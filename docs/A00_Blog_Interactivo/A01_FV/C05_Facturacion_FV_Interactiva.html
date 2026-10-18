@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facturación Fotovoltaica Interactiva · Cálastica y Ejemplos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
+  section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
+  .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--amber);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc352;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+
+  .calculator{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:16px 0;}
+  .calc-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:16px;}
+  .result-chip{background:var(--panel2); border:1px solid var(--amber); border-radius:var(--radius); padding:16px; text-align:center;}
+  .result-chip .v{font-family:var(--font-mono); font-size:24px; color:var(--amber);}
+  .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+
+  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
+  .example-table{width:100%; font-size:12px; border-collapse:collapse;}
+  .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
+  .example-table .label{color:var(--text-dim); width:40%;}
+  .example-table .value{color:var(--text); font-family:var(--font-mono);}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 9px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:8px 9px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+
+  .slider-row{display:flex; align-items:center; gap:12px;}
+  .slider-row input[type=range]{flex:1; accent-color:var(--amber);}
+  .slider-row .slider-val{font-family:var(--font-mono); font-size:13px; color:var(--amber); width:60px; text-align:right; flex-shrink:0;}
+
+  .tooltip-text{font-size:11px; color:var(--text-dimmer); margin-top:4px;}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--amber); text-decoration:none;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    .calc-row{grid-template-columns:1fr;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+    <div class="tabbar-brand">FACTURACIÓN FV</div>
+    <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <nav class="tabbar" id="sidenav">
+      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
+      <a href="#marco" data-sec="marco"><span class="tag">01</span>Marcos tarifarios</a>
+      <a href="#ejemplos" data-sec="ejemplos"><span class="tag">02</span>Ejemplos interactivos</a>
+      <a href="#comparativa" data-sec="comparativa"><span class="tag">03</span>Comparativa tarifaria</a>
+    </nav>
+    <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var wrap = document.getElementById('tabbarWrap');
+    var bar = document.getElementById('sidenav');
+    var btnL = document.getElementById('tabScrollLeft');
+    var btnR = document.getElementById('tabScrollRight');
+    function update(){
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+      wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+    }
+    btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+    btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    setTimeout(update, 0);
+  })();
+  </script>
+
+  <main>
+
+    <!-- SECCIÓN 00: RESUMEN -->
+    <section id="resumen">
+      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
+      <h2>Facturación fotovoltaica: marcos regulatorios y comparativas.</h2>
+      <p class="lede">Análisis completo de los principales marcos tarifarios para sistemas fotovoltaicos en España, desde el autoconsumo sin compensación hasta modelos con inyección a red, con exemplos interactivos de cálculo de facturas.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>De la <em>energía solar</em> a la factura final.</h1>
+            <p class="sub">Comprende los principales modelos de facturación, calcula tus propios escenarios y compara el coste nivelado de la energía (LCOE) entre distintas instalaciones y regulaciones.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">4 marcos tarifarios</div><div class="l">especificados en la regulación vigente</div></div>
+          <div class="stat"><div class="v">Energía + peaje</div><div class="l">componentes principales de la factura</div></div>
+          <div class="stat"><div class="v">Interactivos</div><div class="l">simuladores con tus propios datos</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Conceptos clave</div>
+      <h2 style="font-size:18px;">¿Qué define tu factura de luz?</h2>
+      <div class="grid3">
+        <div class="comp-card">
+          <h4>Energía consumida (kWh)</h4>
+          <p>Cantidad total de electricidad que consumes en un periodo de facturación. Con generación solar, esta cantidad disminuye.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Peaje de acceso (€/kWh)</h4>
+          <p>Cargo fijo por usar la red eléctrica. En regímenes de autoconsumo compensado, se aplica solo al saldo neto inyectado.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Energía inyectada (kWh)</h4>
+          <p>Excedentes de tu instalación que viertes a red. Puede compensarse contra tu consumo (en rojo) o pagarse al tipo de mercado.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 01: MARCOS TARIFARIOS -->
+    <section id="marco">
+      <div class="eyebrow kicker">01 · Marcos tarifarios</div>
+      <h2>Principales regulaciones que afectan tu factin fotovoltaica.</h2>
+      <p class="lede">Desde 2023, coexisten varios modelos de facturación en función del tipo de instalación, el régimen de compensación y el tamaño. Cada uno impacta diferentemente en tu LCOE final.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px;">
+        <div class="theory-card">
+          <h3>1 · Autoconsumo sin compensación (Art. 23 RD 244/2019)</h3>
+          <p>Toda la energía generada se consume en la instalación. No hay inyección a red ni compensación.</p>
+          <ul>
+            <li><b>Peaje:</b> No aplica (energía nunca toca la red)</li>
+            <li><b>Factura:</b> Solo consumo de red (neto de solar)</li>
+            <li><b>Tipología:</b> Ideal para instalaciones aisladas o con alta tasa de autoconsumo</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>2 · Autoconsumo con compensación simplificada (Art. 24)</h3>
+          <p>Saldo neto: se descuenta del consumo, pero se paga peaje sobre el saldo neto inyectado.</p>
+          <ul>
+            <li><b>Peaje:</b> Solo sobre excedentes netos (negociable)</li>
+            <li><b>Compensación:</b> 80% del precio de mercado medio (límite normativo)</li>
+            <li><b>Req. instalación:</b> ≤ 100 kW de potencia</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+        <div class="theory-card">
+          <h3>3 · Productor de electricidad (Art. 27: inscripción en RAIPRE)</h3>
+          <p>Instalación registrada como generador. Venta de energía inyectada a precio de mercado + compensación por déficit de remuneración.</p>
+          <ul>
+            <li><b>Peaje:</b> Sobre TODA la energía generada (incluso auto. consumo)</li>
+            <li><b>Ingresos:</b> PVB (precio de venta) + CGCE (compensación)</li>
+            <li><b>Límite:</b> Generalmente sin límite de potencia</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>4 · Régimen retributivo especial (RD 413/2014 y sucesivos)</h3>
+          <p>Antigua prima: ahora solo aplicable a instalaciones autorizadas antes de 2020 o con contrato heredado.</p>
+          <ul>
+            <li><b>Retribución:</b> Piso + variable (% producción)</li>
+            <li><b>Estabilidad:</b> Garantizada por duración del régimen</li>
+            <li><b>Actualidad:</b> Marginalmente relevante para proyectos nuevos</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="theory-card" style="margin-top:24px; background:linear-gradient(135deg, rgba(255,176,32,0.12) 0%, rgba(37,99,235,0.12) 100%);">
+        <h3 style="color:var(--amber);">Impacto en LCOE: ¿cuál es el modelo más económico?</h3>
+        <p style="margin:12px 0;">La elección del marco tarifario es determinante en la viabilidad económica. Un mismo sistema fotovoltaico puede tener LCOEs radicalmente distintos según:</p>
+        <ul>
+          <li><b>Peaje de acceso:</b> Desde 0 (sin compensación) hasta ~0,05–0,10 €/kWh en compensación simplificada</li>
+          <li><b>Precio de compensación:</b> 80% del mercado (simplificada) vs. 100% (productor)</li>
+          <li><b>Tasa de autoconsumo:</b> Mayor consumo simultáneo = menor peaje pagado</li>
+          <li><b>Curva de carga:</b> Instalaciones con demanda solar (riego irrigación industrial) aprovechan mejor el sol</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 02: EJEMPLOS INTERACTIVOS -->
+    <section id="ejemplos">
+      <div class="eyebrow kicker">02 · Ejemplos interactivos</div>
+      <h2>Calcula tu propia factura según el marco tarifario.</h2>
+      <p class="lede">Introduce los parámetros de tu instalación y sistema de facturación para ver el desglose de costes y la factura mensual estimada.</p>
+
+      <!-- CALCULADORA 1: AUTOCONSUMO SIN COMPENSACIÓN -->
+      <div class="calculator">
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; margin-bottom:16px;">Modelo 1 · Autoconsumo sin compensación</div>
+        <div class="calc-row">
+          <div class="field">
+            <label>Consumo mensual de red (kWh, sin solar)</label>
+            <input type="number" id="m1_consumo_total" value="300" min="10" max="5000" step="10">
+            <div class="tooltip-text">Consumo de red si no tuvieras placas</div>
+          </div>
+          <div class="field">
+            <label>Generación solar cubierta en situ (%)</label>
+            <div class="slider-row">
+              <input type="range" id="m1_autoconsumo_ratio" value="60" min="0" max="100" step="5">
+              <div class="slider-val" id="m1_autoconsumo_ratio_val">60%</div>
+            </div>
+            <div class="tooltip-text">% de consumo que cubre directamente la solar</div>
+          </div>
+          <div class="field">
+            <label>Tarifa energía (€/kWh, red)</label>
+            <input type="number" id="m1_tarifa_energia" value="0.28" min="0.05" max="1" step="0.01">
+            <div class="tooltip-text">Precio medio por kWh de la red eléctrica</div>
+          </div>
+          <div class="field">
+            <label>Coste anual de acceso (€)</label>
+            <input type="number" id="m1_coste_acceso" value="100" min="0" max="500" step="10">
+            <div class="tooltip-text">Cuota fija anual (independiente de consumo)</div>
+          </div>
+        </div>
+        <button class="btn primary" onclick="calcularM1()" style="width:100%; margin-bottom:16px;">Calcular factura mensual</button>
+        <div id="m1_resultado" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+          <div class="result-chip">
+            <div class="l">Consumo de red</div>
+            <div class="v" id="m1_res_consumo">120 kWh</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Factura mensual</div>
+            <div class="v" id="m1_res_factura">33,60 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Ahorro solar (€)</div>
+            <div class="v" id="m1_res_ahorro">50,40 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">€/kWh neto</div>
+            <div class="v" id="m1_res_tarifa_media">0,28 €</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALCULADORA 2: AUTOCONSUMO CON COMPENSACIÓN SIMPLIFICADA -->
+      <div class="calculator" style="margin-top:32px;">
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; margin-bottom:16px;">Modelo 2 · Autoconsumo con compensación simplificada (Art. 24)</div>
+        <div class="calc-row">
+          <div class="field">
+            <label>Consumo mensual (kWh)</label>
+            <input type="number" id="m2_consumo" value="300" min="10" max="5000" step="10">
+          </div>
+          <div class="field">
+            <label>Generación solar mensual (kWh)</label>
+            <input type="number" id="m2_generacion" value="500" min="50" max="10000" step="50">
+            <div class="tooltip-text">Energía total producida por tus paneles en el mes</div>
+          </div>
+          <div class="field">
+            <label>Tarifa energía consumida (€/kWh)</label>
+            <input type="number" id="m2_tarifa_energia" value="0.28" min="0.05" max="1" step="0.01">
+          </div>
+          <div class="field">
+            <label>Peaje sobre saldo neto (€/kWh)</label>
+            <input type="number" id="m2_peaje" value="0.06" min="0" max="0.15" step="0.01">
+            <div class="tooltip-text">Típicamente 60–100% del peaje normal, sobre kWh inyectados netos</div>
+          </div>
+          <div class="field">
+            <label>Compensación energía inyectada (%)</label>
+            <div class="slider-row">
+              <input type="range" id="m2_comp_ratio" value="80" min="50" max="100" step="5">
+              <div class="slider-val" id="m2_comp_ratio_val">80%</div>
+            </div>
+            <div class="tooltip-text">% del precio de mercado (80% es máximo reglamentario)</div>
+          </div>
+          <div class="field">
+            <label>Precio de mercado medio (€/kWh)</label>
+            <input type="number" id="m2_precio_mercado" value="0.12" min="0.05" max="0.50" step="0.01">
+            <div class="tooltip-text">PVB: precio de venta bruta del pool</div>
+          </div>
+        </div>
+        <button class="btn primary" onclick="calcularM2()" style="width:100%; margin-bottom:16px;">Calcular factura mensual</button>
+        <div id="m2_resultado" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+          <div class="result-chip">
+            <div class="l">Saldo neto</div>
+            <div class="v" id="m2_res_saldo">200 kWh</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Factura energía</div>
+            <div class="v" id="m2_res_factura_energia">84,00 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Peaje s/ inyectados</div>
+            <div class="v" id="m2_res_peaje">12,00 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Compensación</div>
+            <div class="v" id="m2_res_comp">−19,20 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Total factura</div>
+            <div class="v" id="m2_res_total">76,80 €</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALCULADORA 3: PRODUCTOR DE ELECTRICIDAD (RAIPRE) -->
+      <div class="calculator" style="margin-top:32px;">
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; margin-bottom:16px;">Modelo 3 · Productor de electricidad (con RAIPRE)</div>
+        <div class="calc-row">
+          <div class="field">
+            <label>Consumo mensual (kWh, sin solar)</label>
+            <input type="number" id="m3_consumo" value="300" min="10" max="5000" step="10">
+          </div>
+          <div class="field">
+            <label>Generación solar mensual (kWh)</label>
+            <input type="number" id="m3_generacion" value="500" min="50" max="10000" step="50">
+          </div>
+          <div class="field">
+            <label>Tarifa energía consumida (€/kWh)</label>
+            <input type="number" id="m3_tarifa_energia" value="0.28" min="0.05" max="1" step="0.01">
+          </div>
+          <div class="field">
+            <label>Peaje sobre TODA generación (€/kWh)</label>
+            <input type="number" id="m3_peaje" value="0.045" min="0" max="0.15" step="0.005">
+            <div class="tooltip-text">Peaje de acceso sobre 100% de generación (incluso autoconsumo)</div>
+          </div>
+          <div class="field">
+            <label>Precio venta (PVB, €/kWh)</label>
+            <input type="number" id="m3_pvb" value="0.12" min="0.05" max="0.50" step="0.01">
+          </div>
+          <div class="field">
+            <label>Compensación CGCE (€/kWh)</label>
+            <input type="number" id="m3_cgce" value="0.02" min="0" max="0.10" step="0.01">
+            <div class="tooltip-text">Complemento por déficit de remuneración (puede ser 0 si PVB es alto)</div>
+          </div>
+        </div>
+        <button class="btn primary" onclick="calcularM3()" style="width:100%; margin-bottom:16px;">Calcular factura mensual</button>
+        <div id="m3_resultado" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+          <div class="result-chip">
+            <div class="l">Gasto energía red</div>
+            <div class="v" id="m3_res_gasto_energia">84,00 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Peaje générración</div>
+            <div class="v" id="m3_res_peaje_gen">22,50 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Ingresos (PVB+CGCE)</div>
+            <div class="v" id="m3_res_ingresos">70,00 €</div>
+          </div>
+          <div class="result-chip">
+            <div class="l">Total factura neta</div>
+            <div class="v" id="m3_res_total">36,50 €</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 03: COMPARATIVA -->
+    <section id="comparativa">
+      <div class="eyebrow kicker">03 · Comparativa tarifaria</div>
+      <h2>Analizador de marcos: encuentra el modelo más económico para ti.</h2>
+      <p class="lede">Introduce tus parámetros base una sola vez y compara automáticamente el coste neto y LCOE entre los 3 marcos tarifarios principales.</p>
+
+      <div class="card" style="margin-top:28px;">
+        <div class="fieldset-title">Parámetros de tu instalación</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Consumo anual de red (kWh, sin solar)</label>
+            <input type="number" id="comp_consumo_anual" value="3600" min="100" max="50000" step="100">
+          </div>
+          <div class="field">
+            <label>Generación solar anual (kWh)</label>
+            <input type="number" id="comp_generacion_anual" value="6000" min="500" max="100000" step="500">
+          </div>
+        </div>
+
+        <div class="fieldset-title">Parámetros de mercado</div>
+        <div class="grid3">
+          <div class="field">
+            <label>Tarifa energía red (€/kWh)</label>
+            <input type="number" id="comp_tarifa_energia" value="0.28" min="0.05" max="1" step="0.01">
+          </div>
+          <div class="field">
+            <label>Precio mercado (PVB, €/kWh)</label>
+            <input type="number" id="comp_precio_mercado" value="0.12" min="0.05" max="0.50" step="0.01">
+          </div>
+          <div class="field">
+            <label>Coste acceso anual (€)</label>
+            <input type="number" id="comp_coste_acceso" value="120" min="0" max="1000" step="50">
+          </div>
+        </div>
+
+        <div class="fieldset-title">Costes de instalación</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Inversión inicial (€)</label>
+            <input type="number" id="comp_inversion" value="15000" min="1000" max="500000" step="1000">
+          </div>
+          <div class="field">
+            <label>Vida útil (años)</label>
+            <input type="number" id="comp_vida_util" value="25" min="10" max="40" step="1">
+          </div>
+        </div>
+
+        <button class="btn primary" onclick="calcularComparativa()" style="width:100%; margin-top:16px;">Comparar los 3 modelos</button>
+      </div>
+
+      <div id="comp_resultado" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px;"></div>
+
+      <div style="margin-top:32px;">
+        <div class="fieldset-title">Gráfico de sensibilidad: impacto de tasa de autoconsumo</div>
+        <p style="font-size:12px; color:var(--text-dim); margin-bottom:16px;">En autoconsumo sin compensación, la factura depende de qué porcentaje de tu generación consumes simultáneamente. Aquí ves cómo varía el coste final según esa ratio.</p>
+        <table class="data-table" style="margin-top:12px;">
+          <thead>
+            <tr>
+              <th>Tasa de autoconsumo</th>
+              <th>Consumo red (kWh/año)</th>
+              <th>Factura anual (€)</th>
+              <th>€/kWh generado</th>
+            </tr>
+          </thead>
+          <tbody id="comp_sensibilidad"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Calculadora interactiva de facturación fotovoltaica integrada en el Proman de superficies y facturación. Los cálculos son orientativos; para una valoración exacta consulta el desglose de tu contrato y la regulación de tu distribuidora. Última actualización: 2026.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'resumen';
+
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+// ===================== UTILIDADES =====================
+function fmtNum(n, d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600); }
+
+// ===================== CALCULADORA 1: AUTOCONSUMO SIN COMPENSACIÓN =====================
+document.getElementById('m1_autoconsumo_ratio').addEventListener('input', function(){
+  document.getElementById('m1_autoconsumo_ratio_val').textContent = this.value + '%';
+});
+
+function calcularM1(){
+  const consumoTotal = parseFloat(document.getElementById('m1_consumo_total').value) || 0;
+  const autoconsumoRatio = parseFloat(document.getElementById('m1_autoconsumo_ratio').value) || 0;
+  const tarifaEnergia = parseFloat(document.getElementById('m1_tarifa_energia').value) || 0;
+  const costeAcceso = parseFloat(document.getElementById('m1_coste_acceso').value) || 0;
+
+  const consumoRed = consumoTotal * (1 - autoconsumoRatio / 100);
+  const factura = (consumoRed * tarifaEnergia) + (costeAcceso / 12);
+  const ahorro = (consumoTotal - consumoRed) * tarifaEnergia;
+  const tarifaMedia = consumoRed > 0 ? factura / consumoRed : 0;
+
+  document.getElementById('m1_res_consumo').textContent = fmtNum(consumoRed, 0) + ' kWh';
+  document.getElementById('m1_res_factura').textContent = fmtNum(factura, 2) + ' €';
+  document.getElementById('m1_res_ahorro').textContent = fmtNum(ahorro, 2) + ' €';
+  document.getElementById('m1_res_tarifa_media').textContent = fmtNum(tarifaMedia, 3) + ' €';
+}
+
+calcularM1();
+
+// ===================== CALCULADORA 2: AUTOCONSUMO CON COMPENSACIÓN SIMPLIFICADA =====================
+document.getElementById('m2_comp_ratio').addEventListener('input', function(){
+  document.getElementById('m2_comp_ratio_val').textContent = this.value + '%';
+});
+
+function calcularM2(){
+  const consumo = parseFloat(document.getElementById('m2_consumo').value) || 0;
+  const generacion = parseFloat(document.getElementById('m2_generacion').value) || 0;
+  const tarifaEnergia = parseFloat(document.getElementById('m2_tarifa_energia').value) || 0;
+  const peaje = parseFloat(document.getElementById('m2_peaje').value) || 0;
+  const compRatio = parseFloat(document.getElementById('m2_comp_ratio').value) || 0;
+  const precioMercado = parseFloat(document.getElementById('m2_precio_mercado').value) || 0;
+
+  const saldoNeto = Math.max(0, generacion - consumo);
+  const consumoRed = Math.max(0, consumo - generacion);
+  const facturaEnergia = consumoRed * tarifaEnergia;
+  const peajeFinal = saldoNeto * peaje;
+  const compensacion = saldoNeto * (compRatio / 100) * precioMercado;
+  const total = facturaEnergia + peajeFinal - compensacion;
+
+  document.getElementById('m2_res_saldo').textContent = fmtNum(saldoNeto, 0) + ' kWh';
+  document.getElementById('m2_res_factura_energia').textContent = fmtNum(facturaEnergia, 2) + ' €';
+  document.getElementById('m2_res_peaje').textContent = fmtNum(peajeFinal, 2) + ' €';
+  document.getElementById('m2_res_comp').textContent = fmtNum(-compensacion, 2) + ' €';
+  document.getElementById('m2_res_total').textContent = fmtNum(Math.max(0, total), 2) + ' €';
+}
+
+calcularM2();
+
+// ===================== CALCULADORA 3: PRODUCTOR RAIPRE =====================
+function calcularM3(){
+  const consumo = parseFloat(document.getElementById('m3_consumo').value) || 0;
+  const generacion = parseFloat(document.getElementById('m3_generacion').value) || 0;
+  const tarifaEnergia = parseFloat(document.getElementById('m3_tarifa_energia').value) || 0;
+  const peaje = parseFloat(document.getElementById('m3_peaje').value) || 0;
+  const pvb = parseFloat(document.getElementById('m3_pvb').value) || 0;
+  const cgce = parseFloat(document.getElementById('m3_cgce').value) || 0;
+
+  const gastoEnergia = consumo * tarifaEnergia;
+  const peajeGen = generacion * peaje;
+  const ingresos = generacion * (pvb + cgce);
+  const total = gastoEnergia + peajeGen - ingresos;
+
+  document.getElementById('m3_res_gasto_energia').textContent = fmtNum(gastoEnergia, 2) + ' €';
+  document.getElementById('m3_res_peaje_gen').textContent = fmtNum(peajeGen, 2) + ' €';
+  document.getElementById('m3_res_ingresos').textContent = fmtNum(ingresos, 2) + ' €';
+  document.getElementById('m3_res_total').textContent = fmtNum(Math.max(0, total), 2) + ' €';
+}
+
+calcularM3();
+
+// ===================== COMPARATIVA =====================
+function calcularComparativa(){
+  const consumoAnual = parseFloat(document.getElementById('comp_consumo_anual').value) || 0;
+  const generacionAnual = parseFloat(document.getElementById('comp_generacion_anual').value) || 0;
+  const tarifaEnergia = parseFloat(document.getElementById('comp_tarifa_energia').value) || 0;
+  const precioMercado = parseFloat(document.getElementById('comp_precio_mercado').value) || 0;
+  const costeAcceso = parseFloat(document.getElementById('comp_coste_acceso').value) || 0;
+  const inversion = parseFloat(document.getElementById('comp_inversion').value) || 1;
+  const vidaUtil = parseFloat(document.getElementById('comp_vida_util').value) || 25;
+
+  const tamaAutoconsumo = 60;
+  const m1Generacion = generacionAnual * (tamaAutoconsumo / 100);
+  const m1ConsumoRed = consumoAnual - m1Generacion;
+  const m1FacturaAnual = (m1ConsumoRed * tarifaEnergia) + costeAcceso;
+  const m1LCOE = (inversion / vidaUtil + m1FacturaAnual) / generacionAnual;
+
+  const saldoNetoM2 = Math.max(0, generacionAnual - consumoAnual);
+  const consumoRedM2 = Math.max(0, consumoAnual - generacionAnual);
+  const m2FacturaEnergia = consumoRedM2 * tarifaEnergia;
+  const m2Peaje = saldoNetoM2 * 0.06;
+  const m2Compensacion = saldoNetoM2 * 0.8 * precioMercado;
+  const m2FacturaAnual = m2FacturaEnergia + m2Peaje - m2Compensacion + costeAcceso;
+  const m2LCOE = (inversion / vidaUtil + m2FacturaAnual) / generacionAnual;
+
+  const m3Peaje = generacionAnual * 0.045;
+  const m3Ingresos = generacionAnual * (precioMercado + 0.02);
+  const m3FacturaAnual = (consumoAnual * tarifaEnergia) + m3Peaje - m3Ingresos + costeAcceso;
+  const m3LCOE = (inversion / vidaUtil + m3FacturaAnual) / generacionAnual;
+
+  const resultado = document.getElementById('comp_resultado');
+  resultado.innerHTML = `
+    <div class="example-card">
+      <h4>Autoconsumo sin compensación</h4>
+      <table class="example-table">
+        <tr><td class="label">Factura anual</td><td class="value">${fmtNum(m1FacturaAnual, 2)} €</td></tr>
+        <tr><td class="label">LCOE (€/kWh)</td><td class="value">${fmtNum(m1LCOE, 4)}</td></tr>
+        <tr><td class="label">Coste nivelado anual</td><td class="value">${fmtNum((inversion / vidaUtil) + m1FacturaAnual, 2)} €</td></tr>
+      </table>
+    </div>
+    <div class="example-card">
+      <h4>Compensación simplificada (Art. 24)</h4>
+      <table class="example-table">
+        <tr><td class="label">Factura anual</td><td class="value">${fmtNum(m2FacturaAnual, 2)} €</td></tr>
+        <tr><td class="label">LCOE (€/kWh)</td><td class="value">${fmtNum(m2LCOE, 4)}</td></tr>
+        <tr><td class="label">Coste nivelado anual</td><td class="value">${fmtNum((inversion / vidaUtil) + m2FacturaAnual, 2)} €</td></tr>
+      </table>
+    </div>
+    <div class="example-card">
+      <h4>Productor RAIPRE</h4>
+      <table class="example-table">
+        <tr><td class="label">Factura anual</td><td class="value">${fmtNum(m3FacturaAnual, 2)} €</td></tr>
+        <tr><td class="label">LCOE (€/kWh)</td><td class="value">${fmtNum(m3LCOE, 4)}</td></tr>
+        <tr><td class="label">Coste nivelado anual</td><td class="value">${fmtNum((inversion / vidaUtil) + m3FacturaAnual, 2)} €</td></tr>
+      </table>
+    </div>
+  `;
+
+  const sensibilidad = document.getElementById('comp_sensibilidad');
+  sensibilidad.innerHTML = '';
+  for (let ratio = 20; ratio <= 100; ratio += 20) {
+    const gen = generacionAnual * (ratio / 100);
+    const cons = consumoAnual - gen;
+    const fact = (cons * tarifaEnergia) + costeAcceso;
+    const unitario = generacionAnual > 0 ? fact / generacionAnual : 0;
+    sensibilidad.innerHTML += `
+      <tr>
+        <td>${ratio}%</td>
+        <td>${fmtNum(cons, 0)}</td>
+        <td>${fmtNum(fact, 2)}</td>
+        <td>${fmtNum(unitario, 4)}</td>
+      </tr>
+    `;
+  }
+
+  showToast('Comparativa calculada correctamente.');
+}
+
+calcularComparativa();
+</script>
+</body>
+</html>

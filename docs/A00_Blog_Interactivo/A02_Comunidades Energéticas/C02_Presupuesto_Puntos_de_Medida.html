@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presupuesto de Puntos de Medida por Socio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:820px;}
+  section .lede{color:var(--text-dim); max-width:760px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:820px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:660px; font-size:15.5px;}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:150px; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:9px 10px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  table.data-table td.num, table.data-table th.num{text-align:right; font-family:var(--font-mono); white-space:nowrap;}
+  table.data-table tfoot td{color:var(--text); border-top:1px solid var(--line); font-family:var(--font-mono);}
+
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=tel], .field input[type=email], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .field select, .budget-table select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238FA3B8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em; text-decoration:none; display:inline-flex; align-items:center; gap:6px;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc352;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.danger{border-color:var(--line); color:var(--text-dimmer);}
+  .btn.danger:hover{border-color:var(--red); color:var(--red);}
+  .btn.small{padding:7px 12px; font-size:11.5px;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap;}
+
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:10.5px; padding:3px 9px; border-radius:var(--radius); text-transform:uppercase; letter-spacing:0.05em; border:1px solid var(--line); color:var(--text-dim); white-space:nowrap;}
+  .badge.amber{color:var(--amber); border-color:var(--amber);}
+  .badge.cyan{color:var(--cyan); border-color:var(--cyan);}
+
+  /* ---------- tablas editables ---------- */
+  .budget-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .budget-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 8px; border-bottom:1px solid var(--line);}
+  .budget-table td{padding:7px 8px; border-bottom:1px solid var(--line-soft); vertical-align:middle; color:var(--text-dim);}
+  .budget-table input[type=text], .budget-table select{width:100%; min-width:110px; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:7px 8px; border-radius:var(--radius); font-family:inherit; font-size:12.5px;}
+  .budget-table select{padding-right:28px;}
+  .budget-table input[type=number]{width:100%; min-width:72px; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:7px 8px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; text-align:right;}
+  .budget-table input:focus, .budget-table select:focus{outline:none; border-color:var(--amber);}
+  .budget-table input[type=checkbox]{accent-color:var(--amber); width:16px; height:16px;}
+  .budget-table .subtotal{font-family:var(--font-mono); color:var(--amber); text-align:right; white-space:nowrap;}
+  .budget-table .medidor{font-family:var(--font-mono); font-size:11.5px; color:var(--cyan); white-space:nowrap;}
+  .budget-table td.row-actions{width:30px; padding:7px 4px; text-align:center;}
+  .btn-del-row{background:transparent; border:1px solid var(--line); color:var(--text-dimmer); border-radius:var(--radius); width:22px; height:22px; line-height:1; cursor:pointer; font-size:11px;}
+  .btn-del-row:hover{border-color:var(--red); color:var(--red);}
+
+  /* ---------- socios ---------- */
+  .socio-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:18px; overflow:hidden;}
+  .socio-head{display:grid; grid-template-columns:2fr 1.2fr 1.6fr 1.4fr auto; gap:12px; align-items:end; padding:16px 18px; border-bottom:1px solid var(--line-soft); background:var(--panel2);}
+  .socio-head .field{margin-bottom:0;}
+  .socio-head .num-socio{font-family:var(--font-mono); font-size:10.5px; color:var(--amber); letter-spacing:0.08em; text-transform:uppercase; grid-column:1/-1; margin-bottom:-4px;}
+  .socio-body{padding:12px 18px 16px; overflow-x:auto;}
+  .socio-foot{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 18px 14px; border-top:1px solid var(--line-soft); font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer);}
+  .socio-foot b{color:var(--amber); font-weight:500;}
+  @media(max-width:1000px){.socio-head{grid-template-columns:1fr 1fr;}}
+
+  details.detalle{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px;}
+  details.detalle summary{cursor:pointer; padding:12px 16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:13px; list-style:none;}
+  details.detalle summary::-webkit-details-marker{display:none;}
+  details.detalle summary::before{content:'▸'; color:var(--amber); margin-right:8px;}
+  details.detalle[open] summary::before{content:'▾';}
+  details.detalle summary .s-tot{font-family:var(--font-mono); color:var(--amber); font-size:12px;}
+  details.detalle .d-body{padding:0 16px 14px; overflow-x:auto;}
+
+  .result-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:16px; text-align:center;}
+  .result-chip .v{font-family:var(--font-mono); font-size:19px; color:var(--amber);}
+  .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+  .result-chip.good{border-color:var(--green);}
+  .result-chip.good .v{color:var(--green);}
+
+  .report-sheet{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:32px 36px;}
+  .report-sheet h3{font-size:15px; color:var(--amber); margin:22px 0 10px; padding-top:14px; border-top:1px solid var(--line-soft);}
+  .report-sheet h3:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .report-sheet p{font-size:12.5px; color:var(--text-dim); margin-bottom:6px;}
+  .report-sheet .rmeta{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+
+  .flow-diagram{display:flex; align-items:stretch; flex-wrap:wrap; gap:0; margin:20px 0;}
+  .flow-step{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px; width:170px; text-align:center;}
+  .flow-step .fi{font-size:22px; margin-bottom:8px;}
+  .flow-step h4{font-size:12.5px; margin-bottom:5px; line-height:1.25;}
+  .flow-step p{font-size:11px; color:var(--text-dimmer);}
+  .flow-arrow{display:flex; align-items:center; justify-content:center; width:34px; flex-shrink:0; color:var(--amber); font-size:18px;}
+  @media(max-width:960px){
+    .flow-diagram{flex-direction:column; align-items:stretch;}
+    .flow-step{width:100%;}
+    .flow-arrow{width:100%; height:26px; transform:rotate(90deg);}
+  }
+  .note{font-size:11.5px; color:var(--text-dimmer); margin-top:10px; border-left:2px solid var(--line); padding-left:10px;}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    .report-sheet{padding:22px 18px;}
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+    <div class="tabbar-brand">PRESUPUESTO CE</div>
+    <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <nav class="tabbar" id="sidenav">
+      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen</a>
+      <a href="#socios" data-sec="socios"><span class="tag">01</span>Socios y puntos de medida</a>
+      <a href="#catalogo" data-sec="catalogo"><span class="tag">02</span>Catálogo de precios</a>
+      <a href="#servicio" data-sec="servicio"><span class="tag">03</span>Servicio en la nube y reparto</a>
+      <a href="#presupuesto" data-sec="presupuesto"><span class="tag">04</span>Presupuesto</a>
+      <a href="#proyecto" data-sec="proyecto"><span class="tag">05</span>Datos del proyecto</a>
+      <a href="#informe" data-sec="informe"><span class="tag">06</span>Informe final</a>
+    </nav>
+    <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var wrap = document.getElementById('tabbarWrap');
+    var bar = document.getElementById('sidenav');
+    var btnL = document.getElementById('tabScrollLeft');
+    var btnR = document.getElementById('tabScrollRight');
+    function update(){
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+      wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+    }
+    btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+    btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    setTimeout(update, 0);
+  })();
+  </script>
+
+  <main>
+
+    <!-- SECCIÓN 00: RESUMEN -->
+    <section id="resumen">
+      <div class="eyebrow kicker">00 · Resumen</div>
+      <h2>Un presupuesto por socio: sus sensores, su puesta en marcha y su cuota anual.</h2>
+      <p class="lede">Herramienta para valorar la monitorización de una comunidad energética. Cada <b>socio</b> tiene uno o varios <b>puntos de medida</b> (red, fotovoltaica, eólica, batería, consumo, cargador de vehículo). En cada punto se instala un medidor de energía —con sus transformadores de intensidad cuando hace falta— y una pasarela por socio envía las lecturas <b>por la conexión a Internet del socio</b> al servidor de datos MQTT en la nube. El presupuesto inicial recoge el hardware de medida y la instalación y puesta en marcha; el servicio en la nube y el mantenimiento se pagan con una <b>cuota anual</b> repartida entre los socios.</p>
+
+      <div class="hero">
+        <h1>Del medidor en el cuadro de cada socio <em>al panel de la comunidad</em>, por Internet.</h1>
+        <p class="sub">Medidores de energía con salida Modbus RS485 (monofásicos y trifásicos, directos o con transformadores de intensidad) conectados a una pasarela que publica cada lectura por MQTT a través de Internet. En la nube se reciben, se suman por socio y por comunidad y se muestran en un panel para cada socio y otro con el neto de la comunidad.</p>
+        <div class="stat-row">
+          <div class="stat"><div class="v" id="stSocios">–</div><div class="l">socios</div></div>
+          <div class="stat"><div class="v" id="stPuntos">–</div><div class="l">puntos de medida</div></div>
+          <div class="stat"><div class="v" id="stInversion">–</div><div class="l">presupuesto inicial de la comunidad, IVA incl.</div></div>
+          <div class="stat"><div class="v" id="stCuota">–</div><div class="l">cuota anual de la comunidad, IVA incl.</div></div>
+        </div>
+      </div>
+
+      <div class="fieldset-title" style="margin-top:36px;">Cadena de medida</div>
+      <div class="flow-diagram">
+        <div class="flow-step"><div class="fi">⚡</div><h4>Medidor por punto</h4><p>Monofásico o trifásico, directo o con transformadores de intensidad · Modbus RS485</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔌</div><h4>Pasarela del socio</h4><p>RS485 → MQTT, varios medidores por bus</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🌐</div><h4>Internet del socio</h4><p>Ethernet o Wi-Fi existente, conexión cifrada</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">☁️</div><h4>Servidor de datos MQTT en la nube</h4><p>Recepción, histórico y sumas por socio y comunidad</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">📊</div><h4>Paneles</h4><p>Uno por socio y uno con el neto de la comunidad</p></div>
+      </div>
+
+      <div class="grid3" style="margin-top:20px;">
+        <div class="comp-card"><h4>01 · Socios y puntos</h4><p>Alta de socios y de sus puntos de medida: tipo, suministro e intensidad máxima. El medidor y sus transformadores se eligen solos y se pueden forzar.</p></div>
+        <div class="comp-card"><h4>02-03 · Precios y servicio</h4><p>Catálogo editable de sensores, instalación y servicios; servicio en la nube y criterio de reparto de su coste entre socios.</p></div>
+        <div class="comp-card"><h4>04-06 · Presupuesto e informe</h4><p>Presupuesto inicial y cuota anual por socio y de la comunidad, con IVA. Informe en PDF de la comunidad o de un socio.</p></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 01: SOCIOS Y PUNTOS -->
+    <section id="socios">
+      <div class="eyebrow kicker">01 · Socios y puntos de medida</div>
+      <h2>Cada socio, con sus puntos de medida.</h2>
+      <p class="lede">Añade los socios y, para cada uno, sus puntos de medida. Con el tipo de suministro y la intensidad máxima se propone el medidor: <b>EM112</b> monofásico directo hasta 45&nbsp;A, <b>EM340</b> trifásico directo hasta 65&nbsp;A y <b>EM24 con transformadores de intensidad</b> por encima. Los puntos de batería y cargador pueden leer además el estado de carga del equipo.</p>
+
+      <div class="btn-row" style="margin-bottom:22px;">
+        <button class="btn primary" type="button" id="btnAddSocio">+ Añadir socio</button>
+        <button class="btn ghost" type="button" id="btnEjemplo">Cargar ejemplo</button>
+        <button class="btn danger" type="button" id="btnVaciar">Vaciar</button>
+      </div>
+      <div id="listaSocios"></div>
+      <p class="note">Se supone que cada socio dispone de acceso a Internet (Ethernet o Wi-Fi) junto al cuadro donde se instala la pasarela. Una pasarela atiende hasta el número de medidores indicado en «Servicio en la nube y reparto».</p>
+    </section>
+
+    <!-- SECCIÓN 02: CATÁLOGO -->
+    <section id="catalogo">
+      <div class="eyebrow kicker">02 · Catálogo de precios</div>
+      <h2>Precios de referencia, editables.</h2>
+      <p class="lede">Precios orientativos sin IVA. Cualquier cambio se aplica al momento a todos los socios. Los servicios en la nube y el mantenimiento se expresan como cuota anual.</p>
+      <div id="tablasCatalogo"></div>
+      <div class="btn-row" style="margin-top:14px;"><button class="btn ghost small" type="button" id="btnPreciosDefecto">Restaurar precios de referencia</button></div>
+    </section>
+
+    <!-- SECCIÓN 03: SERVICIO EN LA NUBE Y REPARTO -->
+    <section id="servicio">
+      <div class="eyebrow kicker">03 · Servicio en la nube y reparto</div>
+      <h2>Un servicio en la nube para toda la comunidad, pagado entre todos.</h2>
+      <p class="lede">La puesta en marcha de la plataforma y su cuota anual (servicio en la nube y mantenimiento) se reparten entre los socios con al menos un punto de medida. Elige el criterio de reparto.</p>
+
+      <div class="card">
+        <div class="grid4" style="align-items:end;">
+          <div class="field"><label>Reparto del coste común</label>
+            <select id="b_reparto">
+              <option value="mixto">Mixto: parte fija por socio + parte por punto</option>
+              <option value="igual">A partes iguales entre socios</option>
+              <option value="puntos">Proporcional al nº de puntos</option>
+            </select>
+          </div>
+          <div class="field"><label>Parte fija por socio (reparto mixto)</label><input type="number" id="b_pct_fijo" value="50" min="0" max="100" step="5"><div class="hint">% a partes iguales; el resto según puntos</div></div>
+          <div class="field"><label>Medidores por pasarela</label><input type="number" id="b_max_pasarela" value="8" min="1" max="32" step="1"><div class="hint">medidores en el bus RS485 de una pasarela</div></div>
+          <div class="field"><label>Compromiso de servicio</label>
+            <select id="b_anios">
+              <option value="1">1 año</option>
+              <option value="3">3 años</option>
+              <option value="5" selected>5 años</option>
+              <option value="10">10 años</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid4" style="align-items:end;">
+          <div class="field"><label>IVA aplicable</label>
+            <select id="b_iva">
+              <option value="21">21 % (general)</option>
+              <option value="10">10 % (reducido)</option>
+              <option value="0">Sin IVA (exento)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Coste común de la plataforma</div>
+      <div class="grid3" id="chipsComun"></div>
+      <div class="fieldset-title">Participación de cada socio</div>
+      <div style="overflow-x:auto;"><table class="data-table" id="tablaReparto"></table></div>
+    </section>
+
+    <!-- SECCIÓN 04: PRESUPUESTO -->
+    <section id="presupuesto">
+      <div class="eyebrow kicker">04 · Presupuesto</div>
+      <h2>Lo que paga cada socio y el total de la comunidad.</h2>
+      <p class="lede"><b>Presupuesto inicial</b>: hardware de medida (medidores, transformadores de intensidad, pasarela y accesorios) e instalación y puesta en marcha, incluida su parte de la puesta en marcha de la plataforma. <b>Cuota anual</b>: su parte del servicio en la nube y del mantenimiento de la plataforma, más el mantenimiento de sus puntos de medida. Despliega un socio para ver su detalle.</p>
+      <div class="grid3" id="chipsTotales" style="margin-bottom:22px;"></div>
+      <div style="overflow-x:auto; margin-bottom:22px;"><table class="data-table" id="tablaSocios"></table></div>
+      <div id="detallesSocios"></div>
+    </section>
+
+    <!-- SECCIÓN 05: DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">05 · Datos del proyecto</div>
+      <h2>¿Para quién y por quién se realiza esta oferta?</h2>
+      <p class="lede">Estos datos aparecen en la portada y encabezados del informe (sección 06). Se guardan en este navegador y se comparten con el resto de herramientas del blog (localStorage), igual que en las demás calculadoras de Vatia&amp;Co.</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / instalación</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Monitorización de la comunidad energética"></div>
+          <div class="field"><label>Fecha de la oferta</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Técnico / autor de la oferta</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización que presenta la oferta</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente (la comunidad energética)</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre de la comunidad energética"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF de la comunidad"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección de la instalación</label><input type="text" id="p_dest_dir" placeholder="Municipio o ámbito de la comunidad"></div>
+        </div>
+      </div>
+      <p class="note">Estos mismos campos (con id que empieza por "p_") aparecen ya rellenos si los usaste antes en otra calculadora del blog, y viceversa.</p>
+    </section>
+
+    <!-- SECCIÓN 06: INFORME FINAL -->
+    <section id="informe">
+      <div class="eyebrow kicker">06 · Informe final</div>
+      <h2>Oferta de la comunidad o de un socio, en PDF.</h2>
+      <p class="lede">El informe de la comunidad incluye la plataforma común, el reparto y el resumen por socio. El de un socio detalla sus puntos de medida, su hardware de medida, su instalación y puesta en marcha y su cuota anual.</p>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="grid3" style="align-items:end;">
+          <div class="field" style="margin-bottom:0;"><label>Alcance del informe</label><select id="i_alcance"></select></div>
+          <div class="btn-row">
+            <button class="btn primary" type="button" id="btnGenerarInforme">Generar vista previa</button>
+            <button class="btn ghost" type="button" id="btnPdf">&#8681; Descargar PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-sheet" id="reportOutput">
+        <p>Elige el alcance y pulsa "Generar vista previa".</p>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta de presupuesto para la monitorización de comunidades energéticas: medidores de energía Modbus con sus transformadores de intensidad, una pasarela por socio que envía los datos por Internet y un servicio de monitorización en la nube con paneles por socio y de la comunidad. Precios de referencia orientativos y editables; los datos se guardan solo en este navegador. Integrado en el blog de Vatia&amp;Co. Última actualización: 2026.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'resumen';
+
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{ e.preventDefault(); irASeccion(link.getAttribute('href')); });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 3200); }
+function fmtEUR(n){ return (isFinite(n)?n:0).toLocaleString('es-ES',{style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtPct(n){ return (isFinite(n)?n*100:0).toLocaleString('es-ES',{maximumFractionDigits:1})+' %'; }
+// La fuente "helvetica" de jsPDF no tiene flechas ni algunos simbolos: se sanean
+function pdfSafe(text){ return String(text).replace(/[←-⇿]/g, '->').replace(/≤/g,'<=').replace(/…/g,'...'); }
+function fmtFecha(iso){
+  if(!iso) return '—';
+  const d = new Date(iso+'T00:00:00');
+  if(isNaN(d)) return iso;
+  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+const nuevoId = (p)=> p + Math.random().toString(36).slice(2, 9);
+const anios = n => n + (n === 1 ? ' año' : ' años');
+
+// ===================== CATÁLOGO =====================
+// grupo: hw (hardware de medida por socio) · in (instalacion y puesta en marcha por socio)
+//        com (puesta en marcha comun, una vez, se reparte) · anual (servicio comun, €/año, se reparte)
+//        mn (mantenimiento por punto, €/año)
+const CATALOGO = [
+  {id:'em112', grupo:'hw', label:'Medidor de energía EM112 (monofásico, directo hasta 45 A, Modbus RS485)', unidad:'ud', precio:75},
+  {id:'em340', grupo:'hw', label:'Medidor de energía EM340 (trifásico, directo hasta 65 A, Modbus RS485)', unidad:'ud', precio:165},
+  {id:'em24', grupo:'hw', label:'Medidor de energía EM24 (para transformadores de intensidad …/5 A, Modbus RS485)', unidad:'ud', precio:215},
+  {id:'ti', grupo:'hw', label:'Transformador de intensidad …/5 A, clase 0,5 (uno por fase)', unidad:'ud', precio:25},
+  {id:'pasarela', grupo:'hw', label:'Pasarela RS485 → MQTT por Internet (Ethernet/Wi-Fi, carril DIN)', unidad:'ud', precio:95},
+  {id:'caja', grupo:'hw', label:'Caja con carril DIN, fuente de alimentación y protección (por pasarela)', unidad:'ud', precio:65},
+  {id:'acc', grupo:'hw', label:'Accesorios por punto (cable RS485 apantallado, bornas, protección del medidor)', unidad:'ud', precio:18},
+  {id:'inst_punto', grupo:'in', label:'Montaje y conexionado de un punto de medida', unidad:'ud', precio:45},
+  {id:'inst_pasarela', grupo:'in', label:'Montaje de la pasarela y conexión a Internet del socio', unidad:'ud', precio:70},
+  {id:'inst_desp', grupo:'in', label:'Desplazamiento y replanteo (por socio)', unidad:'ud', precio:40},
+  {id:'conf_punto', grupo:'in', label:'Alta del punto en la plataforma y pruebas de comunicación', unidad:'ud', precio:15},
+  {id:'conf_soc', grupo:'in', label:'Integración del inversor o cargador (estado de carga, estado)', unidad:'ud', precio:60},
+  {id:'com_puesta', grupo:'com', label:'Puesta en marcha de la plataforma en la nube (servidor de datos MQTT, histórico, comunicaciones seguras, copias)', unidad:'ud', precio:900},
+  {id:'com_paneles', grupo:'com', label:'Paneles de la comunidad y de cada socio, usuarios y permisos', unidad:'ud', precio:450},
+  {id:'nube_anual', grupo:'anual', label:'Servicio en la nube (servidor de datos MQTT, almacenamiento y copias de seguridad)', unidad:'año', precio:180},
+  {id:'plat_anual', grupo:'anual', label:'Mantenimiento de la plataforma (actualizaciones, seguridad, monitorización y soporte)', unidad:'año', precio:780},
+  {id:'dom_anual', grupo:'anual', label:'Dominio y certificados de seguridad', unidad:'año', precio:24},
+  {id:'mant_punto_anual', grupo:'mn', label:'Mantenimiento por punto de medida (supervisión, garantía y sustitución)', unidad:'año', precio:22},
+];
+const PRECIOS_REF = Object.fromEntries(CATALOGO.map(c=>[c.id, c.precio]));
+const CAT = Object.fromEntries(CATALOGO.map(c=>[c.id, c]));
+const GRUPOS = [
+  ['hw', 'Hardware de medida por socio (€, sin IVA)'], ['in', 'Instalación y puesta en marcha por socio (€, sin IVA)'],
+  ['com', 'Puesta en marcha de la plataforma común (€, sin IVA, se reparte)'], ['anual', 'Servicio común en la nube (€/año, sin IVA, se reparte)'],
+  ['mn', 'Mantenimiento por punto de medida (€/año, sin IVA)'],
+];
+
+const ROLES = {red:'Red (compra/vertido)', fv:'Fotovoltaica', eolica:'Eólica', bateria:'Batería', consumo:'Consumo', ve:'Cargador VE'};
+const MODELOS = {auto:'Automático', em112:'EM112', em340:'EM340', em24:'EM24 + TI'};
+
+// ===================== ESTADO (se guarda en el navegador) =====================
+let estado = {precios:{...PRECIOS_REF}, socios:[]};
+
+function ejemplo(){
+  const p = (nombre, rol, fases, amperios, soc=false)=>({id:nuevoId('p'), nombre, rol, fases, amperios, modelo:'auto', soc});
+  return [
+    {id:nuevoId('s'), nombre:'Ana García', nif:'', email:'ana@ejemplo.es',
+     puntos:[p('Red','red','mono',25), p('Fotovoltaica 5 kWp','fv','mono',25), p('Vivienda','consumo','mono',25), p('Batería 5 kWh','bateria','mono',16,true), p('Cargador coche','ve','mono',32,true)]},
+    {id:nuevoId('s'), nombre:'Colegio Churriana', nif:'', email:'colegio@ejemplo.es',
+     puntos:[p('Red','red','tri',100), p('FV cubierta norte','fv','tri',25), p('FV cubierta sur','fv','tri',25), p('Aulas','consumo','tri',63), p('Comedor','consumo','tri',32), p('Batería 20 kWh','bateria','tri',16,true)]},
+    {id:nuevoId('s'), nombre:'Nave Industrial Sur', nif:'', email:'nave@ejemplo.es',
+     puntos:[p('Red','red','tri',160), p('Fotovoltaica 40 kWp','fv','tri',63), p('Eólica 10 kW','eolica','tri',25), p('Maquinaria','consumo','tri',125)]},
+  ];
+}
+
+// ===================== CÁLCULO =====================
+function precio(id){ const v = parseFloat(estado.precios[id]); return isFinite(v) ? v : PRECIOS_REF[id]; }
+function opcion(id){ return document.getElementById(id).value; }
+function num(id, def){ const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : def; }
+
+// Medidor de un punto: automatico segun fases e intensidad, o el forzado
+function medidorDe(pt){
+  let m = pt.modelo && pt.modelo !== 'auto' ? pt.modelo : null;
+  const a = parseFloat(pt.amperios) || 0;
+  if(!m) m = pt.fases === 'mono' ? (a <= 45 ? 'em112' : 'em24') : (a <= 65 ? 'em340' : 'em24');
+  const ti = m === 'em24' ? (pt.fases === 'mono' ? 1 : 3) : 0;
+  return {modelo:m, ti};
+}
+
+// Cantidades (id del catalogo -> cantidad) de un socio, sin el reparto comun
+function lineasSocio(s){
+  const n = s.puntos.length, maxPas = Math.max(1, num('b_max_pasarela', 8));
+  const q = {};
+  const sumar = (id, c)=>{ if(c) q[id] = (q[id]||0) + c; };
+  s.puntos.forEach(pt=>{
+    const m = medidorDe(pt);
+    sumar(m.modelo, 1); sumar('ti', m.ti); sumar('acc', 1);
+    sumar('inst_punto', 1); sumar('conf_punto', 1);
+    if(pt.soc && (pt.rol === 'bateria' || pt.rol === 've')) sumar('conf_soc', 1);
+  });
+  const pasarelas = n ? Math.ceil(n / maxPas) : 0;
+  sumar('pasarela', pasarelas); sumar('caja', pasarelas); sumar('inst_pasarela', pasarelas);
+  if(n){ sumar('inst_desp', 1); sumar('mant_punto_anual', n); }
+  return q;
+}
+
+function costeComun(){
+  const lineas = g => CATALOGO.filter(c=>c.grupo===g).map(c=>({id:c.id, label:c.label, q:1, p:precio(c.id), st:precio(c.id)}));
+  const puesta = lineas('com'), anual = lineas('anual');
+  return {puesta, anual, totalPuesta: puesta.reduce((a,l)=>a+l.st,0), totalAnual: anual.reduce((a,l)=>a+l.st,0)};
+}
+
+// Parte de cada socio en el coste comun (solo socios con algun punto)
+function cuotas(){
+  const activos = estado.socios.filter(s=>s.puntos.length);
+  const S = activos.length, N = activos.reduce((a,s)=>a+s.puntos.length,0);
+  const modo = opcion('b_reparto'), fijo = Math.min(100, Math.max(0, num('b_pct_fijo', 50))) / 100;
+  const out = {};
+  estado.socios.forEach(s=>{
+    const n = s.puntos.length;
+    if(!n || !S){ out[s.id] = 0; return; }
+    if(modo === 'igual') out[s.id] = 1 / S;
+    else if(modo === 'puntos') out[s.id] = n / N;
+    else out[s.id] = fijo / S + (1 - fijo) * n / N;
+  });
+  return out;
+}
+
+function calcular(){
+  const iva = num('b_iva', 21) / 100, nAnios = Math.max(1, num('b_anios', 5));
+  const comun = costeComun(), parte = cuotas();
+  const socios = estado.socios.map(s=>{
+    const q = lineasSocio(s);
+    const linea = id => ({id, label:CAT[id].label, q:q[id]||0, p:precio(id), st:(q[id]||0)*precio(id)});
+    const de = g => CATALOGO.filter(c=>c.grupo===g).map(c=>linea(c.id)).filter(l=>l.q);
+    const hw = de('hw'), inst = de('in'), mn = de('mn');
+    const tHW = hw.reduce((a,l)=>a+l.st,0), tIN = inst.reduce((a,l)=>a+l.st,0);
+    const puestaComun = parte[s.id] * comun.totalPuesta, anualComun = parte[s.id] * comun.totalAnual;
+    const mnAnual = mn.reduce((a,l)=>a+l.st,0);
+    const inicial = tHW + tIN + puestaComun, cuotaAnual = anualComun + mnAnual;
+    return {s, hw, inst, mn, tHW, tIN, parte:parte[s.id], puestaComun, anualComun, mnAnual, inicial, cuotaAnual,
+            inicialIva: inicial*(1+iva), cuotaAnualIva: cuotaAnual*(1+iva), totalIva: (inicial + cuotaAnual*nAnios)*(1+iva),
+            medidores: s.puntos.map(pt=>({pt, m:medidorDe(pt)}))};
+  });
+  const sum = k => socios.reduce((a,x)=>a+x[k],0);
+  return {iva, nAnios, comun, socios,
+          puntos: estado.socios.reduce((a,s)=>a+s.puntos.length,0),
+          inicial: sum('inicial'), cuotaAnual: sum('cuotaAnual'),
+          inicialIva: sum('inicialIva'), cuotaAnualIva: sum('cuotaAnualIva'), totalIva: sum('totalIva')};
+}
+
+// ===================== INTERFAZ: SOCIOS =====================
+function htmlPunto(s, pt){
+  const m = medidorDe(pt);
+  const conSoc = pt.rol === 'bateria' || pt.rol === 've';
+  const opts = (obj, val)=>Object.entries(obj).map(([k,v])=>`<option value="${k}"${k===val?' selected':''}>${esc(v)}</option>`).join('');
+  return `<tr data-socio="${s.id}" data-punto="${pt.id}">
+    <td><input type="text" data-k="nombre" value="${esc(pt.nombre)}" placeholder="Nombre del punto"></td>
+    <td><select data-k="rol">${opts(ROLES, pt.rol)}</select></td>
+    <td><select data-k="fases">${opts({mono:'Monofásico', tri:'Trifásico'}, pt.fases)}</select></td>
+    <td><input type="number" data-k="amperios" value="${esc(pt.amperios)}" min="1" step="1"></td>
+    <td><select data-k="modelo">${opts(MODELOS, pt.modelo||'auto')}</select></td>
+    <td style="text-align:center;"><input type="checkbox" data-k="soc" ${pt.soc&&conSoc?'checked':''} ${conSoc?'':'disabled'} title="Leer estado de carga del inversor o cargador"></td>
+    <td class="medidor">${esc(MODELOS[m.modelo])}${m.ti?` · ${m.ti} TI`:''}</td>
+    <td class="row-actions"><button type="button" class="btn-del-row" data-del-punto aria-label="Eliminar punto">✕</button></td>
+  </tr>`;
+}
+
+function pieSocio(r){
+  return `<span>${r.s.puntos.length} punto(s) · participación en la plataforma <b>${fmtPct(r.parte)}</b></span>
+    <span>Inicial <b>${fmtEUR(r.inicialIva)}</b> · cuota <b>${fmtEUR(r.cuotaAnualIva)}/año</b> <span style="color:var(--text-dimmer)">(IVA incl.)</span></span>`;
+}
+
+function htmlSocio(s, i, r){
+  return `<div class="socio-card" data-socio="${s.id}">
+    <div class="socio-head" style="grid-template-columns:2fr 1.2fr 1.8fr auto;">
+      <div class="num-socio">Socio ${i+1}</div>
+      <div class="field"><label>Nombre</label><input type="text" data-sk="nombre" value="${esc(s.nombre)}" placeholder="Nombre del socio"></div>
+      <div class="field"><label>NIF / CIF</label><input type="text" data-sk="nif" value="${esc(s.nif)}"></div>
+      <div class="field"><label>Correo</label><input type="email" data-sk="email" value="${esc(s.email)}"></div>
+      <button class="btn danger small" type="button" data-del-socio title="Eliminar socio">✕ Socio</button>
+    </div>
+    <div class="socio-body">
+      <table class="budget-table">
+        <thead><tr><th style="width:24%;">Punto de medida</th><th>Tipo</th><th>Suministro</th><th>I máx. (A)</th><th>Medidor</th><th title="Estado de carga del inversor o cargador">SoC</th><th>Resultado</th><th></th></tr></thead>
+        <tbody>${s.puntos.map(pt=>htmlPunto(s, pt)).join('') || '<tr><td colspan="8" style="color:var(--text-dimmer);">Sin puntos de medida.</td></tr>'}</tbody>
+      </table>
+      <div class="btn-row" style="margin-top:10px;"><button class="btn ghost small" type="button" data-add-punto>+ Añadir punto de medida</button></div>
+    </div>
+    <div class="socio-foot">${r ? pieSocio(r) : ''}</div>
+  </div>`;
+}
+
+function pintarSocios(calc){
+  const cont = document.getElementById('listaSocios');
+  const porId = Object.fromEntries(calc.socios.map(r=>[r.s.id, r]));
+  cont.innerHTML = estado.socios.length ? estado.socios.map((s,i)=>htmlSocio(s, i, porId[s.id])).join('')
+    : '<div class="card" style="color:var(--text-dim);">No hay socios. Pulsa «Añadir socio» o «Cargar ejemplo».</div>';
+}
+
+// Solo se repintan los pies (no las tablas) al teclear, para no perder el foco
+function actualizarPies(calc){
+  calc.socios.forEach(r=>{
+    const card = document.querySelector(`.socio-card[data-socio="${r.s.id}"]`);
+    if(!card) return;
+    card.querySelector('.socio-foot').innerHTML = pieSocio(r);
+    r.medidores.forEach(({pt, m})=>{
+      const fila = card.querySelector(`tr[data-punto="${pt.id}"] .medidor`);
+      if(fila) fila.textContent = MODELOS[m.modelo] + (m.ti ? ` · ${m.ti} TI` : '');
+    });
+  });
+}
+
+const buscarSocio = id => estado.socios.find(s=>s.id===id);
+const lista = document.getElementById('listaSocios');
+lista.addEventListener('input', (e)=>{
+  const el = e.target, card = el.closest('.socio-card');
+  if(!card) return;
+  const s = buscarSocio(card.dataset.socio);
+  if(el.dataset.sk){ s[el.dataset.sk] = el.value; }
+  else if(el.dataset.k){
+    const pt = s.puntos.find(p=>p.id===el.closest('tr').dataset.punto);
+    pt[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+    if(el.dataset.k === 'rol'){   // el SoC solo aplica a bateria y cargador
+      const chk = el.closest('tr').querySelector('[data-k="soc"]');
+      const conSoc = pt.rol === 'bateria' || pt.rol === 've';
+      chk.disabled = !conSoc; if(!conSoc){ chk.checked = false; pt.soc = false; }
+    }
+  }
+  todo(false);
+});
+lista.addEventListener('click', (e)=>{
+  const card = e.target.closest('.socio-card');
+  if(!card) return;
+  const s = buscarSocio(card.dataset.socio);
+  if(e.target.closest('[data-add-punto]')){
+    s.puntos.push({id:nuevoId('p'), nombre:'', rol: s.puntos.length ? 'consumo' : 'red', fases:'mono', amperios:25, modelo:'auto', soc:false});
+    todo(true);
+    const filas = document.querySelectorAll(`.socio-card[data-socio="${s.id}"] tbody tr`);
+    filas[filas.length-1]?.querySelector('input[type=text]')?.focus();
+  } else if(e.target.closest('[data-del-punto]')){
+    const id = e.target.closest('tr').dataset.punto;
+    s.puntos = s.puntos.filter(p=>p.id!==id);
+    todo(true);
+  } else if(e.target.closest('[data-del-socio]')){
+    if(!confirm(`¿Eliminar a «${s.nombre || 'este socio'}» y sus puntos de medida?`)) return;
+    estado.socios = estado.socios.filter(x=>x.id!==s.id);
+    todo(true);
+  }
+});
+document.getElementById('btnAddSocio').addEventListener('click', ()=>{
+  estado.socios.push({id:nuevoId('s'), nombre:'', nif:'', email:'',
+                      puntos:[{id:nuevoId('p'), nombre:'Red', rol:'red', fases:'mono', amperios:25, modelo:'auto', soc:false}]});
+  todo(true);
+  const cards = document.querySelectorAll('.socio-card');
+  cards[cards.length-1]?.querySelector('[data-sk="nombre"]')?.focus();
+});
+document.getElementById('btnEjemplo').addEventListener('click', ()=>{
+  if(estado.socios.length && !confirm('Se sustituirán los socios actuales por el ejemplo. ¿Continuar?')) return;
+  estado.socios = ejemplo(); todo(true); showToast('Ejemplo cargado: 3 socios, 15 puntos de medida.');
+});
+document.getElementById('btnVaciar').addEventListener('click', ()=>{
+  if(!estado.socios.length || !confirm('¿Eliminar todos los socios y sus puntos de medida?')) return;
+  estado.socios = []; todo(true);
+});
+
+// ===================== INTERFAZ: CATÁLOGO =====================
+function pintarCatalogo(){
+  document.getElementById('tablasCatalogo').innerHTML = GRUPOS.map(([g, titulo])=>`
+    <div class="fieldset-title">${esc(titulo)}</div>
+    <div style="overflow-x:auto;"><table class="budget-table">
+      <thead><tr><th style="width:70%;">Concepto</th><th>Unidad</th><th>Precio (€)</th></tr></thead>
+      <tbody>${CATALOGO.filter(c=>c.grupo===g).map(c=>`<tr>
+        <td style="color:var(--text);">${esc(c.label)}</td>
+        <td>${c.unidad==='año'?'€/año':'€/ud'}</td>
+        <td><input type="number" data-precio="${c.id}" value="${estado.precios[c.id]}" min="0" step="0.01"></td></tr>`).join('')}</tbody>
+    </table></div>`).join('');
+}
+document.getElementById('tablasCatalogo').addEventListener('input', (e)=>{
+  const id = e.target.dataset.precio;
+  if(!id) return;
+  estado.precios[id] = e.target.value;
+  todo(false);
+});
+document.getElementById('btnPreciosDefecto').addEventListener('click', ()=>{
+  estado.precios = {...PRECIOS_REF}; pintarCatalogo(); todo(false); showToast('Precios de referencia restaurados.');
+});
+
+// ===================== INTERFAZ: SERVICIO, PRESUPUESTO =====================
+function tablaLineas(lineas, unidad){
+  if(!lineas.length) return '<p class="rmeta">—</p>';
+  return `<table class="data-table" style="margin-bottom:12px;">
+    <thead><tr><th>Concepto</th><th class="num">Cant.</th><th class="num">Precio${unidad}</th><th class="num">Subtotal</th></tr></thead>
+    <tbody>${lineas.map(l=>`<tr><td>${esc(l.label)}</td><td class="num">${l.q.toLocaleString('es-ES',{maximumFractionDigits:2})}</td><td class="num">${fmtEUR(l.p)}</td><td class="num">${fmtEUR(l.st)}</td></tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function pintarResultados(calc){
+  // cifras de la portada
+  document.getElementById('stSocios').textContent = calc.socios.length;
+  document.getElementById('stPuntos').textContent = calc.puntos;
+  document.getElementById('stInversion').textContent = fmtEUR(calc.inicialIva);
+  document.getElementById('stCuota').textContent = fmtEUR(calc.cuotaAnualIva);
+
+  // servicio en la nube y reparto
+  const c = calc.comun;
+  document.getElementById('chipsComun').innerHTML = `
+    <div class="result-chip"><div class="v">${fmtEUR(c.totalPuesta)}</div><div class="l">Puesta en marcha de la plataforma (sin IVA, una vez)</div></div>
+    <div class="result-chip"><div class="v">${fmtEUR(c.totalAnual)}/año</div><div class="l">Servicio en la nube, mantenimiento y dominio (sin IVA)</div></div>
+    <div class="result-chip good"><div class="v">${fmtEUR((c.totalPuesta + c.totalAnual*calc.nAnios)*(1+calc.iva))}</div><div class="l">Coste común en ${anios(calc.nAnios)}, IVA incluido</div></div>`;
+  document.getElementById('tablaReparto').innerHTML = `
+    <thead><tr><th>Socio</th><th class="num">Puntos</th><th class="num">Participación</th><th class="num">Puesta en marcha común</th><th class="num">Cuota común/año</th></tr></thead>
+    <tbody>${calc.socios.map(r=>`<tr><td>${esc(r.s.nombre||'(sin nombre)')}</td><td class="num">${r.s.puntos.length}</td><td class="num">${fmtPct(r.parte)}</td><td class="num">${fmtEUR(r.puestaComun)}</td><td class="num">${fmtEUR(r.anualComun)}</td></tr>`).join('') || '<tr><td colspan="5">Sin socios.</td></tr>'}</tbody>
+    <tfoot><tr><td>Total</td><td class="num">${calc.puntos}</td><td class="num">${fmtPct(calc.socios.reduce((a,r)=>a+r.parte,0))}</td><td class="num">${fmtEUR(calc.socios.reduce((a,r)=>a+r.puestaComun,0))}</td><td class="num">${fmtEUR(calc.socios.reduce((a,r)=>a+r.anualComun,0))}</td></tr></tfoot>`;
+
+  // presupuesto
+  document.getElementById('chipsTotales').innerHTML = `
+    <div class="result-chip"><div class="v">${fmtEUR(calc.inicial)}</div><div class="l">Presupuesto inicial de la comunidad (sin IVA)</div></div>
+    <div class="result-chip good"><div class="v">${fmtEUR(calc.inicialIva)}</div><div class="l">Presupuesto inicial, IVA incluido</div></div>
+    <div class="result-chip good"><div class="v">${fmtEUR(calc.cuotaAnualIva)}</div><div class="l">Cuota anual de la comunidad, IVA incluido</div></div>
+    <div class="result-chip"><div class="v">${anios(calc.nAnios)}</div><div class="l">Compromiso de servicio</div></div>
+    <div class="result-chip"><div class="v">${fmtEUR(calc.totalIva)}</div><div class="l">Coste total en ${anios(calc.nAnios)} (inicial + cuotas), IVA incluido</div></div>
+    <div class="result-chip"><div class="v">${fmtEUR(calc.puntos ? calc.totalIva/calc.puntos/calc.nAnios : 0)}</div><div class="l">Coste medio por punto y año en el periodo, IVA incluido</div></div>`;
+  document.getElementById('tablaSocios').innerHTML = `
+    <thead><tr><th>Socio</th><th class="num">Puntos</th><th class="num">Hardware de medida</th><th class="num">Instalación y puesta en marcha</th><th class="num">Inicial IVA incl.</th><th class="num">Cuota anual IVA incl.</th><th class="num">Total ${anios(calc.nAnios)} IVA incl.</th></tr></thead>
+    <tbody>${calc.socios.map(r=>`<tr><td>${esc(r.s.nombre||'(sin nombre)')}</td><td class="num">${r.s.puntos.length}</td><td class="num">${fmtEUR(r.tHW)}</td><td class="num">${fmtEUR(r.tIN + r.puestaComun)}</td><td class="num">${fmtEUR(r.inicialIva)}</td><td class="num">${fmtEUR(r.cuotaAnualIva)}</td><td class="num">${fmtEUR(r.totalIva)}</td></tr>`).join('') || '<tr><td colspan="7">Sin socios.</td></tr>'}</tbody>
+    <tfoot><tr><td>Comunidad</td><td class="num">${calc.puntos}</td><td class="num">${fmtEUR(calc.socios.reduce((a,r)=>a+r.tHW,0))}</td><td class="num">${fmtEUR(calc.socios.reduce((a,r)=>a+r.tIN+r.puestaComun,0))}</td><td class="num">${fmtEUR(calc.inicialIva)}</td><td class="num">${fmtEUR(calc.cuotaAnualIva)}</td><td class="num">${fmtEUR(calc.totalIva)}</td></tr></tfoot>`;
+  const abiertos = new Set([...document.querySelectorAll('details.detalle[open]')].map(d=>d.dataset.socio));
+  document.getElementById('detallesSocios').innerHTML = calc.socios.map(r=>`
+    <details class="detalle" data-socio="${r.s.id}"${abiertos.has(r.s.id)?' open':''}>
+      <summary><span>${esc(r.s.nombre||'(sin nombre)')} · ${r.s.puntos.length} punto(s)</span><span class="s-tot">${fmtEUR(r.inicialIva)} + ${fmtEUR(r.cuotaAnualIva)}/año (IVA incl.)</span></summary>
+      <div class="d-body">${detalleSocioHtml(r, calc)}</div>
+    </details>`).join('');
+
+  // selector del informe
+  const sel = document.getElementById('i_alcance'), previo = sel.value;
+  sel.innerHTML = '<option value="comunidad">Comunidad completa</option>' +
+    calc.socios.map(r=>`<option value="${r.s.id}">Socio: ${esc(r.s.nombre||'(sin nombre)')}</option>`).join('');
+  if([...sel.options].some(o=>o.value===previo)) sel.value = previo;
+}
+
+function detalleSocioHtml(r, calc){
+  const puntos = r.medidores.map(({pt, m})=>`<tr><td>${esc(pt.nombre||'—')}</td><td>${esc(ROLES[pt.rol])}</td><td>${pt.fases==='mono'?'Monofásico':'Trifásico'} · ${esc(pt.amperios)} A</td><td>${esc(MODELOS[m.modelo])}${m.ti?` · ${m.ti} TI`:''}${pt.soc?' · SoC':''}</td></tr>`).join('');
+  return `<div class="fieldset-title" style="margin-top:6px; border-top:none; padding-top:0;">Puntos de medida</div>
+    <table class="data-table" style="margin-bottom:12px;"><thead><tr><th>Punto</th><th>Tipo</th><th>Suministro</th><th>Medidor</th></tr></thead><tbody>${puntos}</tbody></table>
+    <div class="fieldset-title">Presupuesto inicial · hardware de medida</div>${tablaLineas(r.hw, ' (€)')}
+    <div class="fieldset-title">Presupuesto inicial · instalación y puesta en marcha</div>${tablaLineas(r.inst, ' (€)')}
+    <table class="data-table" style="margin-bottom:12px;"><tbody>
+      <tr><td>Participación en la puesta en marcha de la plataforma (${fmtPct(r.parte)} de ${fmtEUR(calc.comun.totalPuesta)})</td><td class="num">${fmtEUR(r.puestaComun)}</td></tr>
+      <tr><td><b>Presupuesto inicial (sin IVA) · IVA incluido</b></td><td class="num"><b>${fmtEUR(r.inicial)} · ${fmtEUR(r.inicialIva)}</b></td></tr>
+    </tbody></table>
+    <div class="fieldset-title">Cuota anual · servicio en la nube y mantenimiento</div>
+    <table class="data-table"><tbody>
+      <tr><td>Participación en el servicio común (${fmtPct(r.parte)} de ${fmtEUR(calc.comun.totalAnual)}/año)</td><td class="num">${fmtEUR(r.anualComun)}/año</td></tr>
+      ${r.mn.map(l=>`<tr><td>${esc(l.label)} × ${l.q}</td><td class="num">${fmtEUR(l.st)}/año</td></tr>`).join('')}
+      <tr><td><b>Cuota anual (sin IVA) · IVA incluido</b></td><td class="num"><b>${fmtEUR(r.cuotaAnual)} · ${fmtEUR(r.cuotaAnualIva)}</b></td></tr>
+      <tr><td><b>Total en ${anios(calc.nAnios)}, IVA incluido</b></td><td class="num"><b>${fmtEUR(r.totalIva)}</b></td></tr>
+    </tbody></table>`;
+}
+
+// Recalcula, repinta y guarda. conSocios: repintar tambien las tarjetas de socios
+function todo(conSocios){
+  const calc = calcular();
+  if(conSocios) pintarSocios(calc); else actualizarPies(calc);
+  pintarResultados(calc);
+  guardarEstado();
+  return calc;
+}
+const OPCIONES = ['b_reparto','b_pct_fijo','b_max_pasarela','b_anios','b_iva'];
+OPCIONES.forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener('input', ()=>todo(false)); el.addEventListener('change', ()=>todo(false));
+});
+
+// ===================== INFORME (VISTA PREVIA + PDF) =====================
+function datosProyecto(){
+  const val = id => (document.getElementById(id)?.value || '').trim();
+  return {
+    proyecto: val('p_proyecto') || 'Monitorización de la comunidad energética',
+    fecha: val('p_fecha'), autor: val('p_autor'), registro: val('p_registro'),
+    orgNombre: val('p_org_nombre'), orgCif: val('p_org_cif'), orgDir: val('p_org_dir'), orgTel: val('p_org_tel'), orgCorreo: val('p_org_correo'),
+    destNombre: val('p_dest_nombre'), destCif: val('p_dest_cif'), destDir: val('p_dest_dir'),
+  };
+}
+const ALCANCE_TXT = n => `Monitorización de ${n.puntos} puntos de medida de ${n.socios} socios: medidores de energía Modbus con sus transformadores de intensidad, una pasarela por socio que envía los datos por su conexión a Internet al servidor de datos MQTT en la nube, y una plataforma de monitorización con un panel por socio y otro con el neto de la comunidad. Servicio en la nube y mantenimiento con cuota anual y compromiso de ${anios(n.anios)}.`;
+const CONDICIONES = 'Oferta orientativa válida 30 días desde la fecha indicada, sujeta a visita técnica para confirmar el estado de los cuadros y el tipo de suministro de cada socio. Se supone que cada socio dispone de acceso a Internet (Ethernet o Wi-Fi) junto al cuadro donde se instala la pasarela; la conexión y su coste corren por cuenta del socio. La cuota anual se factura por anticipado e incluye el servicio en la nube (servidor de datos, almacenamiento y copias de seguridad), el mantenimiento de la plataforma (actualizaciones, seguridad, monitorización y soporte) y la supervisión y sustitución en garantía de los equipos de medida. No incluye obra civil, canalizaciones nuevas ni adecuación de cuadros salvo que se indique. Precios de referencia que deben ajustarse a cada emplazamiento.';
+
+function informeHtml(alcance){
+  const d = datosProyecto(), calc = calcular();
+  let h = `<h3 style="border-top:none; margin-top:0;">Oferta — ${esc(d.proyecto)}</h3>
+    <p class="rmeta">Fecha: ${fmtFecha(d.fecha)}${d.autor?(' · Técnico: '+esc(d.autor)):''}${d.registro?(' · Ref. '+esc(d.registro)):''}</p>
+    <h3>Partes</h3>
+    <p><b>Presentada por:</b> ${esc(d.orgNombre)||'—'}${d.orgCif?(' (CIF '+esc(d.orgCif)+')'):''}<br>${esc(d.orgDir)||''}${d.orgTel?(' · '+esc(d.orgTel)):''}${d.orgCorreo?(' · '+esc(d.orgCorreo)):''}</p>
+    <p><b>Comunidad:</b> ${esc(d.destNombre)||'—'}${d.destCif?(' (CIF '+esc(d.destCif)+')'):''}<br>${esc(d.destDir)||''}</p>`;
+  if(alcance === 'comunidad'){
+    h += `<h3>Alcance</h3><p>${esc(ALCANCE_TXT({puntos:calc.puntos, socios:calc.socios.length, anios:calc.nAnios}))}</p>
+      <h3>Plataforma común</h3>${tablaLineas(calc.comun.puesta, ' (€)')}${tablaLineas(calc.comun.anual, ' (€/año)')}
+      <h3>Presupuesto por socio</h3>
+      <table class="data-table"><thead><tr><th>Socio</th><th class="num">Puntos</th><th class="num">Participación</th><th class="num">Inicial IVA incl.</th><th class="num">Cuota anual IVA incl.</th></tr></thead>
+      <tbody>${calc.socios.map(r=>`<tr><td>${esc(r.s.nombre||'(sin nombre)')}</td><td class="num">${r.s.puntos.length}</td><td class="num">${fmtPct(r.parte)}</td><td class="num">${fmtEUR(r.inicialIva)}</td><td class="num">${fmtEUR(r.cuotaAnualIva)}</td></tr>`).join('')}</tbody></table>
+      <h3>Resumen económico</h3>
+      <table class="data-table"><tbody>
+        <tr><td>Presupuesto inicial (sin IVA)</td><td class="num">${fmtEUR(calc.inicial)}</td></tr>
+        <tr><td><b>Presupuesto inicial, IVA incluido</b></td><td class="num"><b>${fmtEUR(calc.inicialIva)}</b></td></tr>
+        <tr><td><b>Cuota anual de la comunidad, IVA incluido</b></td><td class="num"><b>${fmtEUR(calc.cuotaAnualIva)}</b></td></tr>
+        <tr><td>Coste total en ${anios(calc.nAnios)}, IVA incluido</td><td class="num">${fmtEUR(calc.totalIva)}</td></tr>
+      </tbody></table>`;
+  } else {
+    const r = calc.socios.find(x=>x.s.id===alcance);
+    if(!r) return '<p>Socio no encontrado.</p>';
+    h += `<h3>Socio</h3><p><b>${esc(r.s.nombre||'(sin nombre)')}</b>${r.s.nif?(' · NIF '+esc(r.s.nif)):''}${r.s.email?(' · '+esc(r.s.email)):''}</p>
+      ${detalleSocioHtml(r, calc)}`;
+  }
+  h += `<h3>Condiciones</h3><p>${esc(CONDICIONES)}</p>`;
+  return h;
+}
+document.getElementById('btnGenerarInforme').addEventListener('click', ()=>{
+  document.getElementById('reportOutput').innerHTML = informeHtml(document.getElementById('i_alcance').value);
+  showToast('Vista previa actualizada.');
+});
+
+function descargarPDF(){
+  if(!window.jspdf){ alert('No se pudo cargar la librería de generación de PDF (jsPDF). Comprueba tu conexión e inténtalo de nuevo.'); return; }
+  const alcance = document.getElementById('i_alcance').value;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const marginX = 18, pageW = 210, pageH = 297, contentW = pageW - marginX*2;
+  let y = 20;
+  const AMBER = [214,132,26], TXT = [30,34,40], DIM = [110,115,124], LINE = [222,222,222];
+  function checkBreak(h){ if(y + h > pageH - 22){ doc.addPage(); y = 20; } }
+  function heading(text){
+    checkBreak(26);   // titulo + cabecera de tabla + una fila: sin titulos huerfanos
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...AMBER);
+    doc.text(pdfSafe(text).toUpperCase(), marginX, y);
+    doc.setDrawColor(...AMBER); doc.setLineWidth(0.3); doc.line(marginX, y+1.6, pageW-marginX, y+1.6);
+    y += 8; doc.setTextColor(...TXT);
+  }
+  function paragraph(text, size=9.5){
+    doc.setFont('helvetica','normal'); doc.setFontSize(size); doc.setTextColor(...TXT);
+    doc.splitTextToSize(pdfSafe(text), contentW).forEach(line=>{ checkBreak(6); doc.text(line, marginX, y); y+=5; });
+    y += 2;
+  }
+  function tabla(rows, cols){
+    const rowH = 7;
+    checkBreak(rowH+4);
+    doc.setFillColor(244,244,244); doc.rect(marginX, y-4.7, contentW, rowH, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.3); doc.setTextColor(...DIM);
+    let x = marginX;
+    cols.forEach(c=>{ doc.text(c.label, c.align==='right'? x+c.width-2 : x+2, y, c.align==='right'?{align:'right'}:undefined); x+=c.width; });
+    y += rowH;
+    rows.forEach(r=>{
+      doc.setFont('helvetica', r.negrita?'bold':'normal'); doc.setFontSize(9); doc.setTextColor(...TXT);
+      // cada celda en tantas lineas como necesite; la fila crece con la mas larga
+      const celdas = (r.celdas||r).map((val,i)=>doc.splitTextToSize(pdfSafe(val), cols[i].width-4));
+      const nl = Math.max(1, ...celdas.map(c=>c.length)), alto = rowH + (nl-1)*4.2;
+      checkBreak(alto+2);
+      x = marginX;
+      celdas.forEach((lineas,i)=>{
+        const c = cols[i];
+        lineas.forEach((linea, k)=>doc.text(linea, c.align==='right'? x+c.width-2 : x+2, y + k*4.2, c.align==='right'?{align:'right'}:undefined));
+        x += c.width;
+      });
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.15); doc.line(marginX, y+2+(nl-1)*4.2, pageW-marginX, y+2+(nl-1)*4.2);
+      y += alto;
+    });
+    y += 3;
+  }
+  const colsLineas = [
+    {label:'Concepto', width: contentW*0.56}, {label:'Cant.', width: contentW*0.10, align:'right'},
+    {label:'P. unit.', width: contentW*0.16, align:'right'}, {label:'Subtotal', width: contentW*0.18, align:'right'},
+  ];
+  const colsImporte = [{label:'Concepto', width: contentW*0.74}, {label:'Importe', width: contentW*0.26, align:'right'}];
+  const filas = (lineas)=>lineas.map(l=>[l.label, l.q.toLocaleString('es-ES',{maximumFractionDigits:2}), fmtEUR(l.p), fmtEUR(l.st)]);
+
+  const d = datosProyecto(), calc = calcular();
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...TXT);
+  doc.text('OFERTA ECONÓMICA', marginX, y); y+=7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...DIM);
+  const r = alcance === 'comunidad' ? null : calc.socios.find(x=>x.s.id===alcance);
+  doc.text(pdfSafe(r ? 'Puntos de medida del socio: '+(r.s.nombre||'(sin nombre)') : 'Monitorización de la comunidad energética'), marginX, y); y+=9;
+  doc.setFontSize(9.5); doc.setTextColor(...TXT);
+  doc.text(pdfSafe('Proyecto: '+(d.proyecto||'-')), marginX, y); y+=5;
+  doc.text('Fecha: '+fmtFecha(d.fecha), marginX, y); y+=5;
+  if(d.autor){ doc.text(pdfSafe('Técnico: '+d.autor+(d.registro?' ('+d.registro+')':'')), marginX, y); y+=5; }
+  y += 3;
+
+  heading('Partes');
+  paragraph('Presentada por: '+(d.orgNombre||'—')+(d.orgCif?' (CIF '+d.orgCif+')':'')+(d.orgDir?' · '+d.orgDir:'')+(d.orgTel?' · '+d.orgTel:'')+(d.orgCorreo?' · '+d.orgCorreo:''));
+  paragraph('Comunidad: '+(d.destNombre||'—')+(d.destCif?' (CIF '+d.destCif+')':'')+(d.destDir?' · '+d.destDir:''));
+
+  if(!r){
+    heading('Alcance');
+    paragraph(ALCANCE_TXT({puntos:calc.puntos, socios:calc.socios.length, anios:calc.nAnios}));
+    heading('Plataforma común: puesta en marcha');
+    tabla(filas(calc.comun.puesta), colsLineas);
+    heading('Plataforma común: cuota anual');
+    tabla(filas(calc.comun.anual), colsLineas);
+    heading('Presupuesto por socio (IVA incluido)');
+    tabla(calc.socios.map(x=>[x.s.nombre||'(sin nombre)', String(x.s.puntos.length), fmtPct(x.parte), fmtEUR(x.inicialIva), fmtEUR(x.cuotaAnualIva)+'/año']),
+          [{label:'Socio', width: contentW*0.36}, {label:'Puntos', width: contentW*0.10, align:'right'}, {label:'Particip.', width: contentW*0.14, align:'right'}, {label:'Inicial', width: contentW*0.19, align:'right'}, {label:'Cuota anual', width: contentW*0.21, align:'right'}]);
+    heading('Resumen económico');
+    tabla([
+      ['Presupuesto inicial (sin IVA)', fmtEUR(calc.inicial)],
+      {celdas:['Presupuesto inicial, IVA incluido', fmtEUR(calc.inicialIva)], negrita:true},
+      {celdas:['Cuota anual de la comunidad, IVA incluido', fmtEUR(calc.cuotaAnualIva)], negrita:true},
+      ['Coste total en '+anios(calc.nAnios)+', IVA incluido', fmtEUR(calc.totalIva)],
+    ], colsImporte);
+  } else {
+    heading('Socio');
+    paragraph((r.s.nombre||'(sin nombre)')+(r.s.nif?' · NIF '+r.s.nif:'')+(r.s.email?' · '+r.s.email:''));
+    heading('Puntos de medida');
+    tabla(r.medidores.map(({pt, m})=>[pt.nombre||'—', ROLES[pt.rol], (pt.fases==='mono'?'Mono':'Tri')+' · '+pt.amperios+' A', MODELOS[m.modelo]+(m.ti?' · '+m.ti+' TI':'')+(pt.soc?' · SoC':'')]),
+          [{label:'Punto', width: contentW*0.32}, {label:'Tipo', width: contentW*0.24}, {label:'Suministro', width: contentW*0.20}, {label:'Medidor', width: contentW*0.24}]);
+    heading('Presupuesto inicial: hardware de medida'); tabla(filas(r.hw), colsLineas);
+    heading('Presupuesto inicial: instalación y puesta en marcha');
+    tabla([...filas(r.inst), ['Participación en la puesta en marcha de la plataforma ('+fmtPct(r.parte)+')', '1', fmtEUR(r.puestaComun), fmtEUR(r.puestaComun)]], colsLineas);
+    heading('Cuota anual: servicio en la nube y mantenimiento');
+    tabla([
+      ['Participación en el servicio común ('+fmtPct(r.parte)+' de '+fmtEUR(calc.comun.totalAnual)+'/año)', fmtEUR(r.anualComun)+'/año'],
+      ...r.mn.map(l=>[l.label+' x '+l.q, fmtEUR(l.st)+'/año']),
+    ], colsImporte);
+    heading('Resumen económico');
+    tabla([
+      ['Presupuesto inicial (sin IVA)', fmtEUR(r.inicial)],
+      {celdas:['Presupuesto inicial, IVA incluido', fmtEUR(r.inicialIva)], negrita:true},
+      {celdas:['Cuota anual, IVA incluido', fmtEUR(r.cuotaAnualIva)], negrita:true},
+      ['Total en '+anios(calc.nAnios)+', IVA incluido', fmtEUR(r.totalIva)],
+    ], colsImporte);
+  }
+  heading('Condiciones');
+  paragraph(CONDICIONES);
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=1;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DIM);
+    doc.text('Página '+p+' / '+totalPages, pageW/2, pageH-12, {align:'center'});
+  }
+  const base = (r ? (r.s.nombre||'socio') : (d.proyecto||'comunidad')).toString().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('oferta-'+base+'.pdf');
+  showToast('Oferta en PDF generada y descargada.');
+}
+document.getElementById('btnPdf').addEventListener('click', descargarPDF);
+
+const pFechaInput = document.getElementById('p_fecha');
+if(pFechaInput && !pFechaInput.value) pFechaInput.value = new Date().toISOString().slice(0,10);
+
+// ===================== GUARDADO DEL ESTADO =====================
+// Socios, puntos, precios y opciones se guardan en la memoria compartida VatiaCo
+// (clave de este documento), junto a los datos del proyecto del resto del blog.
+const DOC_KEY = 'presupuesto_puntos_medida';
+function guardarEstado(){
+  try{
+    const v = JSON.parse(localStorage.getItem('VatiaCo')||'{}');
+    v[DOC_KEY] = {estado, opciones: Object.fromEntries(OPCIONES.map(id=>[id, document.getElementById(id).value]))};
+    localStorage.setItem('VatiaCo', JSON.stringify(v));
+  }catch(e){}
+}
+function cargarEstado(){
+  try{
+    const g = (JSON.parse(localStorage.getItem('VatiaCo')||'{}'))[DOC_KEY];
+    if(g && g.estado){
+      // solo precios de conceptos que siguen en el catalogo
+      const precios = {...PRECIOS_REF};
+      Object.entries(g.estado.precios||{}).forEach(([k, v])=>{ if(k in PRECIOS_REF) precios[k] = v; });
+      estado = {precios, socios: (g.estado.socios||[]).map(s=>({id:s.id, nombre:s.nombre||'', nif:s.nif||'', email:s.email||'', puntos:s.puntos||[]}))};
+      Object.entries(g.opciones||{}).forEach(([id, val])=>{ const el = document.getElementById(id); if(el && val!=null && val!=='') el.value = val; });
+      if(!document.getElementById('b_anios').value) document.getElementById('b_anios').value = '5';
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+if(!cargarEstado()) estado.socios = ejemplo();
+pintarCatalogo();
+todo(true);
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
+     compartida entre todos los documentos de esta familia a través de localStorage,
+     igual que en las demás calculadoras del blog. El resto (socios, puntos, precios)
+     lo guarda el propio documento en VatiaCo["presupuesto_puntos_medida"]. -->
+<script>
+(function(){
+  var LS_KEY = 'VatiaCo';
+
+  function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function guardarVatiaco(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+
+  function valorCampo(el){ return el.type==='checkbox' ? el.checked : el.value; }
+  function fijarCampo(el, val){ if(el.type==='checkbox') el.checked = !!val; else el.value = val; }
+
+  var TIPOS_IGNORADOS = {file:1, button:1, submit:1, reset:1, image:1};
+
+  function sincronizarCampos(campos, leerContenedor, obtenerContenedorParaGuardar){
+    campos.forEach(function(el){
+      if(!el.id || TIPOS_IGNORADOS[el.type]) return;
+      var guardado = leerContenedor(leerVatiaco());
+      if(guardado && guardado[el.id]!==undefined && guardado[el.id]!==null && guardado[el.id]!==''){
+        fijarCampo(el, guardado[el.id]);
+        el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input', {bubbles:true}));
+      } else {
+        var v0 = leerVatiaco();
+        var c0 = obtenerContenedorParaGuardar(v0);
+        c0[el.id] = valorCampo(el);
+        guardarVatiaco(v0);
+      }
+      var evento = (el.tagName==='SELECT' || el.type==='checkbox' || el.type==='radio') ? 'change' : 'input';
+      el.addEventListener(evento, function(){
+        var v = leerVatiaco();
+        var c = obtenerContenedorParaGuardar(v);
+        c[el.id] = valorCampo(el);
+        guardarVatiaco(v);
+      });
+    });
+  }
+
+  function instalarBotonesExportarImportar(){
+    var barra = document.createElement('div');
+    barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
+    function crearBoton(texto, titulo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = texto; b.title = titulo;
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      return b;
+    }
+    var btnExp = crearBoton('⬇', 'Exportar los datos (JSON)');
+    btnExp.addEventListener('click', function(){
+      var blob = new Blob([JSON.stringify(leerVatiaco(), null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'VatiaCo.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    var btnImp = crearBoton('⬆', 'Importar datos (JSON)');
+    var inputFile = document.createElement('input');
+    inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
+    inputFile.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        try{ guardarVatiaco(JSON.parse(ev.target.result)); location.reload(); }
+        catch(err){ alert('El archivo no es un JSON válido.'); }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    btnImp.addEventListener('click', function(){ inputFile.click(); });
+
+    barra.appendChild(btnExp);
+    barra.appendChild(btnImp);
+    barra.appendChild(inputFile);
+    document.body.appendChild(barra);
+  }
+
+  function inicializarVatiaco(){
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]')),
+      function(vv){ return vv.proyecto; },
+      function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
+    );
+    instalarBotonesExportarImportar();
+  }
+
+  setTimeout(inicializarVatiaco, 0);
+})();
+</script>
+</body>
+</html>

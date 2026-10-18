@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-10-18T11:08:27.971Z",
+  "videos": [
+    {
+      "file": "v1.webm",
+      "sizeBytes": 3362557,
+      "width": 386,
+      "height": 768,
+      "duration": 48
+    },
+    {
+      "file": "v12.webm",
+      "sizeBytes": 3231063,
+      "width": 386,
+      "height": 768,
+      "duration": 29
+    },
+    {
+      "file": "v13.webm",
+      "sizeBytes": 570780,
+      "width": 876,
+      "height": 790,
+      "duration": 14
+    },
+    {
+      "file": "v2.webm",
+      "sizeBytes": 909553,
+      "width": 376,
+      "height": 728,
+      "duration": 38
+    }
+  ]
+}

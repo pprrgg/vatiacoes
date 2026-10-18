@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estudio del Recurso Eólico · España</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:820px;}
+  section .lede{color:var(--text-dim); max-width:700px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:820px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:660px; font-size:15.5px;}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:150px; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--amber);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .field select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238FA3B8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center;}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc352;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.small{padding:7px 12px; font-size:11.5px;}
+  .btn:disabled{opacity:0.45; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap;}
+
+  .calculator{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:16px 0;}
+  .calc-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:16px;}
+  .result-chip{background:var(--panel2); border:1px solid var(--amber); border-radius:var(--radius); padding:16px; text-align:center;}
+  .result-chip .v{font-family:var(--font-mono); font-size:22px; color:var(--amber);}
+  .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+  .result-chip.good{border-color:var(--green);}
+  .result-chip.good .v{color:var(--green);}
+
+  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
+  .example-table{width:100%; font-size:12px; border-collapse:collapse;}
+  .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
+  .example-table .label{color:var(--text-dim); width:45%;}
+  .example-table .value{color:var(--text); font-family:var(--font-mono);}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 9px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:8px 9px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+
+  .tooltip-text{font-size:11px; color:var(--text-dimmer); margin-top:4px;}
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.05em; margin:20px 0 10px;}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--amber); text-decoration:none;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:11px; padding:4px 11px; border-radius:var(--radius); text-transform:uppercase; letter-spacing:0.05em; border:1px solid var(--line);}
+  .badge.good{background:rgba(22,163,74,0.15); color:var(--green); border-color:var(--green);}
+  .badge.mid{background:rgba(255,176,32,0.15); color:var(--amber); border-color:var(--amber);}
+  .badge.bad{background:rgba(220,38,38,0.15); color:var(--red); border-color:var(--red);}
+  .badge.ok{color:var(--green); border-color:var(--green);}
+  .badge.err{color:var(--red); border-color:var(--red);}
+  .badge.pending{color:var(--amber); border-color:var(--amber);}
+  .spinner{display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--cyan); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:4px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .quickpick{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+  .quickpick button{font-family:var(--font-mono); font-size:11px; padding:6px 11px; border-radius:var(--radius); border:1px solid var(--line); background:var(--panel2); color:var(--text-dim); cursor:pointer;}
+  .quickpick button:hover{border-color:var(--amber); color:var(--amber);}
+
+  .report-sheet{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:36px 40px;}
+  .report-sheet h3{font-size:16px; color:var(--amber); margin:26px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .report-sheet h3:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .report-sheet p{font-size:13px; color:var(--text-dim); margin-bottom:8px;}
+  .report-sheet .rmeta{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+
+  .chart-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:12px 0;}
+  .chart-wrap svg{width:100%; height:auto; display:block;}
+
+  /* ---------- mapa de ubicación (Leaflet + OSM) ---------- */
+  #mapaUbicacion{height:360px; border-radius:var(--radius); border:1px solid var(--line); overflow:hidden; margin-bottom:16px; background:var(--panel2);}
+  .leaflet-popup-content-wrapper{background:var(--panel); color:var(--text); font-family:var(--font-body); border:1px solid var(--line);}
+  .leaflet-popup-tip{background:var(--panel);}
+  .leaflet-popup-content{font-size:12.5px; font-family:var(--font-mono);}
+  .legend-row{display:flex; flex-wrap:wrap; gap:14px; margin-top:8px; font-size:11px; color:var(--text-dim);}
+  .legend-row .li{display:flex; align-items:center; gap:6px;}
+  .legend-row .sw{width:10px; height:10px; border-radius:2px; flex-shrink:0;}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    .calc-row{grid-template-columns:1fr;}
+    .report-sheet{padding:24px 20px;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+    <div class="tabbar-brand">RECURSO EÓLICO</div>
+    <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <nav class="tabbar" id="sidenav">
+      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
+      <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
+      <a href="#marco" data-sec="marco"><span class="tag">02</span>Marco y metodología</a>
+      <a href="#ubicacion" data-sec="ubicacion"><span class="tag">03</span>Ubicación y datos PVGIS</a>
+      <a href="#estadistico" data-sec="estadistico"><span class="tag">04</span>Análisis estadístico</a>
+      <a href="#perfil" data-sec="perfil"><span class="tag">05</span>Distribución y perfil de velocidades</a>
+      <a href="#weibull" data-sec="weibull"><span class="tag">06</span>Weibull y energía del aerogenerador</a>
+      <a href="#informe" data-sec="informe"><span class="tag">07</span>Informe final</a>
+    </nav>
+    <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var wrap = document.getElementById('tabbarWrap');
+    var bar = document.getElementById('sidenav');
+    var btnL = document.getElementById('tabScrollLeft');
+    var btnR = document.getElementById('tabScrollRight');
+    function update(){
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+      wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+    }
+    btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+    btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    setTimeout(update, 0);
+  })();
+  </script>
+
+  <main>
+
+    <!-- SECCIÓN 00: RESUMEN -->
+    <section id="resumen">
+      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
+      <h2>Estudio del recurso eólico en cualquier punto de la península, con datos reales de PVGIS.</h2>
+      <p class="lede">Herramienta interactiva de análisis estadístico del viento, inspirada en un informe técnico académico tipo "Estudio del Recurso Eólico" (Master en Blog de un ingeniero jubilado Industrial, UPM): análisis anual, estacional y diurno/nocturno, histograma de velocidades, rosa de los vientos, extrapolación con la altura, ajuste de la distribución de Weibull y cálculo de energía y factor de capacidad de un aerogenerador. En vez de un fichero de datos descargado a mano, esta herramienta llama en tiempo real a la API TMY (año meteorológico típico) de <b>PVGIS</b> para cualquier coordenada de España, y amplía la teoría con el manual <b>Energía Eólica (IDAE, 2006)</b>.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del dato horario <em>de viento</em> a la energía <em>del aerogenerador</em>.</h1>
+            <p class="sub">Introduce una coordenada, llama a PVGIS para obtener un año meteorológico típico (8.760 horas de velocidad y dirección del viento), y la herramienta calcula automáticamente las estadísticas, el ajuste de Weibull, la extrapolación a la altura de buje y la energía anual estimada de un aerogenerador, con informe final descargable.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">PVGIS TMY</div><div class="l">año meteorológico típico, 8.760 h de viento a 10 m</div></div>
+          <div class="stat"><div class="v">Weibull k · C</div><div class="l">ajuste por linealización (mínimos cuadrados)</div></div>
+          <div class="stat"><div class="v">Ley logarítmica</div><div class="l">extrapolación de velocidad a la altura de buje</div></div>
+          <div class="stat"><div class="v">Energía · Factor de capacidad</div><div class="l">densidad de Weibull × curva de potencia</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
+      <h2 style="font-size:18px;">Un flujo de trabajo, cinco pasos.</h2>
+      <div class="grid4">
+        <div class="comp-card"><h4>01 · Marco teórico</h4><p>Repasa la aerodinámica básica (límite de Betz), la curva de potencia, la ley de variación con la altura y el método de Weibull, con la guía IDAE de energía eólica.</p></div>
+        <div class="comp-card"><h4>02 · Ubicación</h4><p>Introduce latitud/longitud (o elige un emplazamiento de ejemplo) y llama a la API TMY de PVGIS para obtener un año típico de viento.</p></div>
+        <div class="comp-card"><h4>03 · Estadística</h4><p>Consulta la velocidad media y varianza anual, mensual y por franja horaria (diurna/nocturna), igual que en un informe de recurso eólico.</p></div>
+        <div class="comp-card"><h4>04 · Distribución</h4><p>Analiza el histograma, la rosa de los vientos y el perfil de velocidades extrapolado a la altura de buje según la rugosidad del terreno.</p></div>
+      </div>
+      <div class="grid2" style="margin-top:16px;">
+        <div class="comp-card"><h4>05 · Weibull y energía</h4><p>Ajusta k y C, elige un aerogenerador (tabla genérica o modelo cúbico) y obtén la energía anual y el factor de capacidad estimados.</p></div>
+        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera el informe con datos, gráficos, tablas y conclusiones de viabilidad, listo para exportar a PDF con índice y glosario.</p></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 01: DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">01 · Datos del proyecto</div>
+      <h2>¿Para quién y por quién se realiza este estudio?</h2>
+      <p class="lede">Estos datos aparecen en la portada y en los encabezados del informe en PDF (sección 07).</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / emplazamiento estudiado</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto / emplazamiento</label><input type="text" id="p_proyecto" value="Estudio del recurso eólico"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Técnico / autor del estudio</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente del estudio</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección del emplazamiento</label><input type="text" id="p_dest_dir" placeholder="Dirección o paraje del emplazamiento"></div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
+    </section>
+
+    <!-- SECCIÓN 02: MARCO Y METODOLOGÍA -->
+    <section id="marco">
+      <div class="eyebrow kicker">02 · Marco y metodología</div>
+      <h2>Fundamentos de energía eólica y del análisis estadístico del recurso.</h2>
+      <p class="lede">Esta herramienta amplía la teoría con el manual <b>Energía Eólica</b> del IDAE (colección Manuales de Energías Renovables, 2006) y con el <i>European Wind Atlas</i>, y aplica el mismo método estadístico de un informe técnico de recurso eólico: análisis descriptivo, extrapolación con la altura y ajuste de Weibull. No sustituye a una campaña de medición in situ (mástil meteorológico) ni a un estudio de viabilidad firmado por un técnico competente.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Componentes de un aerogenerador (IDAE, Energía Eólica)</div>
+      <div class="grid3" id="componentesGrid"></div>
+
+      <div class="fieldset-title">Aerodinámica: el límite de Betz</div>
+      <div class="theory-card">
+        <p>La potencia máxima que puede extraerse teóricamente del viento con un rotor viene limitada por el <b>límite de Betz</b>: ningún aerogenerador puede aprovechar más del 59,3&nbsp;% de la energía cinética del viento que atraviesa el área barrida por el rotor.</p>
+        <div class="formula-box">
+          <div class="f">P = ½ · ρ · A · v³ · Cp&nbsp;&nbsp;&nbsp;&nbsp;Cp,max (Betz) = 16/27 ≈ 0,593</div>
+        </div>
+        <p>En la práctica, los aerogeneradores comerciales alcanzan coeficientes de potencia (Cp) de entre 0,35 y 0,45, por las pérdidas aerodinámicas, mecánicas y eléctricas del conjunto rotor-tren de potencia-generador.</p>
+      </div>
+
+      <div class="fieldset-title">La curva de potencia del aerogenerador</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>v &lt; v_cut-in</h4><p>Por debajo de la velocidad de conexión (típicamente 3-4 m/s) el aerogenerador no produce energía: el par disponible no vence las pérdidas.</p></div>
+        <div class="comp-card"><h4>v_cut-in ≤ v &lt; v_nominal</h4><p>Tramo de producción creciente (aprox. cúbico con la velocidad) hasta alcanzar la potencia nominal, normalmente entre 11 y 15 m/s.</p></div>
+        <div class="comp-card"><h4>v_nominal ≤ v &lt; v_cut-out</h4><p>El sistema de control (paso de pala o pérdida aerodinámica) limita la potencia al valor nominal, hasta la velocidad de corte por seguridad (20-25 m/s).</p></div>
+      </div>
+
+      <div class="fieldset-title">Ley de variación de la velocidad con la altura</div>
+      <p class="lede" style="margin-bottom:16px;">La velocidad del viento aumenta con la altura por el rozamiento con la superficie terrestre (capa límite atmosférica). Esta herramienta usa la <b>ley logarítmica</b> (la misma del informe de referencia), en función de la longitud de rugosidad z0 del terreno:</p>
+      <div class="formula-box">
+        <div class="f">v(h) = v_ref · ln(h / z0) / ln(h_ref / z0)</div>
+      </div>
+      <p class="tooltip-text">Una alternativa habitual en Blog de un ingeniero jubilado eólica es la <b>ley potencial</b>, v(h) = v_ref·(h/h_ref)^α, con α típico entre 0,10 (terreno muy liso) y 0,40 (terreno muy rugoso o urbano). Esta herramienta usa la ley logarítmica por coherencia con el informe de referencia, pero ambos métodos dan resultados similares para alturas de buje habituales.</p>
+
+      <div class="fieldset-title">Clases y longitudes de rugosidad (European Wind Atlas)</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="tablaRugosidad">
+          <thead><tr><th>Clase</th><th>z0 (m)</th><th>Tipo de paisaje</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="tooltip-text" style="margin-top:10px;">Fuente: <i>European Wind Atlas</i>, reproducida también en manuales técnicos del IDAE. Selecciona la clase más parecida a tu emplazamiento en la sección 05.</p>
+
+      <div class="fieldset-title">Distribución de Weibull</div>
+      <div class="theory-card">
+        <p>La velocidad del viento en un emplazamiento se modela habitualmente con la <b>distribución de Weibull</b> de dos parámetros: k (factor de forma) y C (factor de escala, próximo a la velocidad media).</p>
+        <div class="formula-box">
+          <div class="f">f(v) = (k/C)·(v/C)^(k-1)·e^(-(v/C)^k)</div>
+        </div>
+        <p>Esta herramienta estima k y C mediante <b>linealización y regresión por mínimos cuadrados</b>: se ordenan las velocidades, se calcula su frecuencia acumulada empírica F(v), y se ajusta la recta</p>
+        <div class="formula-box">
+          <div class="f">ln(−ln(1−F)) = k·ln(v) − k·ln(C)</div>
+        </div>
+        <p>donde la pendiente de la recta es k y el término independiente permite despejar C. En terrenos abiertos, k suele estar entre 1,5 y 2,5; valores más altos indican una distribución de velocidades más uniforme.</p>
+      </div>
+
+      <div class="fieldset-title">Energía anual y factor de capacidad</div>
+      <div class="theory-card">
+        <p>La energía anual esperada se calcula integrando el producto de la densidad de probabilidad de Weibull por la curva de potencia del aerogenerador, a lo largo de todo el rango de velocidades:</p>
+        <div class="formula-box">
+          <div class="f">E_anual ≈ 8.760 h · ∫ f(v) · P(v) dv</div>
+        </div>
+        <p>El <b>factor de capacidad</b> (CF) es el cociente entre la energía realmente producida y la que se produciría funcionando siempre a potencia nominal:</p>
+        <div class="formula-box">
+          <div class="f">CF = E_anual / (P_nominal · 8.760 h)</div>
+        </div>
+        <p class="tooltip-text">Referencias orientativas: CF &gt; 35&nbsp;% emplazamiento excelente · 25-35&nbsp;% bueno · 15-25&nbsp;% moderado · &lt; 15&nbsp;% poco favorable para eólica a gran escala.</p>
+      </div>
+
+      <div class="fieldset-title">Limitaciones del modelo</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>Año típico, no serie real</h4><p>PVGIS TMY compone un año "típico" mes a mes a partir de varios años de reanálisis; no es la medición continua de un mástil en el emplazamiento.</p></div>
+        <div class="comp-card"><h4>Resolución del reanálisis</h4><p>Los datos de viento proceden de un modelo meteorológico (ERA5), con una resolución espacial de varias decenas de km; el microclima local puede diferir.</p></div>
+        <div class="comp-card"><h4>Para orientar, no para certificar</h4><p>Un proyecto real de parque eólico exige una campaña de medición in situ de al menos 12 meses con mástil meteorológico certificado.</p></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 03: UBICACIÓN Y DATOS PVGIS -->
+    <section id="ubicacion">
+      <div class="eyebrow kicker">03 · Ubicación y datos PVGIS</div>
+      <h2>Introduce una coordenada y obtén un año meteorológico típico de viento.</h2>
+      <p class="lede">Esta calculadora llama en tiempo real a la API <code class="inline">tmy</code> de PVGIS (Comisión Europea, Joint Research Centre), que devuelve 8.760 horas de un año meteorológico típico con velocidad (<code class="inline">WS10m</code>) y dirección (<code class="inline">WD10m</code>) del viento a 10 m de altura, entre otras variables.</p>
+
+      <div class="quickpick" id="quickpickZonas"></div>
+
+      <div class="calculator">
+        <p class="tooltip-text" style="margin-top:0; margin-bottom:10px;">Haz clic en el mapa o arrastra el marcador para fijar la ubicación; los campos de latitud/longitud se actualizan solos (y también puedes escribirlos directamente).</p>
+        <div id="mapaUbicacion"></div>
+        <div class="calc-row">
+          <div class="field"><label>Latitud</label><input type="number" id="u_lat" value="36.0014" min="-90" max="90" step="0.0001"></div>
+          <div class="field"><label>Longitud</label><input type="number" id="u_lng" value="-5.6096" min="-180" max="180" step="0.0001"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnObtenerPvgis">⟳ Obtener datos PVGIS (TMY)</button>
+          <span id="pvgisBadge"></span>
+        </div>
+        <div id="pvgisResultado" style="margin-top:16px;"></div>
+      </div>
+
+      <div class="calculator" style="margin-top:16px;">
+        <div class="subsection-title" style="margin-top:0;">Vía manual — descarga y carga el archivo (recomendada)</div>
+        <p class="tooltip-text" style="margin-bottom:12px;">La API TMY devuelve más de 1&nbsp;MB de datos (8.760 horas), y los proxies CORS gratuitos fallan con frecuencia para respuestas de este tamaño. Esta vía no depende de ningún proxy: descarga el JSON directamente desde PVGIS con una navegación normal del navegador (sin problema de CORS) y cárgalo aquí.</p>
+        <ol style="font-size:12.5px; color:var(--text-dim); padding-left:18px; margin-bottom:14px;">
+          <li>Pulsa "Abrir URL de PVGIS" (usa la latitud/longitud de arriba).</li>
+          <li>En esa pestaña, guarda la página como archivo con <code class="inline">Ctrl+S</code> / <code class="inline">Cmd+S</code> (tipo "JSON" o "Todos los archivos").</li>
+          <li>Vuelve aquí y pulsa "Cargar archivo JSON descargado", o selecciona todo el texto de esa pestaña (Ctrl+A, Ctrl+C) y pégalo abajo.</li>
+        </ol>
+        <div class="btn-row" style="margin-bottom:14px;">
+          <button class="btn ghost" type="button" id="btnAbrirUrlManual">↗ Abrir URL de PVGIS en pestaña nueva</button>
+          <button class="btn primary" type="button" id="btnCargarArchivo">📁 Cargar archivo JSON descargado</button>
+          <input type="file" id="inputArchivoJson" accept=".json,application/json" style="display:none;">
+        </div>
+        <textarea id="pegadoTmy" placeholder="…o pega aquí el JSON copiado de PVGIS" style="width:100%; min-height:90px; background:var(--panel2); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:11.5px; padding:8px; border-radius:2px; resize:vertical; box-sizing:border-box;"></textarea>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn ghost" type="button" onclick="usarJsonPegado()">Usar JSON pegado</button>
+        </div>
+      </div>
+
+      <p style="font-size:12px; color:var(--text-dimmer); margin-top:20px;">Referencias: <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener" style="color:var(--cyan);">PVGIS — Comisión Europea, Joint Research Centre</a>. La API TMY no siempre envía cabeceras CORS; la llamada automática prueba primero directo y luego varios proxies CORS públicos en cadena, pero para una respuesta de este tamaño pueden fallar o dar timeout. Si eso ocurre, usa la vía manual de arriba — no depende de ningún proxy y siempre funciona.</p>
+    </section>
+
+    <!-- SECCIÓN 04: ANÁLISIS ESTADÍSTICO -->
+    <section id="estadistico">
+      <div class="eyebrow kicker">04 · Análisis estadístico</div>
+      <h2>Velocidad media y varianza: anual, mensual y por franja horaria.</h2>
+      <p class="lede">Se calcula automáticamente en cuanto se obtienen datos de PVGIS en la sección 03. Igual que en un informe de recurso eólico: análisis anual, análisis estacional (mensual) y análisis estacional por periodo (diurno 10:00-18:00 / nocturno 22:00-06:00).</p>
+      <div id="est_aviso" class="tooltip-text"></div>
+      <div id="est_contenido" style="display:none;">
+        <div class="grid4" id="est_chips"></div>
+
+        <div class="subsection-title">Velocidad media y varianza por mes</div>
+        <div class="chart-wrap" id="est_chart_mensual"></div>
+        <div style="overflow-x:auto;"><table class="data-table" id="est_tabla_mensual"><thead><tr><th>Mes</th><th>Velocidad media (m/s)</th><th>Varianza</th></tr></thead><tbody></tbody></table></div>
+
+        <div class="subsection-title">Velocidad media y varianza por mes (periodo diurno y nocturno)</div>
+        <div class="chart-wrap" id="est_chart_periodo"></div>
+        <div style="overflow-x:auto;"><table class="data-table" id="est_tabla_periodo"><thead><tr><th>Mes</th><th>Media diurna</th><th>Var diurna</th><th>Media nocturna</th><th>Var nocturna</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 05: DISTRIBUCIÓN Y PERFIL DE VELOCIDADES -->
+    <section id="perfil">
+      <div class="eyebrow kicker">05 · Distribución y perfil de velocidades</div>
+      <h2>Histograma, rosa de los vientos y extrapolación a la altura de buje.</h2>
+      <p class="lede">A partir del año típico obtenido en la sección 03, se representa la distribución de velocidades a 10 m, la rosa de los vientos por dirección, y el perfil de velocidades con la altura según la clase de rugosidad del terreno.</p>
+      <div id="perfil_aviso" class="tooltip-text"></div>
+      <div id="perfil_contenido" style="display:none;">
+
+        <div class="subsection-title">Histograma de velocidades a 10 m</div>
+        <div class="chart-wrap" id="perfil_hist10"></div>
+
+        <div class="subsection-title">Rosa de los vientos</div>
+        <div class="chart-wrap" id="perfil_rosa" style="max-width:420px; margin-left:auto; margin-right:auto;"></div>
+        <div class="legend-row">
+          <div class="li"><span class="sw" style="background:#37CFFF;"></span>Velocidades bajas (&lt; 5 m/s)</div>
+          <div class="li"><span class="sw" style="background:#16A34A;"></span>Velocidades medias (5-10 m/s)</div>
+          <div class="li"><span class="sw" style="background:#DC2626;"></span>Velocidades altas (&gt; 10 m/s)</div>
+        </div>
+
+        <div class="fieldset-title">Extrapolación a la altura de buje</div>
+        <div class="calc-row">
+          <div class="field"><label>Clase de rugosidad del terreno</label><select id="pf_rugosidad"></select></div>
+          <div class="field"><label>Altura de buje (m)</label><input type="number" id="pf_hbuje" value="100" min="10" max="200" step="5"></div>
+        </div>
+        <button class="btn primary" onclick="calcularPerfil()" style="margin-bottom:12px;">Calcular perfil y extrapolar</button>
+        <div id="pf_resultado"></div>
+
+        <div class="subsection-title">Perfil de velocidades con la altura</div>
+        <div class="chart-wrap" id="perfil_chart_altura"></div>
+
+        <div class="subsection-title">Histograma de velocidades a la altura de buje</div>
+        <div class="chart-wrap" id="perfil_hist_buje"></div>
+
+        <div class="subsection-title">Histograma de frecuencia acumulada a la altura de buje</div>
+        <div class="chart-wrap" id="perfil_hist_acum"></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 06: WEIBULL Y ENERGÍA -->
+    <section id="weibull">
+      <div class="eyebrow kicker">06 · Weibull y energía del aerogenerador</div>
+      <h2>Ajuste de Weibull, curva de potencia y energía anual estimada.</h2>
+      <p class="lede">Ajusta la distribución de Weibull a la velocidad extrapolada a la altura de buje (sección 05), elige un aerogenerador y obtén la energía anual y el factor de capacidad estimados.</p>
+      <div id="wb_aviso" class="tooltip-text"></div>
+      <div id="wb_contenido" style="display:none;">
+
+        <div class="subsection-title">Ajuste de la distribución de Weibull</div>
+        <div class="grid3" id="wb_chips"></div>
+        <div class="chart-wrap" id="wb_chart_ajuste"></div>
+        <div class="subsection-title">Comparación con el histograma de velocidades</div>
+        <div class="chart-wrap" id="wb_chart_densidad"></div>
+
+        <div class="fieldset-title">Aerogenerador</div>
+        <div class="field">
+          <label>Modelo de aerogenerador</label>
+          <select id="wb_turbina"></select>
+        </div>
+        <div class="calc-row" id="wb_turbina_custom" style="display:none;">
+          <div class="field"><label>Potencia nominal (kW)</label><input type="number" id="wb_prated" value="2000" min="1" max="20000" step="10"></div>
+          <div class="field"><label>Velocidad de conexión, v_cut-in (m/s)</label><input type="number" id="wb_cutin" value="3" min="1" max="10" step="0.5"></div>
+          <div class="field"><label>Velocidad nominal (m/s)</label><input type="number" id="wb_rated" value="12" min="5" max="20" step="0.5"></div>
+          <div class="field"><label>Velocidad de corte, v_cut-out (m/s)</label><input type="number" id="wb_cutout" value="25" min="15" max="35" step="0.5"></div>
+        </div>
+        <button class="btn primary" onclick="calcularEnergia()" style="margin-bottom:12px;">Calcular energía anual</button>
+
+        <div id="wb_energia_resultado"></div>
+        <div class="chart-wrap" id="wb_chart_energia"></div>
+
+        <div class="fieldset-title">Viabilidad orientativa del emplazamiento</div>
+        <p id="wb_viabilidad_texto" class="tooltip-text"></p>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 07: INFORME FINAL -->
+    <section id="informe">
+      <div class="eyebrow kicker">07 · Informe final</div>
+      <h2>Informe del estudio de recurso eólico, generado a partir de tus datos.</h2>
+      <p class="lede">Estructura orientativa: datos generales, metodología, ubicación y fuente de datos, análisis estadístico, distribución y perfil de velocidades, ajuste de Weibull, energía y conclusiones de viabilidad. Rellena las secciones 01 y 03 (y calcula 05 y 06) antes de generar el informe.</p>
+
+      <div class="btn-row" style="margin-bottom:24px;">
+        <button class="btn primary" onclick="generarInforme()">Generar / actualizar vista previa</button>
+        <button class="btn ghost" id="btnPdf">&#8681; Descargar informe en PDF</button>
+      </div>
+
+      <div class="report-sheet" id="reportOutput">
+        <p class="tooltip-text">Pulsa "Generar / actualizar vista previa" para componer el documento con los datos introducidos, y "Descargar informe en PDF" para obtener el informe descargable.</p>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta orientativa de estudio de recurso eólico, basada en llamadas en tiempo real a la API TMY de <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">PVGIS</a> (Comisión Europea, Joint Research Centre) y ampliada con el manual "Energía Eólica" del IDAE (2006) y el European Wind Atlas. Los resultados dependen de la disponibilidad y precisión de los datos de PVGIS para cada ubicación; no sustituyen a una campaña de medición in situ ni a un estudio de viabilidad firmado por un técnico competente. Integrado en el blog de VatiaCo. Última actualización: 2026.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'resumen';
+
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+  // El mapa Leaflet se crea mientras su pestaña esta oculta (display:none), asi que
+  // calcula mal su tamano hasta que se le pide que lo recalcule una vez visible.
+  if(id==='ubicacion' && window.mapaUbicacionInstancia){
+    setTimeout(()=>window.mapaUbicacionInstancia.invalidateSize(), 60);
+  }
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{ e.preventDefault(); irASeccion(link.getAttribute('href')); });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+// ===================== UTILIDADES =====================
+function fmtNum(n, d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 3200); }
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function media(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function varianza(arr){ if(!arr.length) return 0; const m=media(arr); return arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length; }
+
+// ===================== DATOS DE REFERENCIA =====================
+const ZONAS_EJEMPLO = [
+  {nombre:'Tarifa / Estrecho de Gibraltar', lat:36.0014, lng:-5.6096},
+  {nombre:'Estaca de Bares (Galicia)', lat:43.7871, lng:-7.6852},
+  {nombre:'Cabo de Gata (Almería)', lat:36.7236, lng:-2.1924},
+  {nombre:'Empordà (Girona)', lat:42.2833, lng:3.0833},
+  {nombre:'Sierra del Perdón (Navarra)', lat:42.6608, lng:-1.6474},
+  {nombre:'Meseta de Soria', lat:41.7666, lng:-2.4790},
+];
+
+const RUGOSIDAD = [
+  {clase:0, z0:0.0002, desc:'Superficies de agua: mares y lagos'},
+  {clase:0.5, z0:0.0024, desc:'Terreno abierto con superficie lisa: hormigón, pistas de aeropuerto, hierba cortada'},
+  {clase:1, z0:0.03, desc:'Tierra agrícola abierta sin vallas ni setos; tal vez algunos edificios muy separados y colinas muy suaves'},
+  {clase:1.5, z0:0.055, desc:'Terreno agrícola con algunas edificaciones y setos de 8 m separados por más de 1 km'},
+  {clase:2, z0:0.1, desc:'Terreno agrícola con algunos edificios y setos de 8 m separados por aprox. 500 m'},
+  {clase:2.5, z0:0.2, desc:'Terreno agrícola con muchos árboles, arbustos y plantas, o setos de 8 m separados por aprox. 250 m'},
+  {clase:3, z0:0.4, desc:'Pueblos, aldeas, terrenos agrícolas con muchos o altos setos, bosques y terrenos accidentados'},
+  {clase:3.5, z0:0.6, desc:'Grandes ciudades con edificios altos'},
+  {clase:4, z0:1.6, desc:'Grandes ciudades con edificios altos y rascacielos'},
+];
+
+const COMPONENTES_AEROGENERADOR = [
+  {t:'Rotor y palas', d:'Convierte la energía cinética del viento en energía mecánica de rotación; su diámetro determina el área barrida.'},
+  {t:'Buje', d:'Une las palas al eje de baja velocidad; en aerogeneradores de paso variable, aloja el mecanismo de orientación de pala (pitch).'},
+  {t:'Góndola', d:'Aloja el tren de potencia: eje, multiplicadora (si la hay), generador eléctrico, freno y sistemas de control.'},
+  {t:'Generador eléctrico', d:'Transforma la energía mecánica en eléctrica; puede ser asíncrono, síncrono o de imanes permanentes según la tecnología.'},
+  {t:'Torre', d:'Eleva el rotor a la altura de buje, donde el viento es más intenso y estable; puede ser tubular de acero o de celosía.'},
+  {t:'Sistema de control y orientación (yaw)', d:'Orienta la góndola a favor del viento y regula la potencia mediante el ángulo de pala (pitch) o pérdida aerodinámica (stall).'},
+];
+
+// Aerogenerador generico 850 kW: tabla tabulada (curva real de ejemplo)
+const CURVA_850 = [[1,0],[2,0],[3,10],[4,33],[5,86],[6,160],[7,262],[8,398],[9,568],[10,732],[11,836],[12,847],[13,850],[14,850],[15,850],[16,850],[17,850],[18,850],[19,850],[20,850],[21,0]];
+
+const TURBINAS = [
+  {id:'g850', label:'Genérico 850 kW (tabla tabulada)', prated:850, tipo:'tabla', curva:CURVA_850},
+  {id:'custom', label:'Genérico personalizable (modelo cúbico)', tipo:'cubico'},
+];
+
+// ===================== ESTADO GLOBAL =====================
+let tmy = null;    // { rows:[{month,day,hour,ws,wd}], monthsSelected, lat, lng }
+let est = null;    // estadisticas anuales/mensuales/periodo
+let perfil = null; // perfil de velocidades + hub height series
+let wb = null;     // ajuste weibull + energia
+
+// ===================== POBLAR SELECTS Y TABLAS ESTÁTICAS =====================
+document.querySelector('#tablaRugosidad tbody').innerHTML = RUGOSIDAD.map(r=>`
+  <tr><td>${fmtNum(r.clase,1)}</td><td>${r.z0}</td><td>${r.desc}</td></tr>
+`).join('');
+
+document.getElementById('componentesGrid').innerHTML = COMPONENTES_AEROGENERADOR.map(c=>`
+  <div class="comp-card"><h4>${c.t}</h4><p>${c.d}</p></div>
+`).join('');
+
+document.getElementById('quickpickZonas').innerHTML = ZONAS_EJEMPLO.map((z,i)=>`
+  <button type="button" onclick="usarZonaEjemplo(${i})">${z.nombre}</button>
+`).join('');
+function usarZonaEjemplo(i){
+  const z = ZONAS_EJEMPLO[i];
+  document.getElementById('u_lat').value = z.lat;
+  document.getElementById('u_lng').value = z.lng;
+  moverMarcadorUbicacionDesdeInputs(true);
+  showToast('Coordenadas de "'+z.nombre+'" cargadas. Pulsa "Obtener datos PVGIS".');
+}
+
+// ===================== MAPA DE UBICACIÓN (Leaflet + OpenStreetMap) =====================
+// Un solo marcador arrastrable: clic en el mapa o arrastrarlo fija la coordenada, y
+// escribir directamente en los campos de latitud/longitud mueve el marcador. Sin esto,
+// el mapa y los campos numéricos serían dos formas de entrada desconectadas entre sí.
+let marcadorUbicacion = null;
+function inicializarMapaUbicacion(){
+  const latInicial = parseFloat(document.getElementById('u_lat').value) || 36.0014;
+  const lngInicial = parseFloat(document.getElementById('u_lng').value) || -5.6096;
+
+  const mapa = L.map('mapaUbicacion', {zoomControl:true}).setView([latInicial, lngInicial], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19,
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+  }).addTo(mapa);
+
+  marcadorUbicacion = L.marker([latInicial, lngInicial], {draggable:true}).addTo(mapa);
+
+  function fijarDesdeLatLng(latlng){
+    document.getElementById('u_lat').value = latlng.lat.toFixed(4);
+    document.getElementById('u_lng').value = latlng.lng.toFixed(4);
+  }
+  marcadorUbicacion.on('dragend', ()=>fijarDesdeLatLng(marcadorUbicacion.getLatLng()));
+  mapa.on('click', (e)=>{ marcadorUbicacion.setLatLng(e.latlng); fijarDesdeLatLng(e.latlng); });
+
+  // El mapa se crea con su pestaña ("Ubicación y datos PVGIS") todavía oculta
+  // (display:none en la sección), así que Leaflet mide un contenedor de tamaño 0 en este
+  // punto; activarSeccion() llama a invalidateSize() la primera vez que se muestra la
+  // pestaña, usando esta misma instancia guardada en window.
+  window.mapaUbicacionInstancia = mapa;
+}
+inicializarMapaUbicacion();
+
+function moverMarcadorUbicacionDesdeInputs(recentrar){
+  if(!marcadorUbicacion) return;
+  const lat = parseFloat(document.getElementById('u_lat').value);
+  const lng = parseFloat(document.getElementById('u_lng').value);
+  if(!isFinite(lat) || !isFinite(lng)) return;
+  const latlng = L.latLng(lat, lng);
+  marcadorUbicacion.setLatLng(latlng);
+  if(recentrar) window.mapaUbicacionInstancia.setView(latlng, Math.max(window.mapaUbicacionInstancia.getZoom(), 7));
+}
+['u_lat','u_lng'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>moverMarcadorUbicacionDesdeInputs(true));
+});
+
+function poblarSelect(id, arr, labelFn){
+  const sel = document.getElementById(id);
+  sel.innerHTML = arr.map((x,i)=>`<option value="${x.clase!==undefined?x.clase:x.id}">${labelFn(x)}</option>`).join('');
+}
+poblarSelect('pf_rugosidad', RUGOSIDAD, r=>`Clase ${fmtNum(r.clase,1)} (z0=${r.z0} m) — ${r.desc}`);
+document.getElementById('pf_rugosidad').value = 2;
+
+poblarSelect('wb_turbina', TURBINAS, t=>t.label);
+document.getElementById('wb_turbina').addEventListener('change', ()=>{
+  document.getElementById('wb_turbina_custom').style.display = document.getElementById('wb_turbina').value==='custom' ? 'grid' : 'none';
+});
+
+// ===================== LLAMADA A PVGIS (TMY) CON FALLBACK CORS =====================
+const PROXIES_CORS = [
+  { nombre:'allorigins', construirUrl: (u)=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u) },
+  { nombre:'codetabs', construirUrl: (u)=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u) },
+];
+
+function construirUrlTmy(lat, lng){
+  const params = new URLSearchParams({ lat, lon: lng, outputformat: 'json' });
+  return 'https://re.jrc.ec.europa.eu/api/v5_2/tmy?'+params.toString();
+}
+
+function fetchConTimeout(url, ms){
+  const controlador = new AbortController();
+  const temporizador = setTimeout(()=>controlador.abort(), ms);
+  return fetch(url, {signal: controlador.signal}).finally(()=>clearTimeout(temporizador));
+}
+
+async function leerRespuestaComoJson(resp){
+  const textoCrudo = await resp.text();
+  try{ return { json: JSON.parse(textoCrudo), textoCrudo }; }catch(e){ return { json:null, textoCrudo }; }
+}
+
+async function intentarUnaLlamada(urlFinal, timeoutMs){
+  const resp = await fetchConTimeout(urlFinal, timeoutMs);
+  const { json, textoCrudo } = await leerRespuestaComoJson(resp);
+  // Importante: un proxy puede devolver un cuerpo JSON perfectamente válido (p.ej. un
+  // aviso de "se requiere API key") con un HTTP de error (401, 403...). Si no se comprueba
+  // resp.ok antes de aceptar el JSON, ese aviso se cuela como si fuera la respuesta real de
+  // PVGIS. Por eso el estado HTTP manda sobre si el cuerpo parsea o no como JSON.
+  if(!resp.ok) throw new Error('HTTP '+resp.status+(json?': '+JSON.stringify(json).slice(0,150):(textoCrudo?': '+textoCrudo.slice(0,150):'')));
+  if(json) return { json, httpStatus: resp.status };
+  throw new Error('Respuesta no válida: '+(textoCrudo?textoCrudo.slice(0,150):'(vacía)'));
+}
+
+async function llamarPvgisConFallback(url){
+  const erroresPorIntento = [];
+  try{
+    const r = await intentarUnaLlamada(url, 20000);
+    return Object.assign(r, { viaProxy:null });
+  }catch(errDirecto){
+    erroresPorIntento.push('directo: '+((errDirecto&&errDirecto.message)||'fallo de red'));
+  }
+  for(const proxy of PROXIES_CORS){
+    try{
+      const r = await intentarUnaLlamada(proxy.construirUrl(url), 20000);
+      return Object.assign(r, { viaProxy: proxy.nombre });
+    }catch(errProxy){
+      erroresPorIntento.push(proxy.nombre+': '+((errProxy&&errProxy.message)||'fallo de red'));
+    }
+  }
+  throw new Error('Ningún intento tuvo éxito. '+erroresPorIntento.join(' · ')+'. Prueba la vía manual, o revisa que la coordenada tenga cobertura PVGIS.');
+}
+
+function procesarTmy(json, lat, lng){
+  const horas = (json.outputs && json.outputs.tmy_hourly) || [];
+  if(horas.length===0) throw new Error('La respuesta de PVGIS no contiene datos horarios (tmy_hourly).');
+  const rows = horas.map(h=>{
+    const t = h['time(UTC)'] || h.time || '';
+    const month = parseInt(t.slice(4,6),10);
+    const day = parseInt(t.slice(6,8),10);
+    const hour = parseInt((t.split(':')[1]||'0000').slice(0,2),10);
+    return { month, day, hour, ws: Number(h.WS10m)||0, wd: Number(h.WD10m)||0 };
+  });
+  const monthsSelected = (json.outputs && json.outputs.months_selected) || [];
+  return { rows, monthsSelected, lat, lng };
+}
+
+function renderPvgisBadge(estado, extra){
+  const el = document.getElementById('pvgisBadge');
+  if(estado==='cargando') el.innerHTML = '<span class="badge pending"><span class="spinner"></span>consultando PVGIS…</span>';
+  else if(estado==='ok') el.innerHTML = '<span class="badge ok">datos obtenidos'+(extra?' — '+esc(extra):'')+'</span>';
+  else if(estado==='error') el.innerHTML = '<span class="badge err">error</span>';
+  else el.innerHTML = '';
+}
+
+document.getElementById('btnObtenerPvgis').addEventListener('click', async ()=>{
+  const lat = parseFloat(document.getElementById('u_lat').value);
+  const lng = parseFloat(document.getElementById('u_lng').value);
+  if(!isFinite(lat) || !isFinite(lng)){ showToast('Introduce una latitud y longitud válidas.'); return; }
+  const btn = document.getElementById('btnObtenerPvgis');
+  btn.disabled = true;
+  renderPvgisBadge('cargando');
+  document.getElementById('pvgisResultado').innerHTML = '';
+  try{
+    const url = construirUrlTmy(lat, lng);
+    const { json, viaProxy } = await llamarPvgisConFallback(url);
+    if(json.status==='error' || (json.message && !json.outputs)){
+      throw new Error(json.message || 'PVGIS devolvió un error para esta ubicación.');
+    }
+    if(!json.outputs){
+      throw new Error('La respuesta de PVGIS no tiene el formato esperado (sin campo "outputs")'+(viaProxy?' — recibida vía proxy '+viaProxy:'')+'. Respuesta: '+JSON.stringify(json).slice(0,200));
+    }
+    aplicarJsonTmy(json, lat, lng, viaProxy?('proxy '+viaProxy):'llamada directa');
+  }catch(err){
+    renderPvgisBadge('error');
+    document.getElementById('pvgisResultado').innerHTML =
+      '<p style="font-size:12.5px; color:var(--red);">'+esc(err.message||'Error desconocido')+'</p>'+
+      '<p class="tooltip-text">La llamada automática ha fallado. Usa la <b>vía manual</b> de abajo (descargar y cargar el archivo, o pegar el JSON) — no depende de ningún proxy y siempre funciona.</p>';
+    showToast('Error al obtener datos de PVGIS: '+(err.message||''));
+  }
+  btn.disabled = false;
+});
+
+// Aplica un objeto JSON de PVGIS ya obtenido (por la vía que sea) al estado de la app,
+// y dispara los cálculos automáticos, igual que si hubiera llegado por la llamada en vivo.
+function aplicarJsonTmy(json, lat, lng, origen){
+  tmy = procesarTmy(json, lat, lng);
+  renderPvgisResultado(origen);
+  renderPvgisBadge('ok', origen);
+  showToast('Datos PVGIS obtenidos: año meteorológico típico (8.760 h).');
+  calcularEstadistico();
+  calcularPerfil();
+}
+
+function usarJsonTexto(texto, origen){
+  const txt = (texto||'').trim();
+  if(!txt){ showToast('No hay JSON que procesar.'); return; }
+  try{
+    const json = JSON.parse(txt);
+    if(!json.outputs){ throw new Error('el JSON no tiene el campo "outputs" esperado de PVGIS'); }
+    const lat = parseFloat(document.getElementById('u_lat').value);
+    const lng = parseFloat(document.getElementById('u_lng').value);
+    aplicarJsonTmy(json, lat, lng, origen);
+  }catch(e){
+    renderPvgisBadge('error');
+    showToast('El JSON no es válido: '+e.message);
+  }
+}
+
+function usarJsonPegado(){
+  usarJsonTexto(document.getElementById('pegadoTmy').value, 'pegado manualmente');
+}
+
+document.getElementById('btnAbrirUrlManual').addEventListener('click', ()=>{
+  const lat = parseFloat(document.getElementById('u_lat').value);
+  const lng = parseFloat(document.getElementById('u_lng').value);
+  if(!isFinite(lat) || !isFinite(lng)){ showToast('Introduce una latitud y longitud válidas.'); return; }
+  window.open(construirUrlTmy(lat, lng), '_blank');
+});
+
+document.getElementById('btnCargarArchivo').addEventListener('click', ()=>{
+  document.getElementById('inputArchivoJson').click();
+});
+document.getElementById('inputArchivoJson').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{ usarJsonTexto(ev.target.result, 'archivo "'+file.name+'"'); };
+  reader.onerror = ()=>{ showToast('No se pudo leer el archivo.'); };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function renderPvgisResultado(origen){
+  const cont = document.getElementById('pvgisResultado');
+  const meses = tmy.monthsSelected.map(m=>MESES[m.month-1].slice(0,3)+' '+m.year).join(', ');
+  cont.innerHTML = `
+    <table class="example-table">
+      <tr><td class="label">Coordenadas</td><td class="value">${fmtNum(tmy.lat,4)}, ${fmtNum(tmy.lng,4)}</td></tr>
+      <tr><td class="label">Horas obtenidas</td><td class="value">${tmy.rows.length} h</td></tr>
+      <tr><td class="label">Vía</td><td class="value">${esc(origen||'—')}</td></tr>
+    </table>
+    <p class="tooltip-text" style="margin-top:10px;">Año meteorológico típico compuesto por: ${meses||'—'}. PVGIS elige, para cada mes del año, el mes históricamente más representativo dentro de su periodo de reanálisis.</p>
+  `;
+}
+
+// ===================== SECCIÓN 04: ANÁLISIS ESTADÍSTICO =====================
+const HORAS_DIURNO = [10,11,12,13,14,15,16,17];
+const HORAS_NOCTURNO = [22,23,0,1,2,3,4,5];
+
+function calcularEstadistico(){
+  if(!tmy){ document.getElementById('est_aviso').textContent = 'Obtén primero los datos de PVGIS en la sección "Ubicación y datos PVGIS".'; document.getElementById('est_contenido').style.display='none'; return; }
+  document.getElementById('est_aviso').textContent = '';
+  document.getElementById('est_contenido').style.display = 'block';
+
+  const wsAll = tmy.rows.map(r=>r.ws);
+  const anualMedia = media(wsAll), anualVar = varianza(wsAll);
+
+  const mensual = [];
+  for(let m=1;m<=12;m++){
+    const ws = tmy.rows.filter(r=>r.month===m).map(r=>r.ws);
+    mensual.push({ mes: MESES[m-1], media: media(ws), var: varianza(ws) });
+  }
+
+  const periodo = [];
+  for(let m=1;m<=12;m++){
+    const wsD = tmy.rows.filter(r=>r.month===m && HORAS_DIURNO.includes(r.hour)).map(r=>r.ws);
+    const wsN = tmy.rows.filter(r=>r.month===m && HORAS_NOCTURNO.includes(r.hour)).map(r=>r.ws);
+    periodo.push({ mes: MESES[m-1], mediaD: media(wsD), varD: varianza(wsD), mediaN: media(wsN), varN: varianza(wsN) });
+  }
+
+  est = { anualMedia, anualVar, mensual, periodo };
+
+  document.getElementById('est_chips').innerHTML = `
+    <div class="result-chip"><div class="l">Velocidad media anual</div><div class="v">${fmtNum(anualMedia,2)} m/s</div></div>
+    <div class="result-chip"><div class="l">Varianza anual</div><div class="v">${fmtNum(anualVar,2)}</div></div>
+    <div class="result-chip"><div class="l">Mes más ventoso</div><div class="v">${mensual.reduce((a,b)=>b.media>a.media?b:a).mes}</div></div>
+    <div class="result-chip"><div class="l">Mes menos ventoso</div><div class="v">${mensual.reduce((a,b)=>b.media<a.media?b:a).mes}</div></div>
+  `;
+
+  document.getElementById('est_chart_mensual').innerHTML = buildDualLineChartSVG(
+    mensual.map(m=>m.media), mensual.map(m=>m.var), mensual.map(m=>m.mes.slice(0,3)),
+    '#37CFFF', '#FFB020', 'Media', 'Varianza', 'Velocidad media y varianza por mes (10 m)'
+  );
+  document.querySelector('#est_tabla_mensual tbody').innerHTML = mensual.map(m=>`
+    <tr><td>${m.mes}</td><td>${fmtNum(m.media,4)}</td><td>${fmtNum(m.var,4)}</td></tr>
+  `).join('');
+
+  document.getElementById('est_chart_periodo').innerHTML = buildDualLineChartSVG(
+    periodo.map(p=>p.mediaD), periodo.map(p=>p.mediaN), periodo.map(p=>p.mes.slice(0,3)),
+    '#37CFFF', '#FFB020', 'Media diurna', 'Media nocturna', 'Velocidad media por mes (periodo diurno y nocturno)'
+  );
+  document.querySelector('#est_tabla_periodo tbody').innerHTML = periodo.map(p=>`
+    <tr><td>${p.mes}</td><td>${fmtNum(p.mediaD,3)}</td><td>${fmtNum(p.varD,3)}</td><td>${fmtNum(p.mediaN,3)}</td><td>${fmtNum(p.varN,3)}</td></tr>
+  `).join('');
+
+  showToast('Análisis estadístico calculado.');
+}
+
+// ===================== SECCIÓN 05: DISTRIBUCIÓN Y PERFIL =====================
+function histograma(valores, binWidth){
+  const maxV = Math.max(...valores, 0);
+  const nBins = Math.max(1, Math.ceil(maxV/binWidth)+1);
+  const bins = new Array(nBins).fill(0);
+  valores.forEach(v=>{ const b = Math.min(Math.floor(v/binWidth), nBins-1); if(b>=0) bins[b]++; });
+  return bins.map((c,i)=>({ v0:i*binWidth, v1:(i+1)*binWidth, count:c }));
+}
+
+function calcularPerfil(){
+  if(!tmy){ document.getElementById('perfil_aviso').textContent = 'Obtén primero los datos de PVGIS en la sección "Ubicación y datos PVGIS".'; document.getElementById('perfil_contenido').style.display='none'; return; }
+  document.getElementById('perfil_aviso').textContent = '';
+  document.getElementById('perfil_contenido').style.display = 'block';
+
+  const wsAll = tmy.rows.map(r=>r.ws);
+  const hist10 = histograma(wsAll, 1);
+  document.getElementById('perfil_hist10').innerHTML = buildHistogramSVG(hist10, '#37CFFF', 'Histograma de velocidades a 10 m', null);
+
+  const rose = buildWindRoseData(tmy.rows);
+  document.getElementById('perfil_rosa').innerHTML = buildWindRoseSVG(rose);
+
+  const clase = parseFloat(document.getElementById('pf_rugosidad').value);
+  const z0 = (RUGOSIDAD.find(r=>r.clase===clase) || RUGOSIDAD[2]).z0;
+  const hbuje = parseFloat(document.getElementById('pf_hbuje').value) || 100;
+  const href = 10;
+  const vref = media(wsAll);
+  const K = Math.log(hbuje/z0)/Math.log(href/z0);
+  const wsBuje = wsAll.map(v=>v*K);
+
+  document.getElementById('pf_resultado').innerHTML = `
+    <div class="grid3">
+      <div class="result-chip"><div class="l">Factor de extrapolación K</div><div class="v">${fmtNum(K,4)}</div></div>
+      <div class="result-chip"><div class="l">Velocidad media a 10 m</div><div class="v">${fmtNum(vref,2)} m/s</div></div>
+      <div class="result-chip good"><div class="l">Velocidad media a ${fmtNum(hbuje,0)} m</div><div class="v">${fmtNum(media(wsBuje),2)} m/s</div></div>
+    </div>
+  `;
+
+  const alturas = [10,20,40,60,80,100,120,150,180,200];
+  const perfilAlturas = alturas.map(h=> h<href ? null : vref*Math.log(h/z0)/Math.log(href/z0));
+  document.getElementById('perfil_chart_altura').innerHTML = buildProfileChartSVG(alturas, perfilAlturas, '#FFB020', 'Perfil de velocidades con la altura (z0='+z0+' m)');
+
+  const histBuje = histograma(wsBuje, 1);
+  document.getElementById('perfil_hist_buje').innerHTML = buildHistogramSVG(histBuje, '#FFB020', 'Histograma de velocidades a la altura de buje ('+fmtNum(hbuje,0)+' m)', null);
+
+  let acum = 0;
+  const histAcum = histBuje.map(b=>{ acum += b.count; return { v0:b.v0, v1:b.v1, count: acum }; });
+  document.getElementById('perfil_hist_acum').innerHTML = buildHistogramSVG(histAcum, '#16A34A', 'Frecuencia acumulada a la altura de buje', null);
+
+  perfil = { z0, hbuje, href, vref, K, wsBuje, hist10, histBuje, rose };
+  showToast('Perfil de velocidades calculado.');
+}
+
+// ===================== WIND ROSE: DATOS =====================
+function buildWindRoseData(rows){
+  const SECTORES = 16;
+  const rose = Array.from({length:SECTORES}, ()=>({low:0, mid:0, high:0}));
+  rows.forEach(r=>{
+    let idx = Math.round(r.wd/22.5) % SECTORES;
+    if(idx<0) idx += SECTORES;
+    const b = rose[idx];
+    if(r.ws < 5) b.low++;
+    else if(r.ws <= 10) b.mid++;
+    else b.high++;
+  });
+  return rose;
+}
+
+// ===================== SECCIÓN 06: WEIBULL Y ENERGÍA =====================
+function ajustarWeibull(valores){
+  const datos = valores.filter(v=>v>0).slice().sort((a,b)=>a-b);
+  const n = datos.length;
+  if(n<10) return null;
+  const pts = datos.map((v,i)=>{
+    const F = (i+1)/(n+1);
+    return { p: Math.log(v), q: Math.log(-Math.log(1-F)) };
+  });
+  const meanP = media(pts.map(d=>d.p)), meanQ = media(pts.map(d=>d.q));
+  const sumPP = pts.reduce((a,d)=>a+(d.p-meanP)*(d.p-meanP),0);
+  const sumPQ = pts.reduce((a,d)=>a+(d.p-meanP)*(d.q-meanQ),0);
+  const k = sumPQ/sumPP;
+  const intercept = meanQ - k*meanP;
+  const C = Math.exp(-intercept/k);
+  const predQ = pts.map(d=>k*d.p+intercept);
+  const ssTot = pts.reduce((a,d)=>a+(d.q-meanQ)*(d.q-meanQ),0);
+  const ssRes = pts.reduce((a,d,i)=>a+(d.q-predQ[i])*(d.q-predQ[i]),0);
+  const r2 = ssTot>0 ? 1-ssRes/ssTot : 1;
+  // Muestra de puntos para el gráfico de linealización (representar los ~8.760 puntos
+  // originales sería excesivo; se toma una muestra uniforme conservando los extremos).
+  const maxPuntos = 220;
+  const paso = Math.max(1, Math.floor(pts.length/maxPuntos));
+  const ptsMuestra = pts.filter((_,i)=> i%paso===0 || i===pts.length-1);
+  return { k, C, r2, intercept, ptsMuestra };
+}
+function weibullDensidad(v,k,C){
+  if(v<=0 || C<=0) return 0;
+  return (k/C)*Math.pow(v/C,k-1)*Math.exp(-Math.pow(v/C,k));
+}
+
+function calcularAjusteWeibull(){
+  if(!perfil){ document.getElementById('wb_aviso').textContent = 'Calcula primero el perfil de velocidades en la sección "Distribución y perfil de velocidades".'; document.getElementById('wb_contenido').style.display='none'; return null; }
+  document.getElementById('wb_aviso').textContent = '';
+  document.getElementById('wb_contenido').style.display = 'block';
+
+  const fit = ajustarWeibull(perfil.wsBuje);
+  if(!fit){ document.getElementById('wb_aviso').textContent = 'No hay suficientes datos válidos para ajustar Weibull.'; return null; }
+
+  document.getElementById('wb_chips').innerHTML = `
+    <div class="result-chip"><div class="l">Factor de forma k</div><div class="v">${fmtNum(fit.k,4)}</div></div>
+    <div class="result-chip"><div class="l">Factor de escala C</div><div class="v">${fmtNum(fit.C,4)} m/s</div></div>
+    <div class="result-chip ${fit.r2>0.9?'good':''}"><div class="l">Coeficiente R²</div><div class="v">${fmtNum(fit.r2,4)}</div></div>
+  `;
+
+  document.getElementById('wb_chart_ajuste').innerHTML = buildWeibullFitScatterSVG(fit.ptsMuestra, fit.k, fit.intercept, 'Ajuste de la distribución de Weibull (linealización, mínimos cuadrados)');
+
+  const histBuje = perfil.histBuje;
+  const totalN = perfil.wsBuje.length;
+  const densidadPts = histBuje.map(b=>weibullDensidad((b.v0+b.v1)/2, fit.k, fit.C));
+  document.getElementById('wb_chart_densidad').innerHTML = buildHistDensityOverlaySVG(histBuje, totalN, densidadPts, '#37CFFF', '#FFB020', 'Ajuste de Weibull sobre el histograma (altura de buje)');
+
+  return fit;
+}
+
+function potenciaTabulada(v, curva){
+  if(v<=curva[0][0] || v>=curva[curva.length-1][0]) return 0;
+  for(let i=1;i<curva.length;i++){
+    if(v<=curva[i][0]){
+      const [v0,p0]=curva[i-1], [v1,p1]=curva[i];
+      return p0 + (p1-p0)*(v-v0)/(v1-v0);
+    }
+  }
+  return 0;
+}
+function potenciaCubica(v,cutin,rated,cutout,prated){
+  if(v<cutin || v>=cutout) return 0;
+  if(v<rated) return prated*Math.pow((v-cutin)/(rated-cutin),3);
+  return prated;
+}
+
+function calcularEnergia(){
+  const fit = calcularAjusteWeibull();
+  if(!fit) return;
+
+  const turbinaId = document.getElementById('wb_turbina').value;
+  const turbina = TURBINAS.find(t=>t.id===turbinaId);
+  let potenciaFn, prated, etiquetaTurbina;
+  if(turbina.tipo==='tabla'){
+    potenciaFn = v=>potenciaTabulada(v, turbina.curva);
+    prated = turbina.prated;
+    etiquetaTurbina = turbina.label;
+  } else {
+    prated = parseFloat(document.getElementById('wb_prated').value) || 2000;
+    const cutin = parseFloat(document.getElementById('wb_cutin').value) || 3;
+    const rated = parseFloat(document.getElementById('wb_rated').value) || 12;
+    const cutout = parseFloat(document.getElementById('wb_cutout').value) || 25;
+    potenciaFn = v=>potenciaCubica(v,cutin,rated,cutout,prated);
+    etiquetaTurbina = 'Genérico '+fmtNum(prated,0)+' kW (modelo cúbico, v_cutin='+cutin+', v_rated='+rated+', v_cutout='+cutout+')';
+  }
+
+  const vMax = 40, dv = 0.1;
+  let energiaKwh = 0;
+  const curvaPuntos = [];
+  for(let v=dv/2; v<vMax; v+=dv){
+    const f = weibullDensidad(v, fit.k, fit.C);
+    const p = potenciaFn(v);
+    energiaKwh += f*dv*p*8760;
+    if(Math.abs((v*10)%5)<dv*5) curvaPuntos.push({ v: Math.round(v*2)/2, densidad: f, potencia: p, energia: f*p });
+  }
+  const capacityFactor = prated>0 ? energiaKwh/(prated*8760) : 0;
+
+  wb = { fit, turbina: etiquetaTurbina, prated, energiaKwh, capacityFactor, potenciaFn, curvaPuntos };
+
+  document.getElementById('wb_energia_resultado').innerHTML = `
+    <div class="grid3">
+      <div class="result-chip"><div class="l">Energía anual estimada</div><div class="v">${fmtNum(energiaKwh/1000,1)} MWh</div></div>
+      <div class="result-chip good"><div class="l">Factor de capacidad</div><div class="v">${fmtNum(capacityFactor*100,1)} %</div></div>
+      <div class="result-chip"><div class="l">Potencia nominal</div><div class="v">${fmtNum(prated,0)} kW</div></div>
+    </div>
+  `;
+
+  document.getElementById('wb_chart_energia').innerHTML = buildEnergyChartSVG(curvaPuntos, '#37CFFF', '#FFB020', 'Densidad de Weibull y curva de potencia');
+
+  let texto, clase;
+  if(capacityFactor>0.35){ texto='Factor de capacidad excelente ('+fmtNum(capacityFactor*100,1)+' %): emplazamiento altamente favorable para un parque eólico, comparable a las mejores ubicaciones de España (corredores como el Estrecho de Gibraltar).'; clase='good'; }
+  else if(capacityFactor>0.25){ texto='Factor de capacidad bueno ('+fmtNum(capacityFactor*100,1)+' %): emplazamiento favorable para energía eólica a gran escala.'; clase='mid'; }
+  else if(capacityFactor>0.15){ texto='Factor de capacidad moderado ('+fmtNum(capacityFactor*100,1)+' %): viabilidad dependerá en gran medida del coste de la instalación y de las condiciones de conexión a red.'; clase='mid'; }
+  else { texto='Factor de capacidad bajo ('+fmtNum(capacityFactor*100,1)+' %): emplazamiento poco favorable para un aerogenerador de gran potencia; podría valorarse minieólica o buscar otra ubicación.'; clase='bad'; }
+  document.getElementById('wb_viabilidad_texto').innerHTML = '<span class="badge '+clase+'">'+esc(texto)+'</span>';
+
+  showToast('Energía anual calculada.');
+}
+
+// ===================== GRÁFICOS SVG =====================
+function buildDualLineChartSVG(seriesA, seriesB, labels, colorA, colorB, labelA, labelB, titulo){
+  const W=640, H=190, padL=40, padR=14, padT=22, padB=26;
+  const maxV = Math.max(...seriesA, ...seriesB, 1);
+  const step = (W-padL-padR)/((labels.length-1)||1);
+  const scale = (H-padT-padB)/maxV;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  for(let g=0; g<=4; g++){
+    const gv = maxV*g/4;
+    const gy = H-padB-gv*scale;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${fmtNum(gv,1)}</text>`;
+  }
+  function poly(vals, color){
+    const pts = vals.map((v,i)=>[padL+step*i, H-padB-v*scale]);
+    return `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="1.6"/>`+
+      pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2" fill="${color}"/>`).join('');
+  }
+  s += poly(seriesA, colorA);
+  s += poly(seriesB, colorB);
+  labels.forEach((l,i)=>{
+    s += `<text x="${padL+step*i}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${esc(l)}</text>`;
+  });
+  s += `<rect x="${W-150}" y="${padT-14}" width="9" height="9" fill="${colorA}"/><text x="${W-138}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">${esc(labelA)}</text>`;
+  s += `<rect x="${W-70}" y="${padT-14}" width="9" height="9" fill="${colorB}"/><text x="${W-58}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">${esc(labelB)}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
+}
+
+function buildHistogramSVG(bins, color, titulo, unidad){
+  const W=640, H=190, padL=42, padR=14, padT=22, padB=26;
+  const values = bins.map(b=>b.count);
+  const maxV = Math.max(...values, 1);
+  const step = (W-padL-padR)/values.length;
+  const scale = (H-padT-padB)/maxV;
+  const barW = step*0.82;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  for(let g=0; g<=4; g++){
+    const gv = maxV*g/4;
+    const gy = H-padB-gv*scale;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${Math.round(gv)}</text>`;
+  }
+  values.forEach((v,i)=>{
+    const x = padL+step*i+(step-barW)/2;
+    const y = H-padB-v*scale;
+    s += `<rect x="${x}" y="${y}" width="${barW}" height="${H-padB-y}" fill="${color}"/>`;
+  });
+  const tickEvery = Math.max(1, Math.round(bins.length/12));
+  bins.forEach((b,i)=>{
+    if(i%tickEvery!==0) return;
+    s += `<text x="${padL+step*i+step/2}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${b.v0}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
+}
+
+function buildHistDensityOverlaySVG(bins, totalN, densidadPts, colorHist, colorLine, titulo){
+  const W=640, H=210, padL=42, padR=14, padT=22, padB=26;
+  const binWidth = bins.length>1 ? (bins[1].v0-bins[0].v0) : 1;
+  const freqRel = bins.map(b=> totalN>0 ? b.count/totalN/binWidth : 0);
+  const maxV = Math.max(...freqRel, ...densidadPts, 0.001);
+  const step = (W-padL-padR)/bins.length;
+  const scale = (H-padT-padB)/maxV;
+  const barW = step*0.82;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  for(let g=0; g<=4; g++){
+    const gv = maxV*g/4;
+    const gy = H-padB-gv*scale;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${fmtNum(gv,2)}</text>`;
+  }
+  freqRel.forEach((v,i)=>{
+    const x = padL+step*i+(step-barW)/2;
+    const y = H-padB-v*scale;
+    s += `<rect x="${x}" y="${y}" width="${barW}" height="${H-padB-y}" fill="${colorHist}" opacity="0.55"/>`;
+  });
+  const pts = densidadPts.map((v,i)=>[padL+step*i+step/2, H-padB-v*scale]);
+  s += `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${colorLine}" stroke-width="2"/>`;
+  const tickEvery = Math.max(1, Math.round(bins.length/12));
+  bins.forEach((b,i)=>{
+    if(i%tickEvery!==0) return;
+    s += `<text x="${padL+step*i+step/2}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${b.v0}</text>`;
+  });
+  s += `<rect x="${W-190}" y="${padT-14}" width="9" height="9" fill="${colorHist}"/><text x="${W-178}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Histograma (frec. relativa)</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
+}
+
+// Grafico de linealizacion de Weibull: dispersion de (ln v, ln(-ln(1-F))) mas la recta
+// ajustada por minimos cuadrados (pendiente k, ordenada en el origen = -k*ln(C)).
+function buildWeibullFitScatterSVG(pts, k, intercept, titulo){
+  const W=640, H=230, padL=48, padR=14, padT=22, padB=30;
+  const xs = pts.map(d=>d.p), ys = pts.map(d=>d.q);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys, ...[k*minX+intercept, k*maxX+intercept]);
+  const maxY = Math.max(...ys, ...[k*minX+intercept, k*maxX+intercept]);
+  const scaleX = (W-padL-padR)/((maxX-minX)||1);
+  const scaleY = (H-padT-padB)/((maxY-minY)||1);
+  const X = x => padL+(x-minX)*scaleX;
+  const Y = y => H-padB-(y-minY)*scaleY;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  for(let g=0; g<=4; g++){
+    const gy = padT+(H-padT-padB)*g/4;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
+  }
+  s += pts.map(d=>`<circle cx="${X(d.p).toFixed(1)}" cy="${Y(d.q).toFixed(1)}" r="1.6" fill="#37CFFF" opacity="0.65"/>`).join('');
+  const lx0=X(minX), ly0=Y(k*minX+intercept), lx1=X(maxX), ly1=Y(k*maxX+intercept);
+  s += `<line x1="${lx0}" y1="${ly0}" x2="${lx1}" y2="${ly1}" stroke="#FFB020" stroke-width="1.8"/>`;
+  s += `<text x="${padL}" y="${H-padB+16}" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">ln(v)</text>`;
+  s += `<text x="${padL-40}" y="${padT}" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">ln(-ln(1-F))</text>`;
+  s += `<rect x="${W-210}" y="${padT-14}" width="9" height="9" fill="#37CFFF"/><text x="${W-198}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Datos transformados</text>`;
+  s += `<rect x="${W-80}" y="${padT-14}" width="9" height="9" fill="#FFB020"/><text x="${W-68}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Ajuste lineal</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
+}
+
+function buildProfileChartSVG(alturas, valores, color, titulo){
+  const W=640, H=190, padL=42, padR=14, padT=22, padB=26;
+  const validas = valores.map((v,i)=>({h:alturas[i], v})).filter(d=>d.v!==null);
+  const maxV = Math.max(...validas.map(d=>d.v), 1);
+  const maxH = Math.max(...alturas);
+  const scaleX = (W-padL-padR)/maxH;
+  const scaleY = (H-padT-padB)/maxV;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  for(let g=0; g<=4; g++){
+    const gv = maxV*g/4;
+    const gy = H-padB-gv*scaleY;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${fmtNum(gv,1)}</text>`;
+  }
+  const pts = validas.map(d=>[padL+d.h*scaleX, H-padB-d.v*scaleY]);
+  s += `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="1.8"/>`;
+  s += pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${color}"/>`).join('');
+  [0,50,100,150,200].forEach(h=>{
+    if(h>maxH) return;
+    s += `<text x="${padL+h*scaleX}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${h} m</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
+}
+
+function buildEnergyChartSVG(pts, colorDensidad, colorPotencia, titulo){
+  const W=640, H=230, padL=42, padR=42, padT=22, padB=26;
+  const maxDens = Math.max(...pts.map(p=>p.densidad), 0.001);
+  const maxPot = Math.max(...pts.map(p=>p.potencia), 1);
+  const maxEnergia = Math.max(...pts.map(p=>p.energia||0), 0.001);
+  const maxV = Math.max(...pts.map(p=>p.v), 1);
+  const scaleX = (W-padL-padR)/maxV;
+  const scaleYd = (H-padT-padB)/maxDens;
+  const scaleYp = (H-padT-padB)/maxPot;
+  const scaleYe = (H-padT-padB)/maxEnergia;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  // Area sombreada de energia (densidad x potencia, escala propia): la superficie bajo esta
+  // curva representa, en cada tramo de velocidad, la contribucion relativa a la energia anual.
+  const ptsE = pts.map(p=>[padL+p.v*scaleX, H-padB-(p.energia||0)*scaleYe]);
+  const areaE = [[padL, H-padB]].concat(ptsE).concat([[padL+pts[pts.length-1].v*scaleX, H-padB]]);
+  s += `<polygon points="${areaE.map(p=>p.join(',')).join(' ')}" fill="#16A34A" opacity="0.28"/>`;
+  s += `<polyline points="${ptsE.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#16A34A" stroke-width="1.4"/>`;
+  const ptsD = pts.map(p=>[padL+p.v*scaleX, H-padB-p.densidad*scaleYd]);
+  const ptsP = pts.map(p=>[padL+p.v*scaleX, H-padB-p.potencia*scaleYp]);
+  s += `<polyline points="${ptsD.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${colorDensidad}" stroke-width="1.8"/>`;
+  s += `<polyline points="${ptsP.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${colorPotencia}" stroke-width="1.8"/>`;
+  pts.forEach((p,i)=>{
+    if(i%4!==0) return;
+    s += `<text x="${padL+p.v*scaleX}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${fmtNum(p.v,0)}</text>`;
+  });
+  s += `<rect x="${W-330}" y="${padT-14}" width="9" height="9" fill="#16A34A" opacity="0.6"/><text x="${W-318}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Energía (densidad × potencia)</text>`;
+  s += `<rect x="${W-160}" y="${padT-14}" width="9" height="9" fill="${colorDensidad}"/><text x="${W-148}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Densidad</text>`;
+  s += `<rect x="${W-80}" y="${padT-14}" width="9" height="9" fill="${colorPotencia}"/><text x="${W-68}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Potencia</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
+}
+
+// ===================== ROSA DE LOS VIENTOS (SVG POLAR) =====================
+function polarXY(cx,cy,r,angDeg){
+  const rad = angDeg*Math.PI/180;
+  return [cx + r*Math.sin(rad), cy - r*Math.cos(rad)];
+}
+function wedgePath(cx,cy,r0,r1,a0,a1){
+  const [x0,y0] = polarXY(cx,cy,r1,a0);
+  const [x1,y1] = polarXY(cx,cy,r1,a1);
+  const large = (a1-a0)>180 ? 1 : 0;
+  if(r0<=0.01){
+    return `M ${cx} ${cy} L ${x0} ${y0} A ${r1} ${r1} 0 ${large} 1 ${x1} ${y1} Z`;
+  }
+  const [x2,y2] = polarXY(cx,cy,r0,a1);
+  const [x3,y3] = polarXY(cx,cy,r0,a0);
+  return `M ${x0} ${y0} A ${r1} ${r1} 0 ${large} 1 ${x1} ${y1} L ${x2} ${y2} A ${r0} ${r0} 0 ${large} 0 ${x3} ${y3} Z`;
+}
+function buildWindRoseSVG(rose){
+  const W=380, H=380, cx=W/2, cy=H/2, rMax=140;
+  const totales = rose.map(b=>b.low+b.mid+b.high);
+  const maxTotal = Math.max(...totales, 1);
+  let s = '';
+  for(let g=1; g<=4; g++){
+    const r = rMax*g/4;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#182739" stroke-width="1"/>`;
+    s += `<text x="${cx+3}" y="${cy-r+9}" font-family="IBM Plex Mono" font-size="7" fill="#5B7086">${Math.round(maxTotal*g/4)}</text>`;
+  }
+  rose.forEach((b,i)=>{
+    const centro = i*22.5;
+    const a0 = centro-9.5, a1 = centro+9.5;
+    const rLow = rMax*b.low/maxTotal;
+    const rMid = rMax*(b.low+b.mid)/maxTotal;
+    const rHigh = rMax*(b.low+b.mid+b.high)/maxTotal;
+    if(b.low>0) s += `<path d="${wedgePath(cx,cy,0,rLow,a0,a1)}" fill="#37CFFF"/>`;
+    if(b.mid>0) s += `<path d="${wedgePath(cx,cy,rLow,rMid,a0,a1)}" fill="#16A34A"/>`;
+    if(b.high>0) s += `<path d="${wedgePath(cx,cy,rMid,rHigh,a0,a1)}" fill="#DC2626"/>`;
+  });
+  const marcas = [['N',0],['E',90],['S',180],['O',270]];
+  marcas.forEach(([lbl,ang])=>{
+    const [x,y] = polarXY(cx,cy,rMax+16,ang);
+    s += `<text x="${x}" y="${y+3}" text-anchor="middle" font-family="IBM Plex Mono" font-weight="600" font-size="11" fill="#8FA3B8">${lbl}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:380px; display:block; margin:0 auto;">${s}</svg>`;
+}
+
+// ===================== SECCIÓN 07: INFORME FINAL (VISTA PREVIA HTML) =====================
+function generarInforme(){
+  if(!tmy || !est || !perfil){
+    document.getElementById('reportOutput').innerHTML = '<p class="tooltip-text">Completa primero la sección 03 (obtener datos PVGIS); las secciones 04 y 05 se calculan automáticamente. Calcula también la sección 06 (Weibull y energía) antes de generar el informe.</p>';
+    return;
+  }
+  if(!wb){ calcularEnergia(); }
+  if(!wb){
+    document.getElementById('reportOutput').innerHTML = '<p class="tooltip-text">Calcula primero la sección "Weibull y energía del aerogenerador" (botón "Calcular energía anual").</p>';
+    return;
+  }
+  const fecha = new Date().toLocaleDateString('es-ES', {year:'numeric', month:'long', day:'numeric'});
+  const meses = tmy.monthsSelected.map(m=>MESES[m.month-1].slice(0,3)+' '+m.year).join(', ');
+  const mesMax = est.mensual.reduce((a,b)=>b.media>a.media?b:a);
+  const mesMin = est.mensual.reduce((a,b)=>b.media<a.media?b:a);
+
+  document.getElementById('reportOutput').innerHTML = `
+    <h3>1 · Datos generales</h3>
+    <p class="rmeta">Informe generado el ${fecha}</p>
+    <table class="example-table">
+      <tr><td class="label">Emplazamiento</td><td class="value">${document.getElementById('p_proyecto').value||'—'}</td></tr>
+      <tr><td class="label">Coordenadas</td><td class="value">${fmtNum(tmy.lat,4)}, ${fmtNum(tmy.lng,4)}</td></tr>
+      <tr><td class="label">Año meteorológico típico</td><td class="value">${meses}</td></tr>
+    </table>
+
+    <h3>2 · Metodología</h3>
+    <p>Estudio de recurso eólico basado en el año meteorológico típico (TMY) de PVGIS, ampliado con el manual "Energía Eólica" del IDAE (2006) y el European Wind Atlas. Se analiza la velocidad y dirección del viento a 10 m, se extrapola a la altura de buje mediante la ley logarítmica y se ajusta una distribución de Weibull por linealización y mínimos cuadrados, con la que se calcula la energía anual y el factor de capacidad de un aerogenerador.</p>
+
+    <h3>3 · Análisis estadístico</h3>
+    <table class="example-table">
+      <tr><td class="label">Velocidad media anual (10 m)</td><td class="value">${fmtNum(est.anualMedia,2)} m/s</td></tr>
+      <tr><td class="label">Varianza anual</td><td class="value">${fmtNum(est.anualVar,2)}</td></tr>
+      <tr><td class="label">Mes más ventoso</td><td class="value">${mesMax.mes} (${fmtNum(mesMax.media,2)} m/s)</td></tr>
+      <tr><td class="label">Mes menos ventoso</td><td class="value">${mesMin.mes} (${fmtNum(mesMin.media,2)} m/s)</td></tr>
+    </table>
+
+    <h3>4 · Perfil de velocidades</h3>
+    <table class="example-table">
+      <tr><td class="label">Clase de rugosidad</td><td class="value">z0 = ${perfil.z0} m</td></tr>
+      <tr><td class="label">Altura de buje</td><td class="value">${fmtNum(perfil.hbuje,0)} m</td></tr>
+      <tr><td class="label">Factor de extrapolación K</td><td class="value">${fmtNum(perfil.K,4)}</td></tr>
+      <tr><td class="label">Velocidad media a la altura de buje</td><td class="value">${fmtNum(media(perfil.wsBuje),2)} m/s</td></tr>
+    </table>
+
+    <h3>5 · Ajuste de Weibull</h3>
+    <table class="example-table">
+      <tr><td class="label">Factor de forma k</td><td class="value">${fmtNum(wb.fit.k,4)}</td></tr>
+      <tr><td class="label">Factor de escala C</td><td class="value">${fmtNum(wb.fit.C,4)} m/s</td></tr>
+      <tr><td class="label">Coeficiente de determinación R²</td><td class="value">${fmtNum(wb.fit.r2,4)}</td></tr>
+    </table>
+
+    <h3>6 · Energía y factor de capacidad</h3>
+    <table class="example-table">
+      <tr><td class="label">Aerogenerador</td><td class="value">${wb.turbina}</td></tr>
+      <tr><td class="label">Energía anual estimada</td><td class="value">${fmtNum(wb.energiaKwh/1000,1)} MWh</td></tr>
+      <tr><td class="label">Factor de capacidad</td><td class="value">${fmtNum(wb.capacityFactor*100,1)} %</td></tr>
+    </table>
+
+    <h3>7 · Conclusiones y viabilidad</h3>
+    <p>${document.getElementById('wb_viabilidad_texto').textContent}</p>
+
+    <h3>8 · Aviso</h3>
+    <p>Este informe es una estimación orientativa basada en el año meteorológico típico de PVGIS. No sustituye a una campaña de medición in situ ni a un estudio de viabilidad de un parque eólico firmado por un técnico competente.</p>
+  `;
+  showToast('Informe generado.');
+}
+
+// ===================== DESCARGAR INFORME EN PDF (con índice, figuras, tablas y glosario) =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(!tmy || !est || !perfil){ showToast('Obtén primero los datos de PVGIS (sección 03).'); return; }
+  if(!wb) calcularEnergia();
+  if(!wb){ showToast('Calcula primero la energía anual (sección 06).'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Estudio del recurso eolico';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const orgTel = document.getElementById('p_org_tel').value || '-';
+  const orgCorreo = document.getElementById('p_org_correo').value || '-';
+  const destNombre = document.getElementById('p_dest_nombre').value || '-';
+  const destCif = document.getElementById('p_dest_cif').value || '-';
+  const destDir = document.getElementById('p_dest_dir').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+  const meses = tmy.monthsSelected.map(m=>MESES[m.month-1].slice(0,3)+' '+m.year).join(', ');
+  const mesMax = est.mensual.reduce((a,b)=>b.media>a.media?b:a);
+  const mesMin = est.mensual.reduce((a,b)=>b.media<a.media?b:a);
+
+  const GLOSARIO = [
+    ['PVGIS','Photovoltaic Geographical Information System (Comisión Europea, JRC)','-'],
+    ['TMY','Typical Meteorological Year: año meteorológico típico compuesto mes a mes','-'],
+    ['WS10m / WD10m','Velocidad / dirección del viento a 10 m de altura (variables PVGIS)','m/s / grados'],
+    ['z0','Longitud de rugosidad del terreno','m'],
+    ['k','Factor de forma de la distribución de Weibull','-'],
+    ['C','Factor de escala de la distribución de Weibull','m/s'],
+    ['Cp','Coeficiente de potencia de un aerogenerador (límite de Betz: 0,593)','-'],
+    ['v_cut-in','Velocidad de conexión del aerogenerador','m/s'],
+    ['v_cut-out','Velocidad de corte de seguridad del aerogenerador','m/s'],
+    ['Factor de capacidad (CF)','Cociente entre la energía real producida y la producida a potencia nominal continua','%'],
+    ['R²','Coeficiente de determinación del ajuste de Weibull','-'],
+  ];
+
+  function makeHelpers(doc){
+    function checkPage(yy, needed=12){
+      if(yy > bottomY-needed){ doc.addPage(); return topY; }
+      return yy;
+    }
+    function sectionTitle(yy, numText, text, collect){
+      yy = checkPage(yy, 18);
+      doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+      doc.text(numText+'  '+text, marginX, yy);
+      doc.setDrawColor(230,150,20); doc.setLineWidth(0.6);
+      doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+      doc.setLineWidth(0.2);
+      if(collect) collect.toc.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+11;
+    }
+    function kv(yy, k, v, indent=0){
+      yy = checkPage(yy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+      doc.text(k, marginX+indent, yy);
+      doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+      const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+70));
+      doc.text(vLines[0], marginX+indent+70, yy);
+      let extra = 0;
+      for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+70, yy+extra); }
+      return yy+5.6+extra;
+    }
+    function paragraph(yy, text, opts={}){
+      const size = opts.size || 9;
+      const width = opts.width || (pageW-2*marginX);
+      doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+      const linesArr = doc.splitTextToSize(text, width);
+      linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+      return yy+3;
+    }
+    function tableCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      doc.text(numText+': '+text, marginX, yy);
+      if(collect) collect.tables.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+6;
+    }
+    function figureCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      const lines = doc.splitTextToSize(numText+': '+text, pageW-2*marginX);
+      lines.forEach((l,i)=>{ doc.text(l, marginX, yy+i*4.5); });
+      if(collect) collect.figures.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+lines.length*4.5+3;
+    }
+    function tabla(yy, headers, colX, aligns, rows){
+      yy = checkPage(yy, 16);
+      doc.setFillColor(245,245,247);
+      doc.rect(marginX, yy-4.5, pageW-2*marginX, 6.5, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(100,108,120);
+      headers.forEach((h,i)=>{ doc.text(h, colX[i], yy, aligns[i]==='right'?{align:'right'}:undefined); });
+      yy += 4; doc.setDrawColor(210,210,215); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy += 5;
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(30,35,45);
+      rows.forEach(r=>{
+        yy = checkPage(yy, 6);
+        r.forEach((c,i)=>{ doc.text(String(c), colX[i], yy, aligns[i]==='right'?{align:'right'}:undefined); });
+        yy += 6;
+      });
+      return yy+4;
+    }
+    function barChartPdf(yy, bins, alto, color){
+      const w = pageW-2*marginX;
+      yy = checkPage(yy, alto+14);
+      const x0=marginX, y0=yy;
+      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,w,alto);
+      const maxV = Math.max(...bins.map(b=>b.count),1);
+      const stepPx = w/bins.length;
+      const barW = stepPx*0.8;
+      bins.forEach((b,i)=>{
+        const bh = (b.count/maxV)*(alto-6);
+        doc.setFillColor(...color);
+        doc.rect(x0+stepPx*i+(stepPx-barW)/2, y0+alto-4-bh, barW, bh, 'F');
+      });
+      return y0+alto+6;
+    }
+    function windRosePdf(yy, rose, diametro){
+      yy = checkPage(yy, diametro+18);
+      const cx = pageW/2, cy = yy+diametro/2;
+      const rMax = diametro/2-6;
+      const maxTotal = Math.max(...rose.map(b=>b.low+b.mid+b.high), 1);
+      doc.setDrawColor(220,222,226); doc.setLineWidth(0.15);
+      for(let g=1; g<=4; g++){ doc.circle(cx, cy, rMax*g/4, 'S'); }
+      function toXY(r, angDeg){ const rad=angDeg*Math.PI/180; return [cx+r*Math.sin(rad), cy-r*Math.cos(rad)]; }
+      function wedge(r0, r1, a0, a1, color){
+        if(r1<=r0) return;
+        const [x0,y0]=toXY(r1,a0), [x1,y1]=toXY(r1,a1), [x2,y2]=toXY(r0,a1), [x3,y3]=toXY(r0,a0);
+        doc.setFillColor(...color);
+        doc.triangle(x0,y0,x1,y1,x2,y2,'F');
+        doc.triangle(x0,y0,x2,y2,x3,y3,'F');
+      }
+      rose.forEach((b,i)=>{
+        const centro=i*22.5, a0=centro-9.5, a1=centro+9.5;
+        const rLow = rMax*b.low/maxTotal, rMid = rMax*(b.low+b.mid)/maxTotal, rHigh = rMax*(b.low+b.mid+b.high)/maxTotal;
+        if(b.low>0) wedge(0, rLow, a0, a1, [55,207,255]);
+        if(b.mid>0) wedge(rLow, rMid, a0, a1, [22,163,74]);
+        if(b.high>0) wedge(rMid, rHigh, a0, a1, [220,38,38]);
+      });
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(90,96,106);
+      doc.text('N', cx, cy-rMax-4, {align:'center'});
+      doc.text('S', cx, cy+rMax+7, {align:'center'});
+      doc.text('E', cx+rMax+6, cy+2, {align:'center'});
+      doc.text('O', cx-rMax-6, cy+2, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(100,108,120);
+      doc.text('Azul: <5 m/s   Verde: 5-10 m/s   Rojo: >10 m/s', cx, cy+rMax+16, {align:'center'});
+      return cy+rMax+22;
+    }
+    function scatterLinePdf(yy, pts, k, intercept, alto){
+      const w = pageW-2*marginX;
+      yy = checkPage(yy, alto+14);
+      const x0=marginX, y0=yy;
+      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,w,alto);
+      const xs = pts.map(d=>d.p), ys = pts.map(d=>d.q);
+      const minX=Math.min(...xs), maxX=Math.max(...xs);
+      const lineYs = [k*minX+intercept, k*maxX+intercept];
+      const minY=Math.min(...ys,...lineYs), maxY=Math.max(...ys,...lineYs);
+      const sx = v => x0 + (v-minX)/((maxX-minX)||1)*w;
+      const sy = v => y0+alto-4 - (v-minY)/((maxY-minY)||1)*(alto-8);
+      doc.setFillColor(55,207,255);
+      pts.forEach(d=>{ doc.circle(sx(d.p), sy(d.q), 0.35, 'F'); });
+      doc.setDrawColor(255,176,32); doc.setLineWidth(0.5);
+      doc.line(sx(minX), sy(k*minX+intercept), sx(maxX), sy(k*maxX+intercept));
+      return y0+alto+6;
+    }
+    function energyChartPdf(yy, pts, alto){
+      const w = pageW-2*marginX;
+      yy = checkPage(yy, alto+14);
+      const x0=marginX, y0=yy;
+      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,w,alto);
+      const maxV = Math.max(...pts.map(p=>p.v),1);
+      const maxDens = Math.max(...pts.map(p=>p.densidad),0.001);
+      const maxPot = Math.max(...pts.map(p=>p.potencia),1);
+      const maxEnergia = Math.max(...pts.map(p=>p.energia||0),0.001);
+      const sx = v => x0 + v/maxV*w;
+      const base = y0+alto-4;
+      const syD = v => base - v/maxDens*(alto-8);
+      const syP = v => base - v/maxPot*(alto-8);
+      const syE = v => base - v/maxEnergia*(alto-8);
+      doc.setFillColor(190,230,200);
+      for(let i=0;i<pts.length-1;i++){
+        const xA=sx(pts[i].v), yA=syE(pts[i].energia||0), xB=sx(pts[i+1].v), yB=syE(pts[i+1].energia||0);
+        doc.triangle(xA, base, xB, base, xB, yB, 'F');
+        doc.triangle(xA, base, xB, yB, xA, yA, 'F');
+      }
+      doc.setDrawColor(55,207,255); doc.setLineWidth(0.5);
+      for(let i=0;i<pts.length-1;i++) doc.line(sx(pts[i].v), syD(pts[i].densidad), sx(pts[i+1].v), syD(pts[i+1].densidad));
+      doc.setDrawColor(255,176,32); doc.setLineWidth(0.5);
+      for(let i=0;i<pts.length-1;i++) doc.line(sx(pts[i].v), syP(pts[i].potencia), sx(pts[i+1].v), syP(pts[i+1].potencia));
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(100,108,120);
+      doc.text('Azul: densidad Weibull   Naranja: potencia   Verde: energía (densidad × potencia)', x0, base+9);
+      return y0+alto+13;
+    }
+    return {checkPage, sectionTitle, kv, paragraph, tableCaption, figureCaption, tabla, barChartPdf, windRosePdf, scatterLinePdf, energyChartPdf};
+  }
+
+  function renderBody(doc, collect){
+    const H = makeHelpers(doc);
+    let y = topY;
+    let figN = 0, tabN = 1;
+    const FIG = ()=>{ figN++; return 'Figura '+figN; };
+    const TAB = ()=>{ tabN++; return 'Tabla '+tabN; };
+
+    y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
+    y = H.paragraph(y, 'Este informe recoge el estudio del recurso eólico del emplazamiento "'+proyecto+'" (coordenadas '+fmtNum(tmy.lat,4)+', '+fmtNum(tmy.lng,4)+'), a partir del año meteorológico típico (TMY) de PVGIS.');
+    y = H.paragraph(y, 'Resultado principal: velocidad media anual de '+fmtNum(est.anualMedia,2)+' m/s a 10 m ('+fmtNum(media(perfil.wsBuje),2)+' m/s extrapolada a '+fmtNum(perfil.hbuje,0)+' m de altura de buje), ajuste de Weibull con k='+fmtNum(wb.fit.k,3)+' y C='+fmtNum(wb.fit.C,3)+' m/s (R²='+fmtNum(wb.fit.r2,3)+'), y una energía anual estimada de '+fmtNum(wb.energiaKwh/1000,1)+' MWh con un factor de capacidad del '+fmtNum(wb.capacityFactor*100,1)+'% para el aerogenerador '+wb.turbina+'.');
+
+    y = H.sectionTitle(y, '2.', 'Metodología y marco normativo', collect);
+    y = H.paragraph(y, 'El viento se caracteriza mediante velocidad y dirección horarias del año meteorológico típico (TMY) de PVGIS a 10 m de altura. La velocidad se extrapola a la altura de buje mediante la ley logarítmica en función de la rugosidad del terreno (clases del European Wind Atlas), y se ajusta una distribución de Weibull de dos parámetros (k, C) mediante linealización y regresión por mínimos cuadrados.');
+    y = H.paragraph(y, 'Los conceptos de aerodinámica del rotor (límite de Betz), componentes del aerogenerador y curva de potencia están ampliados con el manual "Energía Eólica" del IDAE (2006, colección Manuales de Energías Renovables). La energía anual se calcula integrando el producto de la densidad de probabilidad de Weibull por la curva de potencia del aerogenerador elegido.');
+    y = H.paragraph(y, 'Este informe no sustituye a una campaña de medición in situ (mástil meteorológico) ni a un estudio de viabilidad de parque eólico firmado por un técnico competente.');
+
+    y = H.sectionTitle(y, '3.', 'Ubicación y fuente de datos', collect);
+    y = H.kv(y, 'Emplazamiento', proyecto);
+    y = H.kv(y, 'Coordenadas', fmtNum(tmy.lat,4)+', '+fmtNum(tmy.lng,4));
+    y = H.kv(y, 'Fuente de datos', 'PVGIS API TMY (Comisión Europea, JRC)');
+    y = H.kv(y, 'Año meteorológico típico compuesto por', meses);
+    y = H.kv(y, 'Horas analizadas', tmy.rows.length+' h');
+
+    y = H.sectionTitle(y, '4.', 'Análisis estadístico', collect);
+    y = H.kv(y, 'Velocidad media anual (10 m)', fmtNum(est.anualMedia,2)+' m/s');
+    y = H.kv(y, 'Varianza anual', fmtNum(est.anualVar,2));
+    y = H.kv(y, 'Mes más ventoso', mesMax.mes+' ('+fmtNum(mesMax.media,2)+' m/s)');
+    y = H.kv(y, 'Mes menos ventoso', mesMin.mes+' ('+fmtNum(mesMin.media,2)+' m/s)');
+    y = H.tableCaption(y, TAB(), 'Velocidad media y varianza por mes', collect);
+    y = H.tabla(y, ['Mes','Media (m/s)','Varianza'], [marginX, marginX+100, marginX+140], ['left','right','right'],
+      est.mensual.map(m=>[m.mes, fmtNum(m.media,3), fmtNum(m.var,3)]));
+
+    y = H.sectionTitle(y, '5.', 'Distribución y perfil de velocidades', collect);
+    y = H.paragraph(y, 'Histograma de velocidades a 10 m (frecuencia absoluta en horas/año):');
+    y = H.figureCaption(y, FIG(), 'Histograma de velocidades a 10 m', collect);
+    y = H.barChartPdf(y, perfil.hist10, 42, [55,207,255]);
+    y = H.kv(y, 'Clase de rugosidad del terreno', 'z0 = '+perfil.z0+' m');
+    y = H.kv(y, 'Altura de buje', fmtNum(perfil.hbuje,0)+' m');
+    y = H.kv(y, 'Factor de extrapolación K', fmtNum(perfil.K,4));
+    y = H.kv(y, 'Velocidad media a la altura de buje', fmtNum(media(perfil.wsBuje),2)+' m/s');
+    y = H.paragraph(y, 'Histograma de velocidades a la altura de buje:');
+    y = H.figureCaption(y, FIG(), 'Histograma de velocidades a la altura de buje', collect);
+    y = H.barChartPdf(y, perfil.histBuje, 42, [255,176,32]);
+    y = H.paragraph(y, 'Rosa de los vientos (año meteorológico típico completo):');
+    y = H.figureCaption(y, FIG(), 'Rosa de los vientos', collect);
+    y = H.windRosePdf(y, perfil.rose, 78);
+
+    y = H.sectionTitle(y, '6.', 'Ajuste de Weibull y energía del aerogenerador', collect);
+    y = H.kv(y, 'Factor de forma k', fmtNum(wb.fit.k,4));
+    y = H.kv(y, 'Factor de escala C', fmtNum(wb.fit.C,4)+' m/s');
+    y = H.kv(y, 'Coeficiente de determinación R²', fmtNum(wb.fit.r2,4));
+    y = H.kv(y, 'Aerogenerador', wb.turbina);
+    y = H.kv(y, 'Potencia nominal', fmtNum(wb.prated,0)+' kW');
+    y = H.kv(y, 'Energía anual estimada', fmtNum(wb.energiaKwh/1000,1)+' MWh');
+    y = H.kv(y, 'Factor de capacidad', fmtNum(wb.capacityFactor*100,1)+' %');
+    y = H.paragraph(y, 'Ajuste de la distribución de Weibull por linealización y mínimos cuadrados:');
+    y = H.figureCaption(y, FIG(), 'Ajuste de la distribución de Weibull', collect);
+    y = H.scatterLinePdf(y, wb.fit.ptsMuestra, wb.fit.k, wb.fit.intercept, 52);
+    y = H.paragraph(y, 'Densidad de Weibull, curva de potencia y energía proporcionada por el aerogenerador:');
+    y = H.figureCaption(y, FIG(), 'Energía proporcionada por el aerogenerador', collect);
+    y = H.energyChartPdf(y, wb.curvaPuntos, 52);
+
+    y = H.sectionTitle(y, '7.', 'Conclusiones y viabilidad', collect);
+    y = H.paragraph(y, document.getElementById('wb_viabilidad_texto').textContent || 'Sin conclusión calculada.');
+
+    y = H.sectionTitle(y, '8.', 'Referencias', collect);
+    const refs = [
+      'PVGIS (Photovoltaic Geographical Information System). Comisión Europea, Joint Research Centre. API TMY (Typical Meteorological Year).',
+      'IDAE. Energía Eólica (2006), colección Manuales de Energías Renovables, IDAE-CIEMAT.',
+      'European Wind Atlas. Clases y longitudes de rugosidad del terreno.',
+    ];
+    refs.forEach((r,i)=>{ y = H.paragraph(y, (i+1)+'. '+r); });
+
+    y = H.sectionTitle(y, '9.', 'Aviso', collect);
+    y = H.paragraph(y, 'Este informe es una estimación orientativa basada en el año meteorológico típico de PVGIS. No sustituye a una campaña de medición in situ ni a un estudio de viabilidad de un parque eólico firmado por un técnico competente.');
+
+    y = H.sectionTitle(y, '10.', 'Validación del informe', collect);
+    y = H.checkPage(y, 40);
+    y += 10;
+    doc.setDrawColor(180,185,192); doc.setLineWidth(0.3);
+    doc.line(marginX, y+20, marginX+70, y+20);
+    doc.line(pageW-marginX-70, y+20, pageW-marginX, y+20);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+    doc.text('Por el técnico — '+(orgNombre!=='-'?orgNombre:autor), marginX, y+25);
+    doc.text('Por el titular — '+(destNombre&&destNombre!=='-'?destNombre:''), pageW-marginX-70, y+25);
+    doc.text('Fecha:', marginX, y+34);
+    doc.text('Fecha:', pageW-marginX-70, y+34);
+  }
+
+  // ===================== PASE 1: MEDICIÓN =====================
+  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
+  const collectMeasure = {toc:[], tables:[], figures:[]};
+  renderBody(measureDoc, collectMeasure);
+
+  // ===================== PORTADA Y PRELIMINARES (fijas: 5 páginas) =====================
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const FRONT_PAGES = 5;
+
+  function drawIndexPage(title, entries){
+    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+    doc.text(title, marginX, 32);
+    doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+    let y=50;
+    doc.setFontSize(10);
+    entries.forEach(e=>{
+      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
+      const label = e.num+'  '+e.text;
+      const pageStr = String(e.page);
+      const pageX = pageW-marginX;
+      const labelLines = doc.splitTextToSize(label, 140);
+      doc.text(labelLines[0], marginX, y);
+      doc.text(pageStr, pageX, y, {align:'right'});
+      const labelW = doc.getTextWidth(labelLines[0]);
+      const pageStrW = doc.getTextWidth(pageStr);
+      const dotsStartX = marginX+labelW+2;
+      const dotsEndX = pageX-pageStrW-2;
+      if(dotsEndX>dotsStartX){
+        doc.setTextColor(190,192,198);
+        const dotW = doc.getTextWidth('.');
+        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
+        doc.text('.'.repeat(n), dotsStartX, y);
+      }
+      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
+    });
+    if(entries.length===0){
+      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
+      doc.text('Sin elementos.', marginX, y);
+    }
+  }
+
+  // ---- Página 1: portada ----
+  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(230,150,20);
+  doc.text('ESTUDIO DEL RECURSO EÓLICO', marginX, 42);
+  doc.setDrawColor(230,150,20); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 66;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  cy += 4;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Coordenadas: '+fmtNum(tmy.lat,4)+', '+fmtNum(tmy.lng,4)+' — datos PVGIS TMY', marginX, cy); cy+=14;
+
+  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 62, 1.5, 1.5, 'S');
+  let by = cy+9;
+  doc.setFontSize(9.5);
+  [['Titular / cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],
+   ['Dirección del emplazamiento', destDir],
+   ['Técnico', autor+' ('+registro+')'],
+   ['Organización', orgNombre+' — '+orgCif],
+   ['Contacto', orgTel+' / '+orgCorreo],
+   ['Fecha del informe', fecha]]
+   .forEach(([k,v])=>{
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
+    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-66);
+    doc.text(vLines[0], marginX+58, by);
+    by += 7.8;
+  });
+
+  cy += 74;
+  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 24, 1.5, 1.5, 'F');
+  doc.setFont('times','bold'); doc.setFontSize(10); doc.setTextColor(10,18,28);
+  doc.text('FACTOR DE CAPACIDAD ESTIMADO: '+fmtNum(wb.capacityFactor*100,1)+' %', marginX+8, cy+9);
+  doc.setFontSize(13);
+  doc.text('Velocidad media a '+fmtNum(perfil.hbuje,0)+' m: '+fmtNum(media(perfil.wsBuje),2)+' m/s   ·   Energía anual: '+fmtNum(wb.energiaKwh/1000,1)+' MWh', marginX+8, cy+18);
+
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Índice, índice de figuras, índice de tablas y glosario: ver páginas siguientes', marginX, 274);
+
+  // ---- Página 2: índice ----
+  doc.addPage();
+  drawIndexPage('Índice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  // ---- Página 3: índice de figuras ----
+  doc.addPage();
+  drawIndexPage('Índice de figuras', collectMeasure.figures.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  // ---- Página 4: índice de tablas ----
+  doc.addPage();
+  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y términos', page:5}]
+    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+  drawIndexPage('Índice de tablas', tablesForList);
+
+  // ---- Página 5: glosario ----
+  doc.addPage();
+  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+  doc.text('Glosario de siglas y términos', marginX, 32);
+  doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+  let gy=48;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+48, gy); doc.text('Unidad', marginX+150, gy);
+  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
+  GLOSARIO.forEach(row=>{
+    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(180,120,10);
+    doc.text(row[0], marginX, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
+    const dLines = doc.splitTextToSize(row[1], 98);
+    doc.text(dLines[0], marginX+48, gy);
+    doc.setTextColor(100,108,120);
+    doc.text(row[2], marginX+150, gy);
+    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Tabla 1: Glosario de siglas y términos', marginX, gy+6);
+
+  // ---- Página 6 en adelante: cuerpo del informe ----
+  doc.addPage();
+  const collectReal = {toc:[], tables:[], figures:[]};
+  renderBody(doc, collectReal);
+
+  // ===================== CABECERA / PIE =====================
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (proyecto!=='-'?proyecto:'recurso-eolico').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-recurso-eolico-'+safeName+'.pdf');
+  showToast('Informe en PDF generado y descargado.');
+});
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
+     compartida entre todos los documentos de esta familia a través de localStorage. -->
+<script>
+(function(){
+  var DOC_KEY = 'estudio_recurso_eolico_espana';
+  var LS_KEY = 'VatiaCo';
+
+  function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function guardarVatiaco(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+
+  function valorCampo(el){ return el.type==='checkbox' ? el.checked : el.value; }
+  function fijarCampo(el, val){ if(el.type==='checkbox') el.checked = !!val; else el.value = val; }
+
+  var TIPOS_IGNORADOS = {file:1, button:1, submit:1, reset:1, image:1};
+
+  function sincronizarCampos(campos, leerContenedor, obtenerContenedorParaGuardar){
+    campos.forEach(function(el){
+      if(!el.id || TIPOS_IGNORADOS[el.type]) return;
+      var guardado = leerContenedor(leerVatiaco());
+      if(guardado && guardado[el.id]!==undefined && guardado[el.id]!==null && guardado[el.id]!==''){
+        fijarCampo(el, guardado[el.id]);
+      } else {
+        var v0 = leerVatiaco();
+        var c0 = obtenerContenedorParaGuardar(v0);
+        c0[el.id] = valorCampo(el);
+        guardarVatiaco(v0);
+      }
+      var evento = (el.tagName==='SELECT' || el.type==='checkbox' || el.type==='radio') ? 'change' : 'input';
+      el.addEventListener(evento, function(){
+        var v = leerVatiaco();
+        var c = obtenerContenedorParaGuardar(v);
+        c[el.id] = valorCampo(el);
+        guardarVatiaco(v);
+      });
+    });
+  }
+
+  function registrarSalida(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    v[DOC_KEY].outputs.ultimaGeneracionPdf = new Date().toISOString();
+    guardarVatiaco(v);
+  }
+
+  function instalarBotonesExportarImportar(){
+    var barra = document.createElement('div');
+    barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
+    function crearBoton(texto){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = texto;
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      return b;
+    }
+    var btnExp = crearBoton('⬇');
+    btnExp.addEventListener('click', function(){
+      var blob = new Blob([JSON.stringify(leerVatiaco(), null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'VatiaCo.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    var btnImp = crearBoton('⬆');
+    var inputFile = document.createElement('input');
+    inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
+    inputFile.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          var v = JSON.parse(ev.target.result);
+          guardarVatiaco(v);
+          location.reload();
+        }catch(err){
+          alert('El archivo no es un JSON valido.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    btnImp.addEventListener('click', function(){ inputFile.click(); });
+
+    barra.appendChild(btnExp);
+    barra.appendChild(btnImp);
+    barra.appendChild(inputFile);
+    document.body.appendChild(barra);
+  }
+
+  function inicializarVatiaco(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].inputs = v[DOC_KEY].inputs || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    guardarVatiaco(v);
+
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]')),
+      function(vv){ return vv.proyecto; },
+      function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
+    );
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input:not([id^="p_"]), select:not([id^="p_"]), textarea:not([id^="p_"])')),
+      function(vv){ return vv[DOC_KEY] && vv[DOC_KEY].inputs; },
+      function(vv){ vv[DOC_KEY] = vv[DOC_KEY] || {}; vv[DOC_KEY].inputs = vv[DOC_KEY].inputs || {}; return vv[DOC_KEY].inputs; }
+    );
+
+    var btnPdf = document.getElementById('btnPdf');
+    if(btnPdf) btnPdf.addEventListener('click', registrarSalida);
+
+    instalarBotonesExportarImportar();
+  }
+
+  setTimeout(inicializarVatiaco, 0);
+})();
+</script>
+</body>
+</html>
