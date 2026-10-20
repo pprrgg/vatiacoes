@@ -1,11 +1,11 @@
 /*
- * Acceso de participantes a la plataforma de la comunidad, en un visor a pantalla
+ * Acceso de socios a la plataforma de la comunidad, en un visor a pantalla
  * completa (iframe sin barra). Lo usan la pagina principal y el mapa de comunidades:
  * mismo visor y misma direccion, asi que el inicio de sesion es el mismo desde los dos
  * sitios (el navegador guarda la sesion del iframe ligada a este sitio web).
  *
  *   <script src="/js/plataforma.js"></script>
- *   <a href="https://VatiaCo.duckdns.org/" data-plataforma="Acceso participantes">…</a>
+ *   <a href="https://VatiaCo.duckdns.org/" data-plataforma="Acceso socios">…</a>
  *   VatiaCoPlataforma.abrir('Nombre de la comunidad')
  *
  * Dentro del visor del blog (iframe del mismo origen) se monta en la ventana de arriba
@@ -73,7 +73,7 @@
     var a = e.target.closest && e.target.closest('[data-plataforma]');
     if (!a) return;
     e.preventDefault();
-    abrir(a.getAttribute('data-plataforma') || 'Acceso participantes');
+    abrir(a.getAttribute('data-plataforma') || 'Acceso socios');
   });
 
   window.VatiaCoPlataforma = { abrir: abrir, cerrar: cerrar, url: DESTINO };
