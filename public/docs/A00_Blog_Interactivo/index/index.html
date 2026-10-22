@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VatiaCo — Blog de un ingeniero juebilado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    
+    --bg:#0a0f1a;
+    --panel: rgba(17,26,41,0.12);
+    --panel-2: rgba(22,32,47,0.12);
+    --line: rgba(232,236,241,0.09);
+    --line-strong: rgba(232,236,241,0.16);
+    --text:#e8ecf1;
+    --text-dim:#8fa1b3;
+    --text-faint:#5c6c7d;
+    --copper:#cf8f4f;
+    --copper-bright:#e6ad70;
+    --green:#5fd68a;
+    --red:#e2574c;
+    --tape-bg:#f2c94c;
+    --tape-text:#151b12;
+    --radius:2px;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--body);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{color:inherit; text-decoration:none;}
+  img,svg{display:block; max-width:100%;}
+
+  :focus-visible{outline:2px solid var(--copper-bright); outline-offset:3px;}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
+
+  /* fixed background video */
+  .bg-video{
+    position:fixed; inset:0; z-index:-2;
+    width:100%; height:100%;
+    object-fit:cover;
+    filter:brightness(0.62) saturate(1.15);
+  }
+  .bg-video-overlay{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(207,143,79,0.12), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(95,214,138,0.08), transparent 60%),
+      linear-gradient(180deg, rgba(10,15,26,0.25), rgba(10,15,26,0.45) 55%, var(--bg) 100%);
+  }
+
+  /* faint schematic grid backdrop */
+  .grid-bg{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(ellipse 100% 60% at 50% 0%, black 0%, transparent 75%);
+    opacity:0.5;
+  }
+
+  /* ---------- tape label ---------- */
+  .tape{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--tape-bg); color:var(--tape-text);
+    font-family:var(--mono); font-weight:600; font-size:11px; letter-spacing:0.12em;
+    text-transform:uppercase;
+    padding:4px 10px 5px;
+    border-radius:1px;
+    box-shadow:0 1px 0 rgba(0,0,0,0.25), inset 0 -2px 3px rgba(0,0,0,0.08);
+    transform:rotate(-0.4deg);
+  }
+  .tape::before{content:"●"; font-size:7px; color:var(--red); margin-top:-1px;}
+
+  /* ---------- tabbar (sustituye al antiguo topbar con menu) ---------- */
+  .tabbar-wrap{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:stretch;
+    background:rgba(10,15,26,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .tabbar{
+    display:flex; overflow-x:auto; flex:1;
+    scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{
+    display:flex; align-items:center; padding:0 20px;
+    font-family:var(--mono); font-size:12.5px; letter-spacing:0.05em; text-transform:uppercase;
+    color:var(--text-dim); white-space:nowrap; flex-shrink:0;
+    border-bottom:2px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .tabbar a:hover{color:var(--text);}
+  .tabbar a.active{color:var(--copper-bright); border-bottom-color:var(--copper);}
+  .tabbar-arrow{
+    flex-shrink:0; width:34px; background:transparent; border:none;
+    color:var(--text-dim); cursor:pointer;
+    display:none; align-items:center; justify-content:center; padding:0;
+  }
+  .tabbar-arrow:hover{color:var(--copper-bright);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  .btn{
+    font-family:var(--mono); font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase;
+    padding:10px 18px; border-radius:var(--radius);
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--line-strong);
+    transition:all .15s ease;
+    cursor:pointer;
+  }
+  .btn-primary{
+    background:var(--copper); color:#1a1006; border-color:var(--copper); font-weight:600;
+  }
+  .btn-primary:hover{background:var(--copper-bright); transform:translateY(-1px);}
+  .btn-ghost{color:var(--text); background:transparent;}
+  .btn-ghost:hover{border-color:var(--text-dim);}
+  .btn-primary::before{content:"⏻"; font-size:12px;}
+
+  /* ---------- hero ---------- */
+  .hero{padding:88px 0 40px; position:relative; z-index:1;}
+  .hero-top{max-width:700px;}
+  .hero h1{
+    font-family:var(--display); font-weight:700;
+    font-size:clamp(38px, 5.6vw, 68px);
+    line-height:1.03; letter-spacing:-0.01em;
+    margin:20px 0 22px;
+  }
+  .hero h1 .accent{color:var(--copper-bright);}
+  .hero p.lead{
+    font-size:17px; color:var(--text-dim); max-width:520px; margin-bottom:34px;
+  }
+
+  /* ---------- section shell ---------- */
+  section{position:relative; z-index:1; padding:86px 0; display:none;}
+  section.tab-active{display:block;}
+  .section-head{margin-bottom:44px; max-width:620px;}
+  .section-head h2{
+    font-family:var(--display); font-weight:600; font-size:clamp(26px,3.4vw,36px);
+    margin:16px 0 12px; letter-spacing:-0.01em;
+  }
+  .section-head p{color:var(--text-dim); font-size:15.5px;}
+
+  /* ---------- video cards ---------- */
+  /* La card se ajusta al aspect-ratio real de cada video (por eso va inline, por
+     video, en vez de fijo aqui) y align-items:start evita que grid estire una card
+     panoramica hasta la altura de una vertical, o al reves. */
+  .video-cards{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:16px;
+    max-width:760px; margin-bottom:40px; align-items:start;
+  }
+  .video-cards:empty{display:none;}
+  .video-card{
+    position:relative; background:#000; border:1px solid var(--line-strong); border-radius:10px;
+    overflow:hidden; cursor:pointer;
+  }
+  .video-card video{width:100%; height:100%; display:block; object-fit:cover;}
+  .video-card .vc-play{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,15,26,0.28); color:#fff; opacity:1; transition:opacity .15s ease; pointer-events:none;
+  }
+  .video-card .vc-play svg{width:34px; height:34px; filter:drop-shadow(0 1px 4px rgba(0,0,0,0.5));}
+  .video-card.is-playing .vc-play{opacity:0;}
+  .video-card .vc-meta{
+    position:absolute; left:0; right:0; bottom:0; padding:6px 10px;
+    font-family:var(--mono); font-size:10px; color:#fff; display:flex; justify-content:space-between; gap:8px;
+    background:linear-gradient(0deg, rgba(0,0,0,0.6), transparent); pointer-events:none;
+  }
+
+  /* ---------- bio panel ---------- */
+  .bio-panel{
+    background:var(--panel); backdrop-filter:blur(10px); border:1px solid var(--line-strong); border-radius:10px;
+    padding:32px 34px; max-width:760px; margin-bottom:40px;
+  }
+  .bio-panel p{font-size:15px; color:var(--text-dim);}
+  .bio-panel p + p{margin-top:16px;}
+
+  /* ---------- services: breaker panel ---------- */
+  .services-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--line-strong);
+    border:1px solid var(--line-strong);
+    border-radius:6px; overflow:hidden;
+  }
+  @media(max-width:860px){ .services-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:560px){ .services-grid{grid-template-columns:1fr;} }
+  .svc{
+    background:var(--panel); backdrop-filter:blur(10px); padding:26px 22px; position:relative;
+    transition:background .18s ease;
+  }
+  .svc:hover{background:var(--panel-2);}
+  .svc-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px;}
+  .svc-ct{font-family:var(--mono); font-size:11px; color:var(--copper-bright); letter-spacing:0.06em;}
+  .svc-led{width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green);}
+  .svc h3{font-family:var(--display); font-size:17px; font-weight:600; margin-bottom:9px; line-height:1.25;}
+  .svc p{font-size:13.5px; color:var(--text-dim);}
+
+  /* ---------- final cta ---------- */
+  .final-cta{
+    background:var(--panel); backdrop-filter:blur(10px); border:1px solid var(--line-strong); border-radius:10px;
+    padding:56px 44px; display:flex; justify-content:space-between; align-items:center; gap:30px; flex-wrap:wrap;
+    position:relative; overflow:hidden;
+  }
+  .final-cta::before{
+    content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px;
+    border-radius:50%; background:radial-gradient(circle, rgba(207,143,79,0.16), transparent 70%);
+  }
+  .final-cta h2{font-family:var(--display); font-size:clamp(24px,3vw,32px); font-weight:600; max-width:440px; position:relative;}
+  .final-cta-actions{display:flex; gap:14px; flex-wrap:wrap; position:relative;}
+
+  /* ---------- footer ---------- */
+  footer{
+    border-top:1px solid var(--line); padding:50px 0 34px; position:relative; z-index:1;
+  }
+  .footer-grid{
+    display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:34px; margin-bottom:40px;
+  }
+  @media(max-width:700px){ .footer-grid{grid-template-columns:1fr; gap:28px;} }
+  .footer-col h5{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--text-faint); margin-bottom:14px;
+  }
+  .footer-col p, .footer-col a{font-size:13.5px; color:var(--text-dim); display:block; margin-bottom:8px;}
+  .footer-col a:hover{color:var(--text);}
+  .footer-bottom{
+    display:flex; justify-content:space-between; padding-top:22px; border-top:1px solid var(--line);
+    font-family:var(--mono); font-size:11px; color:var(--text-faint); letter-spacing:0.03em; flex-wrap:wrap; gap:10px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important;}
+  }
+</style>
+</head>
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+  <source src="bg.mp4" type="video/mp4">
+</video>
+<div class="bg-video-overlay"></div>
+<div class="grid-bg"></div>
+
+<div class="tabbar-wrap" id="tabbarWrap">
+  <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <nav class="tabbar" id="sidenav">
+    <a href="#inicio" data-sec="inicio">Inicio</a>
+    <a href="/comunidades/" target="_top">Comunidades energéticas</a>
+    <a class="js-open-blog-menu" href="/blog/" target="_top">Blog interactivo</a>
+    <a href="#contacto" data-sec="contacto">Contacto</a>
+  </nav>
+  <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+</div>
+<script>
+(function(){
+  var wrap = document.getElementById('tabbarWrap');
+  var bar = document.getElementById('sidenav');
+  var btnL = document.getElementById('tabScrollLeft');
+  var btnR = document.getElementById('tabScrollRight');
+  function update(){
+    var maxScroll = bar.scrollWidth - bar.clientWidth;
+    wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+    wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+  }
+  btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+  btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+  bar.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+  setTimeout(update, 0);
+})();
+</script>
+
+<main>
+  <!-- HERO -->
+  <section class="hero" id="inicio">
+    <div class="wrap">
+      <div class="hero-top">
+        <span class="tape">Cuaderno personal — Vatio&amp;Libre</span>
+        <h1>Ahora por fin,<br><span class="accent">la energía libre a nuestro alcance.</span></h1>
+        <p class="punchline"></p>
+        <p class="lead"> En mi tiempo libre escribo sobre lo que tuve el gusto de trabajar — la eficiencia energética, las energías renovables y el control de la energía — con artículos técnicos y herramientas interactivas de cálculo, sin prisas, jefes ni clientes de por medio.</p>
+      </div>
+
+      <div class="video-cards" id="videoCards"></div>
+
+      <div class="bio-panel">
+        <p>Vatio&amp;Libre es el cuaderno donde reúno artículos técnicos y calculadoras interactivas sobre auditoría energética, dimensionado fotovoltaico, autoconsumo, recarga de vehículo eléctrico, comunidades energéticas y cualquier tema que me vaya interesando — con normativa real y cálculos verificables, no folletos. Cualquier cometario proactivo es simpre bienvenido y te lo agradezco</p>
+      </div>
+
+      <div class="section-head" style="margin-top:56px;">
+        <span class="tape">Cuadro personal</span>
+        <h2>De qué escribo aquí</h2>
+        <p>Seis temas, los mismos con los que he trabajado toda la vida.</p>
+      </div>
+      <div class="services-grid">
+        <div class="svc">
+          <div class="svc-top"><span class="svc-ct">CT-01</span><span class="svc-led"></span></div>
+          <h3>Eficiencia y auditoría energética</h3>
+          <p>Balances energéticos, indicadores de desempeño (EnPI) y benchmarks sectoriales, conforme a ISO 50002 y RETScreen.</p>
+        </div>
+        <div class="svc">
+          <div class="svc-top"><span class="svc-ct">CT-02</span><span class="svc-led"></span></div>
+          <h3>Energías renovables y autoconsumo FV</h3>
+          <p>Dimensionado de sistemas fotovoltaicos, generación, facturación y presupuestos, partida por partida.</p>
+        </div>
+        <div class="svc">
+          <div class="svc-top"><span class="svc-ct">CT-03</span><span class="svc-led"></span></div>
+          <h3>Control y monitorización de la energía</h3>
+          <p>Cómo leer una instalación en tiempo real y tomar decisiones con esos datos, no a ojo.</p>
+        </div>
+        <div class="svc">
+          <div class="svc-top"><span class="svc-ct">CT-04</span><span class="svc-led"></span></div>
+          <h3>Vehículo eléctrico y recarga inteligente</h3>
+          <p>Qué vehículo conviene, cómo dimensionar la recarga y cómo aprovechar el sol para cargarlo.</p>
+        </div>
+        <div class="svc">
+          <div class="svc-top"><span class="svc-ct">CT-05</span><span class="svc-led"></span></div>
+          <h3>Comunidades energéticas</h3>
+          <p>Reparto de excedentes, coeficientes e inventario técnico para proyectos colectivos de autoconsumo.</p>
+        </div>
+        <div class="svc">
+          <div class="svc-top"><span class="svc-ct">CT-06</span><span class="svc-led"></span></div>
+          <h3>Normativa e instalaciones</h3>
+          <p>REBT, IDAE, CNMC y tramitación — la letra pequeña que hace que una instalación sea legal, no solo funcional.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section id="contacto">
+    <div class="wrap">
+      <div class="final-cta">
+        <h2>¿Alguna pregunta, una corrección técnica o simplemente te apetece hablar de energía? Escríbeme.</h2>
+        <div class="final-cta-actions">
+          <a class="btn btn-primary" href="mailto:info@vatiaco.es">Escribir a info@vatiaco.es</a>
+          <a class="btn btn-ghost" href="tel:+34951733491">951 733 491</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <p style="max-width:280px;">Cuaderno personal de un ingeniero, escrito en el tiempo libre, sobre eficiencia energética, energías renovables y control de la energía. Escrito desde Andalucía.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Vatio&amp;Libre</h5>
+        <a href="#inicio">Sobre mí</a>
+        <a class="js-open-blog-menu" href="/blog/" target="_top">Blog interactivo</a>
+      </div>
+      <div class="footer-col">
+        <h5>Contacto</h5>
+        <a href="mailto:info@vatiaco.es">info@vatiaco.es</a>
+        <a href="tel:+34951733491">951 733 491</a>
+        <p>Churriana, Málaga, Andalucía</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Vatio&amp;Libre — CUADERNO PERSONAL, Blog de un ingeniero jubilado de control</span>
+      <span>CUADERNO V.1.0 — TODOS LOS CIRCUITOS EN ORDEN</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
+  const sections = document.querySelectorAll('section[id]');
+  const SECCION_POR_DEFECTO = 'inicio';
+  function activarSeccion(id){
+    if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+    sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+    document.querySelectorAll('.tabbar a[data-sec]').forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+    window.scrollTo({top:0, left:0, behavior:'auto'});
+  }
+  function irASeccion(hash){
+    const id = hash.replace('#','');
+    if(!document.getElementById(id)) return;
+    activarSeccion(id);
+    history.pushState(null, '', hash);
+  }
+  document.querySelectorAll('a[href^="#"]').forEach(link=>{
+    const id = link.getAttribute('href').slice(1);
+    if(!document.getElementById(id)) return; // no corresponde a una seccion real (p.ej. anclas externas)
+    link.addEventListener('click', (e)=>{
+      e.preventDefault();
+      irASeccion(link.getAttribute('href'));
+    });
+  });
+  window.addEventListener('popstate', ()=>{
+    const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+    activarSeccion(id);
+  });
+  activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelector('.bg-video')?.pause();
+  }
+
+  // ===================== VIDEO CARDS (manifiesto generado en build, sin nombres fijos) =====================
+  // videos.json lo genera scripts/generate-video-manifest.mjs antes de cada dev/build,
+  // escaneando esta misma carpeta (excluye el video de fondo). Así la página nunca tiene
+  // que saber de antemano qué videos hay ni cuántos son.
+  (function(){
+    const cont = document.getElementById('videoCards');
+    if(!cont) return;
+    const PLAY_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    fetch('videos.json', {cache:'no-store'})
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const videos = (data && Array.isArray(data.videos)) ? data.videos : [];
+        if(!videos.length){ cont.remove(); return; }
+        cont.innerHTML = videos.map(v => {
+          const mb = (v.sizeBytes/1024/1024).toFixed(1)+' MB';
+          const dur = (typeof v.duration === 'number')
+            ? Math.floor(v.duration/60)+':'+String(v.duration%60).padStart(2,'0')
+            : '';
+          const src = encodeURI(v.file);
+          // La card usa el aspect-ratio real del video (si ffprobe lo pudo leer al
+          // generar el manifiesto) para no recortar ni dejar barras negras; 16/9 es
+          // solo el respaldo si esa info faltara.
+          const ratio = (v.width && v.height) ? (v.width+'/'+v.height) : '16/9';
+          return '<div class="video-card" style="aspect-ratio:'+ratio+';">'
+            + '<video muted loop playsinline preload="auto"><source src="'+src+'"></video>'
+            + '<div class="vc-play">'+PLAY_ICON+'</div>'
+            + '<div class="vc-meta"><span>'+dur+'</span><span>'+mb+'</span></div>'
+            + '</div>';
+        }).join('');
+
+        // Primer fotograma visible desde el principio: con preload="auto" el propio
+        // navegador ya pinta el fotograma 0 en cuanto tiene datos suficientes, sin
+        // necesidad de forzar un seek con JS. (Se probó a forzar video.currentTime en
+        // "loadeddata" para adelantarlo, pero en la práctica eso disparaba un fallo real
+        // del pipeline de vídeo -"demuxer seek failed"- que dejaba el <video> en estado
+        // de error permanente: a partir de ahí ningún play() volvía a funcionar, ni con
+        // hover ni con click. Cuanto menos se manipule el <video> antes de que el propio
+        // navegador lo tenga listo, más fiable es.)
+        cont.querySelectorAll('.video-card').forEach(card => {
+          const video = card.querySelector('video');
+          video.playbackRate = 4;
+          // Algunos navegadores restablecen playbackRate a 1 al (re)cargar la fuente;
+          // se vuelve a fijar cada vez que arranca la reproducción para que no se pierda.
+          video.addEventListener('play', () => { video.playbackRate = 4; });
+          video.addEventListener('play', () => card.classList.add('is-playing'));
+          video.addEventListener('pause', () => card.classList.remove('is-playing'));
+          card.addEventListener('mouseenter', () => { video.play().catch(()=>{}); });
+          card.addEventListener('mouseleave', () => { video.pause(); });
+          // No alterna play/pause: en ratón, "mouseenter" ya se dispara justo antes que
+          // "click", así que si el click alternara, apagaría lo que el hover acababa de
+          // encender (parecía que el click "no hacía nada"). El click simplemente
+          // garantiza que se reproduzca, tanto si ya estaba sonando (hover) como si es
+          // la primera interacción (tap en móvil, sin hover previo).
+          card.addEventListener('click', () => { video.play().catch(()=>{}); });
+        });
+      })
+      .catch(() => { cont.remove(); });
+  })();
+
+  document.querySelectorAll('.js-open-blog-menu').forEach(link => {
+    link.addEventListener('click', (event) => {
+      try {
+        const topDoc = window.top.document;
+        const topSidebar = topDoc.getElementById('sidebar');
+        const topMenuBtn = topDoc.getElementById('menuToggleButton');
+        const topOverlay = topDoc.getElementById('sidebarOverlay');
+        if (!topSidebar || !topMenuBtn) return; // not embedded in the site shell: let the link navigate normally
+        event.preventDefault();
+        topSidebar.classList.add('open');
+        topOverlay?.classList.add('visible');
+        topMenuBtn.setAttribute('aria-expanded', 'true');
+        topDoc.getElementById('searchInput')?.focus();
+      } catch (err) {
+        // cross-origin or standalone: fall back to normal navigation to "/"
+      }
+    });
+  });
+</script>
+</body>
+</html>

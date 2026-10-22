@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cómo Funciona un Coche Eléctrico Puro · Arquitectura y Señales de Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B; --gray:#5B7086;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--cyan); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--cyan); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--cyan); border-bottom-color:var(--cyan);}
+  .tabbar a.active .tag{color:var(--cyan);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--cyan); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:820px;}
+  section .lede{color:var(--text-dim); max-width:700px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:820px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--cyan);}
+  .hero .sub{color:var(--text-dim); max-width:660px; font-size:15.5px;}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:160px; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--cyan); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--cyan), var(--amber));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+  .comp-card .fn{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field input[type=text], .field input[type=number], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--cyan);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(55,207,255,0.1);}
+  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
+  .btn.primary:hover{background:#6fdcff;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.toggle.on{background:var(--cyan); color:#0A121C;}
+  .btn.toggle.regen-on{background:var(--green); border-color:var(--green); color:#0A121C;}
+
+  .calculator{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:16px 0;}
+  .calc-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:16px;}
+  .result-chip{background:var(--panel2); border:1px solid var(--cyan); border-radius:var(--radius); padding:16px; text-align:center;}
+  .result-chip .v{font-family:var(--font-mono); font-size:22px; color:var(--cyan);}
+  .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+  .result-chip.regen{border-color:var(--green);}
+  .result-chip.regen .v{color:var(--green);}
+
+  .slider-row{display:flex; align-items:center; gap:12px;}
+  .slider-row input[type=range]{flex:1; accent-color:var(--cyan);}
+  .slider-row .slider-val{font-family:var(--font-mono); font-size:13px; color:var(--cyan); width:70px; text-align:right; flex-shrink:0;}
+  .tooltip-text{font-size:11px; color:var(--text-dimmer); margin-top:4px;}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 9px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:8px 9px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+
+  /* Diagramas de caja-flecha lineales (flujo de energía / carga) */
+  .flow-diagram{display:flex; align-items:stretch; flex-wrap:wrap; gap:0; margin:20px 0;}
+  .flow-step{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 14px; width:158px; text-align:center; transition:box-shadow .2s ease, border-color .2s ease;}
+  .flow-step .fi{font-size:22px; margin-bottom:8px;}
+  .flow-step h4{font-size:12px; margin-bottom:5px; line-height:1.25;}
+  .flow-step p{font-size:10.5px; color:var(--text-dimmer);}
+  .flow-arrow{display:flex; align-items:center; justify-content:center; width:34px; flex-shrink:0; color:var(--text-dimmer); font-size:18px; transition:color .2s ease;}
+  @media(max-width:960px){
+    .flow-diagram{flex-direction:column; align-items:stretch;}
+    .flow-step{width:100%;}
+    .flow-arrow{width:100%; height:26px; transform:rotate(90deg);}
+  }
+  .flow-note{font-size:12px; color:var(--text-dimmer); margin-top:14px; border-left:2px solid var(--line); padding-left:12px;}
+  .flow-diagram.traction .flow-step{border-color:var(--amber); box-shadow:0 0 0 1px rgba(255,176,32,0.25);}
+  .flow-diagram.traction .flow-arrow{color:var(--amber);}
+  .flow-diagram.regenerative .flow-step{border-color:var(--green); box-shadow:0 0 0 1px rgba(87,217,163,0.25);}
+  .flow-diagram.regenerative .flow-arrow{color:var(--green);}
+
+  /* Diagrama de señales (SVG) */
+  .diagram-wrap{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:24px 0; overflow-x:auto;}
+  .diagram-wrap svg{width:100%; min-width:760px; height:auto; display:block;}
+  .diagram-wrap text{font-family:var(--font-mono);}
+  .diag-title{font-size:13px; font-weight:600; fill:var(--text);}
+  .diag-sub{font-size:10px; fill:var(--text-dimmer);}
+  .diag-label{font-size:10.5px;}
+  .legend{display:flex; flex-wrap:wrap; gap:18px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line-soft);}
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-dim);}
+  .legend-swatch{width:22px; height:3px; border-radius:2px; flex-shrink:0;}
+  .legend-swatch.dashed{background:none; border-top:2px dashed var(--green); height:0;}
+
+  /* Mini diagrama del simulador */
+  .sim-diagram{display:flex; align-items:center; gap:0; margin:20px 0; flex-wrap:wrap;}
+  .sim-step{background:var(--panel2); border:1.5px solid var(--line); border-radius:var(--radius); padding:14px 10px; width:126px; text-align:center; transition:all .18s ease;}
+  .sim-step .fi{font-size:20px; margin-bottom:6px;}
+  .sim-step h5{font-size:11px; margin-bottom:2px;}
+  .sim-step.active{border-color:var(--amber); box-shadow:0 0 12px rgba(255,176,32,0.35);}
+  .sim-step.active .fi{filter:drop-shadow(0 0 4px rgba(255,176,32,0.6));}
+  .sim-step.regen{border-color:var(--green); box-shadow:0 0 12px rgba(87,217,163,0.35);}
+  .sim-arrow{width:26px; text-align:center; flex-shrink:0; color:var(--text-dimmer); font-size:16px; transition:color .18s ease;}
+  .sim-arrow.active{color:var(--amber);}
+  .sim-arrow.regen{color:var(--green);}
+  @media(max-width:900px){ .sim-diagram{flex-direction:column;} .sim-step{width:100%;} .sim-arrow{transform:rotate(90deg); width:100%; height:20px;} }
+  .status-line{font-family:var(--font-mono); font-size:12.5px; padding:12px 16px; border-radius:var(--radius); background:var(--panel2); border:1px solid var(--line); margin-bottom:20px;}
+  .status-line b{color:var(--amber);}
+  .status-line.regen b{color:var(--green);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--cyan); text-decoration:none;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--cyan); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    .calc-row{grid-template-columns:1fr;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+    <div class="tabbar-brand">COCHE ELÉCTRICO</div>
+    <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <nav class="tabbar" id="sidenav">
+      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
+      <a href="#arquitectura" data-sec="arquitectura"><span class="tag">01</span>Arquitectura y componentes</a>
+      <a href="#energia" data-sec="energia"><span class="tag">02</span>Flujo de energía</a>
+      <a href="#senales" data-sec="senales"><span class="tag">03</span>Flujo de señales</a>
+      <a href="#simulador" data-sec="simulador"><span class="tag">04</span>Simulador interactivo</a>
+      <a href="#carga" data-sec="carga"><span class="tag">05</span>Señales de carga</a>
+    </nav>
+    <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var wrap = document.getElementById('tabbarWrap');
+    var bar = document.getElementById('sidenav');
+    var btnL = document.getElementById('tabScrollLeft');
+    var btnR = document.getElementById('tabScrollRight');
+    function update(){
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+      wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+    }
+    btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+    btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    setTimeout(update, 0);
+  })();
+  </script>
+
+  <main>
+
+    <!-- SECCIÓN 00: RESUMEN -->
+    <section id="resumen">
+      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
+      <h2>Un coche eléctrico puro (BEV), explicado de la batería a la rueda.</h2>
+      <p class="lede">Un vehículo eléctrico de batería (BEV) sustituye el motor de combustión, el depósito y la caja de cambios por cuatro bloques: una batería de tracción, un inversor, un motor eléctrico y una reductora de una sola marcha. Todo el conjunto se coordina mediante señales digitales que viajan por un bus CAN, no por cables mecánicos.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>De la <em>energía química</em> de la batería al <em>par en la rueda</em>.</h1>
+            <p class="sub">Solo hay dos conversiones de energía —eléctrica a mecánica en el motor, y mecánica a eléctrica en la frenada regenerativa— frente a las múltiples conversiones térmicas de un motor de combustión. Esa simplicidad mecánica se paga con más complejidad electrónica: decenas de sensores y una red de control que decide, en milisegundos, cuánto par entregar.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">4 bloques principales</div><div class="l">batería · inversor · motor · reductora</div></div>
+          <div class="stat"><div class="v">1 sola marcha</div><div class="l">sin caja de cambios ni embrague</div></div>
+          <div class="stat"><div class="v">~90% de eficiencia</div><div class="l">de la batería a la rueda, frente al 30-40% de un térmico</div></div>
+          <div class="stat"><div class="v">1 bus de datos</div><div class="l">CAN: sustituye cables mecánicos por mensajes digitales</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Las tres preguntas de esta guía</div>
+      <h2 style="font-size:18px;">Qué vas a entender al terminar</h2>
+      <div class="grid3">
+        <div class="comp-card">
+          <div class="fn">Arquitectura</div>
+          <h4>¿Qué piezas tiene y para qué sirve cada una?</h4>
+          <p>Batería, BMS, inversor, motor, reductora, cargador de a bordo, convertidor DC-DC y unidad de control central (VCU).</p>
+        </div>
+        <div class="comp-card">
+          <div class="fn">Energía</div>
+          <h4>¿Por dónde circula la potencia eléctrica?</h4>
+          <p>El camino de la energía en tracción (batería → rueda) y el camino inverso en frenada regenerativa (rueda → batería).</p>
+        </div>
+        <div class="comp-card">
+          <div class="fn">Señales</div>
+          <h4>¿Cómo "decide" el coche cuánto par dar?</h4>
+          <p>El diagrama de flujo de señales de control: sensores, VCU, CAN bus, y el bucle de control del inversor a alta frecuencia.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 01: ARQUITECTURA -->
+    <section id="arquitectura">
+      <div class="eyebrow kicker">01 · Arquitectura y componentes</div>
+      <h2>Las piezas que sustituyen al motor térmico.</h2>
+      <p class="lede">Un BEV no tiene motor de combustión, escape, embrague ni (normalmente) caja de cambios de varias marchas. En su lugar, cuatro subsistemas de potencia y dos "cerebros" electrónicos gestionan toda la propulsión.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px;">
+        <div class="theory-card">
+          <h3>1 · Batería de tracción (pack HV)</h3>
+          <p>Cientos de celdas de iones de litio agrupadas en módulos, conectadas en serie/paralelo para alcanzar tensiones de 300–800 V. Almacena la energía en forma química y la entrega como corriente continua (DC).</p>
+          <ul>
+            <li><b>Capacidad típica:</b> 40–100 kWh en un turismo</li>
+            <li><b>Arquitectura:</b> 400 V (mayoría) o 800 V (carga ultrarrápida)</li>
+            <li><b>Protección:</b> contactores de alta tensión que aíslan el pack cuando el coche está apagado o ante un fallo</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>2 · BMS (Battery Management System)</h3>
+          <p>Microcontrolador dedicado exclusivamente a vigilar la batería: tensión de cada celda, temperatura, corriente y estado de carga (SOC). No mueve el coche, pero decide cuánta corriente puede entrar o salir sin dañar las celdas.</p>
+          <ul>
+            <li><b>Balanceo:</b> iguala la carga entre celdas para no degradar las más débiles</li>
+            <li><b>Límites dinámicos:</b> reduce la potencia disponible en frío o cuando el SOC es muy alto/bajo</li>
+            <li><b>Comunicación:</b> informa al VCU por CAN los amperios máximos de descarga y de carga en cada instante</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+        <div class="theory-card">
+          <h3>3 · Inversor / MCU (Motor Control Unit)</h3>
+          <p>Convierte la corriente continua de la batería en corriente alterna trifásica de frecuencia y amplitud variables mediante transistores de potencia (IGBT o SiC MOSFET) conmutando a decenas de kHz. Es quien realmente "conduce" al motor.</p>
+          <ul>
+            <li><b>Control vectorial (FOC):</b> ajusta la corriente miles de veces por segundo según la posición exacta del rotor</li>
+            <li><b>Reversible:</b> en frenada regenerativa invierte el flujo, rectificando la AC del motor de vuelta a DC</li>
+            <li><b>Refrigeración:</b> líquida, comparte circuito con el motor y a veces con la batería</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>4 · Motor eléctrico de tracción</h3>
+          <p>Casi siempre un motor síncrono de imanes permanentes (PMSM) o, en algunos modelos, uno de inducción asíncrono. Entrega su par máximo desde 0 rpm, algo imposible en un motor térmico.</p>
+          <ul>
+            <li><b>Sensor de posición:</b> resolver o encoder que informa al inversor de la posición exacta del rotor</li>
+            <li><b>Potencias típicas:</b> 100–300 kW por motor en turismos (algunos modelos usan dos, uno por eje)</li>
+            <li><b>Reversibilidad:</b> el mismo motor funciona como generador al frenar</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:32px;">Componentes de soporte</div>
+      <div class="grid3">
+        <div class="comp-card">
+          <h4>Reductora de una velocidad</h4>
+          <p>Engranajes fijos (relación típica 7:1 a 10:1) que multiplican el par del motor hacia las ruedas. Sin embrague ni sincronizadores porque el motor eléctrico no necesita cambiar de marcha.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Cargador de a bordo (OBC)</h4>
+          <p>Convierte la corriente alterna de un enchufe doméstico o wallbox en corriente continua para cargar la batería. Solo interviene en carga en AC; en carga rápida DC se evita.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Convertidor DC-DC</h4>
+          <p>Reduce la alta tensión del pack de tracción a los 12 V de la red auxiliar (luces, climatización, electrónica), sustituyendo al alternador de un coche de combustión.</p>
+        </div>
+        <div class="comp-card">
+          <h4>VCU (Vehicle Control Unit)</h4>
+          <p>El "cerebro" central: interpreta pedales y modo de conducción, arbitra entre lo que pide el conductor y lo que permite la batería, y coordina el resto de unidades por CAN.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Gestión térmica</h4>
+          <p>Circuito de refrigeración líquida (y a veces bomba de calor) que mantiene batería, inversor y motor en su rango óptimo de temperatura, condicionando cuánta potencia pueden entregar.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Puerto de carga + PLC/CP</h4>
+          <p>Además del contacto eléctrico, intercambia señales de control con el punto de carga antes de dejar pasar un solo amperio (ver sección 05).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 02: FLUJO DE ENERGÍA -->
+    <section id="energia">
+      <div class="eyebrow kicker">02 · Flujo de energía</div>
+      <h2>El camino de la potencia: tracción y frenada regenerativa.</h2>
+      <p class="lede">La energía eléctrica solo recorre dos caminos posibles en marcha: hacia las ruedas (tracción) o desde las ruedas hacia la batería (regeneración). El inversor es la pieza que decide, en cada instante, en qué sentido fluye.</p>
+
+      <div class="fieldset-title">Modo tracción — el conductor pisa el acelerador</div>
+      <div class="flow-diagram traction">
+        <div class="flow-step"><div class="fi">🔋</div><h4>Batería HV</h4><p>DC · 300-800V</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔌</div><h4>Inversor</h4><p>DC → AC trifásica</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">⚙️</div><h4>Motor eléctrico</h4><p>energía eléctrica → par</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔧</div><h4>Reductora</h4><p>multiplica el par (~9:1)</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🛞</div><h4>Ruedas</h4><p>propulsión del vehículo</p></div>
+      </div>
+      <p class="flow-note">La batería se descarga (kWh que bajan) mientras el pack entrega corriente al inversor; el BMS limita el máximo instantáneo según temperatura y SOC.</p>
+
+      <div class="fieldset-title" style="margin-top:36px;">Modo frenada regenerativa — el conductor suelta o frena</div>
+      <div class="flow-diagram regenerative">
+        <div class="flow-step"><div class="fi">🛞</div><h4>Ruedas</h4><p>energía cinética del coche</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔧</div><h4>Reductora</h4><p>transmite el giro inverso</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">⚙️</div><h4>Motor (como generador)</h4><p>par → energía eléctrica AC</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔌</div><h4>Inversor</h4><p>rectifica AC → DC</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔋</div><h4>Batería HV</h4><p>se recarga</p></div>
+      </div>
+      <p class="flow-note">El BMS puede limitar o incluso bloquear la regeneración si la batería está fría o ya casi llena (100% SOC): en ese caso, los frenos de fricción asumen parte del trabajo.</p>
+
+      <div class="grid2" style="margin-top:32px;">
+        <div class="theory-card">
+          <h3>¿Por qué el motor puede "generar"?</h3>
+          <p>Un motor eléctrico y un generador son, físicamente, la misma máquina. Si el inversor hace girar el campo magnético más rápido que el rotor, empuja el coche (tracción). Si el rotor gira más rápido que el campo —porque el coche sigue avanzando por inercia—, la máquina induce corriente en sentido contrario: frena y genera electricidad.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Reparto entre frenada regenerativa y frenos de fricción</h3>
+          <p>El VCU decide cuánta deceleración puede aportar el motor sin sobrepasar el límite de carga del BMS ni comprometer la estabilidad del vehículo (ESC), y reparte el resto al circuito hidráulico de frenos, de forma transparente para el conductor.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 03: FLUJO DE SEÑALES -->
+    <section id="senales">
+      <div class="eyebrow kicker">03 · Flujo de señales de control</div>
+      <h2>Diagrama de flujo de señales: del pedal al par en el motor.</h2>
+      <p class="lede">A diferencia del cable de acelerador mecánico de un coche antiguo, en un BEV el pedal solo genera una señal eléctrica. Todo lo demás —cuánto par dar, si es seguro darlo, y cómo generarlo— lo deciden varias unidades electrónicas comunicándose por un bus CAN.</p>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 920 470" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrCyan" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#37CFFF"/></marker>
+            <marker id="arrAmber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#FFB020"/></marker>
+            <marker id="arrGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#57D9A3"/></marker>
+            <marker id="arrGray" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#5B7086"/></marker>
+          </defs>
+
+          <!-- Cajas: dibujadas primero para que las etiquetas de las flechas queden siempre legibles por encima -->
+          <g>
+            <rect x="20" y="30" width="190" height="56" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="115" y="54" text-anchor="middle" class="diag-title">Pedal acelerador</text>
+            <text x="115" y="70" text-anchor="middle" class="diag-sub">sensor APPS (doble, redundante)</text>
+          </g>
+          <g>
+            <rect x="230" y="30" width="190" height="56" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="325" y="54" text-anchor="middle" class="diag-title">Pedal de freno</text>
+            <text x="325" y="70" text-anchor="middle" class="diag-sub">sensor BLS + presión</text>
+          </g>
+          <g>
+            <rect x="440" y="30" width="190" height="56" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="535" y="54" text-anchor="middle" class="diag-title">Pantalla / cuadro</text>
+            <text x="535" y="70" text-anchor="middle" class="diag-sub">autonomía, potencia, alarmas</text>
+          </g>
+
+          <g>
+            <rect x="20" y="170" width="350" height="80" rx="4" fill="#111E2E" stroke="#37CFFF" stroke-width="1.5"/>
+            <text x="195" y="200" text-anchor="middle" class="diag-title" fill="#37CFFF">VCU — Unidad de Control</text>
+            <text x="195" y="218" text-anchor="middle" class="diag-sub">arbitra el par, aplica límites de seguridad</text>
+            <text x="195" y="234" text-anchor="middle" class="diag-sub">y el modo de conducción (Eco/Normal/Sport)</text>
+          </g>
+          <g>
+            <rect x="440" y="170" width="180" height="80" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="530" y="203" text-anchor="middle" class="diag-title">Inversor (MCU)</text>
+            <text x="530" y="221" text-anchor="middle" class="diag-sub">control vectorial FOC</text>
+            <text x="530" y="235" text-anchor="middle" class="diag-sub">IGBT / SiC MOSFET</text>
+          </g>
+          <g>
+            <rect x="690" y="170" width="190" height="80" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="785" y="203" text-anchor="middle" class="diag-title">Motor eléctrico</text>
+            <text x="785" y="221" text-anchor="middle" class="diag-sub">síncrono de imanes</text>
+            <text x="785" y="235" text-anchor="middle" class="diag-sub">permanentes (PMSM)</text>
+          </g>
+
+          <g>
+            <rect x="20" y="300" width="350" height="60" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="195" y="326" text-anchor="middle" class="diag-title">BMS</text>
+            <text x="195" y="344" text-anchor="middle" class="diag-sub">balanceo de celdas, límites térmicos y de corriente</text>
+          </g>
+          <g>
+            <rect x="440" y="300" width="180" height="60" rx="4" fill="#111E2E" stroke="#FFB020" stroke-width="1.5"/>
+            <text x="530" y="326" text-anchor="middle" class="diag-title" fill="#FFB020">Batería de tracción</text>
+            <text x="530" y="344" text-anchor="middle" class="diag-sub">pack HV, Li-ion</text>
+          </g>
+          <g>
+            <rect x="690" y="300" width="190" height="60" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="785" y="326" text-anchor="middle" class="diag-title">Reductora</text>
+            <text x="785" y="344" text-anchor="middle" class="diag-sub">una sola velocidad, sin embrague</text>
+          </g>
+
+          <g>
+            <rect x="690" y="400" width="190" height="50" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <text x="785" y="422" text-anchor="middle" class="diag-title">Ruedas</text>
+            <text x="785" y="438" text-anchor="middle" class="diag-sub">+ sensores de velocidad (ABS/ESC)</text>
+          </g>
+
+          <!-- Conectores y etiquetas: dibujados después, por encima de las cajas -->
+          <!-- Pedal acelerador -> VCU -->
+          <line x1="115" y1="86" x2="115" y2="169" stroke="#37CFFF" stroke-width="2" marker-end="url(#arrCyan)"/>
+          <text x="122" y="130" class="diag-label" fill="#37CFFF">APPS ×2 · 0–5V</text>
+          <!-- Pedal freno -> VCU -->
+          <line x1="325" y1="86" x2="325" y2="169" stroke="#37CFFF" stroke-width="2" marker-end="url(#arrCyan)"/>
+          <text x="255" y="130" class="diag-label" fill="#37CFFF">Sensor freno + BLS</text>
+          <!-- VCU -> Pantalla (arriba, fuera de la zona de las otras etiquetas) -->
+          <path d="M350,170 L350,100 L535,100 L535,87" fill="none" stroke="#37CFFF" stroke-width="1.5" marker-end="url(#arrCyan)"/>
+          <text x="358" y="94" class="diag-label" fill="#37CFFF" font-size="9">CAN: autonomía / alarmas</text>
+          <!-- VCU -> Inversor (comando) -->
+          <line x1="370" y1="197" x2="439" y2="197" stroke="#37CFFF" stroke-width="2.5" marker-end="url(#arrCyan)"/>
+          <text x="378" y="190" class="diag-label" fill="#37CFFF" font-size="9">CAN: par pedido (Nm)</text>
+          <!-- Inversor -> VCU (feedback) -->
+          <line x1="439" y1="228" x2="370" y2="228" stroke="#57D9A3" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
+          <text x="378" y="244" class="diag-label" fill="#57D9A3" font-size="9">CAN: par real, rpm, fallos</text>
+          <!-- Inversor -> Motor (potencia) -->
+          <line x1="620" y1="197" x2="689" y2="197" stroke="#FFB020" stroke-width="3" marker-end="url(#arrAmber)"/>
+          <text x="628" y="190" class="diag-label" fill="#FFB020" font-size="9">3~ AC · PWM (0-800V)</text>
+          <!-- Motor -> Inversor (feedback resolver) -->
+          <line x1="689" y1="228" x2="620" y2="228" stroke="#57D9A3" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
+          <text x="628" y="244" class="diag-label" fill="#57D9A3" font-size="9">resolver, Iu / Iv / Iw</text>
+          <!-- VCU <-> BMS -->
+          <line x1="195" y1="250" x2="195" y2="299" stroke="#37CFFF" stroke-width="2" marker-end="url(#arrCyan)" marker-start="url(#arrCyan)"/>
+          <text x="203" y="278" class="diag-label" fill="#37CFFF" font-size="9.5">CAN: SOC/SOH, I máx.</text>
+          <!-- Inversor <-> Batería (DC HV) -->
+          <line x1="530" y1="250" x2="530" y2="299" stroke="#FFB020" stroke-width="3" marker-end="url(#arrAmber)" marker-start="url(#arrAmber)"/>
+          <text x="538" y="278" class="diag-label" fill="#FFB020" font-size="9.5">DC HV</text>
+          <!-- BMS -> Bateria (monitorizacion) -->
+          <line x1="370" y1="330" x2="439" y2="330" stroke="#FFB020" stroke-width="1.5" marker-end="url(#arrAmber)"/>
+          <text x="378" y="313" class="diag-label" fill="#FFB020" font-size="8.5">medición celdas</text>
+          <!-- Motor -> Reductora (mecanico) -->
+          <line x1="785" y1="250" x2="785" y2="299" stroke="#5B7086" stroke-width="2.5" marker-end="url(#arrGray)"/>
+          <text x="793" y="278" class="diag-label" fill="#5B7086" font-size="9.5">par mecánico</text>
+          <!-- Reductora -> Ruedas -->
+          <line x1="785" y1="360" x2="785" y2="399" stroke="#5B7086" stroke-width="2.5" marker-end="url(#arrGray)"/>
+          <text x="793" y="384" class="diag-label" fill="#5B7086" font-size="9.5">relación ~9:1</text>
+          <!-- Ruedas -> VCU (velocidad, feedback, rodea por la izquierda) -->
+          <path d="M690,425 L10,425 L10,210 L19,210" fill="none" stroke="#57D9A3" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
+          <text x="30" y="440" class="diag-label" fill="#57D9A3" font-size="9.5">velocidad de rueda (CAN · ABS/ESC)</text>
+        </svg>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#37CFFF;"></span>Señal de control (CAN / analógica)</div>
+          <div class="legend-item"><span class="legend-swatch dashed"></span>Señal de realimentación (sensor)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#FFB020;"></span>Potencia eléctrica</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#5B7086;"></span>Par mecánico</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:8px;">
+        <div class="theory-card">
+          <h3>Por qué el sensor del pedal está duplicado</h3>
+          <p>El pedal acelerador (APPS) monta dos potenciómetros independientes que deben coincidir dentro de un margen de tolerancia. Si el VCU detecta que discrepan, asume un fallo y corta o limita el par por seguridad ("plausibility check"), en lugar de fiarse de una sola señal.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Dos velocidades de control muy distintas</h3>
+          <p>El bucle del inversor que ajusta la corriente del motor corre a decenas de kHz (control vectorial). El bus CAN que lleva "par solicitado" o "SOC de la batería" actualiza mensajes a 10–100 Hz. El VCU decide qué pedir; el inversor decide cómo generarlo, mucho más rápido.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 04: SIMULADOR -->
+    <section id="simulador">
+      <div class="eyebrow kicker">04 · Simulador interactivo</div>
+      <h2>De la posición del pedal al par, la potencia y la corriente de batería.</h2>
+      <p class="lede">Ajusta la velocidad del vehículo y la intensidad del pedal para ver cómo se traduce esa señal en par (Nm), potencia (kW) y corriente de batería (A), respetando el límite de potencia máxima del motor.</p>
+
+      <div class="calculator">
+        <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+          <button class="btn toggle on" id="btnModoTraccion" onclick="setModo('traccion')">Modo tracción (acelerador)</button>
+          <button class="btn toggle" id="btnModoRegen" onclick="setModo('regen')">Modo frenada regenerativa</button>
+        </div>
+
+        <div class="calc-row">
+          <div class="field">
+            <label>Velocidad del vehículo (km/h)</label>
+            <div class="slider-row">
+              <input type="range" id="sim_velocidad" value="50" min="0" max="180" step="1">
+              <div class="slider-val" id="sim_velocidad_val">50 km/h</div>
+            </div>
+          </div>
+          <div class="field">
+            <label id="sim_intensidad_label">Posición del pedal acelerador (%)</label>
+            <div class="slider-row">
+              <input type="range" id="sim_intensidad" value="40" min="0" max="100" step="1">
+              <div class="slider-val" id="sim_intensidad_val">40%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fieldset-title">Parámetros del vehículo (editables)</div>
+        <div class="calc-row">
+          <div class="field">
+            <label>Potencia máxima motor (kW)</label>
+            <input type="number" id="sim_pmax" value="150" min="20" max="500" step="5">
+          </div>
+          <div class="field">
+            <label>Par máximo motor (Nm)</label>
+            <input type="number" id="sim_tmax" value="310" min="50" max="1000" step="5">
+          </div>
+          <div class="field">
+            <label>Tensión nominal batería (V)</label>
+            <input type="number" id="sim_voltaje" value="400" min="200" max="900" step="10">
+          </div>
+          <div class="field">
+            <label>Relación de reducción</label>
+            <input type="number" id="sim_reduccion" value="9" min="4" max="15" step="0.5">
+          </div>
+          <div class="field">
+            <label>Radio de rueda (m)</label>
+            <input type="number" id="sim_radio" value="0.33" min="0.25" max="0.45" step="0.01">
+          </div>
+        </div>
+
+        <div class="status-line" id="sim_status">Estado: <b>tracción</b> — el inversor entrega potencia de la batería al motor.</div>
+
+        <div class="sim-diagram" id="sim_diagram">
+          <div class="sim-step" id="sd_bateria"><div class="fi">🔋</div><h5>Batería</h5></div>
+          <div class="sim-arrow" id="sa_1">→</div>
+          <div class="sim-step" id="sd_inversor"><div class="fi">🔌</div><h5>Inversor</h5></div>
+          <div class="sim-arrow" id="sa_2">→</div>
+          <div class="sim-step" id="sd_motor"><div class="fi">⚙️</div><h5>Motor</h5></div>
+          <div class="sim-arrow" id="sa_3">→</div>
+          <div class="sim-step" id="sd_reductora"><div class="fi">🔧</div><h5>Reductora</h5></div>
+          <div class="sim-arrow" id="sa_4">→</div>
+          <div class="sim-step" id="sd_ruedas"><div class="fi">🛞</div><h5>Ruedas</h5></div>
+        </div>
+
+        <div id="sim_resultado" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px; margin-top:8px;">
+          <div class="result-chip"><div class="l">Régimen motor</div><div class="v" id="sim_res_rpm">0 rpm</div></div>
+          <div class="result-chip"><div class="l">Par entregado</div><div class="v" id="sim_res_par">0 Nm</div></div>
+          <div class="result-chip"><div class="l">Potencia instantánea</div><div class="v" id="sim_res_pot">0 kW</div></div>
+          <div class="result-chip"><div class="l">Corriente de batería</div><div class="v" id="sim_res_corriente">0 A</div></div>
+          <div class="result-chip"><div class="l">Consumo instantáneo</div><div class="v" id="sim_res_consumo">— kWh/100km</div></div>
+        </div>
+        <p class="tooltip-text" style="margin-top:14px;">Modelo simplificado con fines didácticos: a velocidad cero la potencia calculada tiende a cero aunque el motor pueda entregar par máximo (P = par × velocidad angular); en la realidad, arrancar desde parado también consume corriente por las pérdidas resistivas del motor, aquí no modeladas. Por encima de la potencia máxima del motor, el par se recorta automáticamente (zona de debilitamiento de campo). El "consumo instantáneo" extrapola la potencia de <em>este</em> instante a 100 km recorridos a esa velocidad: con el pedal muy pisado (acelerando fuerte) da valores mucho más altos que el consumo medio real de conducción, que promedia también los tramos sin apenas pedal.</p>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 05: SEÑALES DE CARGA -->
+    <section id="carga">
+      <div class="eyebrow kicker">05 · Señales de carga</div>
+      <h2>Cargar también es un intercambio de señales, no solo de electrones.</h2>
+      <p class="lede">Antes de que circule un solo amperio hacia la batería, el coche y el punto de carga negocian por señal quién es, cuánta corriente admite el cable y qué límites impone el BMS. Ese protocolo cambia según sea carga lenta en corriente alterna (AC) o carga rápida en corriente continua (DC).</p>
+
+      <div class="fieldset-title">Carga en AC (wallbox doméstico, conector Tipo 2)</div>
+      <div class="flow-diagram traction">
+        <div class="flow-step"><div class="fi">🔌</div><h4>Toma de carga</h4><p>conector Tipo 2</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">📶</div><h4>Señal Control Pilot (CP)</h4><p>PWM: indica intensidad máxima disponible</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔋</div><h4>Cargador de a bordo (OBC)</h4><p>convierte AC → DC</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔋</div><h4>Batería HV</h4><p>se carga a baja/media potencia</p></div>
+      </div>
+      <p class="flow-note">La señal Proximity Pilot (PP) detecta que el cable está bien conectado y comunica la intensidad máxima que soporta ese cable en concreto (16A, 32A...). El BMS, a través del OBC, limita la corriente final según el estado de la batería.</p>
+
+      <div class="fieldset-title" style="margin-top:36px;">Carga rápida en DC (electrolinera, CCS Combo)</div>
+      <div class="flow-diagram traction">
+        <div class="flow-step"><div class="fi">🔌</div><h4>Toma de carga</h4><p>conector CCS Combo</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">💬</div><h4>Comunicación digital</h4><p>PLC (ISO 15118) o CAN (CHAdeMO)</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🧠</div><h4>BMS negocia</h4><p>fija tensión/corriente objetivo</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔋</div><h4>Batería HV</h4><p>carga directa, sin pasar por el OBC</p></div>
+      </div>
+      <p class="flow-note">En carga rápida, el cargador externo entrega DC directamente al pack, así que el cargador de a bordo (OBC) no interviene. El BMS y el cargador renegocian los valores varias veces por segundo según sube la temperatura y el SOC (la curva de carga se "dobla" según se acerca al 80-100%).</p>
+
+      <div class="grid2" style="margin-top:32px;">
+        <table class="data-table">
+          <thead><tr><th>Señal</th><th>Carga AC (Tipo 2)</th><th>Carga DC (CCS/CHAdeMO)</th></tr></thead>
+          <tbody>
+            <tr><td>Detección de conexión</td><td>Proximity Pilot (PP), resistencia codificada</td><td>Igual, más handshake digital adicional</td></tr>
+            <tr><td>Intensidad disponible</td><td>Control Pilot (CP), señal PWM (IEC 61851)</td><td>Negociada por protocolo digital</td></tr>
+            <tr><td>Quién convierte la energía</td><td>Cargador de a bordo (OBC) del propio coche</td><td>Electrónica de potencia del cargador externo</td></tr>
+            <tr><td>Quién fija el límite final</td><td>BMS, vía CP y comunicación con el OBC</td><td>BMS, negociando directamente con el cargador</td></tr>
+            <tr><td>Protocolo típico</td><td>IEC 61851 (PWM analógica)</td><td>ISO 15118 (PLC/HomePlug GreenPHY) o CAN</td></tr>
+          </tbody>
+        </table>
+        <div class="theory-card">
+          <h3>Por qué la potencia de carga cae cerca del 100%</h3>
+          <p>Cargar celdas de litio a alta corriente cuando ya están casi llenas acelera su degradación. El BMS reduce progresivamente la corriente máxima admitida a partir de aproximadamente el 80% de SOC, lo que explica por qué del 10% al 80% se carga mucho más rápido que del 80% al 100%.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Guía técnica interactiva sobre la arquitectura y las señales de control de un vehículo eléctrico de batería (BEV), integrada en el blog de VatiaCo. Los valores numéricos de los ejemplos y el simulador son orientativos y con fines didácticos; los sistemas reales varían según fabricante y modelo. Última actualización: 2026.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'resumen';
+
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+// ===================== UTILIDADES =====================
+function fmtNum(n, d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600); }
+
+// ===================== SIMULADOR DE PAR / POTENCIA =====================
+let modoSim = 'traccion';
+
+function setModo(m){
+  modoSim = m;
+  document.getElementById('btnModoTraccion').classList.toggle('on', m==='traccion');
+  document.getElementById('btnModoRegen').classList.toggle('regen-on', m==='regen');
+  document.getElementById('btnModoRegen').classList.toggle('on', false);
+  document.getElementById('btnModoTraccion').classList.toggle('on', m==='traccion');
+  document.getElementById('sim_intensidad_label').textContent = m==='traccion' ? 'Posición del pedal acelerador (%)' : 'Intensidad de frenada regenerativa (%)';
+  calcularSimulador();
+}
+
+document.getElementById('sim_velocidad').addEventListener('input', function(){
+  document.getElementById('sim_velocidad_val').textContent = this.value + ' km/h';
+  calcularSimulador();
+});
+document.getElementById('sim_intensidad').addEventListener('input', function(){
+  document.getElementById('sim_intensidad_val').textContent = this.value + '%';
+  calcularSimulador();
+});
+['sim_pmax','sim_tmax','sim_voltaje','sim_reduccion','sim_radio'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', calcularSimulador);
+});
+
+function setDiagramState(active){
+  const steps = ['sd_bateria','sd_inversor','sd_motor','sd_reductora','sd_ruedas'];
+  const arrows = ['sa_1','sa_2','sa_3','sa_4'];
+  steps.forEach(id=>{
+    const el = document.getElementById(id);
+    el.classList.remove('active','regen');
+    if(active==='traccion') el.classList.add('active');
+    if(active==='regen') el.classList.add('regen');
+  });
+  arrows.forEach(id=>{
+    const el = document.getElementById(id);
+    el.classList.remove('active','regen');
+    if(active==='traccion') el.classList.add('active');
+    if(active==='regen') el.classList.add('regen');
+  });
+  const dir = active==='regen' ? ['←','←','←','←'] : ['→','→','→','→'];
+  arrows.forEach((id,i)=>{ document.getElementById(id).textContent = dir[i]; });
+}
+
+function calcularSimulador(){
+  const vKmh = parseFloat(document.getElementById('sim_velocidad').value) || 0;
+  const intensidad = parseFloat(document.getElementById('sim_intensidad').value) || 0;
+  const pMax = (parseFloat(document.getElementById('sim_pmax').value) || 1) * 1000; // W
+  const tMax = parseFloat(document.getElementById('sim_tmax').value) || 1; // Nm
+  const voltaje = parseFloat(document.getElementById('sim_voltaje').value) || 1; // V
+  const reduccion = parseFloat(document.getElementById('sim_reduccion').value) || 1;
+  const radio = parseFloat(document.getElementById('sim_radio').value) || 0.33; // m
+
+  const vMs = vKmh / 3.6;
+  const omegaRueda = radio > 0 ? vMs / radio : 0;
+  const omegaMotor = omegaRueda * reduccion;
+  const rpmMotor = omegaMotor * 60 / (2 * Math.PI);
+
+  let parDeseado = tMax * (intensidad / 100);
+  let potenciaCalc = parDeseado * omegaMotor;
+  let parFinal = parDeseado;
+  if (omegaMotor > 0 && potenciaCalc > pMax) {
+    parFinal = pMax / omegaMotor;
+  }
+  let potenciaFinal = parFinal * omegaMotor; // W
+
+  const status = document.getElementById('sim_status');
+  const resPar = document.getElementById('sim_res_par');
+  const resPot = document.getElementById('sim_res_pot');
+  const resCorriente = document.getElementById('sim_res_corriente');
+  const resConsumo = document.getElementById('sim_res_consumo');
+  const chips = document.querySelectorAll('#sim_resultado .result-chip');
+
+  if (modoSim === 'regen') {
+    potenciaFinal = -potenciaFinal;
+    parFinal = -parFinal;
+  }
+
+  const corrienteBateria = voltaje > 0 ? (potenciaFinal / voltaje) : 0;
+  const consumoPor100 = (modoSim === 'traccion' && vKmh > 1) ? (potenciaFinal / 1000) / vKmh * 100 : null;
+
+  document.getElementById('sim_res_rpm').textContent = fmtNum(rpmMotor, 0) + ' rpm';
+  resPar.textContent = fmtNum(parFinal, 0) + ' Nm';
+  resPot.textContent = fmtNum(potenciaFinal / 1000, 1) + ' kW';
+  resCorriente.textContent = fmtNum(corrienteBateria, 1) + ' A';
+  resConsumo.textContent = consumoPor100 !== null ? fmtNum(consumoPor100, 1) + ' kWh/100km' : '—';
+
+  chips.forEach(c=>c.classList.toggle('regen', modoSim==='regen'));
+
+  if (modoSim === 'traccion') {
+    status.classList.remove('regen');
+    status.innerHTML = `Estado: <b>tracción</b> — el inversor toma ${fmtNum(Math.abs(potenciaFinal/1000),1)} kW de la batería y los entrega al motor como par.`;
+  } else {
+    status.classList.add('regen');
+    status.innerHTML = `Estado: <b>frenada regenerativa</b> — el motor actúa como generador y el inversor devuelve ${fmtNum(Math.abs(potenciaFinal/1000),1)} kW a la batería.`;
+  }
+
+  setDiagramState(modoSim);
+}
+
+setModo('traccion');
+</script>
+</body>
+</html>

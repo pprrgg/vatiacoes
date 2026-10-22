@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOM de Cajoneras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d2419;
+    --panel:#123320;
+    --panel-2:#17402a;
+    --line:#2a5c3f;
+    --ink:#eef2e6;
+    --ink-dim:#8fac9c;
+    --copper:#c97c4b;
+    --copper-dim:#8a5535;
+    --amber:#e8b04b;
+    --danger:#d16456;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 1px 1px, rgba(238,242,230,0.05) 1px, transparent 0) 0 0/24px 24px,
+      var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:20px 14px 60px;
+  }
+  .wrap{max-width:560px;margin:0 auto;}
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--copper);
+    margin:0 0 6px;
+  }
+  h1{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    font-size:28px;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    color:var(--ink-dim);
+    font-size:13.5px;
+    line-height:1.5;
+    margin:0 0 22px;
+    max-width:46ch;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-left:3px solid var(--copper);
+    border-radius:var(--radius);
+    padding:18px 16px;
+    margin-bottom:22px;
+  }
+
+  .field{margin-bottom:14px;}
+  .field:last-of-type{margin-bottom:0;}
+  label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-bottom:6px;
+  }
+  .field-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  input[type="text"]{
+    flex:1;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:4px;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14.5px;
+    padding:10px 12px;
+    min-width:0;
+  }
+  input[type="text"]:focus{
+    outline:2px solid var(--copper);
+    outline-offset:1px;
+    border-color:var(--copper);
+  }
+  input[type="text"]::placeholder{color:#4f6d5c;}
+
+  .mic-btn{
+    flex-shrink:0;
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    border:1px solid var(--copper-dim);
+    background:var(--panel-2);
+    color:var(--copper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  }
+  .mic-btn:hover{background:var(--copper-dim);}
+  .mic-btn:active{transform:scale(0.94);}
+  .mic-btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+  .mic-btn.listening{
+    background:var(--amber);
+    border-color:var(--amber);
+    color:#2a1c04;
+    box-shadow:0 0 0 6px rgba(232,176,75,0.18);
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 4px rgba(232,176,75,0.18);}
+    50%{box-shadow:0 0 0 9px rgba(232,176,75,0.1);}
+  }
+  .mic-btn svg{width:18px;height:18px;}
+
+  .scope{
+    display:flex;
+    align-items:flex-end;
+    gap:2px;
+    height:20px;
+    margin-top:8px;
+    opacity:0;
+    transition:opacity 0.15s ease;
+  }
+  .scope.active{opacity:1;}
+  .scope span{
+    width:3px;
+    background:var(--amber);
+    border-radius:1px;
+    height:4px;
+    animation:bar 0.9s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .scope span, .mic-btn.listening{animation:none;}
+  }
+  .scope span:nth-child(1){animation-delay:0s;}
+  .scope span:nth-child(2){animation-delay:0.08s;}
+  .scope span:nth-child(3){animation-delay:0.16s;}
+  .scope span:nth-child(4){animation-delay:0.24s;}
+  .scope span:nth-child(5){animation-delay:0.32s;}
+  .scope span:nth-child(6){animation-delay:0.4s;}
+  .scope span:nth-child(7){animation-delay:0.32s;}
+  .scope span:nth-child(8){animation-delay:0.24s;}
+  .scope span:nth-child(9){animation-delay:0.16s;}
+  .scope span:nth-child(10){animation-delay:0.08s;}
+  .scope span:nth-child(11){animation-delay:0s;}
+  @keyframes bar{
+    0%,100%{height:4px;}
+    50%{height:18px;}
+  }
+  .status-text{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--amber);
+    margin-top:6px;
+    min-height:14px;
+  }
+
+  .save-btn{
+    width:100%;
+    margin-top:16px;
+    background:var(--copper);
+    color:#241407;
+    border:none;
+    border-radius:4px;
+    padding:12px;
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    font-size:13.5px;
+    letter-spacing:0.03em;
+    cursor:pointer;
+    transition:opacity 0.15s ease, transform 0.1s ease;
+  }
+  .save-btn:disabled{
+    opacity:0.35;
+    cursor:not-allowed;
+  }
+  .save-btn:not(:disabled):hover{opacity:0.9;}
+  .save-btn:not(:disabled):active{transform:scale(0.99);}
+
+  .no-support{
+    font-size:12px;
+    color:var(--ink-dim);
+    margin-top:10px;
+    font-style:italic;
+  }
+
+  .list-header{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:10px;
+    gap:8px;
+  }
+  .list-header input[type="text"]{
+    flex:1;
+    min-width:130px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px;
+    padding:8px 10px;
+  }
+  .actions-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:flex-end;
+    margin-bottom:16px;
+  }
+  .mic-btn.small{width:36px;height:36px;}
+  .mic-btn.small svg{width:15px;height:15px;}
+  .icon-btn{
+    flex-shrink:0;
+    width:36px;
+    height:36px;
+    border-radius:4px;
+    border:1px solid var(--copper-dim);
+    background:var(--panel-2);
+    color:var(--copper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+  .icon-btn:hover{background:var(--copper-dim);}
+  .icon-btn:active{transform:scale(0.94);}
+  .icon-btn svg{width:16px;height:16px;}
+  .copy-btn{
+    flex-shrink:0;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink-dim);
+    border-radius:4px;
+    padding:8px 10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .copy-btn:hover{border-color:var(--copper);color:var(--copper);}
+  .copy-btn svg{width:13px;height:13px;}
+  mark{
+    background:var(--amber);
+    color:#241407;
+    border-radius:2px;
+    padding:0 1px;
+  }
+
+  .row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 4px;
+    border-bottom:1px solid var(--line);
+  }
+  .row:last-child{border-bottom:none;}
+  .badge{
+    flex-shrink:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:500;
+    font-size:12px;
+    color:var(--ink);
+    background:var(--panel-2);
+    border:1px solid var(--copper-dim);
+    border-radius:3px;
+    padding:4px 8px;
+    min-width:48px;
+    text-align:center;
+  }
+  .row .componente{
+    flex:1;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    cursor:text;
+    min-width:0;
+    word-break:break-word;
+  }
+  .row .componente input{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--copper);
+    border-radius:3px;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    padding:5px 7px;
+  }
+  .row .cantidad{
+    flex-shrink:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--ink-dim);
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:4px 8px;
+    cursor:text;
+    white-space:nowrap;
+  }
+  .row .cantidad.empty{
+    color:var(--copper-dim);
+    border-style:dashed;
+    font-style:italic;
+  }
+  .row .cantidad input{
+    width:54px;
+    background:var(--bg);
+    border:1px solid var(--copper);
+    border-radius:3px;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:4px 6px;
+  }
+  .del-btn{
+    flex-shrink:0;
+    background:none;
+    border:none;
+    color:var(--ink-dim);
+    font-size:16px;
+    cursor:pointer;
+    padding:4px 6px;
+    line-height:1;
+  }
+  .del-btn:hover{color:var(--danger);}
+
+  .empty{
+    border:1px dashed var(--line);
+    border-radius:var(--radius);
+    padding:24px 16px;
+    text-align:center;
+    color:var(--ink-dim);
+    font-size:13px;
+    line-height:1.6;
+  }
+
+  .footer-stats{
+    margin-top:14px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--ink-dim);
+    text-align:right;
+  }
+
+  .toast{
+    position:fixed;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2);
+    border:1px solid var(--copper);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:9px 16px;
+    border-radius:5px;
+    opacity:0;
+    transition:opacity 0.2s ease, transform 0.2s ease;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Inventario por voz</p>
+  <h1>Inventario</h1>
+  <p class="sub">Dicta el Ubicación, el componente y la cantidad. Se guardan en tu registro personal y quedan ahí la próxima vez que abras la aplicación.</p>
+
+  <div class="panel">
+    <div class="field">
+      <label for="input-cajon">Ubicación</label>
+      <div class="field-row">
+        <input type="text" id="input-cajon" placeholder="ej. A2" autocomplete="off">
+        <button class="mic-btn" id="mic-cajon" type="button" aria-label="Dictar Ubicación">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="input-componente">Componente</label>
+      <div class="field-row">
+        <input type="text" id="input-componente" placeholder="ej. resistencia 10k ohm" autocomplete="off">
+        <button class="mic-btn" id="mic-componente" type="button" aria-label="Dictar componente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="input-cantidad">Cantidad <span style="text-transform:none; letter-spacing:0; opacity:.7;">(opcional)</span></label>
+      <div class="field-row">
+        <input type="text" id="input-cantidad" placeholder="ej. 12" inputmode="numeric" autocomplete="off">
+        <button class="mic-btn" id="mic-cantidad" type="button" aria-label="Dictar cantidad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="scope" id="scope" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <p class="status-text" id="status-text" aria-live="polite"></p>
+
+    <button class="save-btn" id="save-btn" disabled>+ GUARDAR PAR</button>
+    <p class="no-support" id="no-support" style="display:none;">Tu navegador no soporta dictado por voz. Puedes escribir a mano, o usar el micrófono del teclado (Gboard) tocando los campos de texto.</p>
+  </div>
+
+  <div class="list-header">
+    <input type="text" id="search" placeholder="Buscar por palabra del componente...">
+    <button class="mic-btn small" id="mic-search" type="button" aria-label="Buscar por voz">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+    </button>
+    <button class="icon-btn" id="search-btn" type="button" aria-label="Buscar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    </button>
+  </div>
+
+  <div class="actions-row">
+    <button class="copy-btn" id="copy-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copiar
+    </button>
+    <button class="copy-btn" id="download-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Descargar
+    </button>
+    <button class="copy-btn" id="import-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      Importar
+    </button>
+    <input type="file" id="import-file" accept=".json,.csv,.txt" style="display:none;">
+  </div>
+
+  <div id="list-area"></div>
+  <p class="footer-stats" id="footer-stats"></p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'component-pairs';
+  let pairs = [];
+  let editingId = null;
+  let editingField = null;
+
+  const cajonInput = document.getElementById('input-cajon');
+  const componenteInput = document.getElementById('input-componente');
+  const cantidadInput = document.getElementById('input-cantidad');
+  const saveBtn = document.getElementById('save-btn');
+  const listArea = document.getElementById('list-area');
+  const searchInput = document.getElementById('search');
+  const footerStats = document.getElementById('footer-stats');
+  const toast = document.getElementById('toast');
+  const scope = document.getElementById('scope');
+  const statusText = document.getElementById('status-text');
+  const noSupport = document.getElementById('no-support');
+  const micCajon = document.getElementById('mic-cajon');
+  const micComponente = document.getElementById('mic-componente');
+  const micCantidad = document.getElementById('mic-cantidad');
+  const micSearch = document.getElementById('mic-search');
+  const searchBtn = document.getElementById('search-btn');
+  const copyBtn = document.getElementById('copy-btn');
+  const downloadBtn = document.getElementById('download-btn');
+  const importBtn = document.getElementById('import-btn');
+  const importFile = document.getElementById('import-file');
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 1800);
+  }
+
+  function updateSaveState(){
+    saveBtn.disabled = !(cajonInput.value.trim() && componenteInput.value.trim());
+  }
+  cajonInput.addEventListener('input', updateSaveState);
+  componenteInput.addEventListener('input', updateSaveState);
+
+  async function loadPairs(){
+    try{
+      const result = await window.storage.get(STORAGE_KEY, false);
+      pairs = result && result.value ? JSON.parse(result.value) : [];
+    }catch(e){
+      pairs = [];
+    }
+    render();
+  }
+
+  async function persist(){
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(pairs), false);
+    }catch(e){
+      showToast('No se pudo guardar. Intenta de nuevo.');
+    }
+  }
+
+  function addPair(cajon, componente, cantidad){
+    pairs.unshift({
+      id: makeId(),
+      cajon: cajon.trim(),
+      componente: componente.trim(),
+      cantidad: (cantidad || '').trim(),
+      ts: Date.now()
+    });
+    persist();
+    render();
+  }
+
+  function deletePair(id){
+    pairs = pairs.filter(p => p.id !== id);
+    persist();
+    render();
+  }
+
+  function updateField(id, field, newVal){
+    const p = pairs.find(p => p.id === id);
+    if(p){
+      if(field === 'cantidad'){
+        p.cantidad = newVal.trim();
+      } else {
+        p.componente = newVal.trim() || p.componente;
+      }
+      persist();
+    }
+    editingId = null;
+    editingField = null;
+    render();
+  }
+
+  function render(){
+    const query = searchInput.value.trim().toLowerCase();
+    const filtered = pairs.filter(p =>
+      !query || p.cajon.toLowerCase().includes(query) || p.componente.toLowerCase().includes(query)
+    );
+
+    if(pairs.length === 0){
+      listArea.innerHTML = '<div class="empty">Aún no hay componentes registrados.<br>Dicta un Ubicación y un componente arriba para empezar.</div>';
+      footerStats.textContent = '';
+      return;
+    }
+
+    if(filtered.length === 0){
+      listArea.innerHTML = '<div class="empty">Sin resultados para "' + escapeHtml(searchInput.value) + '".</div>';
+    } else {
+      listArea.innerHTML = filtered.map(p => rowHtml(p, query)).join('');
+    }
+
+    const distinctCajones = new Set(pairs.map(p => p.cajon.toLowerCase())).size;
+    footerStats.textContent = pairs.length + ' componente' + (pairs.length===1?'':'s') + ' registrado' + (pairs.length===1?'':'s') + ' en ' + distinctCajones + ' cajon' + (distinctCajones===1?'':'es');
+
+    attachRowEvents();
+  }
+
+  function rowHtml(p, query){
+    const editingComponente = editingId === p.id && editingField === 'componente';
+    const editingCantidad = editingId === p.id && editingField === 'cantidad';
+    const componenteCell = editingComponente
+      ? '<input type="text" class="edit-input" data-id="' + p.id + '" data-field="componente" value="' + escapeAttr(p.componente) + '">'
+      : highlightMatch(p.componente, query);
+    const cajonCell = highlightMatch(p.cajon, query);
+    const cantidadValue = p.cantidad || '';
+    const cantidadCell = editingCantidad
+      ? '<input type="text" class="edit-input" data-id="' + p.id + '" data-field="cantidad" placeholder="cant." value="' + escapeAttr(cantidadValue) + '">'
+      : (cantidadValue ? escapeHtml(cantidadValue) : '+');
+    return '<div class="row" data-id="' + p.id + '">' +
+      '<span class="badge">' + cajonCell + '</span>' +
+      '<span class="componente" data-id="' + p.id + '" data-field="componente">' + componenteCell + '</span>' +
+      '<span class="cantidad' + (cantidadValue || editingCantidad ? '' : ' empty') + '" data-id="' + p.id + '" data-field="cantidad" title="Cantidad (opcional)">' + cantidadCell + '</span>' +
+      '<button class="del-btn" data-id="' + p.id + '" aria-label="Eliminar">×</button>' +
+      '</div>';
+  }
+
+  function highlightMatch(text, query){
+    const escaped = escapeHtml(text);
+    if(!query) return escaped;
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(' + escapedQuery + ')', 'ig');
+    return escaped.replace(re, '<mark>$1</mark>');
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+  function escapeAttr(str){
+    return escapeHtml(str).replace(/"/g,'&quot;');
+  }
+
+  function attachRowEvents(){
+    listArea.querySelectorAll('.del-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=> deletePair(btn.dataset.id));
+    });
+    listArea.querySelectorAll('.componente, .cantidad').forEach(cell=>{
+      if(editingId === cell.dataset.id && editingField === cell.dataset.field) return;
+      cell.addEventListener('click', ()=>{
+        editingId = cell.dataset.id;
+        editingField = cell.dataset.field;
+        render();
+        const inp = listArea.querySelector('.edit-input[data-id="'+editingId+'"][data-field="'+editingField+'"]');
+        if(inp){ inp.focus(); inp.select(); }
+      });
+    });
+    listArea.querySelectorAll('.edit-input').forEach(inp=>{
+      inp.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){ updateField(inp.dataset.id, inp.dataset.field, inp.value); }
+        if(e.key === 'Escape'){ editingId = null; editingField = null; render(); }
+      });
+      inp.addEventListener('blur', ()=> updateField(inp.dataset.id, inp.dataset.field, inp.value));
+    });
+  }
+
+  searchInput.addEventListener('input', render);
+  searchInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){ e.preventDefault(); triggerSearch(); }
+  });
+  searchBtn.addEventListener('click', triggerSearch);
+
+  function triggerSearch(){
+    render();
+    const query = searchInput.value.trim();
+    if(query){
+      const count = listArea.querySelectorAll('.row').length;
+      showToast(count + ' resultado' + (count===1?'':'s') + ' para "' + query + '"');
+    }
+    searchInput.blur();
+  }
+
+  saveBtn.addEventListener('click', ()=>{
+    if(!cajonInput.value.trim() || !componenteInput.value.trim()) return;
+    addPair(cajonInput.value, componenteInput.value, cantidadInput.value);
+    cajonInput.value = '';
+    componenteInput.value = '';
+    cantidadInput.value = '';
+    updateSaveState();
+    cajonInput.focus();
+    showToast('Par guardado');
+  });
+
+  copyBtn.addEventListener('click', async ()=>{
+    if(pairs.length === 0){ showToast('No hay nada que copiar'); return; }
+    const text = pairs.map(p => p.cajon + '\t' + p.componente + '\t' + (p.cantidad || '')).join('\n');
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast('Copiado (formato Ubicación · componente · cantidad)');
+    }catch(e){
+      showToast('No se pudo copiar');
+    }
+  });
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function dateStamp(){
+    const d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  }
+
+  downloadBtn.addEventListener('click', ()=>{
+    if(pairs.length === 0){ showToast('No hay nada que descargar'); return; }
+    const data = JSON.stringify(pairs.map(p => ({cajon: p.cajon, componente: p.componente, cantidad: p.cantidad || ''})), null, 2);
+    const blob = new Blob([data], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bom-cajoneras-' + dateStamp() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Descargado (' + pairs.length + ' pares)');
+  });
+
+  importBtn.addEventListener('click', ()=> importFile.click());
+
+  importFile.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const items = parseImported(ev.target.result);
+      importPairs(items);
+    };
+    reader.onerror = ()=> showToast('No se pudo leer el archivo');
+    reader.readAsText(file);
+    importFile.value = '';
+  });
+
+  function parseImported(text){
+    let items = [];
+    try{
+      const json = JSON.parse(text);
+      if(Array.isArray(json)){
+        items = json.map(x => ({
+          cajon: String(x.cajon || x.Cajon || x.CAJON || x.Ubicación || '').trim(),
+          componente: String(x.componente || x.Componente || '').trim(),
+          cantidad: String(x.cantidad || x.Cantidad || x.CANTIDAD || '').trim()
+        })).filter(x => x.cajon && x.componente);
+      }
+    }catch(e){
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      items = lines.map(line => {
+        if(line.includes('\t')){
+          const parts = line.split('\t');
+          return {
+            cajon: (parts[0] || '').trim(),
+            componente: (parts[1] || '').trim(),
+            cantidad: (parts[2] || '').trim()
+          };
+        }
+        const parts = line.split(',');
+        return {
+          cajon: (parts[0] || '').trim(),
+          componente: (parts.slice(1).join(',') || '').trim(),
+          cantidad: ''
+        };
+      }).filter(x => x.cajon && x.componente);
+    }
+    return items;
+  }
+
+  function makeId(){
+    return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,9);
+  }
+
+  function importPairs(items){
+    if(items.length === 0){ showToast('No se encontraron pares válidos en el archivo'); return; }
+    const replace = window.confirm(
+      items.length + ' par(es) encontrados en el archivo.\n\n' +
+      'Aceptar = reemplazar toda la lista actual.\n' +
+      'Cancelar = combinar con la lista actual (sin duplicar).'
+    );
+    if(replace){
+      pairs = items.map(it => ({ id: makeId(), cajon: it.cajon, componente: it.componente, cantidad: it.cantidad || '', ts: Date.now() }));
+      persist();
+      render();
+      showToast('Lista reemplazada (' + pairs.length + ' pares)');
+    } else {
+      const existingKeys = new Set(pairs.map(p => (p.cajon + '|' + p.componente).toLowerCase()));
+      let added = 0;
+      items.forEach(it => {
+        const key = (it.cajon + '|' + it.componente).toLowerCase();
+        if(!existingKeys.has(key)){
+          pairs.unshift({ id: makeId(), cajon: it.cajon, componente: it.componente, cantidad: it.cantidad || '', ts: Date.now() });
+          existingKeys.add(key);
+          added++;
+        }
+      });
+      persist();
+      render();
+      showToast(added + ' nuevo(s) agregado(s)');
+    }
+  }
+
+  // --- Speech recognition ---
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(!SpeechRecognition){
+    micCajon.style.display = 'none';
+    micComponente.style.display = 'none';
+    micCantidad.style.display = 'none';
+    micSearch.style.display = 'none';
+    noSupport.style.display = 'block';
+  } else {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    let activeField = null;
+    let activeBtn = null;
+
+    const statusLabels = {
+      cajon: 'Escuchando Ubicación...',
+      componente: 'Escuchando componente...',
+      cantidad: 'Escuchando cantidad...',
+      search: 'Escuchando búsqueda...'
+    };
+
+    recognition.addEventListener('start', ()=>{
+      scope.classList.add('active');
+      statusText.textContent = statusLabels[activeField] || 'Escuchando...';
+      if(activeBtn) activeBtn.classList.add('listening');
+    });
+
+    recognition.addEventListener('result', (e)=>{
+      const transcript = e.results[0][0].transcript;
+      if(activeField === 'cajon'){
+        cajonInput.value = transcript;
+        updateSaveState();
+      } else if(activeField === 'componente'){
+        componenteInput.value = transcript;
+        updateSaveState();
+      } else if(activeField === 'cantidad'){
+        cantidadInput.value = transcript;
+      } else if(activeField === 'search'){
+        searchInput.value = transcript;
+        render();
+      }
+    });
+
+    recognition.addEventListener('error', ()=>{
+      statusText.textContent = 'No se entendió, intenta de nuevo.';
+    });
+
+    recognition.addEventListener('end', ()=>{
+      scope.classList.remove('active');
+      if(activeBtn) activeBtn.classList.remove('listening');
+      setTimeout(()=>{ if(!scope.classList.contains('active')) statusText.textContent=''; }, 1200);
+      activeBtn = null;
+    });
+
+    function startListening(field, btn){
+      activeField = field;
+      activeBtn = btn;
+      try{ recognition.start(); }catch(e){ /* already running */ }
+    }
+
+    micCajon.addEventListener('click', ()=> startListening('cajon', micCajon));
+    micComponente.addEventListener('click', ()=> startListening('componente', micComponente));
+    micCantidad.addEventListener('click', ()=> startListening('cantidad', micCantidad));
+    micSearch.addEventListener('click', ()=> startListening('search', micSearch));
+  }
+
+  loadPairs();
+})();
+</script>
+</body>
+</html>

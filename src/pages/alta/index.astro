@@ -1,0 +1,381 @@
+---
+import TopNav from '../../components/TopNav.astro';
+import PieSitio from '../../components/PieSitio.astro';
+import '../../styles/sitio.css';
+// Alta online de una comunidad energetica: formulario, cuota calculada al momento y pago en
+// Stripe. La API de la plataforma (iot-thingsboard.sh, app/alta.py) valida los datos como el
+// panel del superusuario, abre el pago y, cuando Stripe lo confirma, crea la comunidad
+// (tenant, base de datos, paneles y usuario del gestor con la contraseña elegida aqui).
+const API = 'https://VatiaCo.duckdns.org/cec-api';
+const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
+// La comunidad se elige entre las del IDAE (las mismas del mapa, src/data/comunidades-idae.json):
+// sus datos salen de alli y la API los vuelve a comprobar. Del formulario se registra el gestor.
+import IDAE from '../../data/comunidades-idae.json';
+const { actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
+const vistos = new Set<string>();
+const lista = IDAE.comunidades
+  .filter((c) => { const k = c.n + '|' + c.m; return !vistos.has(k) && vistos.add(k); })
+  .map((c) => ({ n: c.n, m: c.m, p: c.p, a: c.a, s: c.s, w: c.w, etiqueta: `${c.n.trim()} — ${c.m} (${c.p})` }))
+  .sort((x, y) => x.etiqueta.localeCompare(y.etiqueta, 'es'));
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alta de comunidad · VatiaCo</title>
+    <meta name="description" content="Da de alta tu comunidad energética en la plataforma VatiaCo. Pagas por socio, nunca más de 0,99 € al mes." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <style is:global>
+      .alta-rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 1.5rem; align-items: start; }
+      @media (max-width: 900px) { .alta-rejilla { grid-template-columns: 1fr; } .alta-resumen { position: static !important; order: -1; } }
+      .alta-caja { background: var(--gray-6); border: 1px solid var(--gray-5); border-radius: 0.9rem; padding: 1.5rem; }
+      .alta-form fieldset { border: 0; padding: 0; margin: 0 0 1.6rem; }
+      .alta-form legend { color: var(--white); font-weight: 700; font-size: 1.1rem; margin-bottom: 0.9rem; padding: 0; }
+      .campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+      .campos .ancho { grid-column: 1 / -1; }
+      @media (max-width: 560px) { .campos { grid-template-columns: 1fr; } }
+      .campo label, .campo .lbl { display: block; font-size: 0.85rem; font-weight: 600; color: var(--gray-1); margin-bottom: 0.35rem; }
+      .campo .opc { font-weight: 400; color: var(--gray-3); }
+      .campo input, .campo select { width: 100%; padding: 0.65rem 0.8rem; font: inherit; color: var(--white); background: var(--black);
+        border: 1px solid var(--gray-5); border-radius: 0.5rem; }
+      .campo input:focus, .campo select:focus { outline: none; border-color: var(--accent); }
+      .campo .ayuda { font-size: 0.8rem; color: var(--gray-3); margin-top: 0.3rem; }
+      .campo .err { display: none; font-size: 0.8rem; color: #ff8a80; margin-top: 0.3rem; }
+      .campo.mal input, .campo.mal select { border-color: #ff8a80; }
+      .campo.mal .err { display: block; }
+      .selector { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+      .selector label { position: relative; display: block; padding: 0.75rem 0.9rem; border: 1px solid var(--gray-5); border-radius: 0.5rem;
+        background: var(--black); cursor: pointer; margin: 0; }
+      .selector input { position: absolute; opacity: 0; pointer-events: none; }
+      .selector strong { display: block; color: var(--white); }
+      .selector span { font-size: 0.8rem; color: var(--gray-3); font-weight: 400; }
+      .selector .ahorro { color: var(--bolt); font-weight: 600; }
+      .selector label:has(input:checked) { border-color: var(--accent); background: var(--accent-low); }
+      .selector label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .campo .ayuda a { color: var(--accent-high); }
+      .ficha { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem 1rem; margin: 1rem 0 0; padding: 1rem 1.1rem;
+        border-radius: 0.6rem; background: var(--black); border: 1px solid var(--gray-5); }
+      .ficha .ancho { grid-column: 1 / -1; }
+      .ficha dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-3); }
+      .ficha dd { margin: 0.1rem 0 0; color: var(--white); font-weight: 600; overflow-wrap: anywhere; }
+      .ficha a { color: var(--accent-high); font-weight: 500; }
+      .fuente { margin: 0.8rem 0 0; font-size: 0.78rem; color: var(--gray-3); }
+      .fuente a { color: var(--gray-2); }
+      .acepto { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.92rem; }
+      .acepto input { width: 1.1rem; height: 1.1rem; margin-top: 0.2rem; accent-color: var(--accent); flex: none; }
+      .acepto a { color: var(--accent-high); }
+      .alta-form .btn.principal { width: 100%; justify-content: center; margin-top: 1.2rem; padding: 0.9rem; font-size: 1rem; cursor: pointer; }
+      .alta-form .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .nota { text-align: center; font-size: 0.8rem; color: var(--gray-3); margin: 0.6rem 0 0; }
+      .aviso { padding: 0.75rem 1rem; border-radius: 0.5rem; margin: 0 0 1.2rem; font-size: 0.92rem; }
+      .aviso.mal { background: #3a1d1b; color: #ffb4ab; }
+      .aviso.info { background: var(--accent-low); color: var(--gray-1); }
+      .demo { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem 2rem; flex-wrap: wrap; margin: 0 0 1.5rem;
+        padding: 1.3rem 1.5rem; border-radius: 0.9rem; border: 1px solid rgba(255, 213, 79, 0.55);
+        background: linear-gradient(135deg, rgba(255, 213, 79, 0.12), rgba(255, 213, 79, 0.03)); box-shadow: 0 8px 28px rgba(255, 213, 79, 0.08); }
+      .demo-texto { flex: 1 1 26rem; min-width: 0; }
+      .demo-titulo { display: inline-flex; align-items: center; gap: 0.55rem; color: var(--bolt); font-size: 1.05rem; }
+      .demo-titulo::before { content: ''; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--bolt);
+        box-shadow: 0 0 0 4px rgba(255, 213, 79, 0.2); }
+      .demo p { margin: 0.4rem 0 0.8rem; font-size: 0.95rem; color: var(--gray-1); }
+      .demo-cred { display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; margin: 0; }
+      .demo-cred dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-3); }
+      .demo-cred dd { margin: 0.15rem 0 0; }
+      .demo-cred code { font-size: 1rem; color: var(--white); background: var(--black); border: 1px solid var(--gray-5); border-radius: 0.4rem;
+        padding: 0.2rem 0.55rem; user-select: all; }
+      .demo-btn { flex: none; }
+      [hidden] { display: none !important; }
+      .alta-resumen { position: sticky; top: calc(var(--nav-height) + 1rem); }
+      .alta-resumen h3 { margin: 0; font-size: 0.95rem; color: var(--gray-3); font-weight: 600; }
+      .cifra { font-size: 2.6rem; font-weight: 800; color: var(--white); line-height: 1.15; letter-spacing: -0.02em; }
+      .cifra small { font-size: 1rem; font-weight: 500; color: var(--gray-3); letter-spacing: 0; }
+      .por-socio { margin: 0.2rem 0 1rem; font-size: 0.92rem; }
+      .por-socio strong { color: var(--white); }
+      .desglose { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+      .desglose td { padding: 0.4rem 0; border-top: 1px solid var(--gray-5); }
+      .desglose td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--gray-1); }
+      .desglose .inactivo td { opacity: 0.45; }
+      .prueba { margin-top: 1rem; padding: 0.8rem; border-radius: 0.5rem; background: var(--accent-low); font-size: 0.85rem; }
+      .prueba strong { display: block; color: var(--white); }
+      .medida { margin-top: 1rem; padding: 0.8rem; border-radius: 0.5rem; background: rgba(255, 213, 79, 0.12); font-size: 0.85rem; }
+      .letra { margin: 0.8rem 0 0; font-size: 0.8rem; color: var(--gray-3); }
+    </style>
+  </head>
+  <body>
+    <TopNav />
+
+    <main>
+      <div class="hero">
+        <div class="wrap">
+          <div class="etiqueta" id="sello">Alta de comunidad</div>
+          <h1>Prueba la plataforma <em>un mes gratis</em>.</h1>
+          <p>Rellena los datos y la plataforma de tu comunidad se crea al momento: paneles, base de datos y tu usuario de gestor para
+            dar de alta a los socios. Sin permanencia: si no te convence, te das de baja antes de que termine el mes y no pagas nada.</p>
+        </div>
+      </div>
+
+      <section style="padding-top: 2.5rem;">
+        <div class="wrap">
+          <div class="aviso info" id="cancelado" hidden>Has salido del pago sin completarlo. Tus datos siguen aquí por si quieres continuar.</div>
+          <div class="demo" role="note">
+            <div class="demo-texto">
+              <strong class="demo-titulo">Plataforma en fase de pruebas</strong>
+              <p>Mientras la mejoramos puede tener cortes y cambios. Antes de dar de alta tu comunidad, entra en la demo como gestor y
+                pruébala con una comunidad de ejemplo:</p>
+              <dl class="demo-cred">
+                <div><dt>Usuario</dt><dd><code>demo@vatiaco.es</code></dd></div>
+                <div><dt>Contraseña</dt><dd><code>demo</code></dd></div>
+              </dl>
+            </div>
+            <a class="btn principal demo-btn" href={PORTAL_URL} data-plataforma="Demo de VatiaCo">Entrar en la demo</a>
+          </div>
+          <div class="aviso mal" id="inactiva" hidden>El alta online no está disponible en este momento. Llámanos al 951 733 491 o escríbenos a
+            <a href="mailto:info@vatiaco.es">info@vatiaco.es</a> .</div>
+
+          <div class="alta-rejilla">
+            <form class="alta-caja alta-form" id="formulario" novalidate>
+              <fieldset>
+                <legend>La comunidad</legend>
+                <div class="campos">
+                  <div class="campo ancho" data-campo="comunidad">
+                    <label for="comunidad">Comunidad energética</label>
+                    <input id="comunidad" list="lista-idae" autocomplete="off" spellcheck="false" placeholder="Escribe su nombre o su municipio…" />
+                    <datalist id="lista-idae">{lista.map((c) => <option value={c.etiqueta} />)}</datalist>
+                    <div class="ayuda">Elige tu comunidad entre las registradas en el IDAE, las del <a href="/comunidades/">mapa</a>.
+                      ¿No aparece? <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">Escríbenos</a>.</div>
+                    <div class="err"></div>
+                  </div>
+                </div>
+                <dl class="ficha" id="ficha" hidden>
+                  <div><dt>Municipio</dt><dd id="f-municipio"></dd></div>
+                  <div><dt>Provincia</dt><dd id="f-provincia"></dd></div>
+                  <div><dt>Comunidad autónoma</dt><dd id="f-autonomia"></dd></div>
+                  <div><dt>Socios</dt><dd id="f-socios"></dd></div>
+                  <div class="ancho" id="f-web-c" hidden><dt>Web</dt><dd><a id="f-web" target="_blank" rel="noopener"></a></dd></div>
+                </dl>
+                <p class="fuente">Datos de la comunidad: <a href={FUENTE.url} target="_blank" rel="noopener">{FUENTE.nombre}</a>,
+                  actualizados el {ACTUALIZADO}. Si alguno no es correcto, escríbenos y lo corregimos.</p>
+              </fieldset>
+
+              <fieldset>
+                <legend>Gestor de la comunidad</legend>
+                <div class="campos">
+                  <div class="campo ancho" data-campo="contacto">
+                    <label for="contacto">Nombre y apellidos</label>
+                    <input id="contacto" name="contacto" maxlength="80" autocomplete="name" />
+                    <div class="err"></div>
+                  </div>
+                  <div class="campo" data-campo="email">
+                    <label for="email">Email</label>
+                    <input id="email" name="email" type="email" maxlength="120" autocomplete="email" />
+                    <div class="ayuda">Es tu usuario para entrar en la plataforma.</div>
+                    <div class="err"></div>
+                  </div>
+                  <div class="campo" data-campo="telefono">
+                    <label for="telefono">Teléfono <span class="opc">(opcional)</span></label>
+                    <input id="telefono" name="telefono" type="tel" maxlength="20" autocomplete="tel" />
+                    <div class="err"></div>
+                  </div>
+                  <div class="campo" data-campo="password">
+                    <label for="password">Contraseña</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" />
+                    <div class="ayuda">Al menos 8 caracteres.</div>
+                    <div class="err"></div>
+                  </div>
+                  <div class="campo" data-campo="password2">
+                    <label for="password2">Repite la contraseña</label>
+                    <input id="password2" name="password2" type="password" autocomplete="new-password" />
+                    <div class="err"></div>
+                  </div>
+                </div>
+              </fieldset>
+
+
+              <fieldset>
+                <legend>Suscripción</legend>
+                <div class="campos">
+                  <div class="campo ancho" data-campo="socios">
+                    <p class="ayuda" id="socios-nota" style="margin: 0;">La cuota se calcula con los socios de la comunidad en el IDAE y después
+                      se ajusta sola, cada noche, a los socios que des de alta en la plataforma.</p>
+                    <div class="err"></div>
+                  </div>
+                  <div class="campo ancho" data-campo="periodo">
+                    <span class="lbl">Forma de pago</span>
+                    <div class="selector" role="radiogroup" aria-label="Forma de pago">
+                      <label><input type="radio" name="periodo" value="anual" checked /><strong>Anual</strong><span class="ahorro">2 meses gratis</span></label>
+                      <label><input type="radio" name="periodo" value="mensual" /><strong>Mensual</strong><span>Sin compromiso</span></label>
+                    </div>
+                    <div class="err"></div>
+                  </div>
+                </div>
+              </fieldset>
+
+              <div class="campo" data-campo="acepta">
+                <label class="acepto"><input type="checkbox" id="acepta" name="acepta" />
+                  <span>Acepto las <a id="url-condiciones" href="/condiciones/" target="_blank" rel="noopener">condiciones del servicio</a> y la
+                    <a id="url-privacidad" href="/privacidad/" target="_blank" rel="noopener">política de privacidad</a>.</span></label>
+                <div class="err"></div>
+              </div>
+
+              <div class="aviso mal" id="error-general" hidden style="margin-top: 1rem;"></div>
+              <button class="btn principal" type="submit" id="enviar">Empezar el mes gratis</button>
+              <p class="nota" id="nota-pago">Pago con tarjeta o domiciliación SEPA, gestionado por Stripe.</p>
+            </form>
+
+            <aside class="alta-caja alta-resumen" aria-live="polite">
+              <h3>Tu cuota</h3>
+              <div class="cifra" id="total">—</div>
+              <p class="por-socio" id="por-socio"></p>
+              <table class="desglose"><tbody id="desglose"></tbody></table>
+              <div class="medida" id="a-medida" hidden>Para comunidades de más de <span id="max"></span> socios preparamos una tarifa a medida:
+                escríbenos a <a href="mailto:info@vatiaco.es">info@vatiaco.es</a>.</div>
+              <div class="prueba" id="prueba" hidden><strong id="prueba-titulo"></strong><span id="prueba-texto"></span></div>
+              <p class="letra" id="iva">Precios sin IVA. Puedes cancelar en cualquier momento.</p>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <PieSitio />
+
+    <script is:inline define:vars={{ API, LISTA: lista }}>
+      (function () {
+        var $ = function (s) { return document.querySelector(s); };
+        var form = $('#formulario'), BORRADOR = 'alta-comunidad-borrador';
+        var CAMPOS = ['contacto', 'email', 'telefono'];
+        var inCom = $('#comunidad'), elegida = null;
+        var POR_ETIQUETA = {}; LISTA.forEach(function (c) { POR_ETIQUETA[c.etiqueta] = c; });
+
+        // Comunidad elegida de la lista del IDAE: su ficha (con sus socios, que fijan la cuota)
+        function elegir() {
+          var c = POR_ETIQUETA[inCom.value] || null;
+          elegida = c;
+          $('#ficha').hidden = !c;
+          if (!c) return;
+          $('#f-municipio').textContent = c.m; $('#f-provincia').textContent = c.p;
+          $('#f-autonomia').textContent = c.a || '–'; $('#f-socios').textContent = c.s ? c.s.toLocaleString('es-ES') : 'sin datos (se empieza con 1)';
+          $('#f-web-c').hidden = !c.w;
+          if (c.w) { $('#f-web').href = c.w; $('#f-web').textContent = c.w.replace(/^https?:\/\//, ''); }
+          limpiar('comunidad');
+        }
+        inCom.addEventListener('input', function () { elegir(); actualizar(); guardar(); });
+        var T = null;   // tarifa (la da la API)
+        var euros = function (c, d) { d = d == null ? 2 : d;
+          return (c / 100).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d }); };
+
+        if (new URLSearchParams(location.search).has('cancelado')) $('#cancelado').hidden = false;
+
+        function desglose(n) {
+          return T.tramos.map(function (t) {
+            var u = Math.max(0, Math.min(n, t.hasta) - (t.desde - 1));
+            return { desde: t.desde, hasta: t.hasta, centimos: t.centimos, unidades: u, subtotal: u * t.centimos };
+          });
+        }
+        // Socios de la comunidad en el IDAE (sin dato: 1, y la cuota sube sola al dar de alta socios)
+        function socios() { return elegida ? Math.max(1, elegida.s || 0) : 0; }
+        function periodo() { return form.periodo.value === 'mensual' ? 'mensual' : 'anual'; }
+
+        function actualizar() {
+          if (!T) return;
+          var n = socios(), anual = periodo() === 'anual', excede = n > T.max_socios, meses = T.meses_cobrados_anual;
+          var lineas = desglose(Math.min(Math.max(n, 0), T.max_socios));
+          var mensual = lineas.reduce(function (s, l) { return s + l.subtotal; }, 0);
+          $('#a-medida').hidden = !excede;
+          $('#enviar').disabled = excede || !T.activa;
+          if (n < 1 || excede) {
+            $('#total').textContent = '—';
+            $('#por-socio').textContent = excede ? 'Tarifa a medida' : 'Elige tu comunidad para ver su cuota';
+          } else if (anual) {
+            $('#total').innerHTML = euros(mensual * meses) + ' <small>/ año</small>';
+            $('#por-socio').innerHTML = n.toLocaleString('es-ES') + ' socios · equivale a <strong>' + euros(mensual * meses / 12 / n, 3) + '</strong> por socio y mes';
+          } else {
+            $('#total').innerHTML = euros(mensual) + ' <small>/ mes</small>';
+            $('#por-socio').innerHTML = n.toLocaleString('es-ES') + ' socios · <strong>' + euros(mensual / n, 3) + '</strong> por socio y mes';
+          }
+          var f = anual ? meses : 1;
+          $('#desglose').innerHTML = lineas.map(function (l) {
+            var rango = l.desde === 1 ? 'Hasta ' + l.hasta : l.desde.toLocaleString('es-ES') + '–' + l.hasta.toLocaleString('es-ES');
+            return '<tr class="' + (l.unidades ? '' : 'inactivo') + '"><td>' + rango + '</td><td>' +
+              (l.unidades ? l.unidades + ' × ' + euros(l.centimos * f) : euros(l.centimos) + '/mes') + '</td><td>' +
+              (l.unidades ? euros(l.subtotal * f) : '') + '</td></tr>';
+          }).join('');
+          var dias = T.dias_prueba;
+          $('#prueba').hidden = !dias;
+          if (dias) {
+            var m = Math.round(dias / 30), fin = new Date(Date.now() + dias * 864e5);
+            $('#sello').textContent = 'Alta de comunidad · ' + (m > 1 ? m + ' meses gratis' : 'primer mes gratis');
+            $('#prueba-titulo').textContent = m > 1 ? 'Los ' + m + ' primeros meses son gratis' : 'El primer mes es gratis';
+            $('#prueba-texto').textContent = 'El primer cobro será el ' + fin.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) +
+              '. Puedes cancelar sin coste hasta entonces.';
+            $('#nota-pago').textContent = 'Hoy no se cobra nada. Pago con tarjeta o domiciliación SEPA, gestionado por Stripe.';
+          }
+          $('#iva').textContent = elegida && T.provincias_sin_iva.indexOf(elegida.p) >= 0
+            ? 'En tu provincia no se aplica IVA. Sin permanencia: cancelas cuando quieras.'
+            : 'Precios sin IVA (21 %). Sin permanencia: cancelas cuando quieras.';
+        }
+
+        function guardar() {
+          var d = {}; CAMPOS.forEach(function (k) { d[k] = form[k].value; }); d.periodo = periodo(); d.comunidad = inCom.value;
+          try { sessionStorage.setItem(BORRADOR, JSON.stringify(d)); } catch (e) {}
+        }
+        function restaurar() {
+          var d = null; try { d = JSON.parse(sessionStorage.getItem(BORRADOR) || 'null'); } catch (e) {}
+          if (!d) return;
+          Object.keys(d).forEach(function (k) {
+            if (k === 'periodo') { var r = form.querySelector('input[name=periodo][value="' + d[k] + '"]'); if (r) r.checked = true; }
+            else if (k === 'comunidad') { inCom.value = d[k]; elegir(); }
+            else if (form[k]) form[k].value = d[k];
+          });
+        }
+        function limpiar(c) { var e = document.querySelector('[data-campo="' + c + '"]'); if (e) e.classList.remove('mal'); }
+        function errores(es) {
+          var primero = null;
+          Object.keys(es).forEach(function (c) {
+            var e = document.querySelector('[data-campo="' + c + '"]');
+            if (!e) { general(es[c]); return; }
+            e.classList.add('mal'); e.querySelector('.err').textContent = es[c]; primero = primero || e;
+          });
+          if (primero) { primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var i = primero.querySelector('input, select'); if (i) i.focus({ preventScroll: true }); }
+        }
+        function general(t) { var e = $('#error-general'); e.textContent = t; e.hidden = false; }
+
+        fetch(API + '/alta/tarifa').then(function (r) { return r.json(); }).then(function (t) {
+          T = t;
+          $('#max').textContent = t.max_socios.toLocaleString('es-ES');
+          if (t.url_condiciones) $('#url-condiciones').href = t.url_condiciones;
+          if (t.url_privacidad) $('#url-privacidad').href = t.url_privacidad;
+          $('#inactiva').hidden = t.activa;
+          restaurar();
+          actualizar();
+        }).catch(function () { $('#inactiva').hidden = false; $('#enviar').disabled = true; });
+
+        form.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); actualizar(); guardar(); });
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          $('#error-general').hidden = true;
+          if (!elegida) { errores({ comunidad: 'Elige tu comunidad de la lista (comunidades registradas en el IDAE).' }); return; }
+          var d = {}; CAMPOS.concat(['password', 'password2']).forEach(function (k) { d[k] = form[k].value; });
+          d.idae = { n: elegida.n, m: elegida.m };
+          d.periodo = periodo(); d.acepta = form.acepta.checked;
+          var b = $('#enviar'); b.disabled = true; b.textContent = 'Preparando el pago…';
+          fetch(API + '/alta/solicitud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (c) { return { ok: r.ok, c: c }; }); })
+            .then(function (x) {
+              if (x.ok && x.c.url) { location.href = x.c.url; return; }
+              if (x.c.errores) errores(x.c.errores);
+              else general(x.c.detail || 'No se ha podido iniciar el pago. Inténtalo de nuevo.');
+              b.disabled = false; b.textContent = 'Empezar el mes gratis';
+            })
+            .catch(function () {
+              general('No hay conexión con la plataforma. Inténtalo de nuevo en unos minutos.');
+              b.disabled = false; b.textContent = 'Empezar el mes gratis';
+            });
+        });
+      })();
+    </script>
+  </body>
+</html>

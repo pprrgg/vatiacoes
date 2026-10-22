@@ -1,0 +1,6 @@
+﻿id;nombre;email;password;telefono;estado;deshabilitado;cups;nif;lat;lon;simulado;sim_tipo;sim_kwh_mes
+carmen-ruiz;Carmen Ruiz;carmen.ruiz@ejemplo.es;carmen2026;611 100 001;activo;no;;;37,1815;-3,5930;sí;residencial;280
+antonio-garcia;Antonio García;antonio.garcia@ejemplo.es;antonio2026;611 100 002;activo;no;;;37,1802;-3,5911;sí;residencial;420
+panaderia-san-nicolas;Panadería San Nicolás;panaderia@ejemplo.es;panaderia2026;958 100 003;activo;no;;;37,1821;-3,5938;sí;comercial;2.800
+talleres-darro;Talleres Darro;;;958 100 004;activo;no;;;37,1796;-3,5902;sí;industrial;35.000
+parking-plaza-larga;Parking Plaza Larga;parking@ejemplo.es;parking2026;958 100 005;activo;no;;;37,1830;-3,5921;sí;cargador_ve;3.500

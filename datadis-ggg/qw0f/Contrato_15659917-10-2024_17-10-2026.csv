@@ -1,0 +1,2 @@
+cups;distribuidora;comercializadora;tarifaAcceso;tensionConexion;potenciaContratadakW;modoControlPotencia;discriminacionHoraria;fechaInicioVigencia;fechaFinVigencia;provincia;municipio;codigoPostal;potenciaTotalGenerada;tipoAutoconsumo;seccion;subseccion;coeficienteReparto;cau;potenciaMaximaInstalacion
+"ES0031103223148001QW0F";EDISTRIBUCIÓN;"-";"BAJA TENSION y POTENCIA <= 15 kW";"Baja tensión";"1,15;1,15";ICP;"TARIFA DE TRES PERIODOS";"2021/06/01";;Granada;LANTEIRA;"18518";;;;;;;"5.75"

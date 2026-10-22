@@ -1,0 +1,805 @@
+---
+import { getDocsTree, type DocNode } from '../data/docs.ts';
+import TopNav from '../components/TopNav.astro';
+
+const docsTree: DocNode[] = await getDocsTree();
+
+function escapeHtml(text: string) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const CARET_SVG =
+  '<svg aria-hidden="true" class="caret" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg>';
+
+const FOLDER_SVG =
+  '<svg aria-hidden="true" class="node-icon folder-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>';
+
+const FILE_SVG =
+  '<svg aria-hidden="true" class="node-icon file-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M13 2v6h6"/></svg>';
+
+function buildMenuHtml(items: DocNode[], level = 0): string {
+  let html = '';
+  for (const item of items) {
+    if (item.type === 'folder') {
+      // Si el título de la carpeta es exactamente "index", la omitimos
+      if (item.title && item.title.toLowerCase() === 'index') {
+        continue;
+      }
+      html += `<li class="folder" data-level="${level}"><details${level === 0 ? ' open' : ''}><summary><span class="group-label">${FOLDER_SVG}<span class="label-text">${escapeHtml(item.title)}</span></span>${CARET_SVG}</summary><ul>${buildMenuHtml(item.children, level + 1)}</ul></details></li>`;
+    } else {
+      // Si es un archivo y su URL termina en 'index.html', lo omitimos del menú
+      if (item.url && item.url.endsWith('index.html')) {
+        continue;
+      }
+      html += `<li class="file" data-level="${level}"><a class="doc-link" href="${escapeHtml(item.url)}">${FILE_SVG}<span class="label-text">${escapeHtml(item.title)}</span></a></li>`;
+    }
+  }
+  return html;
+}
+
+const docsMenuHtml = `<ul class="top-level">${buildMenuHtml(docsTree)}</ul>`;
+
+// Portada del blog (/blog/ sin ?doc=): introduccion e indice por secciones, a partir del
+// mismo arbol que el menu lateral. Seccion = cada carpeta dentro de la raiz; sus
+// subcarpetas se muestran como apartados (p.ej. "Hasta 50 kW").
+type DocPortada = { title: string; url: string };
+type Grupo = { titulo: string | null; docs: DocPortada[] };
+type Seccion = { titulo: string; grupos: Grupo[]; total: number };
+const esIndice = (n: DocNode) => n.title.toLowerCase() === 'index' || (n.type === 'file' && n.url.endsWith('index.html'));
+function recoger(items: DocNode[], titulo: string | null, grupos: Grupo[]) {
+  const docs = items.filter((n): n is Extract<DocNode, { type: 'file' }> => n.type === 'file' && !esIndice(n))
+    .map((n) => ({ title: n.title, url: n.url }));
+  if (docs.length) grupos.push({ titulo, docs });
+  for (const f of items) {
+    if (f.type === 'folder' && !esIndice(f)) recoger(f.children, titulo ? `${titulo} · ${f.title}` : f.title, grupos);
+  }
+}
+const secciones: Seccion[] = [];
+for (const raiz of docsTree) {
+  if (raiz.type !== 'folder' || esIndice(raiz)) continue;
+  for (const sec of raiz.children) {
+    if (sec.type !== 'folder' || esIndice(sec)) continue;
+    const grupos: Grupo[] = [];
+    recoger(sec.children, null, grupos);
+    if (grupos.length) secciones.push({ titulo: sec.title, grupos, total: grupos.reduce((a, g) => a + g.docs.length, 0) });
+  }
+  const sueltos: Grupo[] = [];
+  recoger(raiz.children.filter((n) => n.type === 'file'), null, sueltos);
+  if (sueltos.length) secciones.push({ titulo: 'Otros documentos', grupos: sueltos, total: sueltos[0].docs.length });
+}
+const totalDocs = secciones.reduce((a, sec) => a + sec.total, 0);
+const enlaceDoc = (url: string) => `/blog/?doc=${encodeURIComponent(url)}`;
+const DEFAULT_DOC_URL = '/docs/A00_Blog_Interactivo/index/index.html';
+// El mapa de comunidades es una pagina propia (/comunidades/); su antigua direccion en
+// el visor se reenvia alli (loadFromQuery)
+const MAPA_ANTIGUO = '/docs/A00_Blog_Interactivo/index/comunidades.html';
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VatiaCo Blog de un ingeniero </title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, system-ui, sans-serif;
+        --nav-height: 3.5rem;
+
+        --color-accent-low: #17264f;
+        --color-accent: #3369ff;
+        --color-accent-high: #b3c7ff;
+        --color-white: #ffffff;
+        --color-gray-1: #edeef3;
+        --color-gray-2: #c1c3c8;
+        --color-gray-3: #888c96;
+        --color-gray-4: #555962;
+        --color-gray-5: #353841;
+        --color-gray-6: #23262f;
+        --color-black: #17181c;
+
+        --color-text: var(--color-gray-2);
+        --color-text-accent: var(--color-accent-high);
+        --color-bg: var(--color-black);
+        --color-bg-nav: var(--color-gray-6);
+        --color-bg-sidebar: var(--color-gray-6);
+        --color-hairline-shade: var(--color-black);
+
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --color-accent-low: #cfd4fc;
+        --color-accent: #3d50f5;
+        --color-accent-high: #0f1c8a;
+        --color-white: #17181c;
+        --color-gray-1: #23262f;
+        --color-gray-2: #353841;
+        --color-gray-3: #555962;
+        --color-gray-4: #888c96;
+        --color-gray-5: #c1c3c8;
+        --color-gray-6: #edeef3;
+        --color-black: #ffffff;
+      }
+      @media (min-width: 800px) {
+        :root {
+          --nav-height: 4rem;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* La barra superior es el componente comun src/components/TopNav.astro */
+
+      /* ---------- Layout ---------- */
+      .page {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        min-height: calc(100vh - var(--nav-height));
+      }
+      .sidebar {
+        border-right: 1px solid var(--color-hairline-shade);
+        padding: 0;
+        background: var(--color-bg-sidebar);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - var(--nav-height));
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+      }
+      .sidebar h1 {
+        margin: 0;
+        padding: 1.5rem 1.5rem 0.75rem 1.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-gray-3);
+        letter-spacing: -0.01em;
+        text-transform: uppercase;
+      }
+      .sidebar p {
+        color: var(--color-gray-3);
+        margin: 0;
+        padding: 0 1.5rem 1.5rem 1.5rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+      .sidebar-cta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 1rem 1rem 0.75rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid var(--color-gray-5);
+        border-radius: 0.6rem;
+        color: var(--color-gray-1);
+        text-decoration: none;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      .sidebar-cta:hover,
+      .sidebar-cta:focus-visible {
+        border-color: var(--color-accent);
+        background: var(--color-accent-low);
+      }
+      .sidebar-cta-icon {
+        flex: none;
+        color: #ffd54f;
+      }
+      .sidebar-cta strong {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      .sidebar-cta small {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--color-gray-3);
+      }
+      .menu {
+        --sl-sidebar-item-padding-inline: 0.5rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        flex: 1 1 auto;
+        padding: 0 1.5rem 1.5rem;
+      }
+      .menu :global(ul) {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .menu :global(li) {
+        overflow-wrap: anywhere;
+      }
+      .menu :global(ul ul li) {
+        border-inline-start: 1px solid var(--color-gray-5);
+        margin-inline-start: var(--sl-sidebar-item-padding-inline);
+        padding-inline-start: var(--sl-sidebar-item-padding-inline);
+      }
+      .menu :global(.top-level > li + li) {
+        margin-top: 0.75rem;
+      }
+      @media (min-width: 800px) {
+        .menu :global(.top-level > li + li) {
+          margin-top: 0.5rem;
+        }
+      }
+      .menu :global(a) {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--color-gray-3);
+        text-decoration: none;
+        padding: 0.3em var(--sl-sidebar-item-padding-inline);
+        border-radius: 0.25rem;
+        line-height: 1.4;
+        font-size: 0.85rem;
+        font-weight: 400;
+      }
+      .menu :global(a:hover),
+      .menu :global(a:focus) {
+        color: var(--color-white);
+      }
+      .menu :global(a.active) {
+        color: var(--color-accent-low);
+        background-color: var(--color-text-accent);
+        font-weight: 600;
+      }
+      .menu :global(a.active .file-icon) {
+        color: var(--color-accent-low);
+        opacity: 1;
+      }
+      /* Carpetas */
+      .menu :global(summary) {
+        cursor: pointer;
+        user-select: none;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.2em var(--sl-sidebar-item-padding-inline);
+        line-height: 1.4;
+      }
+      .menu :global(summary::marker),
+      .menu :global(summary::-webkit-details-marker) {
+        display: none;
+      }
+      /* Icono compartido para carpetas y archivos */
+      .menu :global(.node-icon) {
+        flex-shrink: 0;
+      }
+      .menu :global(.folder-icon) {
+        color: var(--color-gray-3);
+      }
+      .menu :global(.file-icon) {
+        color: var(--color-gray-4);
+        opacity: 0.8;
+      }
+      .menu :global(details[open] > summary .folder-icon) {
+        color: var(--color-accent);
+      }
+      .menu :global(.label-text) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      /* Tipografía por nivel: distingue visualmente la profundidad de cada carpeta */
+      .menu :global(.group-label) {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 0;
+        color: var(--color-gray-2);
+        font-size: 0.8125rem;
+        font-weight: 500;
+      }
+      .menu :global(li.folder[data-level='0'] > details > summary .group-label) {
+        font-size: 1.0625rem;
+        font-weight: 700;
+        color: var(--color-white);
+        letter-spacing: -0.01em;
+      }
+      .menu :global(li.folder[data-level='0'] > details > summary .folder-icon) {
+        color: var(--color-text-accent);
+      }
+      .menu :global(li.folder[data-level='1'] > details > summary .group-label) {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-gray-1);
+      }
+      @media (min-width: 800px) {
+        .menu :global(li.folder[data-level='0'] > details > summary .group-label) {
+          font-size: 0.9375rem;
+        }
+        .menu :global(li.folder[data-level='1'] > details > summary .group-label) {
+          font-size: 0.875rem;
+        }
+        .menu :global(a) {
+          font-size: 0.8125rem;
+        }
+      }
+      /* Líneas guía: más marcadas cuanto más profunda es la carpeta */
+      .menu :global(li[data-level='1']) {
+        border-inline-start-color: var(--color-gray-5);
+      }
+      .menu :global(li[data-level='2']) {
+        border-inline-start-color: var(--color-gray-4);
+      }
+      .menu :global(li[data-level='3']) {
+        border-inline-start-color: var(--color-gray-3);
+      }
+      .menu :global(.caret) {
+        flex-shrink: 0;
+        transition: transform 0.2s ease-in-out;
+        color: var(--color-gray-3);
+      }
+      .menu :global(details[open] > summary .caret) {
+        transform: rotate(90deg);
+      }
+      .content {
+        padding: 0;
+        overflow: hidden;
+        height: calc(100vh - var(--nav-height));
+      }
+      .viewer {
+        height: 100%;
+      }
+      .viewer[hidden] {
+        display: none;
+      }
+      /* ---------- Portada del blog ---------- */
+      .portada {
+        height: 100%;
+        overflow-y: auto;
+        padding: 2.5rem clamp(1rem, 4vw, 3rem) 3rem;
+      }
+      .portada[hidden] {
+        display: none;
+      }
+      .portada-intro {
+        max-width: 50rem;
+        margin-bottom: 2.25rem;
+      }
+      .portada .etiqueta {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #ffd54f;
+      }
+      .portada h1 {
+        font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+        line-height: 1.15;
+        color: var(--color-white);
+        margin: 0.6rem 0 0.9rem;
+      }
+      .portada-intro p {
+        margin: 0 0 0.8rem;
+        line-height: 1.6;
+      }
+      .portada .cifras b {
+        color: var(--color-white);
+      }
+      .portada-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-top: 1.1rem;
+      }
+      .portada-boton {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.55rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--color-gray-5);
+        color: var(--color-gray-1);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+      .portada-boton:hover {
+        border-color: var(--color-accent);
+        background: var(--color-accent-low);
+      }
+      .portada-indice {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+        gap: 1rem;
+        align-items: start;
+      }
+      .seccion {
+        background: var(--color-gray-6);
+        border: 1px solid var(--color-gray-5);
+        border-radius: 0.75rem;
+        padding: 1.1rem 1.2rem 1rem;
+      }
+      .seccion header {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-bottom: 0.6rem;
+      }
+      .seccion-icono {
+        display: inline-flex;
+        color: var(--color-accent-high);
+      }
+      .seccion h2 {
+        margin: 0;
+        font-size: 1.05rem;
+        color: var(--color-white);
+        flex: 1;
+      }
+      .seccion-total {
+        font-size: 0.75rem;
+        color: var(--color-gray-3);
+        white-space: nowrap;
+      }
+      .grupo h3 {
+        margin: 0.7rem 0 0.25rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-gray-3);
+      }
+      .grupo ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .grupo a {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.32rem 0.35rem;
+        border-radius: 0.35rem;
+        color: var(--color-gray-2);
+        text-decoration: none;
+        font-size: 0.9rem;
+        line-height: 1.35;
+      }
+      .grupo a span {
+        display: inline-flex;
+        margin-top: 0.12rem;
+        color: var(--color-gray-3);
+      }
+      .grupo a:hover {
+        background: var(--color-gray-5);
+        color: var(--color-white);
+      }
+      .viewer-frame {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+      .sidebar-overlay {
+        display: none;
+      }
+      @media (max-width: 980px) {
+        .page {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          position: fixed;
+          inset: var(--nav-height) 0 0 auto;
+          left: -100%;
+          width: min(320px, 100%);
+          height: calc(100vh - var(--nav-height));
+          transition: left 0.25s ease;
+          z-index: 40;
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+        }
+        .sidebar.open {
+          left: 0;
+        }
+        .sidebar-overlay {
+          display: none;
+          position: fixed;
+          inset: var(--nav-height) 0 0 0;
+          background: rgba(0, 0, 0, 0.45);
+          z-index: 30;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          pointer-events: none;
+        }
+        .sidebar-overlay.visible {
+          display: block;
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .burger {
+          display: inline-flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <TopNav blog />
+
+    <div class="page">
+      <aside class="sidebar" id="sidebar">
+        <a class="sidebar-cta" href="/comunidades/">
+          <svg aria-hidden="true" class="sidebar-cta-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffd54f"><circle cx="6" cy="6" r="2.4"/><path d="M6 1.2v1.1M6 9.7v1.1M1.2 6h1.1M9.7 6h1.1M2.6 2.6l.8.8M8.6 8.6l.8.8M2.6 9.4l.8-.8M8.6 3.4l.8-.8"/></g><path d="M9 12h13l-3 7H6l3-7Z"/><path d="M13.3 12l-3 7M17.7 12l-3 7M7.5 15.5h13"/><path d="M12.5 19v3M10 22h5"/></svg>
+          <span>
+            <strong>Comunidades energéticas</strong>
+            <small>Mapa de España</small>
+          </span>
+        </a>
+        <div class="menu" set:html={docsMenuHtml}></div>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <main class="content">
+        <section class="portada" id="portadaBlog" hidden>
+          <div class="portada-intro">
+            <div class="etiqueta">Blog de un ingeniero</div>
+            <h1>Control de la energía, explicado y calculado.</h1>
+            <p>Guías interactivas sobre fotovoltaica, comunidades energéticas, contratos de electricidad, vehículo eléctrico, auditorías, rehabilitación, eólica, instalaciones y certificados de ahorro energético. Cada documento combina la explicación con calculadoras, informes y presupuestos que se pueden rellenar y descargar.</p>
+            <p class="cifras"><b>{secciones.length}</b> secciones · <b>{totalDocs}</b> documentos</p>
+            <div class="portada-acciones">
+              <a class="portada-boton" href="/comunidades/">Mapa de comunidades energéticas</a>
+            </div>
+          </div>
+          <div class="portada-indice">
+            {secciones.map((sec) => (
+              <article class="seccion">
+                <header>
+                  <span class="seccion-icono" set:html={FOLDER_SVG}></span>
+                  <h2>{sec.titulo}</h2>
+                  <span class="seccion-total">{sec.total} {sec.total === 1 ? 'documento' : 'documentos'}</span>
+                </header>
+                {sec.grupos.map((g) => (
+                  <div class="grupo">
+                    {g.titulo && <h3>{g.titulo}</h3>}
+                    <ul>
+                      {g.docs.map((d) => (
+                        <li><a href={enlaceDoc(d.url)} data-doc={d.url}><span set:html={FILE_SVG}></span>{d.title}</a></li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </article>
+            ))}
+          </div>
+        </section>
+        <div class="viewer">
+          <iframe id="docFrame" class="viewer-frame" src="" title="Vista previa del documento"></iframe>
+        </div>
+      </main>
+    </div>
+
+    <script define:vars={{ DEFAULT_DOC_URL, MAPA_ANTIGUO }}>
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      const docFrame = document.getElementById('docFrame');
+      const menuToggleButton = document.getElementById('menuToggleButton');
+
+      function toggleMenu() {
+        if (!sidebar) return;
+        const isOpen = sidebar.classList.toggle('open');
+        overlay?.classList.toggle('visible', isOpen);
+        menuToggleButton?.setAttribute('aria-expanded', String(isOpen));
+      }
+
+      function closeMenu() {
+        sidebar?.classList.remove('open');
+        overlay?.classList.remove('visible');
+        menuToggleButton?.setAttribute('aria-expanded', 'false');
+      }
+
+      const SESSION_DOC_KEY = 'VatiaCo-current-doc';
+
+      function markActiveDoc(url) {
+        const menu = document.querySelector('.menu');
+        if (!menu) return;
+
+        menu.querySelectorAll('a.doc-link.active').forEach((link) => {
+          link.classList.remove('active');
+          link.removeAttribute('aria-current');
+        });
+
+        const activeLink = menu.querySelector(`a.doc-link[href="${CSS.escape(url)}"]`);
+        if (!activeLink) return;
+        activeLink.classList.add('active');
+        activeLink.setAttribute('aria-current', 'page');
+
+        let node = activeLink.closest('li')?.parentElement?.closest('details');
+        while (node) {
+          node.open = true;
+          node = node.parentElement?.closest('details');
+        }
+      }
+
+      const portada = document.getElementById('portadaBlog');
+      const viewer = document.querySelector('.viewer');
+
+      // Portada del blog: /blog/ sin documento (y el enlace "Blog" de la barra)
+      function mostrarPortada() {
+        if (!portada || !viewer) return;
+        portada.hidden = false;
+        viewer.hidden = true;
+        sessionStorage.removeItem(SESSION_DOC_KEY);
+        document.querySelectorAll('.menu a.doc-link.active').forEach((a) => { a.classList.remove('active'); a.removeAttribute('aria-current'); });
+      }
+
+      // nueva: true desde la portada, para que "atras" vuelva a ella
+      function openDoc(url, nueva = false) {
+        if (!docFrame) return;
+        if (portada) portada.hidden = true;
+        if (viewer) viewer.hidden = false;
+        if (nueva) history.pushState({ doc: url }, '', `?doc=${encodeURIComponent(url)}`);
+        // Ya abierto (p.ej. "atras" tras cerrar el visor del mapa): no se recarga
+        if (docFrame.getAttribute('src') !== url) docFrame.src = url;
+        if (!nueva) history.replaceState({ doc: url }, '', `?doc=${encodeURIComponent(url)}`);
+        sessionStorage.setItem(SESSION_DOC_KEY, url);
+        markActiveDoc(url);
+      }
+
+      function initMenuLinks() {
+        const menu = document.querySelector('.menu');
+        if (!menu) return;
+
+        menu.querySelectorAll('a.doc-link').forEach((link) => {
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            const url = event.currentTarget.getAttribute('href');
+            if (!url) return;
+            closeMenu();
+            openDoc(url);
+          });
+        });
+      }
+
+      let isFiltering = false;
+
+      function initAccordion() {
+        const menu = document.querySelector('.menu');
+        if (!menu) return;
+
+        menu.querySelectorAll('details').forEach((det) => {
+          det.addEventListener('toggle', () => {
+            if (isFiltering) return;
+            if (!det.open) return;
+
+            const li = det.parentElement;
+            const parent = li?.parentElement;
+            if (!parent) return;
+            const siblings = parent.querySelectorAll(':scope > li > details');
+            siblings.forEach((s) => {
+              if (s !== det && s.open) s.open = false;
+            });
+          });
+        });
+      }
+
+      function loadFromQuery() {
+        const params = new URLSearchParams(window.location.search);
+        const doc = params.get('doc');
+        const sanitized = doc && doc.startsWith('/docs/') ? doc : null;
+        // Enlaces antiguos al mapa dentro del visor: a su pagina propia
+        if (sanitized === MAPA_ANTIGUO) { location.replace('/comunidades/'); return; }
+        if (sanitized) openDoc(sanitized);
+        else mostrarPortada();
+      }
+
+      const searchInput = document.getElementById('searchInput');
+
+      function filterMenu(query) {
+        if (!sidebar) return;
+        const menu = sidebar.querySelector('.menu');
+        if (!menu) return;
+
+        const normalize = (value) => value.trim().toLowerCase();
+        const searchValue = normalize(query);
+
+        function walkList(list) {
+          let anyVisible = false;
+          const items = Array.from(list.children).filter((node) => node.tagName === 'LI');
+
+          for (const item of items) {
+            const details = item.querySelector(':scope > details');
+            const anchor = item.querySelector(':scope > a');
+            const summary = item.querySelector(':scope > details > summary');
+            const label = normalize(anchor?.textContent || summary?.textContent || '');
+            const childUl = item.querySelector(':scope > details > ul');
+
+            let visible;
+            if (childUl) {
+              const childVisible = walkList(childUl);
+              visible = childVisible || (!!searchValue && label.includes(searchValue));
+              if (details) details.open = searchValue ? visible : details.dataset.wasOpen === 'true';
+            } else {
+              visible = !searchValue || label.includes(searchValue);
+            }
+
+            item.style.display = visible ? '' : 'none';
+            if (visible) anyVisible = true;
+          }
+
+          return anyVisible;
+        }
+
+        if (searchValue) {
+          menu.querySelectorAll('details').forEach((det) => {
+            if (det.dataset.wasOpen === undefined) det.dataset.wasOpen = String(det.open);
+          });
+        }
+
+        isFiltering = true;
+        walkList(menu.querySelector(':scope > ul.top-level') || menu);
+
+        if (!searchValue) {
+          menu.querySelectorAll('details[data-was-open]').forEach((det) => {
+            det.open = det.dataset.wasOpen === 'true';
+            delete det.dataset.wasOpen;
+          });
+        }
+        isFiltering = false;
+      }
+
+      searchInput?.addEventListener('input', (event) => filterMenu(event.target.value));
+
+      document.addEventListener('keydown', (event) => {
+        const isSearchShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+        if (isSearchShortcut) {
+          event.preventDefault();
+          searchInput?.focus();
+          searchInput?.select();
+        }
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        initMenuLinks();
+        initAccordion();
+        // Busqueda que llega de otra pagina (p.ej. la principal): /blog/?q=texto
+        // (se lee antes de abrir el documento, que reescribe la URL con ?doc=)
+        const q = new URLSearchParams(window.location.search).get('q');
+        loadFromQuery();
+        if (q && searchInput) {
+          searchInput.value = q;
+          filterMenu(q);
+          if (window.matchMedia('(max-width: 980px)').matches) toggleMenu();
+        }
+        window.addEventListener('popstate', () => {
+          loadFromQuery();
+        });
+        menuToggleButton?.addEventListener('click', toggleMenu);
+        // Documentos de la portada: se abren en el visor sin recargar
+        portada?.addEventListener('click', (event) => {
+          const a = event.target.closest('a[data-doc]');
+          if (!a) return;
+          event.preventDefault();
+          openDoc(a.dataset.doc, true);
+        });
+        // "Blog" en la barra superior: la portada, sin recargar
+        document.querySelector('header.topnav a.contact-link[href="/blog/"]')?.addEventListener('click', (event) => {
+          event.preventDefault();
+          closeMenu();
+          if (location.search) history.pushState({}, '', '/blog/');
+          mostrarPortada();
+        });
+        document.getElementById('sidebarOverlay')?.addEventListener('click', closeMenu);
+      });
+    </script>
+  </body>
+</html>

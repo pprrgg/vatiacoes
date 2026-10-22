@@ -1,0 +1,2 @@
+cups;distribuidora;comercializadora;tarifaAcceso;tensionConexion;potenciaContratadakW;modoControlPotencia;discriminacionHoraria;fechaInicioVigencia;fechaFinVigencia;provincia;municipio;codigoPostal;potenciaTotalGenerada;tipoAutoconsumo;seccion;subseccion;coeficienteReparto;cau;potenciaMaximaInstalacion
+"ES0031999900000003LA0F";EDISTRIBUCIÓN;"-";"BAJA TENSION y POTENCIA <= 15 kW";"Baja tensión";"4,6;4,6";ICP;"TARIFA DE TRES PERIODOS";"2023/04/12";;Granada;GRANADA;"18008";"4";"41";"b";"b1";"1";"ES0031999900000003LAA000";"5.75"

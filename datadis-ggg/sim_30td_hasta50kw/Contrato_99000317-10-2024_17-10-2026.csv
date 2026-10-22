@@ -1,0 +1,2 @@
+cups;distribuidora;comercializadora;tarifaAcceso;tensionConexion;potenciaContratadakW;modoControlPotencia;discriminacionHoraria;fechaInicioVigencia;fechaFinVigencia;provincia;municipio;codigoPostal;potenciaTotalGenerada;tipoAutoconsumo;seccion;subseccion;coeficienteReparto;cau;potenciaMaximaInstalacion
+"ES0031999900000001LR0F";EDISTRIBUCIÓN;"-";"BAJA TENSION y 15 kW < POTENCIA <= 50 kW (3.0TD)";"Baja tensión";"35;35;35;35;35;45";MAXIMETRO;"TARIFA DE SEIS PERIODOS";"2021/06/01";;Granada;GUADIX;"18500";;;;;;;"43.65"

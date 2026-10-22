@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Potencia instalada a efectos legales · Estaciones de recarga VE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B; --violet:#B98CFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--cyan); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1400px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--cyan); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--cyan); border-bottom-color:var(--cyan);}
+  .tabbar a.active .tag{color:var(--cyan);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--cyan); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px; border-bottom:1px solid var(--line-soft);}
+  section.tab-active{display:block;}
+  #teoria{padding-top:0;}
+  #teoria > .hero{margin:0 -56px 48px;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
+  section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--cyan);}
+  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .hero-meta{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer); display:flex; flex-direction:column; gap:6px; text-align:right; padding-top:6px;}
+  .hero-meta span{color:var(--text-dim);}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
+  .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--cyan); font-size:16px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+
+  .theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:900px){.theory-grid{grid-template-columns:1fr;}}
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--cyan);}
+  .formula-box .f small{font-size:10px; color:var(--text-dimmer); display:block; margin-top:4px; font-family:var(--font-mono);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dimmer); padding:9px 11px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:10px 11px; border-bottom:1px solid var(--line-soft);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  .cellnum{font-family:var(--font-mono); color:var(--cyan);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=email], .field input[type=tel], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--cyan);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(55,207,255,0.1);}
+  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
+  .btn.primary:hover{background:#7fe1ff;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.small{padding:7px 12px; font-size:11.5px;}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+  .seg{display:inline-flex; background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px; margin-bottom:16px;}
+  .seg button{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.02em; border:none; background:transparent; color:var(--text-dim); padding:7px 14px; border-radius:3px; cursor:pointer; transition:.15s;}
+  .seg button.active{background:var(--cyan); color:#0A121C; font-weight:700;}
+
+  table.pts-table{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px;}
+  table.pts-table th{font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; color:var(--text-dimmer); padding:6px 7px; text-align:left; border-bottom:1px solid var(--line);}
+  table.pts-table td{font-family:var(--font-mono); padding:5px 7px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.pts-table input{background:var(--bg); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:12px; padding:5px 6px; width:100%; border-radius:2px;}
+  table.pts-table .rm{color:var(--red); background:none; border:none; cursor:pointer; font-size:14px;}
+
+  .line-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden;}
+  .line-head{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; cursor:pointer; gap:16px; flex-wrap:wrap;}
+  .line-head:hover{background:var(--panel2);}
+  .line-head .lh-left{display:flex; align-items:center; gap:12px; min-width:0;}
+  .line-head .lh-idx{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); flex-shrink:0;}
+  .line-head .lh-title{font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .line-head .lh-right{display:flex; align-items:center; gap:10px; flex-shrink:0; flex-wrap:wrap;}
+  .line-body{padding:0 20px 20px; border-top:1px solid var(--line-soft); display:none;}
+  .line-body.open{display:block;}
+  .calc-steps{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:16px 18px; margin:16px 0; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);}
+  .calc-steps .step{padding:6px 0; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; gap:16px;}
+  .calc-steps .step:last-child{border-bottom:none;}
+  .calc-steps .step .k{color:var(--text-dimmer);}
+  .calc-steps .step .v{color:var(--text); text-align:right;}
+  .remove-btn{font-family:var(--font-mono); font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:4px 8px;}
+  .remove-btn:hover{text-decoration:underline;}
+  .empty-state{text-align:center; padding:36px 20px; color:var(--text-dimmer); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--radius);}
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
+
+  .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
+  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
+  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
+  .pill.bad{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
+
+  table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
+  table.summary td{padding:10px 10px; border-bottom:1px solid var(--line-soft); font-family:var(--font-mono); color:var(--text-dim);}
+  table.summary tr:hover td{background:var(--panel2);}
+
+  .stat-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 18px; flex:1; min-width:140px;}
+  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--cyan);}
+  .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--cyan); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--cyan); text-decoration:none;}
+
+  .scheme-svg-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:14px 0; overflow-x:auto;}
+  .scheme-svg-wrap svg{display:block; margin:0 auto;}
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:18px 0 6px;}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    #teoria > .hero{margin:0 -24px 32px;}
+    .hero-top{flex-direction:column;}
+    .hero-meta{text-align:left;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+  <div class="tabbar-brand">POTENCIA LEGAL · RECARGA VE</div>
+  <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <nav class="tabbar" id="sidenav">
+    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
+    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco normativo</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Casos e informe</a>
+  </nav>
+  <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+</div>
+<script>
+(function(){
+  var wrap = document.getElementById('tabbarWrap');
+  var bar = document.getElementById('sidenav');
+  var btnL = document.getElementById('tabScrollLeft');
+  var btnR = document.getElementById('tabScrollRight');
+  function update(){
+    var maxScroll = bar.scrollWidth - bar.clientWidth;
+    wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+    wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+  }
+  btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+  btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+  bar.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+  setTimeout(update, 0);
+})();
+</script>
+
+  <main>
+
+    <!-- 00 TEORIA -->
+    <section id="teoria">
+      <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">REBT · ITC-BT-52 · Infraestructura de recarga</div>
+          <h1>La potencia que <em>declaras</em> no es la que <em>entregas</em> al coche.</h1>
+          <p class="sub">Una estación de recarga tiene, en realidad, cuatro potencias distintas: la que reparten los cargadores, la que consume de verdad la instalación, la que te concede la distribuidora, y la que tu interruptor general (IGA) permite legalmente antes de disparar. Esta herramienta las distingue, calcula la potencia máxima admisible a partir del IGA, comprueba umbrales de proyecto técnico, y genera un informe en PDF con los casos analizados.</p>
+        </div>
+        <div class="hero-meta">
+          <span>Basado en</span>
+          <span style="color:var(--cyan)">ITC-BT-52 · REBT (RD 842/2002)</span>
+          <span>Divulgación: autarquiapersonal.com (03/02/2024)</span>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="v">P = U · I_IGA</div><div class="l">monofásica (230 V)</div></div>
+        <div class="stat"><div class="v">P = √3 · U · I_IGA</div><div class="l">trifásica (400 V)</div></div>
+        <div class="stat"><div class="v">10 kW ext. / 50 kW int.</div><div class="l">umbral de proyecto técnico, ITC-BT-52</div></div>
+      </div>
+    </header>
+
+      <div class="eyebrow kicker">00 · Fundamento teórico</div>
+      <h2>Cuatro potencias, un mismo cuadro eléctrico.</h2>
+      <p class="lede">La confusión habitual sobre "cuál es la potencia" de una estación de recarga viene de mezclar cuatro magnitudes que casi nunca coinciden. Distinguirlas es lo que evita boletines mal redactados, IGA que disparan en servicio y proyectos exigidos que nadie tramitó a tiempo.</p>
+
+      <div class="scheme-svg-wrap" id="poderesSvgHolder"></div>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Potencia de recarga</h3>
+          <p>La suma de la potencia nominal que los puntos de recarga pueden entregar simultáneamente a los vehículos, tal y como figura en la placa de cada cargador.</p>
+          <div class="formula-box">
+            <div class="f">P_recarga = Σ (P_unitaria · nº unidades)</div>
+            <small>Se limita por software o gestión dinámica de carga (DLM) para no superar la potencia de acceso.</small>
+          </div>
+          <p>Es la cifra "comercial" — la que aparece en el folleto del cargador — pero <b>no</b> la que hay que declarar como potencia instalada a efectos legales.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Potencia total de las cargas</h3>
+          <p>El consumo eléctrico real de toda la instalación: cargadores (que consumen más de lo que entregan, por pérdidas de rectificación y consumo de refrigeración/comunicaciones), iluminación, módems y auxiliares.</p>
+          <div class="formula-box">
+            <div class="f">P_cargas = Σ P_consumo_real + P_auxiliares</div>
+            <small>En cargadores rápidos de CC, el consumo puede superar la potencia nominal de recarga hasta un 15-20%.</small>
+          </div>
+          <p>Es la magnitud relevante para comprobar que <b>no se supera</b> la potencia máxima admisible del IGA.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Potencia de acceso</h3>
+          <p>La potencia máxima contratada con la distribuidora, fijada en la Carta de Condiciones Técnico-Económicas (CTE) de un suministro nuevo, o compartida dinámicamente con otros usos existentes.</p>
+          <div class="formula-box">
+            <div class="f">P_acceso ≤ P_máxima admisible (IGA)</div>
+            <small>Si el suministro es compartido, se necesita vatímetro o DLM para no superar el resto de cargas.</small>
+          </div>
+          <p>Es el "techo" comercial que la red permite entregar en ese punto de suministro.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Potencia máxima admisible (la "legal")</h3>
+          <p>Se calcula a partir del calibre del Interruptor General Automático (IGA), no de los cargadores. Es la que debe figurar en el boletín (CIEBT) y en el registro industrial.</p>
+          <div class="formula-box">
+            <div class="f">P_legal = U · I_IGA,regulado</div>
+            <small>I_IGA,regulado = calibre normalizado × coeficiente de regulación térmica (0,5–1,0)</small>
+          </div>
+          <p>Es la cifra que responde de verdad a la pregunta "¿cuál es la potencia instalada a efectos legales?".</p>
+        </div>
+      </div>
+
+      <div class="subsection-title" style="margin-top:32px;">Por qué el orden de magnitud casi nunca coincide</div>
+      <div class="card">
+        <p style="font-size:13px; color:var(--text-dim); line-height:1.8;">
+          En una estación con gestión de carga bien dimensionada, lo habitual es: <b style="color:var(--text);">P_recarga</b> (nominal de los cargadores) puede ser <em>mayor</em> que <b style="color:var(--text);">P_acceso</b> (porque el DLM reparte la potencia disponible entre puntos sin superarla); <b style="color:var(--text);">P_cargas</b> (consumo real medido) debe mantenerse siempre <em>por debajo</em> de <b style="color:var(--text);">P_legal</b> (o el IGA disparará); y <b style="color:var(--text);">P_legal</b> se ajusta, mediante el coeficiente de regulación del propio IGA, para acercarse a <b style="color:var(--text);">P_acceso</b> sin excederla en exceso. La sección "Casos e informe" calcula las cuatro magnitudes de cada caso y avisa cuando alguna de estas relaciones no se cumple.
+        </p>
+      </div>
+
+      <div class="subsection-title" style="margin-top:32px;">Diagrama de flujo del cálculo</div>
+      <p style="font-size:13px; color:var(--text-dim); margin-bottom:8px; max-width:680px;">De los datos de partida (cargadores instalados, cargas reales y potencia de acceso) a la potencia legal declarable, con las tres comprobaciones normativas que dispara el resultado.</p>
+      <div class="scheme-svg-wrap" id="flowSvgHolder"></div>
+    </section>
+
+    <!-- 01 MARCO NORMATIVO -->
+    <section id="marco">
+      <div class="eyebrow kicker">01 · Marco normativo</div>
+      <h2>ITC-BT-52 y el Reglamento Electrotécnico para Baja Tensión.</h2>
+      <p class="lede">La infraestructura de recarga de vehículos eléctricos se regula mediante la Instrucción Técnica Complementaria ITC-BT-52, integrada en el REBT. Cuando la potencia de acceso supera el umbral de baja tensión, entra en juego además el Reglamento de Alta Tensión para el transformador.</p>
+
+      <div class="card">
+        <div class="fieldset-title">Baja tensión — Reglamento Electrotécnico (REBT)</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li><b style="color:var(--text);">Real Decreto 842/2002</b>, de 2 de agosto, por el que se aprueba el Reglamento Electrotécnico para Baja Tensión (REBT) y sus instrucciones técnicas complementarias ITC-BT.</li>
+          <li><b style="color:var(--text);">Real Decreto 1053/2014</b>, de 12 de diciembre, que aprueba la ITC-BT-52 "Instalaciones con fines especiales. Infraestructura para la recarga de vehículos eléctricos".</li>
+          <li>La potencia instalada a efectos legales de un cuadro o estación de recarga se determina a partir del calibre del Interruptor General Automático (IGA) de cabecera, no de la suma nominal de los puntos de carga.</li>
+        </ul>
+        <div class="fieldset-title">Umbrales de proyecto técnico (ITC-BT-52 / ITC-BT-04)</div>
+        <table class="data-table">
+          <thead><tr><th>Ubicación</th><th>Potencia instalada</th><th>Requiere</th></tr></thead>
+          <tbody>
+            <tr><td>Interior (garaje, aparcamiento cerrado)</td><td class="cellnum">≥ 50 kW</td><td>Proyecto técnico + dirección de obra + inspección OCA</td></tr>
+            <tr><td>Exterior</td><td class="cellnum">≥ 10 kW</td><td>Proyecto técnico + dirección de obra + inspección OCA</td></tr>
+            <tr><td>Vivienda unifamiliar</td><td class="cellnum">≥ 50 kW</td><td>Proyecto técnico</td></tr>
+            <tr><td>Por debajo de los umbrales anteriores</td><td class="cellnum">—</td><td>Memoria técnica de diseño, sin proyecto firmado</td></tr>
+          </tbody>
+        </table>
+        <div class="fieldset-title">Alta tensión — cuando la potencia de acceso supera baja tensión</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li><b style="color:var(--text);">Real Decreto 337/2014</b>, de 9 de mayo, Reglamento sobre condiciones técnicas y garantías de seguridad en instalaciones eléctricas de alta tensión, con su <b style="color:var(--text);">ITC-RAT-07</b> (transformadores y autotransformadores de potencia).</li>
+          <li>Por encima de ~150 kW de potencia de acceso suele requerirse centro de transformación propio: dos proyectos independientes — uno de alta tensión (transformador) y otro de baja tensión (estación de recarga).</li>
+          <li>El transformador se dimensiona por su potencia nominal normalizada, no por el calibre de sus protecciones. Si la potencia de acceso coincide exactamente con un escalón, se sube al siguiente — no se opera al 100% de la placa.</li>
+        </ul>
+      </div>
+
+      <div class="subsection-title" style="margin-top:28px;">Tabla de la fuente · previsión de cargas del caso de 10 plazas</div>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Elemento</th><th>Unidades</th><th>Potencia unitaria</th><th>Potencia total</th></tr></thead>
+          <tbody>
+            <tr><td>Circutor Raption 150 Compact (consume 260 A)</td><td class="cellnum">1</td><td class="cellnum">180,13 kW</td><td class="cellnum">180,13 kW</td></tr>
+            <tr><td>Circutor Urban T22 (consume 67 A)</td><td class="cellnum">4</td><td class="cellnum">46,42 kW</td><td class="cellnum">185,68 kW</td></tr>
+            <tr><td>Punto de iluminación</td><td class="cellnum">3</td><td class="cellnum">0,10 kW</td><td class="cellnum">0,30 kW</td></tr>
+            <tr><td>Módem</td><td class="cellnum">1</td><td class="cellnum">0,03 kW</td><td class="cellnum">0,03 kW</td></tr>
+            <tr style="font-weight:bold;"><td colspan="3">Sumatorio</td><td class="cellnum">366,14 kW</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin:10px 0 0;">Reproducida de la Tabla 1 (Paso 2, previsión de cargas) del artículo de referencia. Nótese que la potencia de <em>recarga</em> nominal de los mismos cargadores (326 kW: 4×44 kW + 150 kW) es <em>menor</em> que su consumo real (366,14 kW) — la diferencia son las pérdidas de rectificación y refrigeración. Precargada en la calculadora de "Casos e informe".</p>
+
+      <div class="theory-grid" style="margin-top:24px;">
+        <div>
+          <div class="subsection-title">Valores normalizados de IGA (serie comercial, IEC 60947-2)</div>
+          <div class="card" style="padding:0; overflow-x:auto;">
+            <table class="data-table">
+              <tbody>
+                <tr><td class="cellnum">6</td><td class="cellnum">10</td><td class="cellnum">16</td><td class="cellnum">20</td><td class="cellnum">25</td><td class="cellnum">32</td><td class="cellnum">40</td></tr>
+                <tr><td class="cellnum">50</td><td class="cellnum">63</td><td class="cellnum">80</td><td class="cellnum">100</td><td class="cellnum">125</td><td class="cellnum">160</td><td class="cellnum">200</td></tr>
+                <tr><td class="cellnum">250</td><td class="cellnum">315</td><td class="cellnum">400</td><td class="cellnum">500</td><td class="cellnum">630</td><td class="cellnum">800</td><td class="cellnum">1000 A</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="subsection-title">Valores normalizados de transformadores (ITC-RAT-07)</div>
+          <div class="card" style="padding:0; overflow-x:auto;">
+            <table class="data-table">
+              <tbody>
+                <tr><td class="cellnum">25</td><td class="cellnum">50</td><td class="cellnum">100</td><td class="cellnum">160</td><td class="cellnum">250</td></tr>
+                <tr><td class="cellnum">315</td><td class="cellnum">400</td><td class="cellnum">500</td><td class="cellnum">630</td><td class="cellnum">800</td></tr>
+                <tr><td class="cellnum">1000</td><td class="cellnum">1250</td><td class="cellnum">1600</td><td class="cellnum">2000</td><td class="cellnum">2500 kVA</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin:10px 0 0;">Ambas series son las que usa la calculadora de "Casos e informe" para redondear al alza: el calibre de IGA al primer valor ≥ la corriente requerida, y el transformador al primer valor <em>estrictamente superior</em> a la potencia de acceso.</p>
+
+      <div class="subsection-title" style="margin-top:28px;">Qué debe figurar en el boletín (CIEBT) / registro industrial</div>
+      <div class="card">
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li>Potencia instalada a efectos legales (la calculada a partir del IGA, en kW).</li>
+          <li>Esquema de conexión (M1/M2/M3/M4) y modo(s) de carga (1/2/3/4) de la instalación.</li>
+          <li>Ubicación (interior/exterior) y tipo de acceso (privado/público).</li>
+          <li>Potencia unitaria (kW) y número de unidades de cada modelo de cargador instalado.</li>
+        </ul>
+        <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">Para la previsión de cargas en esquemas colectivos con Sistema de Protección de la LGA (SPL) y factores de simultaneidad, consulta la <a href="C03_Guia_BT_52.html#cargas" style="color:var(--cyan); text-decoration:underline;">Guía ITC-BT-52 · Previsión de cargas</a> — esta herramienta se centra en la potencia legal de un cuadro o estación ya dimensionada.</p>
+      </div>
+    </section>
+
+    <!-- 02 CASOS E INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Casos e informe</div>
+      <h2>Añade cada estación o cuadro de recarga, y genera el informe.</h2>
+      <p class="lede">Cada caso calcula sus cuatro potencias, comprueba los umbrales de proyecto técnico y de alta tensión, y detecta si el consumo real puede disparar el IGA declarado. El primer caso viene precargado con el ejemplo de 10 plazas del artículo de referencia.</p>
+
+      <div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir caso</div>
+        <div class="field"><label>Nombre / ubicación del caso</label><input type="text" id="i_nombre" placeholder="Ej: Parking Nave 2 — 10 plazas"></div>
+
+        <div class="fieldset-title">Puntos de carga instalados</div>
+        <div style="overflow-x:auto;">
+        <table class="pts-table" id="ptsTable">
+          <thead><tr><th style="width:40%;">Modelo</th><th>Potencia unitaria (kW)</th><th>Unidades</th><th></th></tr></thead>
+          <tbody id="ptsBody"></tbody>
+        </table>
+        </div>
+        <div class="btn-row"><button class="btn small ghost" id="btnAddPt" type="button">+ Añadir modelo de cargador</button></div>
+
+        <div class="fieldset-title">Previsión de cargas (consumo real, con pérdidas y auxiliares)</div>
+        <p class="hint" style="margin-bottom:8px;">Réplica de la tabla de previsión de cargas de la fuente: cada cargador consume más de lo que entrega (rectificador, refrigeración, comunicaciones), y hay que sumar iluminación y otros auxiliares. Si la dejas vacía, se asume que el consumo real coincide con la potencia de recarga nominal.</p>
+        <div style="overflow-x:auto;">
+        <table class="pts-table" id="cargasTable">
+          <thead><tr><th style="width:40%;">Elemento</th><th>Unidades</th><th>Potencia unitaria real (kW)</th><th></th></tr></thead>
+          <tbody id="cargasBody"></tbody>
+        </table>
+        </div>
+        <div class="btn-row"><button class="btn small ghost" id="btnAddCarga" type="button">+ Añadir elemento de consumo</button></div>
+
+        <div class="fieldset-title">Acceso y ubicación</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia de acceso concedida, CTE (kW)</label><input type="number" id="i_pacceso" value="250" min="0" step="1"></div>
+          <div class="field"><label>Ubicación</label>
+            <select id="i_ubicacion">
+              <option value="exterior">Exterior</option>
+              <option value="interior">Interior (garaje/aparcamiento)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="fieldset-title">Interruptor General Automático (IGA)</div>
+        <div class="grid3">
+          <div class="field"><label>Tensión de alimentación</label>
+            <select id="i_tension">
+              <option value="tri" selected>Trifásica (400 V)</option>
+              <option value="mono">Monofásica (230 V)</option>
+            </select>
+          </div>
+          <div class="field"><label>Coeficiente de regulación térmica (0,5–1,0)</label><input type="number" id="i_coef" value="0.90" min="0.5" max="1" step="0.01"></div>
+          <div class="field"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddCaso">+ Calcular y añadir al informe</button>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:10px;">Casos del informe</div>
+      <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
+      <div id="casosContainer"><div class="empty-state">Todavía no has añadido ningún caso. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div></div>
+
+      <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
+        <table class="summary" id="summaryTable"></table>
+      </div>
+
+      <div class="fieldset-title">Datos del informe (portada)</div>
+      <div class="card" style="margin-bottom:24px;">
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Determinación de la potencia instalada a efectos legales — estaciones de recarga VE"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+          <div class="field"><label>Autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+          <div class="field"><label>Organización</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
+        <button class="btn ghost" id="btnClearCasos">Vaciar todos los casos</button>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta no oficial de apoyo al cálculo de la potencia instalada a efectos legales de estaciones de recarga de vehículos eléctricos, basada en la ITC-BT-52 del REBT (RD 842/2002, modificado por RD 1053/2014) y en el artículo divulgativo <a href="https://autarquiapersonal.com/2024/02/03/cual-es-la-potencia-instalada-a-efectos-legales-de-una-estacion-de-recarga-de-vehiculos-electricos/" target="_blank" rel="noopener">"¿Cuál es la potencia instalada a efectos legales de una estación de recarga de vehículos eléctricos?"</a> (autarquiapersonal.com, 03/02/2024). Consulta siempre <a href="https://www.boe.es/buscar/act.php?id=BOE-A-2014-13681" target="_blank" rel="noopener">el texto oficial de la ITC-BT-52</a> y a un instalador autorizado antes de presentar un boletín.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'teoria';
+function idEsSeccion(id){ return Array.from(sections).some(s => s.id === id); }
+function activarSeccion(id){
+  if(!idEsSeccion(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  if(!idEsSeccion(id)) return;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+document.getElementById('p_fecha').valueAsDate = new Date();
+
+// ===================== HELPERS =====================
+function fmtNum(n,d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function fmtKw(n,d=2){ return fmtNum(n,d)+' kW'; }
+function step(k,v,sub){ return '<div class="step'+(sub?' sub':'')+'"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'...' : (s||''); }
+
+// Calibres normalizados de interruptores automáticos (serie comercial habitual, IEC 60947-2)
+const BREAKERS = [6,10,13,16,20,25,32,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3200,4000];
+// Potencias nominales normalizadas de transformadores de distribución (kVA), serie habitual ITC-RAT-07
+const TRANSFORMERS = [25,50,100,160,250,315,400,500,630,800,1000,1250,1600,2000,2500];
+
+function roundStandardUp(value, series){
+  for(const s of series){ if(value <= s*1.0001) return s; }
+  return Math.ceil(value/500)*500;
+}
+// Para transformadores se exige margen sobre la potencia de acceso: si el valor coincide
+// exactamente con un escalón normalizado, se pasa al siguiente (no se opera al 100% nominal).
+function roundStandardUpStrict(value, series){
+  for(const s of series){ if(value < s*0.9999) return s; }
+  return Math.ceil(value/500)*500+500;
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ===================== SVG: LAS CUATRO POTENCIAS (teoría) =====================
+function buildPoderesSVG(){
+  const W=760,H=150;
+  const boxes = [
+    {x:20,  label:'P. recarga',  sub:'326 kW', color:'#37CFFF'},
+    {x:210, label:'P. cargas',   sub:'366,1 kW', color:'#B98CFF'},
+    {x:400, label:'P. acceso',   sub:'250 kW', color:'#FFB020'},
+    {x:590, label:'P. legal (IGA)', sub:'249,4 kW', color:'#57D9A3'},
+  ];
+  const bw=150, bh=64, by=40;
+  let s='';
+  boxes.forEach((b,i)=>{
+    s += '<rect x="'+b.x+'" y="'+by+'" width="'+bw+'" height="'+bh+'" rx="3" fill="none" stroke="'+b.color+'" stroke-width="1.6"/>';
+    s += '<text x="'+(b.x+bw/2)+'" y="'+(by+26)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="'+b.color+'">'+b.label+'</text>';
+    s += '<text x="'+(b.x+bw/2)+'" y="'+(by+46)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" font-weight="bold" fill="#E7ECF2">'+b.sub+'</text>';
+    if(i<boxes.length-1){
+      const x1=b.x+bw, x2=boxes[i+1].x;
+      s += '<line x1="'+x1+'" y1="'+(by+bh/2)+'" x2="'+(x2-6)+'" y2="'+(by+bh/2)+'" stroke="#5B7086" stroke-width="1.2"/>';
+      s += '<polygon points="'+(x2-6)+','+(by+bh/2-4)+' '+(x2)+','+(by+bh/2)+' '+(x2-6)+','+(by+bh/2+4)+'" fill="#5B7086"/>';
+    }
+  });
+  s += '<text x="20" y="'+(by+bh+22)+'" font-family="IBM Plex Mono" font-size="9.5" fill="#8FA3B8">Ejemplo del caso analizado (10 plazas, ver "Casos e informe"): la nominal de los cargadores no es la legal.</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:760px;">'+s+'</svg>';
+}
+document.getElementById('poderesSvgHolder').innerHTML = buildPoderesSVG();
+
+// ===================== SVG: DIAGRAMA DE FLUJO DEL CÁLCULO =====================
+function buildFlowchartSVG(){
+  const W=920, H=820;
+  let s='';
+
+  function esc2(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function box(x,y,w,h,lines,opts){
+    opts = opts||{};
+    const stroke = opts.color||'#5B7086';
+    const fill = opts.fill||'none';
+    const sw = opts.bold?2:1.3;
+    let out = '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="4" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+    const cx = x+w/2;
+    const lh = 14;
+    const startY = y+h/2 - (lines.length-1)*lh/2 + 4;
+    lines.forEach((ln,i)=>{
+      out += '<text x="'+cx+'" y="'+(startY+i*lh)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="'+(i===0?11:10)+'" font-weight="'+(i===0?'bold':'normal')+'" fill="'+(i===0?'#E7ECF2':stroke)+'">'+esc2(ln)+'</text>';
+    });
+    return out;
+  }
+  function diamond(cx,cy,w,h,lines,color){
+    let out = '<polygon points="'+cx+','+(cy-h/2)+' '+(cx+w/2)+','+cy+' '+cx+','+(cy+h/2)+' '+(cx-w/2)+','+cy+'" fill="none" stroke="'+color+'" stroke-width="1.5"/>';
+    const lh=13;
+    const startY = cy - (lines.length-1)*lh/2 + 4;
+    lines.forEach((ln,i)=>{
+      out += '<text x="'+cx+'" y="'+(startY+i*lh)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="'+color+'">'+esc2(ln)+'</text>';
+    });
+    return out;
+  }
+  function vArrow(x,y1,y2,color){
+    color = color||'#5B7086';
+    let out = '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+(y2-7)+'" stroke="'+color+'" stroke-width="1.3"/>';
+    out += '<polygon points="'+(x-4)+','+(y2-7)+' '+(x+4)+','+(y2-7)+' '+x+','+y2+'" fill="'+color+'"/>';
+    return out;
+  }
+  function elbow(x1,y1,x2,y2,color){
+    color = color||'#5B7086';
+    let out = '<polyline points="'+x1+','+y1+' '+x1+','+((y1+y2)/2)+' '+x2+','+((y1+y2)/2)+' '+x2+','+(y2-7)+'" fill="none" stroke="'+color+'" stroke-width="1.3"/>';
+    out += '<polygon points="'+(x2-4)+','+(y2-7)+' '+(x2+4)+','+(y2-7)+' '+x2+','+y2+'" fill="'+color+'"/>';
+    return out;
+  }
+  function label(x,y,text,color,anchor){
+    return '<text x="'+x+'" y="'+y+'" text-anchor="'+(anchor||'middle')+'" font-family="IBM Plex Mono" font-size="9.5" font-weight="bold" fill="'+(color||'#8FA3B8')+'">'+esc2(text)+'</text>';
+  }
+
+  // --- Fila 1: datos de partida ---
+  s += box(30,16,400,58,['PUNTOS DE CARGA INSTALADOS','P_recarga = Σ (P_unitaria × uds)'],{color:'#37CFFF'});
+  s += box(490,16,400,58,['PREVISIÓN DE CARGAS (consumo real)','P_cargas = Σ (consumo unitario × uds) + aux.'],{color:'#B98CFF'});
+  s += box(260,110,400,50,['POTENCIA DE ACCESO CONCEDIDA (CTE)','P_acceso'],{color:'#FFB020'});
+  s += elbow(230,74,460,110,'#37CFFF');
+  s += elbow(690,74,460,110,'#B98CFF');
+
+  // --- Fila 2: cálculo del IGA legal ---
+  s += vArrow(460,160,196,'#FFB020');
+  s += box(260,196,400,46,['CORRIENTE REQUERIDA','I = P_acceso × 1000 / (U · [√3])'],{color:'#8FA3B8'});
+  s += vArrow(460,242,278,'#8FA3B8');
+  s += box(260,278,400,46,['CALIBRE DE IGA NORMALIZADO','redondeo al alza (serie comercial IEC 60947-2)'],{color:'#8FA3B8'});
+  s += vArrow(460,324,360,'#8FA3B8');
+  s += box(260,360,400,46,['IGA REGULADO','calibre normalizado × coeficiente (0,5–1,0)'],{color:'#8FA3B8'});
+  s += vArrow(460,406,442,'#57D9A3');
+  s += box(210,442,500,54,['POTENCIA MÁXIMA ADMISIBLE — P_LEGAL','U · [√3] · I_IGA,regulado  ·  la que se declara en el CIEBT'],{color:'#57D9A3', bold:true});
+
+  // --- Fila 3: tres comprobaciones normativas ---
+  s += vArrow(460,496,540,'#5B7086');
+  s += '<line x1="150" y1="540" x2="770" y2="540" stroke="#182739" stroke-width="1"/>';
+  s += elbow(460,540,150,586,'#5B7086');
+  s += elbow(460,540,460,586,'#5B7086');
+  s += elbow(460,540,770,586,'#5B7086');
+
+  const cxs = [150, 460, 770];
+  s += diamond(cxs[0],626,230,84,['¿P_cargas','supera P_legal?'],'#FF6B6B');
+  s += diamond(cxs[1],626,230,84,['¿P_recarga ≥ 10 kW ext.','ó ≥ 50 kW interior?'],'#FFB020');
+  s += diamond(cxs[2],626,230,84,['¿P_acceso','supera 150 kW?'],'#B98CFF');
+
+  // Cada diamante: rama SÍ baja a una caja de acción; la rama NO solo se etiqueta (sin caja),
+  // para que las tres columnas no se crucen entre sí.
+  const outcomes = [
+    {cx:cxs[0], color:'#FF6B6B', lines:['SÍ → riesgo de disparo del IGA','revisar DLM, IGA o P. de acceso'], no:'NO → consistente, sin incidencias'},
+    {cx:cxs[1], color:'#FFB020', lines:['SÍ → proyecto técnico','dirección de obra + inspección OCA'], no:'NO → memoria técnica, sin proyecto'},
+    {cx:cxs[2], color:'#B98CFF', lines:['SÍ → centro de transformación','proyecto AT + transformador ITC-RAT-07'], no:'NO → solo baja tensión'},
+  ];
+  outcomes.forEach(o=>{
+    s += vArrow(o.cx,668,706,o.color);
+    s += label(o.cx+95,655,'SÍ',o.color,'start');
+    s += box(o.cx-115,706,230,54,o.lines,{color:o.color});
+    s += label(o.cx,782,o.no,'#57D9A3');
+  });
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:920px;">'+s+'</svg>';
+}
+document.getElementById('flowSvgHolder').innerHTML = buildFlowchartSVG();
+
+// ===================== FILA DE PUNTOS DE CARGA (formulario) =====================
+const ptsBody = document.getElementById('ptsBody');
+function addPtRow(modelo, potencia, cantidad){
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" class="pt_modelo" value="'+esc(modelo||'')+'"></td>'+
+    '<td><input type="number" class="pt_potencia" value="'+(potencia!=null?potencia:'')+'" min="0" step="0.1"></td>'+
+    '<td><input type="number" class="pt_cantidad" value="'+(cantidad!=null?cantidad:1)+'" min="1" step="1"></td>'+
+    '<td><button type="button" class="rm" title="Eliminar modelo">×</button></td>';
+  tr.querySelector('.rm').addEventListener('click', ()=>{ tr.remove(); });
+  ptsBody.appendChild(tr);
+}
+document.getElementById('btnAddPt').addEventListener('click', ()=> addPtRow('', '', 1));
+// Precarga: ejemplo del artículo de referencia (10 plazas)
+addPtRow('Circutor Urban T22', 44, 4);
+addPtRow('Circutor Raption 150 Compact', 150, 1);
+
+function leerPuntos(){
+  const rows = ptsBody.querySelectorAll('tr');
+  const puntos = [];
+  rows.forEach(tr=>{
+    const modelo = tr.querySelector('.pt_modelo').value.trim();
+    const potencia = parseFloat(tr.querySelector('.pt_potencia').value)||0;
+    const cantidad = parseInt(tr.querySelector('.pt_cantidad').value)||0;
+    if(potencia>0 && cantidad>0) puntos.push({modelo: modelo||'Cargador', potencia, cantidad});
+  });
+  return puntos;
+}
+
+// ===================== FILA DE PREVISIÓN DE CARGAS (formulario) =====================
+const cargasBody = document.getElementById('cargasBody');
+function addCargaRow(elemento, cantidad, potenciaUnitaria){
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" class="cg_elemento" value="'+esc(elemento||'')+'"></td>'+
+    '<td><input type="number" class="cg_cantidad" value="'+(cantidad!=null?cantidad:1)+'" min="1" step="1"></td>'+
+    '<td><input type="number" class="cg_potencia" value="'+(potenciaUnitaria!=null?potenciaUnitaria:'')+'" min="0" step="0.01"></td>'+
+    '<td><button type="button" class="rm" title="Eliminar elemento">×</button></td>';
+  tr.querySelector('.rm').addEventListener('click', ()=>{ tr.remove(); });
+  cargasBody.appendChild(tr);
+}
+document.getElementById('btnAddCarga').addEventListener('click', ()=> addCargaRow('', 1, ''));
+// Precarga: Tabla 1 (previsión de cargas) del artículo de referencia — sumatorio 366,14 kW
+addCargaRow('Circutor Raption 150 Compact (consume 260 A)', 1, 180.13);
+addCargaRow('Circutor Urban T22 (consume 67 A)', 4, 46.42);
+addCargaRow('Punto de iluminación', 3, 0.10);
+addCargaRow('Módem', 1, 0.03);
+
+function leerCargas(){
+  const rows = cargasBody.querySelectorAll('tr');
+  const cargas = [];
+  rows.forEach(tr=>{
+    const elemento = tr.querySelector('.cg_elemento').value.trim();
+    const cantidad = parseInt(tr.querySelector('.cg_cantidad').value)||0;
+    const potencia = parseFloat(tr.querySelector('.cg_potencia').value)||0;
+    if(cantidad>0 && potencia>0) cargas.push({elemento: elemento||'Elemento', cantidad, potencia});
+  });
+  return cargas;
+}
+
+// ===================== CÁLCULO DE UN CASO =====================
+function calcCaso(input){
+  const U = input.tension==='mono' ? 230 : 400;
+  const sqrt3 = Math.sqrt(3);
+  const denom = input.tension==='mono' ? U : sqrt3*U;
+
+  const pRecarga = input.puntos.reduce((a,p)=>a+p.potencia*p.cantidad, 0);
+  const pCargas = input.cargas.length ? input.cargas.reduce((a,c)=>a+c.potencia*c.cantidad, 0) : pRecarga;
+  const pAcceso = input.pAcceso;
+
+  const corrienteRequerida = (pAcceso*1000)/denom;
+  const igaNormalizado = roundStandardUp(corrienteRequerida, BREAKERS);
+  const coefExactoNecesario = Math.min(1, corrienteRequerida/igaNormalizado);
+  const igaRegulado = igaNormalizado*input.coefRegulacion;
+  const pLegal = (denom*igaRegulado)/1000;
+
+  const necesitaProyecto = (input.ubicacion==='exterior' && pRecarga>=10) || (input.ubicacion==='interior' && pRecarga>=50);
+  const necesitaAT = pAcceso>150;
+  const transformadorNormalizado = necesitaAT ? roundStandardUpStrict(pAcceso, TRANSFORMERS) : null;
+
+  const excedeCargas = pCargas > pLegal*1.001;
+  const limitaAcceso = pLegal < pAcceso*0.999;
+
+  let estado = 'ok';
+  if(excedeCargas) estado = 'bad';
+  else if(limitaAcceso) estado = 'warn';
+
+  return {
+    U, denom, pRecarga, pCargas, pAcceso,
+    corrienteRequerida, igaNormalizado, coefExactoNecesario, igaRegulado, pLegal,
+    necesitaProyecto, necesitaAT, transformadorNormalizado,
+    excedeCargas, limitaAcceso, estado
+  };
+}
+
+// ===================== ALTA / LISTADO DE CASOS =====================
+let casos = [];
+let casoNextId = 1;
+
+document.getElementById('btnAddCaso').addEventListener('click', ()=>{
+  const puntos = leerPuntos();
+  if(puntos.length===0){ showToast('Añade al menos un modelo de cargador con potencia y unidades.'); return; }
+  const cargas = leerCargas();
+  const pAcceso = parseFloat(document.getElementById('i_pacceso').value)||0;
+  if(pAcceso<=0){ showToast('Introduce la potencia de acceso concedida.'); return; }
+  const input = {
+    nombre: document.getElementById('i_nombre').value.trim() || ('Caso '+casoNextId),
+    puntos,
+    cargas,
+    pAcceso,
+    ubicacion: document.getElementById('i_ubicacion').value,
+    tension: document.getElementById('i_tension').value,
+    coefRegulacion: Math.min(1, Math.max(0.5, parseFloat(document.getElementById('i_coef').value)||0.9)),
+    notas: document.getElementById('i_notas').value.trim(),
+  };
+  const result = calcCaso(input);
+  const caso = {...input, id: casoNextId++, result};
+  casos.push(caso);
+  renderCasos();
+  showToast('Caso añadido: '+caso.nombre);
+  document.getElementById('i_nombre').value='';
+  document.getElementById('i_notas').value='';
+  // Limpiar los formularios de puntos de carga y previsión de cargas: si no se hace, el
+  // siguiente caso reutiliza en silencio los mismos equipos del caso anterior.
+  ptsBody.innerHTML = '';
+  cargasBody.innerHTML = '';
+  addPtRow('', '', 1);
+  addCargaRow('', 1, '');
+});
+
+document.getElementById('btnClearCasos').addEventListener('click', ()=>{
+  if(casos.length===0) return;
+  if(confirm('¿Vaciar todos los casos del informe?')){ casos=[]; renderCasos(); }
+});
+
+function pillFor(estado){
+  if(estado==='bad') return '<span class="pill bad">CONSUMO SUPERA LA P. LEGAL</span>';
+  if(estado==='warn') return '<span class="pill warn">P. LEGAL &lt; P. ACCESO</span>';
+  return '<span class="pill ok">CONSISTENTE</span>';
+}
+
+function renderCasos(){
+  const container = document.getElementById('casosContainer');
+  const statsRow = document.getElementById('statsRow');
+  const btnPdf = document.getElementById('btnPdf');
+  const summaryWrap = document.getElementById('summaryTableWrap');
+
+  if(casos.length===0){
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún caso. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div>';
+    statsRow.style.display='none';
+    btnPdf.disabled = true;
+    summaryWrap.style.display='none';
+    document.getElementById('summaryTable').innerHTML='';
+    return;
+  }
+  btnPdf.disabled = false;
+  summaryWrap.style.display='block';
+
+  const totalPLegal = casos.reduce((a,c)=>a+c.result.pLegal,0);
+  const okCount = casos.filter(c=>c.result.estado==='ok').length;
+  const proyectoCount = casos.filter(c=>c.result.necesitaProyecto).length;
+  statsRow.style.display='flex';
+  statsRow.innerHTML =
+    '<div class="stat-chip"><div class="v">'+casos.length+'</div><div class="l">casos analizados</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtNum(totalPLegal,1)+'</div><div class="l">kW de potencia legal, total</div></div>'+
+    '<div class="stat-chip"><div class="v">'+proyectoCount+'/'+casos.length+'</div><div class="l">requieren proyecto técnico</div></div>'+
+    '<div class="stat-chip"><div class="v" style="color:'+(okCount===casos.length?'var(--green)':'var(--amber)')+'">'+okCount+'/'+casos.length+'</div><div class="l">sin incidencias</div></div>';
+
+  container.innerHTML = casos.map((c,idx)=>{
+    const r = c.result;
+    let stepsHtml = '';
+    stepsHtml += step('Tensión de alimentación', c.tension==='mono' ? 'Monofásica (230 V)' : 'Trifásica (400 V)');
+    stepsHtml += step('Potencia de recarga (nominal cargadores)', fmtKw(r.pRecarga,1));
+    stepsHtml += step('Potencia total de cargas (consumo real)', fmtKw(r.pCargas,1));
+    stepsHtml += step('Potencia de acceso concedida (CTE)', fmtKw(r.pAcceso,1));
+    stepsHtml += step('Corriente requerida para la P. de acceso', fmtNum(r.corrienteRequerida,2)+' A', true);
+    stepsHtml += step('Calibre de IGA normalizado (redondeo al alza)', fmtNum(r.igaNormalizado,0)+' A', true);
+    stepsHtml += step('Coeficiente de regulación aplicado', fmtNum(c.coefRegulacion,2)+' (sugerido: '+fmtNum(r.coefExactoNecesario,2)+')', true);
+    stepsHtml += step('IGA regulado', fmtNum(r.igaRegulado,1)+' A', true);
+    stepsHtml += step('Potencia máxima admisible (legal)', fmtKw(r.pLegal,2));
+    stepsHtml += step('¿Requiere proyecto técnico? (ITC-BT-52)', r.necesitaProyecto ? 'Sí — supera '+(c.ubicacion==='exterior'?'10 kW exterior':'50 kW interior') : 'No');
+    if(r.necesitaAT){
+      stepsHtml += step('Alta tensión (P. acceso > 150 kW)', 'Sí — requiere centro de transformación');
+      stepsHtml += step('Transformador normalizado sugerido', r.transformadorNormalizado+' kVA (ITC-RAT-07)', true);
+    }
+    if(c.notas) stepsHtml += step('Notas', c.notas);
+
+    const ptsRows = c.puntos.map(p=>'<tr><td>'+esc(p.modelo)+'</td><td>'+fmtNum(p.potencia,1)+'</td><td>'+p.cantidad+'</td><td>'+fmtNum(p.potencia*p.cantidad,1)+'</td></tr>').join('');
+    const cargasRows = c.cargas.map(g=>'<tr><td>'+esc(g.elemento)+'</td><td>'+g.cantidad+'</td><td>'+fmtNum(g.potencia,2)+'</td><td>'+fmtNum(g.potencia*g.cantidad,2)+'</td></tr>').join('');
+
+    return '<div class="line-card">'+
+      '<div class="line-head" onclick="toggleCaso('+c.id+')">'+
+        '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title">'+esc(c.nombre)+'</span></div>'+
+        '<div class="lh-right"><span class="badge">'+fmtNum(r.pLegal,1)+' kW legal</span>'+
+        pillFor(r.estado)+
+        '<button class="remove-btn" onclick="event.stopPropagation(); removeCaso('+c.id+')">eliminar</button></div>'+
+      '</div>'+
+      '<div class="line-body" id="cb-'+c.id+'">'+
+        '<div class="subsection-title">Puntos de carga (potencia de recarga nominal)</div>'+
+        '<table class="data-table"><thead><tr><th>Modelo</th><th>P. unitaria (kW)</th><th>Uds.</th><th>Subtotal (kW)</th></tr></thead><tbody>'+ptsRows+'</tbody></table>'+
+        (cargasRows ? '<div class="subsection-title">Previsión de cargas (consumo real)</div>'+
+        '<table class="data-table"><thead><tr><th>Elemento</th><th>Uds.</th><th>P. unitaria (kW)</th><th>Subtotal (kW)</th></tr></thead><tbody>'+cargasRows+
+        '<tr style="font-weight:bold;"><td colspan="3">Sumatorio</td><td>'+fmtNum(r.pCargas,2)+'</td></tr></tbody></table>' : '')+
+        '<div class="calc-steps">'+stepsHtml+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  const summaryTable = document.getElementById('summaryTable');
+  summaryTable.innerHTML =
+    '<thead><tr><th>Caso</th><th>P. recarga</th><th>P. cargas</th><th>P. acceso</th><th>P. legal (IGA)</th><th>Estado</th></tr></thead><tbody>'+
+    casos.map(c=>{
+      const r=c.result;
+      return '<tr><td>'+esc(c.nombre)+'</td><td>'+fmtNum(r.pRecarga,1)+'</td><td>'+fmtNum(r.pCargas,1)+'</td><td>'+fmtNum(r.pAcceso,1)+'</td>'+
+        '<td style="color:var(--text);">'+fmtNum(r.pLegal,2)+'</td><td>'+pillFor(r.estado)+'</td></tr>';
+    }).join('')+'</tbody>';
+}
+
+window.toggleCaso = function(id){ document.getElementById('cb-'+id).classList.toggle('open'); };
+window.removeCaso = function(id){ casos = casos.filter(c=>c.id!==id); renderCasos(); };
+
+// ===================== GENERAR PDF =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(casos.length===0) return;
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 22, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Potencia instalada a efectos legales - estaciones de recarga VE';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+
+  const GLOSARIO = [
+    ['IGA','Interruptor General Automático','-'],
+    ['P_recarga','Potencia nominal de recarga (suma de cargadores)','kW'],
+    ['P_cargas','Potencia total de las cargas (consumo real)','kW'],
+    ['P_acceso','Potencia de acceso concedida por la distribuidora','kW'],
+    ['P_legal','Potencia maxima admisible, a efectos legales','kW'],
+    ['CTE','Carta de Condiciones Tecnico-Economicas','-'],
+    ['DLM','Gestion dinamica de carga (Dynamic Load Management)','-'],
+    ['CIEBT','Certificado de Instalacion Electrica de Baja Tension (boletin)','-'],
+    ['REBT','Reglamento Electrotecnico para Baja Tension','-'],
+    ['ITC-BT-52','Instruccion Tecnica Complementaria de recarga de VE','-'],
+    ['OCA','Organismo de Control Autorizado','-'],
+  ];
+
+  function makeHelpers(doc){
+    function checkPage(yy, needed=12){
+      if(yy > bottomY-needed){ doc.addPage(); return topY; }
+      return yy;
+    }
+    function sectionTitle(yy, numText, text, collect){
+      yy = checkPage(yy, 18);
+      doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+      doc.text(numText+'  '+text, marginX, yy);
+      doc.setDrawColor(55,207,255); doc.setLineWidth(0.6);
+      doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+      doc.setLineWidth(0.2);
+      if(collect) collect.toc.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+11;
+    }
+    function subTitle(yy, numText, text){
+      yy = checkPage(yy, 12);
+      doc.setFont('times','bold'); doc.setFontSize(10.5); doc.setTextColor(40,48,60);
+      doc.text(numText+'  '+text, marginX, yy);
+      return yy+7;
+    }
+    function kv(yy, k, v, indent=0){
+      yy = checkPage(yy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+      doc.text(k, marginX+indent, yy);
+      doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+      const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+74));
+      doc.text(vLines[0], marginX+indent+74, yy);
+      let extra = 0;
+      for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+74, yy+extra); }
+      return yy+5.6+extra;
+    }
+    function paragraph(yy, text, opts={}){
+      const size = opts.size || 9;
+      const width = opts.width || (pageW-2*marginX);
+      doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+      const linesArr = doc.splitTextToSize(text, width);
+      linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+      return yy+3;
+    }
+    function formulaBlock(yy, formulaLines, caption){
+      yy = checkPage(yy, 10+formulaLines.length*7);
+      const boxH = 8+formulaLines.length*7;
+      doc.setDrawColor(205,205,212); doc.setFillColor(250,250,251); doc.setLineWidth(0.25);
+      doc.roundedRect(marginX, yy-5, pageW-2*marginX, boxH, 1, 1, 'FD');
+      let ly = yy+2;
+      formulaLines.forEach(f=>{
+        doc.setFont('courier','bold'); doc.setFontSize(9.5); doc.setTextColor(20,140,180);
+        doc.text(f, pageW/2, ly, {align:'center'});
+        ly += 7;
+      });
+      if(caption){
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(125,132,142);
+        const capLines = doc.splitTextToSize(caption, pageW-2*marginX-10);
+        capLines.forEach(cl=>{ doc.text(cl, pageW/2, ly, {align:'center'}); ly+=4; });
+      }
+      return ly+4;
+    }
+    function tableCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      doc.text(numText+': '+text, marginX, yy);
+      if(collect) collect.tables.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+6;
+    }
+    function simpleTable(yy, headers, rows, colX){
+      yy = checkPage(yy, 10+rows.length*6.5);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(100,108,120);
+      headers.forEach((h,i)=>doc.text(h, colX[i], yy));
+      yy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5.5;
+      doc.setFont('helvetica','normal');
+      rows.forEach(row=>{
+        yy = checkPage(yy,7);
+        doc.setFontSize(7.6); doc.setTextColor(30,35,45);
+        row.forEach((cell,i)=>doc.text(String(cell), colX[i], yy));
+        yy+=6;
+      });
+      return yy+3;
+    }
+    return {checkPage, sectionTitle, subTitle, kv, paragraph, formulaBlock, tableCaption, simpleTable};
+  }
+
+  function renderBody(doc, collect){
+    const H = makeHelpers(doc);
+    let y = topY;
+    let tabN = 1;
+    const TAB = ()=>{ tabN++; return 'Tabla '+tabN; };
+
+    const totalPLegal = casos.reduce((a,c)=>a+c.result.pLegal,0);
+    const okCount = casos.filter(c=>c.result.estado==='ok').length;
+    const proyectoCount = casos.filter(c=>c.result.necesitaProyecto).length;
+
+    y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
+    y = H.paragraph(y, 'El presente informe analiza '+(casos.length>1?casos.length+' casos':'un caso')+' de estaciones o cuadros de recarga de vehiculos electricos, dentro del proyecto "'+proyecto+'", con el objetivo de determinar la potencia instalada a efectos legales de cada uno, a partir del calibre de su Interruptor General Automatico (IGA).');
+    y = H.paragraph(y, 'La potencia legal conjunta calculada es de '+fmtNum(totalPLegal,1)+' kW. De los '+casos.length+' caso(s) evaluados, '+okCount+' no presentan incidencias, y '+proyectoCount+' requieren proyecto tecnico conforme a la ITC-BT-52.');
+
+    y = H.sectionTitle(y, '2.', 'Introduccion', collect);
+    y = H.paragraph(y, 'Este informe tecnico se elabora para justificar la potencia que debe figurar en el certificado de instalacion electrica (boletin/CIEBT) y en el registro industrial de cada estacion de recarga analizada, distinguiendola de la potencia nominal de los puntos de carga y de la potencia de acceso contratada.');
+    y = H.paragraph(y, 'La base normativa es la Instruccion Tecnica Complementaria ITC-BT-52 "Instalaciones con fines especiales. Infraestructura para la recarga de vehiculos electricos" (Real Decreto 1053/2014), que modifica el Reglamento Electrotecnico para Baja Tension (Real Decreto 842/2002).');
+
+    y = H.sectionTitle(y, '3.', 'Fundamento tecnico', collect);
+    y = H.subTitle(y, '3.1', 'Las cuatro potencias de una estacion de recarga');
+    y = H.paragraph(y, 'Una estacion de recarga presenta cuatro magnitudes de potencia distintas: la potencia de recarga (suma nominal de los cargadores), la potencia total de las cargas (consumo real, incluyendo perdidas de rectificacion y auxiliares), la potencia de acceso (contratada con la distribuidora), y la potencia maxima admisible o "legal" (calculada a partir del IGA). Solo esta ultima debe declararse en el boletin.');
+    y = H.subTitle(y, '3.2', 'Calculo de la potencia legal a partir del IGA');
+    y = H.paragraph(y, 'La potencia legal se obtiene multiplicando la tension de alimentacion por la corriente regulada del interruptor general automatico:');
+    y = H.formulaBlock(y, ['Monofasica: P = U x I_IGA,regulado', 'Trifasica: P = raiz(3) x U x I_IGA,regulado'], 'I_IGA,regulado = calibre normalizado del IGA x coeficiente de regulacion termica (0,5-1,0)');
+    y = H.subTitle(y, '3.3', 'Umbrales de proyecto tecnico');
+    y = H.paragraph(y, 'Conforme a la ITC-BT-52, las instalaciones de recarga en exterior con potencia igual o superior a 10 kW, y en interior (o vivienda unifamiliar) con potencia igual o superior a 50 kW, requieren proyecto tecnico visado, direccion de obra e inspeccion por Organismo de Control Autorizado (OCA) antes de su puesta en servicio.');
+    y = H.subTitle(y, '3.4', 'Alta tension y transformador');
+    y = H.paragraph(y, 'Cuando la potencia de acceso concedida supera aproximadamente 150 kW, la instalacion suele requerir centro de transformacion propio, con dos proyectos independientes (alta tension y baja tension). El transformador se dimensiona por su potencia nominal normalizada segun la ITC-RAT-07 (Real Decreto 337/2014), redondeando al alza al siguiente valor de la serie normalizada (25, 50, 100, 160, 250, 315, 400, 500, 630, 800, 1000... kVA).');
+
+    y = H.sectionTitle(y, '4.', 'Datos de partida del proyecto', collect);
+    y = H.kv(y, 'Proyecto', proyecto);
+    y = H.kv(y, 'Autor', autor+' ('+registro+')');
+    y = H.kv(y, 'Organizacion', orgNombre+' - '+orgCif);
+    y = H.kv(y, 'Fecha del informe', fecha);
+
+    y = H.sectionTitle(y, '5.', 'Resultados - resumen de casos', collect);
+    y = H.tableCaption(y, TAB(), 'Resumen de casos calculados', collect);
+    y = H.simpleTable(y, ['Caso','P.recarga','P.cargas','P.acceso','P.legal (kW)'],
+      casos.map(c=>[trunc(c.nombre,26), fmtNum(c.result.pRecarga,1), fmtNum(c.result.pCargas,1), fmtNum(c.result.pAcceso,1), fmtNum(c.result.pLegal,2)]),
+      [marginX, marginX+62, marginX+92, marginX+122, marginX+152]);
+
+    y = H.sectionTitle(y, '6.', 'Memoria de calculo por caso', collect);
+    casos.forEach((c,i)=>{
+      const r = c.result;
+      y = H.checkPage(y, 70);
+      y = H.subTitle(y, '6.'+(i+1), c.nombre);
+      y = H.kv(y,'Tension de alimentacion', c.tension==='mono'?'Monofasica (230 V)':'Trifasica (400 V)');
+      y = H.kv(y,'Potencia de recarga (nominal cargadores)', fmtNum(r.pRecarga,1)+' kW');
+      y = H.kv(y,'Potencia total de cargas (consumo real)', fmtNum(r.pCargas,1)+' kW');
+      y = H.kv(y,'Potencia de acceso concedida (CTE)', fmtNum(r.pAcceso,1)+' kW');
+      y = H.kv(y,'Corriente requerida', fmtNum(r.corrienteRequerida,2)+' A');
+      y = H.kv(y,'Calibre de IGA normalizado', fmtNum(r.igaNormalizado,0)+' A');
+      y = H.kv(y,'Coeficiente de regulacion aplicado', fmtNum(c.coefRegulacion,2));
+      y = H.kv(y,'IGA regulado', fmtNum(r.igaRegulado,1)+' A');
+      y = H.kv(y,'Potencia maxima admisible (legal)', fmtNum(r.pLegal,2)+' kW');
+      y = H.kv(y,'Requiere proyecto tecnico', r.necesitaProyecto?'Si':'No');
+      if(r.necesitaAT){
+        y = H.kv(y,'Requiere centro de transformacion', 'Si');
+        y = H.kv(y,'Transformador normalizado sugerido', r.transformadorNormalizado+' kVA');
+      }
+      if(c.puntos && c.puntos.length){
+        y = H.tableCaption(y, TAB(), 'Puntos de carga instalados - '+c.nombre, collect);
+        y = H.simpleTable(y, ['Modelo','P.unit (kW)','Uds.','Subtotal (kW)'],
+          c.puntos.map(p=>[trunc(p.modelo,28), fmtNum(p.potencia,1), p.cantidad, fmtNum(p.potencia*p.cantidad,1)]),
+          [marginX, marginX+72, marginX+102, marginX+124]);
+      }
+      if(c.cargas && c.cargas.length){
+        y = H.tableCaption(y, TAB(), 'Prevision de cargas (consumo real) - '+c.nombre, collect);
+        y = H.simpleTable(y, ['Elemento','Uds.','P.unit (kW)','Subtotal (kW)'],
+          c.cargas.map(g=>[trunc(g.elemento,28), g.cantidad, fmtNum(g.potencia,2), fmtNum(g.potencia*g.cantidad,2)])
+            .concat([['SUMATORIO','','',fmtNum(r.pCargas,2)]]),
+          [marginX, marginX+72, marginX+102, marginX+124]);
+      }
+      if(c.notas) y = H.kv(y,'Notas', c.notas);
+      y = H.checkPage(y,10);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      const okMsg = r.estado==='ok' ? 'Sin incidencias: el consumo real no supera la potencia legal.' :
+        (r.estado==='bad' ? 'ATENCION: la potencia total de cargas supera la potencia legal calculada; riesgo de disparo del IGA.' :
+        'AVISO: la potencia legal calculada queda por debajo de la potencia de acceso concedida.');
+      doc.setTextColor(...(r.estado==='ok'?[50,140,100]:(r.estado==='bad'?[190,60,60]:[190,140,30])));
+      doc.text('Veredicto: '+okMsg, marginX, y);
+      y+=12;
+    });
+
+    y = H.sectionTitle(y, '7.', 'Conclusiones', collect);
+    y = H.paragraph(y, 'De los '+casos.length+' caso(s) evaluados, '+okCount+' no presentan incidencias entre su consumo real y la potencia legal calculada, y '+(casos.length-okCount)+' requieren revision del calibre del IGA, del coeficiente de regulacion o de la potencia de acceso contratada. '+proyectoCount+' caso(s) superan el umbral de la ITC-BT-52 y requieren proyecto tecnico visado.');
+    y = H.paragraph(y, 'Este informe se ha generado con una herramienta de calculo no oficial. El autor es responsable de verificar los resultados y la documentacion justificativa antes de su presentacion ante el organismo competente.');
+
+    y = H.sectionTitle(y, '8.', 'Referencias', collect);
+    const refs = [
+      'Real Decreto 842/2002, de 2 de agosto, por el que se aprueba el Reglamento Electrotecnico para Baja Tension (REBT). BOE-A-2002-18099.',
+      'Real Decreto 1053/2014, de 12 de diciembre, por el que se aprueba la Instruccion Tecnica Complementaria ITC-BT-52 "Instalaciones con fines especiales. Infraestructura para la recarga de vehiculos electricos". BOE-A-2014-13681.',
+      'Real Decreto 337/2014, de 9 de mayo, por el que se aprueba el Reglamento sobre condiciones tecnicas y garantias de seguridad en instalaciones electricas de alta tension y sus Instrucciones Tecnicas Complementarias ITC-RAT 01 a 23. BOE-A-2014-6084.',
+      '"Cual es la potencia instalada a efectos legales de una estacion de recarga de vehiculos electricos?", autarquiapersonal.com, 03/02/2024 (fuente divulgativa, caso practico de referencia).',
+    ];
+    refs.forEach((r,i)=>{ y = H.paragraph(y, (i+1)+'. '+r); });
+  }
+
+  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
+  const collectMeasure = {toc:[], tables:[]};
+  renderBody(measureDoc, collectMeasure);
+
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const FRONT_PAGES = 4;
+
+  function drawIndexPage(title, entries){
+    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+    doc.text(title, marginX, 32);
+    doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+    let y=50;
+    doc.setFontSize(10);
+    entries.forEach(e=>{
+      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
+      const label = e.num+'  '+e.text;
+      const pageStr = String(e.page);
+      const pageX = pageW-marginX;
+      const labelLines = doc.splitTextToSize(label, 140);
+      doc.text(labelLines[0], marginX, y);
+      doc.text(pageStr, pageX, y, {align:'right'});
+      const labelW = doc.getTextWidth(labelLines[0]);
+      const pageStrW = doc.getTextWidth(pageStr);
+      const dotsStartX = marginX+labelW+2;
+      const dotsEndX = pageX-pageStrW-2;
+      if(dotsEndX>dotsStartX){
+        doc.setTextColor(190,192,198);
+        const dotW = doc.getTextWidth('.');
+        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
+        doc.text('.'.repeat(n), dotsStartX, y);
+      }
+      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
+    });
+    if(entries.length===0){
+      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
+      doc.text('Sin elementos.', marginX, y);
+    }
+  }
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 92;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
+  cy+=16;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Informe tecnico - Potencia instalada a efectos legales', marginX, cy); cy+=16;
+  doc.setFontSize(10.5);
+  [['Organizacion', orgNombre],['CIF', orgCif],['Autor', autor],['Fecha', fecha]].forEach(([k,v])=>{
+    doc.setFont('times','italic'); doc.setTextColor(130,136,146); doc.text(k+':', marginX, cy);
+    doc.setFont('times','normal'); doc.setTextColor(40,46,56); doc.text(String(v), marginX+40, cy);
+    cy+=7.5;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(150,155,163);
+  doc.text('ITC-BT-52 - Reglamento Electrotecnico para Baja Tension (RD 842/2002)', marginX, 274);
+
+  doc.addPage();
+  drawIndexPage('Indice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  doc.addPage();
+  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y terminos', page:4}]
+    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+  drawIndexPage('Indice de tablas', tablesForList);
+
+  doc.addPage();
+  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+  doc.text('Glosario de siglas y terminos', marginX, 32);
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+  let gy=48;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+32, gy); doc.text('Unidad', marginX+152, gy);
+  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
+  GLOSARIO.forEach(row=>{
+    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(20,140,180);
+    doc.text(row[0], marginX, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
+    const dLines = doc.splitTextToSize(row[1], 116);
+    doc.text(dLines[0], marginX+32, gy);
+    doc.setTextColor(100,108,120);
+    doc.text(row[2], marginX+152, gy);
+    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Tabla 1: Glosario de siglas y terminos', marginX, gy+6);
+
+  doc.addPage();
+  const collectReal = {toc:[], tables:[]};
+  renderBody(doc, collectReal);
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-potencia-legal-ve-'+safeName+'.pdf');
+  showToast('PDF generado y descargado.');
+});
+</script>
+</body>
+</html>

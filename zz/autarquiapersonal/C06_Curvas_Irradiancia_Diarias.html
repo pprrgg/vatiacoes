@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curvas de Irradiancia y Producción FV Diarias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B; --violet:#B98CFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--cyan); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1400px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--cyan); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--cyan); border-bottom-color:var(--cyan);}
+  .tabbar a.active .tag{color:var(--cyan);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--cyan); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px; border-bottom:1px solid var(--line-soft);}
+  section.tab-active{display:block;}
+  #teoria{padding-top:0;}
+  #teoria > .hero{margin:0 -56px 48px;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
+  section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--cyan);}
+  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .hero-meta{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer); display:flex; flex-direction:column; gap:6px; text-align:right; padding-top:6px;}
+  .hero-meta span{color:var(--text-dim);}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
+  .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--cyan); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+
+  .theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:900px){.theory-grid{grid-template-columns:1fr;}}
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:12.5px; color:var(--cyan);}
+  .formula-box .f small{font-size:10px; color:var(--text-dimmer); display:block; margin-top:4px; font-family:var(--font-mono);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dimmer); padding:9px 11px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:10px 11px; border-bottom:1px solid var(--line-soft);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  .cellnum{font-family:var(--font-mono); color:var(--cyan);}
+
+  table.hourly-table{width:100%; border-collapse:collapse; font-size:10.5px; margin-top:6px;}
+  table.hourly-table th{font-family:var(--font-mono); font-size:9px; text-transform:uppercase; color:var(--text-dimmer); padding:5px 6px; text-align:right; border-bottom:1px solid var(--line);}
+  table.hourly-table th:first-child{text-align:left;}
+  table.hourly-table td{font-family:var(--font-mono); padding:4px 6px; text-align:right; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.hourly-table td:first-child{text-align:left; color:var(--text);}
+  table.hourly-table tr.night td{opacity:0.35;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=email], .field input[type=tel], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--cyan);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(55,207,255,0.1);}
+  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
+  .btn.primary:hover{background:#7fe1ff;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.small{padding:7px 12px; font-size:11.5px;}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+  .line-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden;}
+  .line-head{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; cursor:pointer; gap:16px; flex-wrap:wrap;}
+  .line-head:hover{background:var(--panel2);}
+  .line-head .lh-left{display:flex; align-items:center; gap:12px; min-width:0;}
+  .line-head .lh-idx{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); flex-shrink:0;}
+  .line-head .lh-title{font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .line-head .lh-right{display:flex; align-items:center; gap:10px; flex-shrink:0; flex-wrap:wrap;}
+  .line-body{padding:0 20px 20px; border-top:1px solid var(--line-soft); display:none;}
+  .line-body.open{display:block;}
+  .calc-steps{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:16px 18px; margin:16px 0; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);}
+  .calc-steps .step{padding:6px 0; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; gap:16px;}
+  .calc-steps .step:last-child{border-bottom:none;}
+  .calc-steps .step .k{color:var(--text-dimmer);}
+  .calc-steps .step .v{color:var(--text); text-align:right;}
+  .remove-btn{font-family:var(--font-mono); font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:4px 8px;}
+  .remove-btn:hover{text-decoration:underline;}
+  .empty-state{text-align:center; padding:36px 20px; color:var(--text-dimmer); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--radius);}
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
+
+  .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
+  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
+  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
+
+  table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
+  table.summary td{padding:10px 10px; border-bottom:1px solid var(--line-soft); font-family:var(--font-mono); color:var(--text-dim);}
+  table.summary tr:hover td{background:var(--panel2);}
+
+  .stat-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 18px; flex:1; min-width:140px;}
+  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--cyan);}
+  .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--cyan); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--cyan); text-decoration:none;}
+
+  .scheme-svg-wrap, .chart-svg-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:14px 0; overflow-x:auto;}
+  .scheme-svg-wrap svg, .chart-svg-wrap svg{display:block; margin:0 auto;}
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:18px 0 6px;}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    #teoria > .hero{margin:0 -24px 32px;}
+    .hero-top{flex-direction:column;}
+    .hero-meta{text-align:left;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+  <div class="tabbar-brand">CURVAS DE IRRADIANCIA · FV</div>
+  <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <nav class="tabbar" id="sidenav">
+    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
+    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco y fuentes</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Casos e informe</a>
+  </nav>
+  <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+</div>
+<script>
+(function(){
+  var wrap = document.getElementById('tabbarWrap');
+  var bar = document.getElementById('sidenav');
+  var btnL = document.getElementById('tabScrollLeft');
+  var btnR = document.getElementById('tabScrollRight');
+  function update(){
+    var maxScroll = bar.scrollWidth - bar.clientWidth;
+    wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+    wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+  }
+  btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+  btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+  bar.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+  setTimeout(update, 0);
+})();
+</script>
+
+  <main>
+
+    <!-- 00 TEORIA -->
+    <section id="teoria">
+      <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Geometría solar · Modelo de cielo despejado</div>
+          <h1>De la <em>posición del sol</em> a la curva de irradiancia de cada hora.</h1>
+          <p class="sub">Implementa el modelo analítico de posición solar e irradiancia de cielo despejado (formulación de pveducation.org, la misma fuente que cita el artículo de referencia) para generar la curva horaria de irradiancia de un día cualquiera, normalizarla, y escalarla con datos reales de radiación mensual para obtener la irradiancia horaria esperada sobre un panel inclinado.</p>
+        </div>
+        <div class="hero-meta">
+          <span>Basado en</span>
+          <span style="color:var(--cyan)">pveducation.org · Solar position / Air mass</span>
+          <span>Divulgación: autarquiapersonal.com (20/09/2021)</span>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="v">α = asin[senδ·senφ + cosδ·cosφ·cos(HRA)]</div><div class="l">altura solar</div></div>
+        <div class="stat"><div class="v">AM = 1/[cosζ + 0,50572(96,08−ζ)⁻¹·⁶³⁶⁴]</div><div class="l">masa de aire, Kasten-Young</div></div>
+        <div class="stat"><div class="v">I%ᵢ = I₀ᵢ / ΣI₀</div><div class="l">forma de la curva diaria, normalizada</div></div>
+      </div>
+    </header>
+
+      <div class="eyebrow kicker">00 · Fundamento teórico</div>
+      <h2>Seis pasos: del calendario a los W/m² de cada hora.</h2>
+      <p class="lede">El modelo no necesita medidas para dibujar la <em>forma</em> de la curva diaria — la geometría solar y un modelo de cielo despejado bastan para eso. Lo que sí hace falta son datos reales de radiación (el "área bajo la curva") para escalarla a la irradiancia real de un mes concreto en una ubicación concreta.</p>
+
+      <div class="scheme-svg-wrap" id="flowSvgHolder"></div>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Parámetros temporales</h3>
+          <p>Convierten la hora del reloj en hora solar local, que es la que rige la posición del sol.</p>
+          <div class="formula-box">
+            <div class="f">B = (360/365)·(n−81) &nbsp;·&nbsp; EoT = 9,87·sen(2B) − 7,53·cos(B) − 1,5·sen(B)</div>
+            <small>n: día del año (1-365) · EoT: ecuación del tiempo, minutos</small>
+          </div>
+          <div class="formula-box">
+            <div class="f">TC = 4·(long − LSTM) + EoT &nbsp;·&nbsp; LST = hora_local + TC/60 &nbsp;·&nbsp; HRA = 15·(LST−12)</div>
+            <small>LSTM = 15·huso UTC · HRA: ángulo horario, 0° al mediodía solar</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Posición solar</h3>
+          <p>La declinación depende solo del día del año; la altura y el acimut dependen además de la latitud y de la hora.</p>
+          <div class="formula-box">
+            <div class="f">δ = −23,45°·cos[(360/365)·(n+10)]</div>
+            <small>declinación solar, °</small>
+          </div>
+          <div class="formula-box">
+            <div class="f">α = asin[senδ·senφ + cosδ·cosφ·cos(HRA)] &nbsp;·&nbsp; ζ = 90°−α</div>
+            <small>α: altura solar · ζ: cenit · φ: latitud</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Irradiancia de cielo despejado</h3>
+          <p>Modelo de Kasten-Young para la masa de aire, y de Meinel para la irradiancia directa normal, corregida por altitud.</p>
+          <div class="formula-box">
+            <div class="f">AM = 1 / [cosζ + 0,50572·(96,07995−ζ)⁻¹·⁶³⁶⁴]</div>
+            <small>masa de aire, adimensional</small>
+          </div>
+          <div class="formula-box">
+            <div class="f">I_D = 1488,3·{[1−0,14h]·0,7^(AM^0,678) + 0,14h}</div>
+            <small>h: altitud, km · I_D: irradiancia directa normal, W/m²</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Proyección sobre el panel inclinado</h3>
+          <p>La irradiancia directa se proyecta sobre la superficie del panel según su inclinación y orientación respecto al sol.</p>
+          <div class="formula-box">
+            <div class="f">I₀ = I_D·[cosα·senβ·cos(Ψ−θ) + senα·cosβ]</div>
+            <small>β: inclinación panel · Ψ: acimut panel (180°=sur) · θ: acimut solar</small>
+          </div>
+          <p>Repitiendo esto para las 24 horas se obtiene la <b style="color:var(--text);">forma</b> de la curva diaria de cielo despejado.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>5 · Curva normalizada</h3>
+          <p>Se divide cada hora por la suma del día completo, obteniendo qué fracción de la radiación total cae en cada hora — independiente de las unidades.</p>
+          <div class="formula-box">
+            <div class="f">I%ᵢ = I₀,ᵢ / Σᵢ₌₀²³ I₀,ᵢ</div>
+            <small>i: hora del día, 0 a 23</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>6 · Irradiancia real (escalado con datos reales)</h3>
+          <p>La forma normalizada se combina con la radiación horizontal real del mes (de un atlas de radiación) y factores de corrección, para obtener la irradiancia horaria esperada en W/m².</p>
+          <div class="formula-box">
+            <div class="f">E_βΨ = k_β·k_Ψ·k_S·k_O·E₀ &nbsp;·&nbsp; I_βΨ,ᵢ = 1000·I%ᵢ·E_βΨ</div>
+            <small>E₀: HSP horizontal del mes (atlas) · k_β: inclinación · k_Ψ: orientación · k_S: sombras · k_O: suciedad/nieve</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 01 MARCO Y FUENTES -->
+    <section id="marco">
+      <div class="eyebrow kicker">01 · Marco y fuentes</div>
+      <h2>Formulación de referencia y datos reales de radiación.</h2>
+      <p class="lede">El modelo de posición solar y de cielo despejado es puramente geométrico/astronómico (no depende de ninguna normativa española), pero para pasar de "forma de la curva" a "W/m² reales" se necesitan datos de radiación de un atlas solar para la ubicación concreta.</p>
+
+      <div class="card">
+        <div class="fieldset-title">Formulación (geometría solar y cielo despejado)</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li><b style="color:var(--text);">PVEducation.org</b> (Universidad de Nueva Gales del Sur / Christiana Honsberg) — posición solar, hora solar, ecuación del tiempo, ángulos de altura/cenit/acimut.</li>
+          <li><b style="color:var(--text);">Modelo de masa de aire de Kasten y Young (1989)</b> — aproximación estándar AM = 1/[cosζ + 0,50572(96,07995−ζ)⁻¹·⁶³⁶⁴], usada también en PVEducation.org.</li>
+          <li><b style="color:var(--text);">Modelo de Meinel</b> para la irradiancia directa normal de cielo despejado en función de la masa de aire, con corrección por altitud.</li>
+        </ul>
+        <div class="fieldset-title">Datos reales de radiación (para escalar la curva)</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li><b style="color:var(--text);">PVGIS</b> (Photovoltaic Geographical Information System, Comisión Europea / JRC) — irradiación horizontal mensual real para cualquier ubicación de Europa. Es la fuente recomendada para sustituir los valores orientativos de E₀ de esta herramienta.</li>
+          <li><b style="color:var(--text);">Atlas de Radiación Solar</b> (AEMET / EUMETSAT SAF) — fuente citada por el artículo de referencia para los valores E₀ por mes y ubicación.</li>
+          <li>El factor de inclinación k_β es un valor de tabla (función de latitud e inclinación), no una fórmula cerrada — consulta las tablas de tu atlas de radiación o compara directamente con PVGIS para tu combinación exacta.</li>
+        </ul>
+      </div>
+
+      <div class="subsection-title" style="margin-top:28px;">Valores orientativos de E₀ mensual (HSP, plano horizontal)</div>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table" id="e0DefaultTable"></table>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin:10px 0 0;">Valores <b>orientativos</b> para el centro de España (no proceden del artículo de referencia, cuya tabla original es una imagen no reproducible aquí). Sustitúyelos por los de <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">PVGIS</a> para tu ubicación exacta antes de usar el informe con fines de diseño real. Son totalmente editables en la sección "Casos e informe".</p>
+
+      <div class="subsection-title" style="margin-top:28px;">Qué NO cubre este modelo</div>
+      <div class="card">
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li>Nubosidad real: el modelo de cielo despejado da la <em>forma</em> de un día ideal sin nubes; la magnitud real la aporta el dato mensual E₀, que ya integra la nubosidad media histórica.</li>
+          <li>Sombreado de relieve u obstáculos concretos: represéntalo con el factor k_S (0 a 1).</li>
+          <li>Seguimiento solar (paneles con seguidor): el modelo asume orientación e inclinación fijas.</li>
+          <li>Conversión a energía del generador FV (pérdidas de módulo, inversor, temperatura): queda fuera del alcance de este artículo (parte I); esta herramienta calcula <b style="color:var(--text);">irradiancia</b> (W/m²), no potencia ni energía generada por un sistema concreto.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 02 CASOS E INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Casos e informe</div>
+      <h2>Añade cada día/ubicación/panel, y genera el informe.</h2>
+      <p class="lede">Cada caso calcula las 24 horas del día indicado: posición solar, irradiancia de cielo despejado, curva normalizada e irradiancia real escalada con los datos de radiación del mes correspondiente.</p>
+
+      <div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir caso</div>
+        <div class="field"><label>Nombre del caso</label><input type="text" id="i_nombre" placeholder="Ej: Toledo, panel a 30° sur, 21 de junio"></div>
+
+        <div class="fieldset-title">Fecha y ubicación</div>
+        <div class="grid4">
+          <div class="field"><label>Fecha</label><input type="date" id="i_fecha" value="2026-06-21"></div>
+          <div class="field"><label>Latitud (°, N positivo)</label><input type="number" id="i_lat" value="40.0" step="0.01" min="-90" max="90"></div>
+          <div class="field"><label>Longitud (°, E positivo)</label><input type="number" id="i_lon" value="-4.0" step="0.01" min="-180" max="180"></div>
+          <div class="field"><label>Altitud (m)</label><input type="number" id="i_alt" value="500" step="10" min="0"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Huso horario (UTC)</label>
+            <select id="i_utc">
+              <option value="1">+1 (España peninsular, invierno)</option>
+              <option value="2" selected>+2 (España peninsular, verano)</option>
+              <option value="0">0</option>
+              <option value="-1">−1</option>
+            </select>
+          </div>
+          <div class="field"><label>Inclinación del panel β (°)</label><input type="number" id="i_beta" value="30" min="0" max="90" step="1"></div>
+          <div class="field"><label>Acimut del panel Ψ (°, 180°=sur)</label><input type="number" id="i_psi" value="180" min="0" max="360" step="1"></div>
+        </div>
+
+        <div class="fieldset-title">Radiación real del mes y factores de corrección</div>
+        <div class="grid4">
+          <div class="field"><label>E₀ del mes (HSP, horizontal)</label><input type="number" id="i_e0" value="6.6" min="0" step="0.01"><div class="hint">Se autorrellena al elegir la fecha; ajústalo con PVGIS.</div></div>
+          <div class="field"><label>k_β · inclinación (tabla)</label><input type="number" id="i_kbeta" value="1.00" min="0" step="0.01"></div>
+          <div class="field"><label>k_S · sombras (0-1)</label><input type="number" id="i_ks" value="1.00" min="0" max="1" step="0.01"></div>
+          <div class="field"><label>k_O · suciedad/nieve (0-1)</label><input type="number" id="i_ko" value="1.00" min="0" max="1" step="0.01"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddCaso">+ Calcular curva diaria y añadir al informe</button>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:10px;">Casos del informe</div>
+      <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
+      <div id="casosContainer"><div class="empty-state">Todavía no has añadido ningún caso. Rellena el formulario de arriba y pulsa "Calcular curva diaria y añadir al informe".</div></div>
+
+      <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
+        <table class="summary" id="summaryTable"></table>
+      </div>
+
+      <div class="fieldset-title">Datos del informe (portada)</div>
+      <div class="card" style="margin-bottom:24px;">
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Curvas de irradiancia y producción fotovoltaica diarias"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+          <div class="field"><label>Autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+          <div class="field"><label>Organización</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
+        <button class="btn ghost" id="btnClearCasos">Vaciar todos los casos</button>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta no oficial de apoyo al cálculo de curvas de irradiancia solar diaria, basada en la formulación de posición solar y masa de aire de <a href="https://www.pveducation.org/pvcdrom/properties-of-sunlight/sun-position-calculator" target="_blank" rel="noopener">PVEducation.org</a>, y en el artículo divulgativo <a href="https://autarquiapersonal.com/2021/09/20/calculo-de-las-curvas-de-irradiancia-y-produccion-fotovoltaica-diarias-i/" target="_blank" rel="noopener">"Cálculo de las curvas de irradiancia y producción fotovoltaica diarias (I)"</a> (autarquiapersonal.com, 20/09/2021). El modelo de cielo despejado no incluye nubosidad real; usa datos de <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">PVGIS</a> para la radiación mensual real de tu ubicación antes de un diseño definitivo.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'teoria';
+function idEsSeccion(id){ return Array.from(sections).some(s => s.id === id); }
+function activarSeccion(id){
+  if(!idEsSeccion(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  if(!idEsSeccion(id)) return;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+document.getElementById('p_fecha').valueAsDate = new Date();
+
+// ===================== HELPERS =====================
+function fmtNum(n,d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function step(k,v,sub){ return '<div class="step'+(sub?' sub':'')+'"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'...' : (s||''); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ===================== MODELO SOLAR (pveducation.org) =====================
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+// Valores orientativos (centro de España); sustitúyelos por los de PVGIS para tu ubicación.
+const E0_DEFAULT = [2.0,2.9,4.2,5.0,5.9,6.6,6.9,6.2,5.0,3.4,2.2,1.7];
+
+function toRad(d){ return d*Math.PI/180; }
+function toDeg(r){ return r*180/Math.PI; }
+
+function dayOfYear(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const start = new Date(d.getFullYear(),0,0);
+  return Math.round((d-start)/86400000);
+}
+function monthIndex(dateStr){
+  return new Date(dateStr+'T00:00:00').getMonth();
+}
+function psiDeviation(psi){
+  let dsel = Math.abs(psi-180);
+  if(dsel>180) dsel = 360-dsel;
+  return dsel;
+}
+
+function calcHour(p, hourLocal){
+  const LSTM = 15*p.utcZone;
+  const B = (360/365)*(p.day-81);
+  const Brad = toRad(B);
+  const EoT = 9.87*Math.sin(2*Brad) - 7.53*Math.cos(Brad) - 1.5*Math.sin(Brad);
+  const TC = 4*(p.lon - LSTM) + EoT;
+  const LST = hourLocal + TC/60;
+  const HRA = 15*(LST-12);
+
+  const decl = -23.45*Math.cos(toRad((360/365)*(p.day+10)));
+  const declRad = toRad(decl);
+  const latRad = toRad(p.lat);
+  const HRArad = toRad(HRA);
+
+  const sinAlpha = Math.sin(declRad)*Math.sin(latRad) + Math.cos(declRad)*Math.cos(latRad)*Math.cos(HRArad);
+  const alpha = toDeg(Math.asin(Math.max(-1,Math.min(1,sinAlpha))));
+  const zenith = 90-alpha;
+
+  let theta=null, AM=null, ID=0, I0=0;
+  if(alpha>0){
+    const cosAlpha = Math.cos(toRad(alpha));
+    let cosTheta = (Math.sin(declRad)*Math.cos(latRad) - Math.cos(declRad)*Math.sin(latRad)*Math.cos(HRArad)) / cosAlpha;
+    cosTheta = Math.max(-1,Math.min(1,cosTheta));
+    const base = toDeg(Math.acos(cosTheta));
+    theta = HRA<=0 ? base : 360-base;
+
+    const zenithRad = toRad(zenith);
+    AM = 1/(Math.cos(zenithRad) + 0.50572*Math.pow(96.07995-zenith, -1.6364));
+    ID = 1488.3*((1-0.14*p.altKm)*Math.pow(0.7, Math.pow(AM,0.678)) + 0.14*p.altKm);
+
+    const alphaRad = toRad(alpha), betaRad = toRad(p.beta), psiThetaRad = toRad(p.psi-theta);
+    I0 = ID*(Math.cos(alphaRad)*Math.sin(betaRad)*Math.cos(psiThetaRad) + Math.sin(alphaRad)*Math.cos(betaRad));
+    I0 = Math.max(0, I0);
+  }
+  return {hour:hourLocal, HRA, decl, alpha, zenith, theta, AM, ID, I0};
+}
+
+function calcDia(p){
+  const horas = [];
+  for(let h=0; h<24; h++) horas.push(calcHour(p,h));
+  const sumI0 = horas.reduce((a,r)=>a+r.I0,0);
+  const kPsi = Math.max(0, 1 - 3.5e-5*Math.pow(psiDeviation(p.psi),2));
+  const EbetaPsi = p.kBeta*kPsi*p.kS*p.kO*p.E0;
+  horas.forEach(r=>{
+    r.pct = sumI0>0 ? r.I0/sumI0 : 0;
+    r.IbetaPsi = 1000*r.pct*EbetaPsi;
+  });
+  const horasSol = horas.filter(r=>r.alpha>0);
+  const salida = horasSol.length ? horasSol[0].hour : null;
+  const puesta = horasSol.length ? horasSol[horasSol.length-1].hour : null;
+  const peak = horas.reduce((best,r)=> r.IbetaPsi>(best?best.IbetaPsi:-1) ? r : best, null);
+  return {horas, sumI0, kPsi, EbetaPsi, salida, puesta, peak};
+}
+
+// ===================== TABLA DE VALORES E0 ORIENTATIVOS (teoría) =====================
+(function(){
+  const t = document.getElementById('e0DefaultTable');
+  let html = '<thead><tr>'+MESES.map(m=>'<th>'+m.slice(0,3)+'</th>').join('')+'</tr></thead><tbody><tr>'+
+    E0_DEFAULT.map(v=>'<td class="cellnum">'+fmtNum(v,2)+'</td>').join('')+'</tr></tbody>';
+  t.innerHTML = html;
+})();
+
+// ===================== SVG: DIAGRAMA DE FLUJO METODOLÓGICO =====================
+function buildFlowchartSVG(){
+  const W=920, H=210;
+  let s='';
+  function esc2(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function box(x,y,w,h,lines,color){
+    let out = '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="4" fill="none" stroke="'+color+'" stroke-width="1.4"/>';
+    const lh=13;
+    const startY = y+h/2-(lines.length-1)*lh/2+4;
+    lines.forEach((ln,i)=>{ out += '<text x="'+(x+w/2)+'" y="'+(startY+i*lh)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="'+(i===0?10.5:9.5)+'" font-weight="'+(i===0?'bold':'normal')+'" fill="'+(i===0?'#E7ECF2':color)+'">'+esc2(ln)+'</text>'; });
+    return out;
+  }
+  function arrow(x1,y,x2,color){
+    return '<line x1="'+x1+'" y1="'+y+'" x2="'+(x2-7)+'" y2="'+y+'" stroke="'+color+'" stroke-width="1.3"/>'+
+      '<polygon points="'+(x2-7)+','+(y-4)+' '+(x2-7)+','+(y+4)+' '+x2+','+y+'" fill="'+color+'"/>';
+  }
+  const boxes = [
+    {t:['FECHA + UBICACIÓN','n, φ, long, huso'], c:'#37CFFF'},
+    {t:['POSICIÓN SOLAR','δ, α, ζ, θ (24 h)'], c:'#57D9A3'},
+    {t:['CIELO DESPEJADO','AM, I_D, I₀ (24 h)'], c:'#FFB020'},
+    {t:['CURVA NORMALIZADA','I%ᵢ = I₀ᵢ / ΣI₀'], c:'#B98CFF'},
+    {t:['IRRADIANCIA REAL','I_βΨ = 1000·I%·E_βΨ'], c:'#FF6B6B'},
+  ];
+  const bw=160, bh=56, gap=22, y0=90;
+  let x=15;
+  boxes.forEach((b,i)=>{
+    s += box(x,y0,bw,bh,b.t,b.c);
+    if(i<boxes.length-1) s += arrow(x+bw+2, y0+bh/2, x+bw+gap-2, '#5B7086');
+    x += bw+gap;
+  });
+  s += '<text x="15" y="30" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">Metodología (6 pasos del artículo): geometría pura → forma de la curva → escalado con datos reales de radiación mensual.</text>';
+  s += '<text x="15" y="'+(y0+bh+26)+'" font-family="IBM Plex Mono" font-size="9.5" fill="#8FA3B8">Los tres primeros bloques son astronomía pura (no dependen de datos de radiación); el escalado final sí necesita E₀, k_β, k_Ψ, k_S, k_O.</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:920px;">'+s+'</svg>';
+}
+document.getElementById('flowSvgHolder').innerHTML = buildFlowchartSVG();
+
+// ===================== SVG: CURVA DIARIA (web) =====================
+function buildDailyCurveSVG(horas){
+  const W=760, padL=40, padR=16, padT=16, padB=26, chartH=200;
+  const H = chartH+padT+padB;
+  const n = horas.length;
+  const stp = (W-padL-padR)/n;
+  const maxV = Math.max(...horas.map(r=>Math.max(r.I0,r.IbetaPsi)), 10);
+  const scale = chartH/maxV;
+  const baseY = padT+chartH;
+  let s = '';
+  s += '<line x1="'+padL+'" y1="'+baseY+'" x2="'+(W-padR)+'" y2="'+baseY+'" stroke="#213348" stroke-width="1"/>';
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const gy = baseY-chartH*f;
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="0.6"/>';
+    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">'+Math.round(maxV*f)+'</text>';
+  });
+  function pathFor(key){
+    return horas.map((r,i)=>{
+      const cx = padL+stp*i+stp/2;
+      const cy = baseY-r[key]*scale;
+      return (i===0?'M':'L')+cx+','+cy;
+    }).join(' ');
+  }
+  s += '<path d="'+pathFor('I0')+'" fill="none" stroke="#5B7086" stroke-width="1.6" stroke-dasharray="3,2"/>';
+  s += '<path d="'+pathFor('IbetaPsi')+'" fill="none" stroke="#FFB020" stroke-width="2.2"/>';
+  horas.forEach((r,i)=>{
+    if(i%2===0){
+      const cx = padL+stp*i+stp/2;
+      s += '<text x="'+cx+'" y="'+(baseY+14)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">'+r.hour+'h</text>';
+    }
+  });
+  s += '<text x="'+padL+'" y="'+(H-2)+'" font-family="IBM Plex Mono" font-size="9" fill="#8FA3B8">Gris discontinuo: I₀ cielo despejado (W/m²) &nbsp;·&nbsp; Ámbar: I_βΨ irradiancia real estimada (W/m²)</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:760px;">'+s+'</svg>';
+}
+
+// ===================== AUTORRELLENO DE E0 SEGÚN FECHA =====================
+document.getElementById('i_fecha').addEventListener('change', ()=>{
+  const mi = monthIndex(document.getElementById('i_fecha').value);
+  document.getElementById('i_e0').value = E0_DEFAULT[mi];
+});
+
+// ===================== ALTA / LISTADO DE CASOS =====================
+let casos = [];
+let casoNextId = 1;
+
+document.getElementById('btnAddCaso').addEventListener('click', ()=>{
+  const fecha = document.getElementById('i_fecha').value;
+  if(!fecha){ showToast('Elige una fecha.'); return; }
+  const lat = parseFloat(document.getElementById('i_lat').value);
+  const lon = parseFloat(document.getElementById('i_lon').value);
+  if(!isFinite(lat) || !isFinite(lon)){ showToast('Introduce latitud y longitud válidas.'); return; }
+
+  const p = {
+    day: dayOfYear(fecha),
+    lat, lon,
+    altKm: (parseFloat(document.getElementById('i_alt').value)||0)/1000,
+    utcZone: parseFloat(document.getElementById('i_utc').value),
+    beta: parseFloat(document.getElementById('i_beta').value)||0,
+    psi: parseFloat(document.getElementById('i_psi').value)||180,
+    E0: parseFloat(document.getElementById('i_e0').value)||0,
+    kBeta: parseFloat(document.getElementById('i_kbeta').value)||1,
+    kS: Math.min(1,Math.max(0, parseFloat(document.getElementById('i_ks').value)||1)),
+    kO: Math.min(1,Math.max(0, parseFloat(document.getElementById('i_ko').value)||1)),
+  };
+  const result = calcDia(p);
+  const caso = {
+    nombre: document.getElementById('i_nombre').value.trim() || ('Caso '+casoNextId),
+    fecha, mes: MESES[monthIndex(fecha)], ...p,
+    id: casoNextId++, result
+  };
+  casos.push(caso);
+  renderCasos();
+  showToast('Caso añadido: '+caso.nombre);
+  document.getElementById('i_nombre').value='';
+});
+
+document.getElementById('btnClearCasos').addEventListener('click', ()=>{
+  if(casos.length===0) return;
+  if(confirm('¿Vaciar todos los casos del informe?')){ casos=[]; renderCasos(); }
+});
+
+function renderCasos(){
+  const container = document.getElementById('casosContainer');
+  const statsRow = document.getElementById('statsRow');
+  const btnPdf = document.getElementById('btnPdf');
+  const summaryWrap = document.getElementById('summaryTableWrap');
+
+  if(casos.length===0){
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún caso. Rellena el formulario de arriba y pulsa "Calcular curva diaria y añadir al informe".</div>';
+    statsRow.style.display='none';
+    btnPdf.disabled = true;
+    summaryWrap.style.display='none';
+    document.getElementById('summaryTable').innerHTML='';
+    return;
+  }
+  btnPdf.disabled = false;
+  summaryWrap.style.display='block';
+
+  const avgEbp = casos.reduce((a,c)=>a+c.result.EbetaPsi,0)/casos.length;
+  const maxPeak = casos.reduce((a,c)=>Math.max(a, c.result.peak?c.result.peak.IbetaPsi:0), 0);
+  statsRow.style.display='flex';
+  statsRow.innerHTML =
+    '<div class="stat-chip"><div class="v">'+casos.length+'</div><div class="l">casos analizados</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtNum(avgEbp,2)+'</div><div class="l">HSP medios sobre el plano inclinado</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtNum(maxPeak,0)+'</div><div class="l">W/m² de pico máximo entre casos</div></div>';
+
+  container.innerHTML = casos.map((c,idx)=>{
+    const r = c.result;
+    let stepsHtml = '';
+    stepsHtml += step('Fecha (día del año)', c.fecha+' (n='+c.day+')');
+    stepsHtml += step('Latitud / longitud / altitud', fmtNum(c.lat,2)+'° / '+fmtNum(c.lon,2)+'° / '+Math.round(c.altKm*1000)+' m');
+    stepsHtml += step('Inclinación β / acimut Ψ del panel', c.beta+'° / '+c.psi+'°');
+    stepsHtml += step('Salida / puesta de sol (hora entera)', (r.salida!=null?r.salida+':00':'—')+' – '+(r.puesta!=null?r.puesta+':00':'—'));
+    stepsHtml += step('ΣI₀ cielo despejado (24 h)', fmtNum(r.sumI0,1)+' W/m²', true);
+    stepsHtml += step('E₀ mes ('+c.mes+') · k_β · k_Ψ · k_S · k_O', fmtNum(c.E0,2)+' · '+fmtNum(c.kBeta,2)+' · '+fmtNum(r.kPsi,3)+' · '+fmtNum(c.kS,2)+' · '+fmtNum(c.kO,2), true);
+    stepsHtml += step('E_βΨ · irradiación real sobre el panel', fmtNum(r.EbetaPsi,2)+' HSP (kWh/m²·día)');
+    stepsHtml += step('Hora e irradiancia de pico', r.peak ? (r.peak.hour+':00 → '+fmtNum(r.peak.IbetaPsi,0)+' W/m²') : '—');
+
+    const chartSvg = buildDailyCurveSVG(r.horas);
+    const rows = r.horas.map(h=>{
+      const night = h.alpha<=0;
+      return '<tr class="'+(night?'night':'')+'"><td>'+h.hour+':00</td><td>'+fmtNum(h.HRA,1)+'</td><td>'+fmtNum(h.alpha,1)+'</td>'+
+        '<td>'+(h.theta!=null?fmtNum(h.theta,1):'—')+'</td><td>'+(h.AM!=null?fmtNum(h.AM,2):'—')+'</td>'+
+        '<td>'+fmtNum(h.ID,0)+'</td><td>'+fmtNum(h.I0,0)+'</td><td>'+fmtNum(h.pct*100,1)+'%</td><td>'+fmtNum(h.IbetaPsi,0)+'</td></tr>';
+    }).join('');
+
+    return '<div class="line-card">'+
+      '<div class="line-head" onclick="toggleCaso('+c.id+')">'+
+        '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title">'+esc(c.nombre)+'</span></div>'+
+        '<div class="lh-right"><span class="badge">'+fmtNum(r.EbetaPsi,2)+' HSP</span>'+
+        '<span class="pill ok">pico '+(r.peak?fmtNum(r.peak.IbetaPsi,0):'0')+' W/m²</span>'+
+        '<button class="remove-btn" onclick="event.stopPropagation(); removeCaso('+c.id+')">eliminar</button></div>'+
+      '</div>'+
+      '<div class="line-body" id="cb-'+c.id+'">'+
+        '<div class="calc-steps">'+stepsHtml+'</div>'+
+        '<div class="subsection-title">Curva diaria (24 h)</div>'+
+        '<div class="chart-svg-wrap">'+chartSvg+'</div>'+
+        '<div style="overflow-x:auto;"><table class="hourly-table"><thead><tr><th>Hora</th><th>HRA°</th><th>α°</th><th>θ°</th><th>AM</th><th>I_D</th><th>I₀</th><th>I%</th><th>I_βΨ</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  const summaryTable = document.getElementById('summaryTable');
+  summaryTable.innerHTML =
+    '<thead><tr><th>Caso</th><th>Fecha</th><th>β/Ψ</th><th>E_βΨ (HSP)</th><th>Pico (W/m²)</th></tr></thead><tbody>'+
+    casos.map(c=>{
+      const r=c.result;
+      return '<tr><td>'+esc(c.nombre)+'</td><td>'+c.fecha+'</td><td>'+c.beta+'°/'+c.psi+'°</td><td>'+fmtNum(r.EbetaPsi,2)+'</td><td>'+(r.peak?fmtNum(r.peak.IbetaPsi,0):'0')+'</td></tr>';
+    }).join('')+'</tbody>';
+}
+
+window.toggleCaso = function(id){ document.getElementById('cb-'+id).classList.toggle('open'); };
+window.removeCaso = function(id){ casos = casos.filter(c=>c.id!==id); renderCasos(); };
+
+// ===================== GENERAR PDF =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(casos.length===0) return;
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 22, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Curvas de irradiancia y produccion fotovoltaica diarias';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+
+  const GLOSARIO = [
+    ['n','Dia del año (1-365)','-'],
+    ['delta','Declinacion solar','grados'],
+    ['HRA','Angulo horario','grados'],
+    ['alfa','Altura solar (elevacion)','grados'],
+    ['zeta','Angulo cenital','grados'],
+    ['theta','Acimut solar','grados'],
+    ['AM','Masa de aire (Kasten-Young)','-'],
+    ['I_D','Irradiancia directa normal, cielo despejado','W/m2'],
+    ['I0','Irradiancia sobre el plano inclinado, cielo despejado','W/m2'],
+    ['I%','Curva diaria normalizada','-'],
+    ['E0','Irradiacion horizontal real del mes (atlas solar)','HSP'],
+    ['HSP','Horas de Sol Pico, equivalente a kWh/m2 x dia','kWh/m2*dia'],
+    ['I_betaPsi','Irradiancia horaria real estimada','W/m2'],
+  ];
+
+  function makeHelpers(doc){
+    function checkPage(yy, needed=12){
+      if(yy > bottomY-needed){ doc.addPage(); return topY; }
+      return yy;
+    }
+    function sectionTitle(yy, numText, text, collect){
+      yy = checkPage(yy, 18);
+      doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+      doc.text(numText+'  '+text, marginX, yy);
+      doc.setDrawColor(55,207,255); doc.setLineWidth(0.6);
+      doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+      doc.setLineWidth(0.2);
+      if(collect) collect.toc.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+11;
+    }
+    function subTitle(yy, numText, text){
+      yy = checkPage(yy, 12);
+      doc.setFont('times','bold'); doc.setFontSize(10.5); doc.setTextColor(40,48,60);
+      doc.text(numText+'  '+text, marginX, yy);
+      return yy+7;
+    }
+    function kv(yy, k, v, indent=0){
+      yy = checkPage(yy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+      doc.text(k, marginX+indent, yy);
+      doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+      const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+74));
+      doc.text(vLines[0], marginX+indent+74, yy);
+      let extra = 0;
+      for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+74, yy+extra); }
+      return yy+5.6+extra;
+    }
+    function paragraph(yy, text, opts={}){
+      const size = opts.size || 9;
+      const width = opts.width || (pageW-2*marginX);
+      doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+      const linesArr = doc.splitTextToSize(text, width);
+      linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+      return yy+3;
+    }
+    function formulaBlock(yy, formulaLines, caption){
+      yy = checkPage(yy, 10+formulaLines.length*7);
+      const boxH = 8+formulaLines.length*7;
+      doc.setDrawColor(205,205,212); doc.setFillColor(250,250,251); doc.setLineWidth(0.25);
+      doc.roundedRect(marginX, yy-5, pageW-2*marginX, boxH, 1, 1, 'FD');
+      let ly = yy+2;
+      formulaLines.forEach(f=>{
+        doc.setFont('courier','bold'); doc.setFontSize(9); doc.setTextColor(20,140,180);
+        doc.text(f, pageW/2, ly, {align:'center'});
+        ly += 7;
+      });
+      if(caption){
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(125,132,142);
+        const capLines = doc.splitTextToSize(caption, pageW-2*marginX-10);
+        capLines.forEach(cl=>{ doc.text(cl, pageW/2, ly, {align:'center'}); ly+=4; });
+      }
+      return ly+4;
+    }
+    function tableCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      doc.text(numText+': '+text, marginX, yy);
+      if(collect) collect.tables.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+6;
+    }
+    function figureCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      const lines = doc.splitTextToSize(numText+': '+text, pageW-2*marginX);
+      lines.forEach((l,i)=>{ doc.text(l, marginX, yy+i*4.5); });
+      if(collect) collect.figures.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+lines.length*4.5+3;
+    }
+    function simpleTable(yy, headers, rows, colX){
+      yy = checkPage(yy, 10+rows.length*6.5);
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.6); doc.setTextColor(100,108,120);
+      headers.forEach((h,i)=>doc.text(h, colX[i], yy));
+      yy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5.5;
+      doc.setFont('helvetica','normal');
+      rows.forEach(row=>{
+        yy = checkPage(yy,7);
+        doc.setFontSize(7); doc.setTextColor(30,35,45);
+        row.forEach((cell,i)=>doc.text(String(cell), colX[i], yy));
+        yy+=5.6;
+      });
+      return yy+3;
+    }
+    function drawDailyCurveChart(yy, horas){
+      const chartH = 58, chartW = pageW-2*marginX;
+      yy = checkPage(yy, chartH+10);
+      const x0 = marginX, y0 = yy;
+      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,chartW,chartH);
+      const n = horas.length;
+      const stp = chartW/n;
+      const maxV = Math.max(...horas.map(r=>Math.max(r.I0,r.IbetaPsi)), 10);
+      const scale = (chartH-4)/maxV;
+      const baseY = y0+chartH-2;
+      function pts(key){ return horas.map((r,i)=>[x0+stp*i+stp/2, baseY-r[key]*scale]); }
+      doc.setDrawColor(150,155,163); doc.setLineWidth(0.4);
+      let p1 = pts('I0');
+      for(let i=0;i<p1.length-1;i++){ doc.line(p1[i][0],p1[i][1],p1[i+1][0],p1[i+1][1]); }
+      doc.setDrawColor(230,150,30); doc.setLineWidth(0.6);
+      let p2 = pts('IbetaPsi');
+      for(let i=0;i<p2.length-1;i++){ doc.line(p2[i][0],p2[i][1],p2[i+1][0],p2[i+1][1]); }
+      doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(150,155,163);
+      horas.forEach((r,i)=>{ if(i%3===0){ doc.text(r.hour+'h', x0+stp*i+stp/2, y0+chartH+4, {align:'center'}); } });
+      doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(150,155,163);
+      doc.text('Gris: I0 cielo despejado. Naranja: I_betaPsi irradiancia real estimada (W/m2).', x0, y0+chartH+9);
+      return y0+chartH+13;
+    }
+    return {checkPage, sectionTitle, subTitle, kv, paragraph, formulaBlock, tableCaption, figureCaption, simpleTable, drawDailyCurveChart};
+  }
+
+  function renderBody(doc, collect){
+    const H = makeHelpers(doc);
+    let y = topY;
+    let figN=0, tabN=1;
+    const FIG = ()=>{ figN++; return 'Figura '+figN; };
+    const TAB = ()=>{ tabN++; return 'Tabla '+tabN; };
+
+    const avgEbp = casos.reduce((a,c)=>a+c.result.EbetaPsi,0)/casos.length;
+
+    y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
+    y = H.paragraph(y, 'El presente informe calcula la curva diaria de irradiancia solar para '+(casos.length>1?casos.length+' casos':'un caso')+' dentro del proyecto "'+proyecto+'", combinando un modelo geometrico de cielo despejado con datos reales de radiacion mensual, para estimar la irradiancia horaria (W/m2) sobre un plano inclinado.');
+    y = H.paragraph(y, 'La irradiacion media resultante sobre el plano inclinado es de '+fmtNum(avgEbp,2)+' HSP (kWh/m2 por dia) entre los casos analizados.');
+
+    y = H.sectionTitle(y, '2.', 'Introduccion', collect);
+    y = H.paragraph(y, 'Este informe implementa la metodologia de calculo de curvas de irradiancia solar diaria descrita en el articulo "Calculo de las curvas de irradiancia y produccion fotovoltaica diarias (I)" (autarquiapersonal.com, 20/09/2021), basada a su vez en la formulacion de posicion solar y masa de aire de PVEducation.org.');
+    y = H.paragraph(y, 'El modelo separa dos componentes: la FORMA de la curva diaria, que depende unicamente de la geometria solar (fecha, hora, latitud) y de un modelo de cielo despejado; y la MAGNITUD real, que se obtiene escalando esa forma con datos de radiacion horizontal real de un atlas solar para el mes y la ubicacion analizados.');
+
+    y = H.sectionTitle(y, '3.', 'Fundamento teorico', collect);
+    y = H.subTitle(y, '3.1', 'Parametros temporales y posicion solar');
+    y = H.paragraph(y, 'La hora del reloj se convierte en hora solar local mediante la ecuacion del tiempo y la correccion por longitud, de la que se deriva el angulo horario. A partir de este y de la declinacion solar (funcion del dia del anio) se obtiene la altura solar, el angulo cenital y el acimut solar en cada hora del dia.');
+    y = H.formulaBlock(y, ['B = (360/365)(n-81)','EoT = 9,87 sen(2B) - 7,53 cos(B) - 1,5 sen(B)','HRA = 15(LST-12)'], 'n: dia del anio. EoT: ecuacion del tiempo, minutos. LST: hora solar local.');
+    y = H.formulaBlock(y, ['delta = -23,45 cos[(360/365)(n+10)]','alfa = asin[sen(delta)sen(phi) + cos(delta)cos(phi)cos(HRA)]'], 'delta: declinacion solar. phi: latitud. alfa: altura solar.');
+    y = H.subTitle(y, '3.2', 'Irradiancia de cielo despejado');
+    y = H.paragraph(y, 'La masa de aire se calcula con la aproximacion de Kasten y Young, y la irradiancia directa normal con el modelo de Meinel corregido por altitud. Proyectando esta irradiancia sobre el plano del panel (inclinacion y orientacion) se obtiene la irradiancia de cielo despejado I0 para cada hora.');
+    y = H.formulaBlock(y, ['AM = 1 / [cos(zeta) + 0,50572(96,07995-zeta)^-1,6364]','I_D = 1488,3 {[1-0,14h] 0,7^(AM^0,678) + 0,14h}','I0 = I_D [cos(alfa)sen(beta)cos(Psi-theta) + sen(alfa)cos(beta)]'], 'zeta: angulo cenital. h: altitud (km). beta: inclinacion panel. Psi: acimut panel. theta: acimut solar.');
+    y = H.subTitle(y, '3.3', 'Curva normalizada e irradiancia real');
+    y = H.paragraph(y, 'Dividiendo cada I0 horario entre la suma del dia se obtiene la fraccion de radiacion diaria de cada hora (I%), independiente de unidades. Esta forma se escala con la radiacion horizontal real del mes (E0, de un atlas de radiacion solar) y factores de correccion por inclinacion, orientacion, sombras y suciedad, para obtener la irradiancia horaria real estimada.');
+    y = H.formulaBlock(y, ['I%_i = I0_i / suma(I0)','E_bPsi = k_b k_Psi k_S k_O E0','I_bPsi_i = 1000 I%_i E_bPsi'], 'E0: HSP horizontal real del mes (atlas de radiacion / PVGIS). k_Psi aprox. 1 - 3,5e-5 (desviacion respecto al sur)^2.');
+
+    y = H.sectionTitle(y, '4.', 'Datos de partida del proyecto', collect);
+    y = H.kv(y, 'Proyecto', proyecto);
+    y = H.kv(y, 'Autor', autor+' ('+registro+')');
+    y = H.kv(y, 'Organizacion', orgNombre+' - '+orgCif);
+    y = H.kv(y, 'Fecha del informe', fecha);
+
+    y = H.sectionTitle(y, '5.', 'Resultados - resumen de casos', collect);
+    y = H.tableCaption(y, TAB(), 'Resumen de casos calculados', collect);
+    y = H.simpleTable(y, ['Caso','Fecha','Beta/Psi','E_bPsi (HSP)','Pico (W/m2)'],
+      casos.map(c=>[trunc(c.nombre,24), c.fecha, c.beta+'/'+c.psi, fmtNum(c.result.EbetaPsi,2), c.result.peak?fmtNum(c.result.peak.IbetaPsi,0):'0']),
+      [marginX, marginX+58, marginX+90, marginX+120, marginX+152]);
+
+    y = H.sectionTitle(y, '6.', 'Memoria de calculo por caso', collect);
+    casos.forEach((c,i)=>{
+      const r = c.result;
+      y = H.checkPage(y, 90);
+      y = H.subTitle(y, '6.'+(i+1), c.nombre);
+      y = H.kv(y,'Fecha (dia del anio)', c.fecha+' (n='+c.day+')');
+      y = H.kv(y,'Latitud / longitud / altitud', fmtNum(c.lat,2)+'d / '+fmtNum(c.lon,2)+'d / '+Math.round(c.altKm*1000)+' m');
+      y = H.kv(y,'Inclinacion / acimut del panel', c.beta+'d / '+c.psi+'d');
+      y = H.kv(y,'Salida / puesta de sol', (r.salida!=null?r.salida+':00':'-')+' - '+(r.puesta!=null?r.puesta+':00':'-'));
+      y = H.kv(y,'Suma I0 cielo despejado (24h)', fmtNum(r.sumI0,1)+' W/m2');
+      y = H.kv(y,'E0 mes ('+c.mes+')', fmtNum(c.E0,2)+' HSP');
+      y = H.kv(y,'k_beta / k_Psi / k_S / k_O', fmtNum(c.kBeta,2)+' / '+fmtNum(r.kPsi,3)+' / '+fmtNum(c.kS,2)+' / '+fmtNum(c.kO,2));
+      y = H.kv(y,'E_bPsi (irradiacion real sobre el panel)', fmtNum(r.EbetaPsi,2)+' HSP');
+      y = H.kv(y,'Hora e irradiancia de pico', r.peak ? (r.peak.hour+':00 -> '+fmtNum(r.peak.IbetaPsi,0)+' W/m2') : '-');
+
+      y = H.paragraph(y, 'Curva diaria de irradiancia (cielo despejado y real estimada):');
+      y = H.drawDailyCurveChart(y, r.horas);
+      y = H.figureCaption(y, FIG(), 'Curva diaria de irradiancia - '+c.nombre, collect);
+
+      const horasSol = r.horas.filter(h=>h.alpha>0);
+      y = H.tableCaption(y, TAB(), 'Horas con sol - '+c.nombre, collect);
+      y = H.simpleTable(y, ['Hora','alfa','theta','AM','I0','I%','I_bPsi'],
+        horasSol.map(h=>[h.hour+':00', fmtNum(h.alpha,1), fmtNum(h.theta,1), fmtNum(h.AM,2), fmtNum(h.I0,0), fmtNum(h.pct*100,1)+'%', fmtNum(h.IbetaPsi,0)]),
+        [marginX, marginX+22, marginX+46, marginX+70, marginX+92, marginX+116, marginX+142]);
+      y += 4;
+    });
+
+    y = H.sectionTitle(y, '7.', 'Conclusiones', collect);
+    y = H.paragraph(y, 'El modelo de cielo despejado reproduce correctamente la forma esperada de la curva diaria de irradiancia (creciente hasta el mediodia solar, decreciente despues), y su escalado con datos reales de radiacion mensual permite estimar la irradiancia horaria esperada sobre un plano con inclinacion y orientacion arbitrarias.');
+    y = H.paragraph(y, 'Este informe se ha generado con una herramienta de calculo no oficial. Los valores de E0 y k_beta deben verificarse con PVGIS o un atlas de radiacion solar oficial para la ubicacion exacta antes de un uso con fines de diseno real. El modelo no incluye nubosidad instantanea, relieve, ni conversion a energia de un generador fotovoltaico concreto (perdidas de modulo, inversor, temperatura).');
+
+    y = H.sectionTitle(y, '8.', 'Referencias', collect);
+    const refs = [
+      'PVEducation.org (Honsberg & Bowden) - Sun Position Calculator, Air Mass. https://www.pveducation.org/pvcdrom/properties-of-sunlight/sun-position-calculator',
+      'Kasten, F.; Young, A.T. (1989) - Revised optical air mass tables and approximation formula.',
+      'PVGIS - Photovoltaic Geographical Information System, Comision Europea (JRC). https://re.jrc.ec.europa.eu/pvg_tools/en/',
+      '"Calculo de las curvas de irradiancia y produccion fotovoltaica diarias (I)", autarquiapersonal.com, 20/09/2021 (fuente divulgativa de referencia).',
+    ];
+    refs.forEach((rf,i)=>{ y = H.paragraph(y, (i+1)+'. '+rf); });
+  }
+
+  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
+  const collectMeasure = {toc:[], tables:[], figures:[]};
+  renderBody(measureDoc, collectMeasure);
+
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const FRONT_PAGES = 5;
+
+  function drawIndexPage(title, entries){
+    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+    doc.text(title, marginX, 32);
+    doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+    let y=50;
+    doc.setFontSize(10);
+    entries.forEach(e=>{
+      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
+      const label = e.num+'  '+e.text;
+      const pageStr = String(e.page);
+      const pageX = pageW-marginX;
+      const labelLines = doc.splitTextToSize(label, 140);
+      doc.text(labelLines[0], marginX, y);
+      doc.text(pageStr, pageX, y, {align:'right'});
+      const labelW = doc.getTextWidth(labelLines[0]);
+      const pageStrW = doc.getTextWidth(pageStr);
+      const dotsStartX = marginX+labelW+2;
+      const dotsEndX = pageX-pageStrW-2;
+      if(dotsEndX>dotsStartX){
+        doc.setTextColor(190,192,198);
+        const dotW = doc.getTextWidth('.');
+        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
+        doc.text('.'.repeat(n), dotsStartX, y);
+      }
+      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
+    });
+    if(entries.length===0){
+      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
+      doc.text('Sin elementos.', marginX, y);
+    }
+  }
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 92;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
+  cy+=16;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Informe tecnico - Curvas de irradiancia solar diaria', marginX, cy); cy+=16;
+  doc.setFontSize(10.5);
+  [['Organizacion', orgNombre],['CIF', orgCif],['Autor', autor],['Fecha', fecha]].forEach(([k,v])=>{
+    doc.setFont('times','italic'); doc.setTextColor(130,136,146); doc.text(k+':', marginX, cy);
+    doc.setFont('times','normal'); doc.setTextColor(40,46,56); doc.text(String(v), marginX+40, cy);
+    cy+=7.5;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(150,155,163);
+  doc.text('Modelo de posicion solar y cielo despejado (PVEducation.org)', marginX, 274);
+
+  doc.addPage();
+  drawIndexPage('Indice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  doc.addPage();
+  drawIndexPage('Indice de figuras', collectMeasure.figures.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  doc.addPage();
+  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y terminos', page:5}]
+    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+  drawIndexPage('Indice de tablas', tablesForList);
+
+  doc.addPage();
+  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+  doc.text('Glosario de siglas y terminos', marginX, 32);
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+  let gy=48;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+32, gy); doc.text('Unidad', marginX+152, gy);
+  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
+  GLOSARIO.forEach(row=>{
+    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(20,140,180);
+    doc.text(row[0], marginX, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
+    const dLines = doc.splitTextToSize(row[1], 116);
+    doc.text(dLines[0], marginX+32, gy);
+    doc.setTextColor(100,108,120);
+    doc.text(row[2], marginX+152, gy);
+    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Tabla 1: Glosario de siglas y terminos', marginX, gy+6);
+
+  doc.addPage();
+  const collectReal = {toc:[], tables:[], figures:[]};
+  renderBody(doc, collectReal);
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-curvas-irradiancia-'+safeName+'.pdf');
+  showToast('PDF generado y descargado.');
+});
+</script>
+</body>
+</html>

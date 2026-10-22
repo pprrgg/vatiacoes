@@ -1,0 +1,44 @@
+---
+import PaginaLegal from '../components/PaginaLegal.astro';
+import { TITULAR as T } from '../data/titular';
+---
+<PaginaLegal titulo="Aviso legal" descripcion="Titular de vatiaco.es y condiciones de uso de la web.">
+  <p>En cumplimiento del artículo 10 de la Ley 34/2002, de servicios de la sociedad de la información y de comercio electrónico
+    (LSSI), estos son los datos del titular de esta web y de la plataforma {T.marca}:</p>
+  <div class="ficha">
+    <p><strong>Titular:</strong> {T.nombre}</p>
+    <p><strong>NIF:</strong> {T.nif}</p>
+    <p><strong>Domicilio:</strong> {T.domicilio}</p>
+    <p><strong>Contacto:</strong> <a href={'mailto:' + T.email}>{T.email}</a> · {T.telefono}</p>
+    <p><strong>Nombre comercial:</strong> {T.marca}</p>
+  </div>
+
+  {T.enPruebas && (
+    <p class="ficha aviso-pruebas"><strong>Plataforma en fase de pruebas.</strong> La plataforma {T.marca} está en desarrollo:
+      puede tener interrupciones y cambios mientras se mejora, y no ofrece todavía un nivel de servicio garantizado. Los detalles
+      están en las <a href="/condiciones/">condiciones del servicio</a>.</p>
+  )}
+
+  <h2>Uso de la web</h2>
+  <p>La web informa sobre los servicios de {T.marca} y da acceso a la plataforma de gestión de comunidades energéticas. Quien la
+    usa se compromete a hacerlo de forma lícita y a no dañar su funcionamiento. La contratación de la plataforma se rige por las
+    <a href="/condiciones/">condiciones del servicio</a>.</p>
+
+  <h2>Contenidos y enlaces</h2>
+  <p>Los textos, guías y calculadoras del blog son orientativos y no sustituyen el asesoramiento profesional de un proyecto
+    concreto. El mapa de comunidades energéticas muestra datos públicos del IDAE; si alguno no es correcto, escríbenos y lo
+    corregimos. Los enlaces a webs de terceros se ofrecen por utilidad; {T.marca} no responde de su contenido.</p>
+
+  <h2>Propiedad intelectual</h2>
+  <p>El diseño, los textos propios y el código de la web y de la plataforma pertenecen a su titular, salvo los componentes de
+    terceros que se usan con su licencia (por ejemplo, ThingsBoard, Leaflet u OpenStreetMap). Se pueden citar y enlazar
+    indicando la fuente.</p>
+
+  <h2>Datos personales y cookies</h2>
+  <p>El tratamiento de datos personales se explica en la <a href="/privacidad/">política de privacidad</a>. La web no usa
+    cookies de publicidad ni de análisis; solo el almacenamiento técnico del navegador que hace falta para funcionar (por ejemplo,
+    conservar el formulario de alta si vuelves desde la página de pago o mantener la sesión en la plataforma).</p>
+
+  <h2>Legislación aplicable</h2>
+  <p>Esta web se rige por la legislación española.</p>
+</PaginaLegal>

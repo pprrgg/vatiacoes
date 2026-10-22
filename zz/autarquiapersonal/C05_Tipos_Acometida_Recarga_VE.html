@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipos de Acometida para Estaciones de Recarga VE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B; --violet:#B98CFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--cyan); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1400px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--cyan); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--cyan); border-bottom-color:var(--cyan);}
+  .tabbar a.active .tag{color:var(--cyan);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--cyan); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px; border-bottom:1px solid var(--line-soft);}
+  section.tab-active{display:block;}
+  #teoria{padding-top:0;}
+  #teoria > .hero{margin:0 -56px 48px;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
+  section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--cyan);}
+  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .hero-meta{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer); display:flex; flex-direction:column; gap:6px; text-align:right; padding-top:6px;}
+  .hero-meta span{color:var(--text-dim);}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
+  .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--cyan); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+
+  .theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:900px){.theory-grid{grid-template-columns:1fr;}}
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dimmer); padding:9px 11px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:10px 11px; border-bottom:1px solid var(--line-soft);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  .cellnum{font-family:var(--font-mono); color:var(--cyan);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--cyan);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(55,207,255,0.1);}
+  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
+  .btn.primary:hover{background:#7fe1ff;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+  .seg{display:inline-flex; background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px; margin-bottom:16px;}
+  .seg button{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.02em; border:none; background:transparent; color:var(--text-dim); padding:7px 14px; border-radius:3px; cursor:pointer; transition:.15s;}
+  .seg button.active{background:var(--cyan); color:#0A121C; font-weight:700;}
+
+  .line-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden;}
+  .line-head{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; cursor:pointer; gap:16px; flex-wrap:wrap;}
+  .line-head:hover{background:var(--panel2);}
+  .line-head .lh-left{display:flex; align-items:center; gap:12px; min-width:0;}
+  .line-head .lh-idx{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); flex-shrink:0;}
+  .line-head .lh-title{font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .line-head .lh-right{display:flex; align-items:center; gap:10px; flex-shrink:0; flex-wrap:wrap;}
+  .line-body{padding:0 20px 20px; border-top:1px solid var(--line-soft); display:none;}
+  .line-body.open{display:block;}
+  .calc-steps{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:16px 18px; margin:16px 0; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);}
+  .calc-steps .step{padding:6px 0; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; gap:16px;}
+  .calc-steps .step:last-child{border-bottom:none;}
+  .calc-steps .step .k{color:var(--text-dimmer);}
+  .calc-steps .step .v{color:var(--text); text-align:right;}
+  .remove-btn{font-family:var(--font-mono); font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:4px 8px;}
+  .remove-btn:hover{text-decoration:underline;}
+  .empty-state{text-align:center; padding:36px 20px; color:var(--text-dimmer); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--radius);}
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
+
+  .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
+  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
+  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
+  .pill.mt{background:rgba(185,140,255,0.12); color:var(--violet); border:1px solid rgba(185,140,255,0.35);}
+
+  table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
+  table.summary td{padding:10px 10px; border-bottom:1px solid var(--line-soft); font-family:var(--font-mono); color:var(--text-dim);}
+  table.summary tr:hover td{background:var(--panel2);}
+
+  .stat-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 18px; flex:1; min-width:140px;}
+  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--cyan);}
+  .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--cyan); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--cyan); text-decoration:none;}
+
+  .scheme-svg-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:14px 0; overflow-x:auto;}
+  .scheme-svg-wrap svg{display:block; margin:0 auto;}
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:18px 0 6px;}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    #teoria > .hero{margin:0 -24px 32px;}
+    .hero-top{flex-direction:column;}
+    .hero-meta{text-align:left;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+  <div class="tabbar-brand">TIPOS DE ACOMETIDA · RECARGA VE</div>
+  <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <nav class="tabbar" id="sidenav">
+    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
+    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco normativo</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Casos e informe</a>
+  </nav>
+  <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+</div>
+<script>
+(function(){
+  var wrap = document.getElementById('tabbarWrap');
+  var bar = document.getElementById('sidenav');
+  var btnL = document.getElementById('tabScrollLeft');
+  var btnR = document.getElementById('tabScrollRight');
+  function update(){
+    var maxScroll = bar.scrollWidth - bar.clientWidth;
+    wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+    wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+  }
+  btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+  btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+  bar.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+  setTimeout(update, 0);
+})();
+</script>
+
+  <main>
+
+    <!-- 00 TEORIA -->
+    <section id="teoria">
+      <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">REBT / RAT · Estaciones de recarga de VE</div>
+          <h1>Acometida en <em>baja tensión</em> o centro propio en <em>media tensión</em>.</h1>
+          <p class="sub">Dos formas muy distintas de conectar una estación de recarga a la red, según cuánta potencia necesite: una caja de protección y un contador si cabe en baja tensión; un centro de seccionamiento y un transformador propios si hay que entrar en media tensión. Esquemas, componentes y criterio de decisión, con dos casos reales de referencia.</p>
+        </div>
+        <div class="hero-meta">
+          <span>Casos de referencia</span>
+          <span style="color:var(--cyan)">La Campiña (Lugo) · 100 kW BT aérea</span>
+          <span style="color:var(--violet)">Breogán Car (Lugo) · 444 kW MT subterránea</span>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="v">CGP → CM/CPM → DI → CVE</div><div class="l">cadena en baja tensión</div></div>
+        <div class="stat"><div class="v">CS → CPMC → CT → CBT</div><div class="l">cadena en media tensión</div></div>
+        <div class="stat"><div class="v">250 kW (≤20 kV) / 400 kW (30 kV)</div><div class="l">umbral de interruptor automático en el CS</div></div>
+      </div>
+    </header>
+
+      <div class="eyebrow kicker">00 · Fundamento teórico</div>
+      <h2>La misma función, dos cadenas de equipos completamente distintas.</h2>
+      <p class="lede">En ambos casos el objetivo es el mismo — proteger, medir y entregar potencia al cuadro de los cargadores — pero los equipos que hacen falta cambian por completo en cuanto la potencia solicitada supera lo que la distribuidora puede entregarte en baja tensión en ese punto de la red.</p>
+
+      <div class="theory-grid">
+        <div class="theory-card" style="border-left:3px solid var(--cyan);">
+          <h3 style="color:var(--cyan);">Acometida en baja tensión (aérea o subterránea individual)</h3>
+          <p>Caso de referencia: estación de 100 kW en La Campiña (Lugo), suministrada en BT desde un apoyo aéreo de la distribuidora.</p>
+          <ul>
+            <li><b>CGP</b> (Caja General de Protección) — o <b>ADU</b> (Armario de Distribución Urbana) si la distribuidora necesita margen para ampliar la red: linda entre la red de la compañía y la instalación del cliente.</li>
+            <li><b>CM/CPM</b> (Caja de Medida o de Protección y Medida) — aloja el contador; con potencia &gt;50 kW la medida es indirecta, con transformadores de intensidad.</li>
+            <li><b>DI</b> (Derivación Individual) — conecta la CM/CPM con el cuadro de protección. En un suministro individual no existe una "LGA" separada: todo el tramo CGP→cuadro es DI (ITC-BT-12, punto 2.1).</li>
+            <li><b>CVE / CGMP</b> (cuadro de protección del cliente) — aloja las protecciones antes del cargador.</li>
+          </ul>
+        </div>
+
+        <div class="theory-card" style="border-left:3px solid var(--violet);">
+          <h3 style="color:var(--violet);">Acometida subterránea en media tensión (centro propio)</h3>
+          <p>Caso de referencia: estación de 444 kW en Breogán Car (Lugo), con centro de transformación propio de 630 kVA.</p>
+          <ul>
+            <li><b>CS</b> (Centro de Seccionamiento) — obligatorio en el límite de la propiedad; celdas de Línea-Línea-Protección/Ventilación-Auxiliares (L-L-P/V-A).</li>
+            <li><b>CPMC</b> (Centro de Protección y Medida) — a un máximo de 5-10 m del CS.</li>
+            <li><b>CT</b> (Centro de Transformación) — aloja el transformador MT/BT, sus protecciones y el reparto de baja tensión.</li>
+            <li><b>CBT</b> (Cuadro de Baja Tensión) — nivel de aislamiento 10 kV; tensión de defecto admisible de referencia ≈1,0-1,5 kV para cuadros integrados.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="subsection-title" style="margin-top:32px;">Esquema · Acometida en baja tensión (caso La Campiña, 100 kW)</div>
+      <div class="scheme-svg-wrap" id="btSvgHolder"></div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin:6px 0 0;">CGP-14-250 (250 A ≈ 173 kW de capacidad) — medida indirecta AV.06, 3 TI 200/5 A clase 0,5S, IP55/IK10 — conductos Ø160 mm — cargador limitado a 100 kW (el máximo que admite la acometida).</p>
+
+      <div class="subsection-title" style="margin-top:32px;">Esquema · Acometida subterránea en media tensión (caso Breogán Car, 444 kW)</div>
+      <div class="scheme-svg-wrap" id="mtSvgHolder"></div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin:6px 0 0;">Transformador 20/0,4 kV, 630 kVA, aislante éster natural — potencia de acceso solicitada 350 kW, potencia total instalada en cargadores 444 kW (2×150 kW + 2×50 kW + 1×2×22 kW) — conductos PEHD Ø160 mm (MT) y Ø63 mm (BT auxiliar).</p>
+
+      <div class="subsection-title" style="margin-top:32px;">Esquema · Despiece de celdas del Centro de Seccionamiento (CS)</div>
+      <div class="scheme-svg-wrap" id="celdasSvgHolder"></div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin:6px 0 0;">Composición habitual L-L-P/V-A: dos celdas de Línea (entrada/salida del anillo de la distribuidora), una de Protección/Ventilación hacia el CT del cliente, y una de Servicios Auxiliares. La protección de la celda P/V es automática desde 250 kW (≤20 kV) / 400 kW (30 kV); por debajo, seccionador manual.</p>
+
+      <div class="subsection-title" style="margin-top:32px;">Diagrama de decisión · Baja tensión o media tensión</div>
+      <div class="scheme-svg-wrap" id="decisionSvgHolder"></div>
+    </section>
+
+    <!-- 01 MARCO NORMATIVO -->
+    <section id="marco">
+      <div class="eyebrow kicker">01 · Marco normativo</div>
+      <h2>REBT en baja tensión, Reglamento de Alta Tensión a partir del centro propio.</h2>
+      <p class="lede">Dos reglamentos distintos entran en juego según el tipo de acometida, y a ellos se suma siempre la Carta de Condiciones Técnico-Económicas (CTE) particular de la distribuidora, que es quien fija en la práctica qué potencia puede darte en BT antes de exigirte un centro propio.</p>
+
+      <div class="card">
+        <div class="fieldset-title">Baja tensión</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li><b style="color:var(--text);">ITC-BT-12</b>, punto 2.1 — en suministros individuales no existe LGA independiente: el tramo CGP→cuadro de protección del cliente es, en su totalidad, Derivación Individual.</li>
+          <li><b style="color:var(--text);">ITC-BT-52</b> — infraestructura específica de recarga de vehículos eléctricos (ver también la <a href="C03_Guia_BT_52.html" style="color:var(--cyan); text-decoration:underline;">Guía ITC-BT-52</a> de este sitio).</li>
+          <li>Zonas de afección de carreteras (normativa del Ministerio de Transportes) — dentro de la franja de afección puede prohibirse la hornacina superficial y exigirse grado de protección mínimo IK10/IP55 con carcasas móviles precintables por la distribuidora.</li>
+        </ul>
+        <div class="fieldset-title">Media tensión (centro propio)</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li><b style="color:var(--text);">ITC-RAT 09</b> — instalaciones de conexión y centros de transformación.</li>
+          <li><b style="color:var(--text);">Orden TEC/1281/2019</b> — normas particulares y condiciones técnicas de las instalaciones de conexión.</li>
+          <li>Normas técnicas particulares de cada distribuidora (p. ej. NT-IEMT.01) — definen la composición exacta de celdas del CS y las distancias máximas entre CS, CPMC y CT.</li>
+          <li>Interruptor automático obligatorio en el CS a partir de <b style="color:var(--text);">250 kW en redes ≤20 kV</b> y <b style="color:var(--text);">400 kW en redes de 30 kV</b> — por debajo de esos umbrales puede bastar un seccionador manual.</li>
+          <li>Límite de tramo de conducto externo entre celdas/CT: máximo 3 m (Guía-BT-22, aplicada también como referencia práctica en MT).</li>
+        </ul>
+      </div>
+
+      <div class="subsection-title" style="margin-top:28px;">Quién decide realmente BT o MT: la CTE de la distribuidora</div>
+      <div class="card">
+        <p style="font-size:13px; color:var(--text-dim); line-height:1.8;">No existe un umbral único nacional de potencia que obligue a pasar de BT a MT: lo decide, caso por caso, la <b style="color:var(--text);">Carta de Condiciones Técnico-Económicas (CTE)</b> que emite la distribuidora para ese punto concreto de la red — depende de la capacidad disponible en el centro de transformación de la compañía más cercano. En el caso de La Campiña, la red BT local pudo asumir 100 kW; en Breogán Car, la potencia total instalada (444 kW, con 350 kW de acceso solicitado) obligó a construir centro de transformación propio. Como orientación práctica: por encima de, aproximadamente, 100-150 kW es habitual que la distribuidora ya no pueda ofrecer BT y exija centro propio, pero <b style="color:var(--text);">la cifra exacta te la da siempre la CTE</b>, no una tabla genérica.</p>
+      </div>
+    </section>
+
+    <!-- 02 CASOS E INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Casos e informe</div>
+      <h2>Añade cada estación, elige su acometida, y genera el informe.</h2>
+      <p class="lede">Cada caso registra la potencia solicitada y la respuesta de la distribuidora (CTE), sugiere el tipo de acometida más probable, y añade la lista de equipos y el esquema correspondiente al informe.</p>
+
+      <div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir caso</div>
+        <div class="field"><label>Nombre / ubicación del caso</label><input type="text" id="i_nombre" placeholder="Ej: Estación Polígono Norte — 6 plazas"></div>
+
+        <div class="fieldset-title">Potencia y respuesta de la distribuidora</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia total instalada en cargadores (kW)</label><input type="number" id="i_pinstalada" value="100" min="0" step="1"></div>
+          <div class="field"><label>Potencia de acceso solicitada (kW)</label><input type="number" id="i_psolicitada" value="100" min="0" step="1"></div>
+          <div class="field"><label>Potencia máxima que ofrece la distribuidora en BT (CTE)</label><input type="number" id="i_pbtofrecida" value="100" min="0" step="1"><div class="hint">Según la Carta de Condiciones Técnico-Económicas para ese punto de red.</div></div>
+        </div>
+
+        <div class="fieldset-title">Si requiere media tensión</div>
+        <div class="grid3">
+          <div class="field"><label>Tensión de red MT disponible</label>
+            <select id="i_tensionmt">
+              <option value="20">≤ 20 kV</option>
+              <option value="30">30 kV</option>
+            </select>
+          </div>
+          <div class="field"><label>¿Instalación en franja de afección de carretera?</label>
+            <select id="i_afeccion">
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddCaso">+ Determinar acometida y añadir al informe</button>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:10px;">Casos del informe</div>
+      <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
+      <div id="casosContainer"><div class="empty-state">Todavía no has añadido ningún caso. Rellena el formulario de arriba y pulsa "Determinar acometida y añadir al informe".</div></div>
+
+      <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
+        <table class="summary" id="summaryTable"></table>
+      </div>
+
+      <div class="fieldset-title">Datos del informe (portada)</div>
+      <div class="card" style="margin-bottom:24px;">
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Análisis de tipo de acometida — estaciones de recarga VE"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+          <div class="field"><label>Autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+          <div class="field"><label>Organización</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
+        <button class="btn ghost" id="btnClearCasos">Vaciar todos los casos</button>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta no oficial de apoyo a la decisión entre acometida en baja tensión y centro propio en media tensión para estaciones de recarga de vehículos eléctricos, basada en el REBT (ITC-BT-12, ITC-BT-52), el Reglamento de Alta Tensión (ITC-RAT 09, Orden TEC/1281/2019) y los casos reales descritos en la serie de artículos de <a href="https://autarquiapersonal.com/2024/10/26/analisis-de-una-estacion-de-recarga-para-vehiculos-electricos-i/" target="_blank" rel="noopener">"Análisis de una estación de recarga para vehículos eléctricos" (I)</a>, <a href="https://autarquiapersonal.com/2025/02/21/analisis-de-una-estacion-de-recarga-para-vehiculos-electricos-ii-acometida-subterranea-en-m-t/" target="_blank" rel="noopener">(II)</a> y <a href="https://autarquiapersonal.com/2025/09/27/ejemplo-de-estacion-de-recarga-para-vehiculos-electricos-iii-acometida-subterranea-en-media-tension/" target="_blank" rel="noopener">(III)</a>, autarquiapersonal.com. La decisión real siempre depende de la Carta de Condiciones Técnico-Económicas que emita tu distribuidora para el punto de red concreto.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'teoria';
+function idEsSeccion(id){ return Array.from(sections).some(s => s.id === id); }
+function activarSeccion(id){
+  if(!idEsSeccion(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  if(!idEsSeccion(id)) return;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+document.getElementById('p_fecha').valueAsDate = new Date();
+
+// ===================== HELPERS =====================
+function fmtNum(n,d=0){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function step(k,v,sub){ return '<div class="step'+(sub?' sub':'')+'"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'...' : (s||''); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ===================== SVG: ESQUEMAS DE INSTALACIÓN =====================
+function esc2(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function schemeBox(x,y,w,h,lines,color,dashed){
+  let out = '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="4" fill="rgba(255,255,255,0.02)" stroke="'+color+'" stroke-width="1.4"'+(dashed?' stroke-dasharray="4,3"':'')+'/>';
+  const lh=13;
+  const startY = y+h/2-(lines.length-1)*lh/2+4;
+  lines.forEach((ln,i)=>{ out += '<text x="'+(x+w/2)+'" y="'+(startY+i*lh)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="'+(i===0?10.5:9)+'" font-weight="'+(i===0?'bold':'normal')+'" fill="'+(i===0?'#E7ECF2':color)+'">'+esc2(ln)+'</text>'; });
+  return out;
+}
+function schemeArrow(x1,y,x2,color,label){
+  let out = '<line x1="'+x1+'" y1="'+y+'" x2="'+(x2-7)+'" y2="'+y+'" stroke="'+color+'" stroke-width="1.3"/>'+
+    '<polygon points="'+(x2-7)+','+(y-4)+' '+(x2-7)+','+(y+4)+' '+x2+','+y+'" fill="'+color+'"/>';
+  if(label) out += '<text x="'+((x1+x2)/2)+'" y="'+(y-6)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">'+esc2(label)+'</text>';
+  return out;
+}
+
+function buildBtScheme(){
+  const W=1070, H=150, y0=55, bw=150, bh=58, gap=26;
+  const boxes = [
+    {t:['RED BT','distribuidora (apoyo)'], c:'#5B7086'},
+    {t:['CGP-14-250','protección + corte'], c:'#37CFFF'},
+    {t:['CM/CPM','medida indirecta'], c:'#57D9A3'},
+    {t:['DI','derivación individual'], c:'#FFB020'},
+    {t:['CVE/CGMP','cuadro protección'], c:'#B98CFF'},
+    {t:['CARGADOR VE','≤100 kW'], c:'#FF6B6B'},
+  ];
+  let s = '<text x="15" y="24" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">Todo el tramo CGP → cuadro es Derivación Individual (ITC-BT-12, 2.1): no existe LGA en suministro individual.</text>';
+  let x=15;
+  boxes.forEach((b,i)=>{
+    s += schemeBox(x,y0,bw,bh,b.t,b.c);
+    if(i<boxes.length-1) s += schemeArrow(x+bw+2,y0+bh/2,x+bw+gap-2,'#5B7086');
+    x += bw+gap;
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:1070px;">'+s+'</svg>';
+}
+document.getElementById('btSvgHolder').innerHTML = buildBtScheme();
+
+function buildMtScheme(){
+  const W=1070, H=190, y0=70, bw=150, bh=58, gap=26;
+  const boxes = [
+    {t:['RED MT','20/30 kV distribuidora'], c:'#5B7086'},
+    {t:['CS','celdas L-L-P/V-A'], c:'#37CFFF'},
+    {t:['CPMC','protección + medida'], c:'#57D9A3'},
+    {t:['CT','transf. 630 kVA'], c:'#FFB020'},
+    {t:['CBT','cuadro BT, 10 kV aisl.'], c:'#B98CFF'},
+    {t:['CARGADORES VE','444 kW instalados'], c:'#FF6B6B'},
+  ];
+  let s = '<text x="15" y="24" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">Centro de Seccionamiento obligatorio en el límite de propiedad; CPMC a máx. 5-10 m del CS (norma particular distribuidora).</text>';
+  let x=15;
+  boxes.forEach((b,i)=>{
+    s += schemeBox(x,y0,bw,bh,b.t,b.c);
+    if(i<boxes.length-1) s += schemeArrow(x+bw+2,y0+bh/2,x+bw+gap-2,'#5B7086');
+    x += bw+gap;
+  });
+  s += '<text x="15" y="'+(y0+bh+26)+'" font-family="IBM Plex Mono" font-size="9" fill="#8FA3B8">MT subterránea PEHD Ø160 mm (CS-CPMC-CT) · BT auxiliar Ø63 mm · interruptor automático en CS obligatorio desde 250 kW (≤20 kV) / 400 kW (30 kV).</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:1070px;">'+s+'</svg>';
+}
+document.getElementById('mtSvgHolder').innerHTML = buildMtScheme();
+
+// ===================== SVG: DESPIECE DE CELDAS DEL CS =====================
+function buildCeldasScheme(){
+  const W=760, H=190;
+  const cellW=150, cellH=90, gap=20, y0=55, busY=30;
+  const celdas = [
+    {t:['CELDA L','entrada'], c:'#37CFFF', dir:'in'},
+    {t:['CELDA L','salida (anillo)'], c:'#37CFFF', dir:'out'},
+    {t:['CELDA P/V','protección → CT'], c:'#FFB020', dir:'down'},
+    {t:['CELDA A','aux. (BT servicios)'], c:'#B98CFF', dir:'down'},
+  ];
+  let s = '';
+  const x0=20, xLast = x0+(cellW+gap)*(celdas.length-1)+cellW;
+  s += '<line x1="'+x0+'" y1="'+busY+'" x2="'+xLast+'" y2="'+busY+'" stroke="#5B7086" stroke-width="2"/>';
+  s += '<text x="'+x0+'" y="'+(busY-8)+'" font-family="IBM Plex Mono" font-size="9" fill="#8FA3B8">Embarrado MT del Centro de Seccionamiento</text>';
+  let x = x0;
+  celdas.forEach(cel=>{
+    const cx = x+cellW/2;
+    s += '<line x1="'+cx+'" y1="'+busY+'" x2="'+cx+'" y2="'+y0+'" stroke="'+cel.c+'" stroke-width="1.6"/>';
+    s += schemeBox(x,y0,cellW,cellH,cel.t,cel.c);
+    if(cel.dir==='in'){
+      s += schemeArrow(x-18,y0+cellH/2,x,'#5B7086');
+      s += '<text x="'+(x-20)+'" y="'+(y0+cellH/2-6)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">red MT</text>';
+    } else if(cel.dir==='down'){
+      s += schemeArrow2v(cx,y0+cellH,cx,y0+cellH+18,cel.c);
+    }
+    x += cellW+gap;
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:760px;">'+s+'</svg>';
+}
+function schemeArrow2v(x,y1,xEnd,y2,color){
+  return '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+(y2-7)+'" stroke="'+color+'" stroke-width="1.3"/>'+
+    '<polygon points="'+(x-4)+','+(y2-7)+' '+(x+4)+','+(y2-7)+' '+x+','+y2+'" fill="'+color+'"/>';
+}
+document.getElementById('celdasSvgHolder').innerHTML = buildCeldasScheme();
+
+// ===================== SVG: DIAGRAMA DE DECISIÓN BT / MT =====================
+function schemeDiamond(cx,cy,w,h,lines,color){
+  let out = '<polygon points="'+cx+','+(cy-h/2)+' '+(cx+w/2)+','+cy+' '+cx+','+(cy+h/2)+' '+(cx-w/2)+','+cy+'" fill="rgba(255,255,255,0.02)" stroke="'+color+'" stroke-width="1.5"/>';
+  const lh=13;
+  const startY = cy-(lines.length-1)*lh/2+4;
+  lines.forEach((ln,i)=>{ out += '<text x="'+cx+'" y="'+(startY+i*lh)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="'+color+'">'+esc2(ln)+'</text>'; });
+  return out;
+}
+function schemeVArrow(x,y1,y2,color){
+  return '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+(y2-7)+'" stroke="'+color+'" stroke-width="1.3"/>'+
+    '<polygon points="'+(x-4)+','+(y2-7)+' '+(x+4)+','+(y2-7)+' '+x+','+y2+'" fill="'+color+'"/>';
+}
+function schemeElbow(x1,y1,x2,y2,color){
+  return '<polyline points="'+x1+','+y1+' '+x1+','+((y1+y2)/2)+' '+x2+','+((y1+y2)/2)+' '+x2+','+(y2-7)+'" fill="none" stroke="'+color+'" stroke-width="1.3"/>'+
+    '<polygon points="'+(x2-4)+','+(y2-7)+' '+(x2+4)+','+(y2-7)+' '+x2+','+y2+'" fill="'+color+'"/>';
+}
+function buildDecisionScheme(){
+  const W=920, H=430;
+  let s = '';
+  s += schemeBox(370,10,180,44,['ESTACIÓN DE RECARGA','potencia solicitada P'],'#5B7086');
+  s += schemeVArrow(460,54,90);
+  s += schemeDiamond(460,150,320,90,['¿P ≤ potencia máxima ofrecida','en BT según la CTE?'],'#37CFFF');
+
+  s += '<text x="290" y="150" text-anchor="end" font-family="IBM Plex Mono" font-size="10" font-weight="bold" fill="#57D9A3">SÍ</text>';
+  s += schemeElbow(300,150,140,230,'#57D9A3');
+  s += schemeBox(30,230,220,54,['ACOMETIDA EN BT','CGP/ADU → CM/CPM → DI → CVE'],'#57D9A3');
+
+  s += '<text x="640" y="150" text-anchor="start" font-family="IBM Plex Mono" font-size="10" font-weight="bold" fill="#FF6B6B">NO</text>';
+  s += schemeElbow(620,150,780,230,'#FF6B6B');
+  s += schemeBox(670,230,220,54,['CENTRO PROPIO EN MT','CS → CPMC → CT → CBT'],'#B98CFF');
+
+  s += schemeVArrow(780,284,320);
+  s += schemeDiamond(780,382,300,80,['¿P ≥ 250 kW (≤20 kV) /','400 kW (30 kV)?'],'#B98CFF');
+  s += '<text x="640" y="382" text-anchor="end" font-family="IBM Plex Mono" font-size="9.5" font-weight="bold" fill="#FFB020">SÍ → interruptor automático en CS</text>';
+  s += '<text x="640" y="398" text-anchor="end" font-family="IBM Plex Mono" font-size="9.5" fill="#8FA3B8">NO → basta seccionador manual</text>';
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:920px;">'+s+'</svg>';
+}
+document.getElementById('decisionSvgHolder').innerHTML = buildDecisionScheme();
+
+// ===================== LISTAS DE EQUIPOS POR TIPO =====================
+const EQUIPOS_BT = [
+  ['CGP / ADU', 'Caja General de Protección (o Armario de Distribución Urbana si la distribuidora necesita margen de red). Modelo de referencia: CGP-14-250 (250 A).'],
+  ['CM/CPM', 'Caja de Medida o de Protección y Medida. Con potencia > 50 kW, medida indirecta con transformadores de intensidad (ref.: 3× 200/5 A, clase 0,5S). Grado IP55/IK10.'],
+  ['DI (Derivación Individual)', 'Todo el tramo CGP→cuadro de protección. No existe LGA en suministro individual (ITC-BT-12, 2.1). Conducto de referencia Ø160 mm.'],
+  ['CVE / CGMP', 'Cuadro de protección del cliente, en hornacina empotrada. Grado IP66/IK10.'],
+  ['Cargador', 'Limitado a la potencia máxima que admite la acometida (en el caso de referencia, 100 kW).'],
+];
+const EQUIPOS_MT = [
+  ['CS (Centro de Seccionamiento)', 'Obligatorio en el límite de propiedad. Celdas de Línea-Línea-Protección/Ventilación-Auxiliares (L-L-P/V-A). Interruptor automático obligatorio desde 250 kW (≤20 kV) / 400 kW (30 kV); por debajo, seccionador manual.'],
+  ['CPMC (Centro de Protección y Medida)', 'A un máximo de 5-10 m del CS (norma particular de la distribuidora).'],
+  ['CT (Centro de Transformación)', 'Aloja el transformador MT/BT (ref.: 630 kVA, aislante éster natural), sus protecciones y el reparto de baja tensión.'],
+  ['CBT (Cuadro de Baja Tensión)', 'Nivel de aislamiento de referencia 10 kV; tensión de defecto admisible orientativa 1,0-1,5 kV para cuadros integrados.'],
+  ['Conductos', 'PEHD Ø160 mm en el tramo de MT (CS-CPMC-CT); Ø63 mm para servicios auxiliares en BT. Tramo externo máx. 3 m (Guía-BT-22).'],
+];
+
+// ===================== DECISIÓN Y ALTA DE CASOS =====================
+function decidirAcometida(input){
+  const margen = input.pBtOfrecida - input.pSolicitada;
+  let tipo, motivo;
+  if(input.pSolicitada <= input.pBtOfrecida){
+    tipo = 'BT';
+    motivo = 'La potencia solicitada ('+fmtNum(input.pSolicitada)+' kW) no supera la potencia máxima que la distribuidora ofrece en baja tensión para este punto de red ('+fmtNum(input.pBtOfrecida)+' kW, según CTE).';
+  } else {
+    tipo = 'MT';
+    motivo = 'La potencia solicitada ('+fmtNum(input.pSolicitada)+' kW) supera la potencia máxima que la distribuidora ofrece en baja tensión ('+fmtNum(input.pBtOfrecida)+' kW) — se requiere centro de transformación propio en media tensión.';
+  }
+  const umbralAutomatico = input.tensionMt==='30' ? 400 : 250;
+  const requiereAutomatico = tipo==='MT' && input.pSolicitada >= umbralAutomatico;
+  return {tipo, motivo, margen, umbralAutomatico, requiereAutomatico};
+}
+
+let casos = [];
+let casoNextId = 1;
+
+document.getElementById('btnAddCaso').addEventListener('click', ()=>{
+  const input = {
+    nombre: document.getElementById('i_nombre').value.trim() || ('Caso '+casoNextId),
+    pInstalada: parseFloat(document.getElementById('i_pinstalada').value)||0,
+    pSolicitada: parseFloat(document.getElementById('i_psolicitada').value)||0,
+    pBtOfrecida: parseFloat(document.getElementById('i_pbtofrecida').value)||0,
+    tensionMt: document.getElementById('i_tensionmt').value,
+    afeccion: document.getElementById('i_afeccion').value,
+  };
+  if(input.pSolicitada<=0){ showToast('Introduce la potencia de acceso solicitada.'); return; }
+  const result = decidirAcometida(input);
+  const caso = {...input, id: casoNextId++, result};
+  casos.push(caso);
+  renderCasos();
+  showToast('Caso añadido: '+caso.nombre+' → acometida '+result.tipo);
+  document.getElementById('i_nombre').value='';
+});
+
+document.getElementById('btnClearCasos').addEventListener('click', ()=>{
+  if(casos.length===0) return;
+  if(confirm('¿Vaciar todos los casos del informe?')){ casos=[]; renderCasos(); }
+});
+
+function renderCasos(){
+  const container = document.getElementById('casosContainer');
+  const statsRow = document.getElementById('statsRow');
+  const btnPdf = document.getElementById('btnPdf');
+  const summaryWrap = document.getElementById('summaryTableWrap');
+
+  if(casos.length===0){
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún caso. Rellena el formulario de arriba y pulsa "Determinar acometida y añadir al informe".</div>';
+    statsRow.style.display='none';
+    btnPdf.disabled = true;
+    summaryWrap.style.display='none';
+    document.getElementById('summaryTable').innerHTML='';
+    return;
+  }
+  btnPdf.disabled = false;
+  summaryWrap.style.display='block';
+
+  const btCount = casos.filter(c=>c.result.tipo==='BT').length;
+  const mtCount = casos.length-btCount;
+  statsRow.style.display='flex';
+  statsRow.innerHTML =
+    '<div class="stat-chip"><div class="v">'+casos.length+'</div><div class="l">casos analizados</div></div>'+
+    '<div class="stat-chip"><div class="v" style="color:var(--cyan);">'+btCount+'</div><div class="l">con acometida en BT</div></div>'+
+    '<div class="stat-chip"><div class="v" style="color:var(--violet);">'+mtCount+'</div><div class="l">con centro propio en MT</div></div>';
+
+  container.innerHTML = casos.map((c,idx)=>{
+    const r = c.result;
+    const equipos = r.tipo==='BT' ? EQUIPOS_BT : EQUIPOS_MT;
+    let stepsHtml = '';
+    stepsHtml += step('Potencia total instalada', fmtNum(c.pInstalada)+' kW');
+    stepsHtml += step('Potencia de acceso solicitada', fmtNum(c.pSolicitada)+' kW');
+    stepsHtml += step('Potencia máxima ofrecida en BT (CTE)', fmtNum(c.pBtOfrecida)+' kW');
+    stepsHtml += step('Margen sobre la oferta en BT', fmtNum(r.margen)+' kW', true);
+    stepsHtml += step('Tipo de acometida recomendado', r.tipo==='BT' ? 'Baja tensión' : 'Media tensión, centro propio');
+    if(r.tipo==='MT'){
+      stepsHtml += step('Tensión de red MT', c.tensionMt+' kV');
+      stepsHtml += step('Umbral de interruptor automático en CS', fmtNum(r.umbralAutomatico)+' kW');
+      stepsHtml += step('¿Requiere interruptor automático en el CS?', r.requiereAutomatico ? 'Sí' : 'No (basta seccionador manual)');
+    }
+    if(c.afeccion==='si') stepsHtml += step('Franja de afección de carretera', 'Sí — hornacina no superficial, IK10/IP55, carcasa precintable');
+
+    const equiposRows = equipos.map(e=>'<tr><td style="font-weight:bold; color:var(--text);">'+esc(e[0])+'</td><td>'+esc(e[1])+'</td></tr>').join('');
+
+    return '<div class="line-card">'+
+      '<div class="line-head" onclick="toggleCaso('+c.id+')">'+
+        '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title">'+esc(c.nombre)+'</span></div>'+
+        '<div class="lh-right"><span class="badge">'+fmtNum(c.pSolicitada)+' kW</span>'+
+        '<span class="pill '+(r.tipo==='BT'?'ok':'mt')+'">'+(r.tipo==='BT'?'BAJA TENSIÓN':'MEDIA TENSIÓN')+'</span>'+
+        '<button class="remove-btn" onclick="event.stopPropagation(); removeCaso('+c.id+')">eliminar</button></div>'+
+      '</div>'+
+      '<div class="line-body" id="cb-'+c.id+'">'+
+        '<p style="font-size:12.5px; color:var(--text-dim); margin:14px 0 0;">'+esc(r.motivo)+'</p>'+
+        '<div class="calc-steps">'+stepsHtml+'</div>'+
+        '<div class="subsection-title">Cadena de equipos — acometida en '+(r.tipo==='BT'?'baja tensión':'media tensión')+'</div>'+
+        '<table class="data-table"><thead><tr><th>Equipo</th><th>Función / referencia</th></tr></thead><tbody>'+equiposRows+'</tbody></table>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  const summaryTable = document.getElementById('summaryTable');
+  summaryTable.innerHTML =
+    '<thead><tr><th>Caso</th><th>P. solicitada</th><th>P. BT ofrecida</th><th>Acometida</th></tr></thead><tbody>'+
+    casos.map(c=>{
+      const r=c.result;
+      return '<tr><td>'+esc(c.nombre)+'</td><td>'+fmtNum(c.pSolicitada)+' kW</td><td>'+fmtNum(c.pBtOfrecida)+' kW</td>'+
+        '<td style="color:'+(r.tipo==='BT'?'var(--cyan)':'var(--violet)')+';">'+(r.tipo==='BT'?'Baja tensión':'Media tensión')+'</td></tr>';
+    }).join('')+'</tbody>';
+}
+
+window.toggleCaso = function(id){ document.getElementById('cb-'+id).classList.toggle('open'); };
+window.removeCaso = function(id){ casos = casos.filter(c=>c.id!==id); renderCasos(); };
+
+// ===================== GENERAR PDF =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(casos.length===0) return;
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 22, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Analisis de tipo de acometida - estaciones de recarga VE';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+
+  const GLOSARIO = [
+    ['CTE','Carta de Condiciones Tecnico-Economicas de la distribuidora','-'],
+    ['CGP','Caja General de Proteccion','-'],
+    ['ADU','Armario de Distribucion Urbana','-'],
+    ['CM/CPM','Caja de Medida / de Proteccion y Medida','-'],
+    ['DI','Derivacion Individual','-'],
+    ['CVE/CGMP','Cuadro de proteccion del cliente','-'],
+    ['CS','Centro de Seccionamiento','-'],
+    ['CPMC','Centro de Proteccion y Medida en Cliente','-'],
+    ['CT','Centro de Transformacion','-'],
+    ['CBT','Cuadro de Baja Tension','-'],
+    ['BT / MT','Baja tension / Media tension','-'],
+  ];
+
+  function makeHelpers(doc){
+    function checkPage(yy, needed=12){
+      if(yy > bottomY-needed){ doc.addPage(); return topY; }
+      return yy;
+    }
+    function sectionTitle(yy, numText, text, collect){
+      yy = checkPage(yy, 18);
+      doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+      doc.text(numText+'  '+text, marginX, yy);
+      doc.setDrawColor(55,207,255); doc.setLineWidth(0.6);
+      doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+      doc.setLineWidth(0.2);
+      if(collect) collect.toc.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+11;
+    }
+    function subTitle(yy, numText, text){
+      yy = checkPage(yy, 12);
+      doc.setFont('times','bold'); doc.setFontSize(10.5); doc.setTextColor(40,48,60);
+      doc.text(numText+'  '+text, marginX, yy);
+      return yy+7;
+    }
+    function kv(yy, k, v, indent=0){
+      yy = checkPage(yy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+      doc.text(k, marginX+indent, yy);
+      doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+      const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+74));
+      doc.text(vLines[0], marginX+indent+74, yy);
+      let extra = 0;
+      for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+74, yy+extra); }
+      return yy+5.6+extra;
+    }
+    function paragraph(yy, text, opts={}){
+      const size = opts.size || 9;
+      const width = opts.width || (pageW-2*marginX);
+      doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+      const linesArr = doc.splitTextToSize(text, width);
+      linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+      return yy+3;
+    }
+    function tableCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      doc.text(numText+': '+text, marginX, yy);
+      if(collect) collect.tables.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+6;
+    }
+    function simpleTable(yy, headers, rows, colX){
+      yy = checkPage(yy, 10+rows.length*6.5);
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.8); doc.setTextColor(100,108,120);
+      headers.forEach((h,i)=>doc.text(h, colX[i], yy));
+      yy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5.5;
+      doc.setFont('helvetica','normal');
+      rows.forEach(row=>{
+        yy = checkPage(yy,7);
+        doc.setFontSize(7.4); doc.setTextColor(30,35,45);
+        row.forEach((cell,i)=>{
+          const cLines = doc.splitTextToSize(String(cell), (colX[i+1]||pageW-marginX)-colX[i]-2);
+          doc.text(cLines[0]||'', colX[i], yy);
+        });
+        yy+=5.8;
+      });
+      return yy+3;
+    }
+    function wrapTable(yy, rows, colX, colW){
+      rows.forEach(row=>{
+        const lines = doc.splitTextToSize(row[1], colW);
+        yy = checkPage(yy, 5+lines.length*4.2);
+        doc.setFont('helvetica','bold'); doc.setFontSize(7.6); doc.setTextColor(20,140,180);
+        doc.text(row[0], colX[0], yy);
+        doc.setFont('helvetica','normal'); doc.setTextColor(50,56,66);
+        lines.forEach((l,i)=>doc.text(l, colX[1], yy+i*4.2));
+        yy += Math.max(5.5, lines.length*4.2)+2;
+      });
+      return yy+2;
+    }
+    return {checkPage, sectionTitle, subTitle, kv, paragraph, tableCaption, simpleTable, wrapTable};
+  }
+
+  function renderBody(doc, collect){
+    const H = makeHelpers(doc);
+    let y = topY;
+    let tabN=1;
+    const TAB = ()=>{ tabN++; return 'Tabla '+tabN; };
+
+    const btCount = casos.filter(c=>c.result.tipo==='BT').length;
+    const mtCount = casos.length-btCount;
+
+    y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
+    y = H.paragraph(y, 'El presente informe analiza el tipo de acometida electrica mas adecuado para '+(casos.length>1?casos.length+' casos':'un caso')+' de estaciones de recarga de vehiculos electricos dentro del proyecto "'+proyecto+'", distinguiendo entre acometida en baja tension y centro de transformacion propio en media tension segun la potencia solicitada y la capacidad ofrecida por la distribuidora.');
+    y = H.paragraph(y, 'De los '+casos.length+' caso(s) analizados, '+btCount+' resuelven con acometida en baja tension y '+mtCount+' requieren centro de transformacion propio en media tension.');
+
+    y = H.sectionTitle(y, '2.', 'Introduccion', collect);
+    y = H.paragraph(y, 'Este informe se basa en la serie de articulos "Analisis de una estacion de recarga para vehiculos electricos" (I, II y III), autarquiapersonal.com, que documentan dos casos reales: una estacion de 100 kW con acometida aerea en baja tension (La Campiña, Lugo), y una estacion de 444 kW con centro de transformacion propio en media tension subterranea (Breogan Car, Lugo).');
+    y = H.paragraph(y, 'No existe un umbral unico nacional de potencia que determine el paso de baja a media tension: lo decide, caso por caso, la Carta de Condiciones Tecnico-Economicas (CTE) que emite la distribuidora para el punto de red concreto, en funcion de la capacidad disponible en su centro de transformacion mas cercano.');
+
+    y = H.sectionTitle(y, '3.', 'Cadenas de equipos por tipo de acometida', collect);
+    y = H.subTitle(y, '3.1', 'Acometida en baja tension');
+    y = H.paragraph(y, 'CGP/ADU -> CM/CPM (medida) -> DI (derivacion individual) -> CVE/CGMP (cuadro de proteccion) -> cargador. Segun la ITC-BT-12 (punto 2.1), en suministro individual no existe LGA separada: todo el tramo desde la CGP hasta el cuadro del cliente es Derivacion Individual.');
+    y = H.tableCaption(y, TAB(), 'Equipos de la cadena en baja tension', collect);
+    y = H.wrapTable(y, EQUIPOS_BT, [marginX, marginX+42], 128);
+    y = H.subTitle(y, '3.2', 'Acometida subterranea en media tension (centro propio)');
+    y = H.paragraph(y, 'CS (centro de seccionamiento) -> CPMC (proteccion y medida) -> CT (centro de transformacion) -> CBT (cuadro de baja tension) -> cargadores. El interruptor automatico en el CS es obligatorio a partir de 250 kW en redes de hasta 20 kV, o 400 kW en redes de 30 kV; por debajo, puede bastar un seccionador manual.');
+    y = H.tableCaption(y, TAB(), 'Equipos de la cadena en media tension', collect);
+    y = H.wrapTable(y, EQUIPOS_MT, [marginX, marginX+48], 122);
+
+    y = H.sectionTitle(y, '4.', 'Datos de partida del proyecto', collect);
+    y = H.kv(y, 'Proyecto', proyecto);
+    y = H.kv(y, 'Autor', autor+' ('+registro+')');
+    y = H.kv(y, 'Organizacion', orgNombre+' - '+orgCif);
+    y = H.kv(y, 'Fecha del informe', fecha);
+
+    y = H.sectionTitle(y, '5.', 'Resultados - resumen de casos', collect);
+    y = H.tableCaption(y, TAB(), 'Resumen de casos y acometida recomendada', collect);
+    y = H.simpleTable(y, ['Caso','P.solicitada','P.BT ofrecida','Acometida'],
+      casos.map(c=>[trunc(c.nombre,30), fmtNum(c.pSolicitada)+' kW', fmtNum(c.pBtOfrecida)+' kW', c.result.tipo==='BT'?'Baja tension':'Media tension']),
+      [marginX, marginX+70, marginX+108, marginX+146]);
+
+    y = H.sectionTitle(y, '6.', 'Memoria de calculo por caso', collect);
+    casos.forEach((c,i)=>{
+      const r = c.result;
+      y = H.checkPage(y, 60);
+      y = H.subTitle(y, '6.'+(i+1), c.nombre);
+      y = H.kv(y,'Potencia total instalada', fmtNum(c.pInstalada)+' kW');
+      y = H.kv(y,'Potencia de acceso solicitada', fmtNum(c.pSolicitada)+' kW');
+      y = H.kv(y,'Potencia maxima ofrecida en BT (CTE)', fmtNum(c.pBtOfrecida)+' kW');
+      y = H.kv(y,'Tipo de acometida recomendado', r.tipo==='BT'?'Baja tension':'Media tension, centro propio');
+      y = H.paragraph(y, r.motivo);
+      if(r.tipo==='MT'){
+        y = H.kv(y,'Tension de red MT', c.tensionMt+' kV');
+        y = H.kv(y,'Umbral de interruptor automatico en CS', fmtNum(r.umbralAutomatico)+' kW');
+        y = H.kv(y,'Requiere interruptor automatico en CS', r.requiereAutomatico?'Si':'No (seccionador manual)');
+      }
+      if(c.afeccion==='si') y = H.kv(y,'Franja de afeccion de carretera', 'Si - hornacina no superficial, IK10/IP55');
+      y += 4;
+    });
+
+    y = H.sectionTitle(y, '7.', 'Conclusiones', collect);
+    y = H.paragraph(y, 'La eleccion entre acometida en baja tension y centro propio en media tension depende, en la practica, de la capacidad que la distribuidora este dispuesta a ofrecer en ese punto concreto de la red (CTE), y no de un umbral fijo aplicable a todos los casos. Este informe orienta la decision con el mismo criterio empleado en los dos casos reales de referencia, pero la potencia exacta de corte debe confirmarse siempre con la distribuidora antes de iniciar el proyecto.');
+    y = H.paragraph(y, 'Este informe se ha generado con una herramienta de calculo no oficial. El autor es responsable de verificar los resultados y la documentacion justificativa antes de su presentacion.');
+
+    y = H.sectionTitle(y, '8.', 'Referencias', collect);
+    const refs = [
+      'ITC-BT-12 y ITC-BT-52 del Reglamento Electrotecnico para Baja Tension (RD 842/2002).',
+      'ITC-RAT 09 del Reglamento sobre condiciones tecnicas y garantias de seguridad en instalaciones electricas de alta tension (RD 337/2014).',
+      'Orden TEC/1281/2019, normas particulares y condiciones tecnicas de las instalaciones de conexion.',
+      '"Analisis de una estacion de recarga para vehiculos electricos (I)", autarquiapersonal.com, 26/10/2024.',
+      '"Analisis de una estacion de recarga para vehiculos electricos (II) - Acometida subterranea en M.T.", autarquiapersonal.com, 21/02/2025.',
+      '"Ejemplo de estacion de recarga para vehiculos electricos (III) - Acometida subterranea en media tension", autarquiapersonal.com, 27/09/2025.',
+    ];
+    refs.forEach((rf,i)=>{ y = H.paragraph(y, (i+1)+'. '+rf); });
+  }
+
+  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
+  const collectMeasure = {toc:[], tables:[]};
+  renderBody(measureDoc, collectMeasure);
+
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const FRONT_PAGES = 4;
+
+  function drawIndexPage(title, entries){
+    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+    doc.text(title, marginX, 32);
+    doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+    let y=50;
+    doc.setFontSize(10);
+    entries.forEach(e=>{
+      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
+      const label = e.num+'  '+e.text;
+      const pageStr = String(e.page);
+      const pageX = pageW-marginX;
+      const labelLines = doc.splitTextToSize(label, 140);
+      doc.text(labelLines[0], marginX, y);
+      doc.text(pageStr, pageX, y, {align:'right'});
+      const labelW = doc.getTextWidth(labelLines[0]);
+      const pageStrW = doc.getTextWidth(pageStr);
+      const dotsStartX = marginX+labelW+2;
+      const dotsEndX = pageX-pageStrW-2;
+      if(dotsEndX>dotsStartX){
+        doc.setTextColor(190,192,198);
+        const dotW = doc.getTextWidth('.');
+        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
+        doc.text('.'.repeat(n), dotsStartX, y);
+      }
+      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
+    });
+    if(entries.length===0){
+      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
+      doc.text('Sin elementos.', marginX, y);
+    }
+  }
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 92;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
+  cy+=16;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Informe tecnico - Tipo de acometida para estaciones de recarga VE', marginX, cy); cy+=16;
+  doc.setFontSize(10.5);
+  [['Organizacion', orgNombre],['CIF', orgCif],['Autor', autor],['Fecha', fecha]].forEach(([k,v])=>{
+    doc.setFont('times','italic'); doc.setTextColor(130,136,146); doc.text(k+':', marginX, cy);
+    doc.setFont('times','normal'); doc.setTextColor(40,46,56); doc.text(String(v), marginX+40, cy);
+    cy+=7.5;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(150,155,163);
+  doc.text('REBT (ITC-BT-12/52) y Reglamento de Alta Tension (ITC-RAT 09)', marginX, 274);
+
+  doc.addPage();
+  drawIndexPage('Indice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  doc.addPage();
+  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y terminos', page:4}]
+    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+  drawIndexPage('Indice de tablas', tablesForList);
+
+  doc.addPage();
+  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+  doc.text('Glosario de siglas y terminos', marginX, 32);
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+  let gy=48;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+32, gy);
+  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
+  GLOSARIO.forEach(row=>{
+    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(20,140,180);
+    doc.text(row[0], marginX, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
+    const dLines = doc.splitTextToSize(row[1], 140);
+    doc.text(dLines[0], marginX+32, gy);
+    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Tabla 1: Glosario de siglas y terminos', marginX, gy+6);
+
+  doc.addPage();
+  const collectReal = {toc:[], tables:[]};
+  renderBody(doc, collectReal);
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-tipo-acometida-ve-'+safeName+'.pdf');
+  showToast('PDF generado y descargado.');
+});
+</script>
+</body>
+</html>
