@@ -54,7 +54,7 @@ DUCKDNS_VERSION="version-d860cc34"
 
 TB_LANG="es_ES"         # idioma de la interfaz para todos los usuarios
 BRAND="VatiaCo"      # texto del logo que sustituye al de ThingsBoard
-BRAND_WEB="https://VatiaCo.es/"   # icono "home" en la linea del titulo de los paneles
+BRAND_WEB="https://VatiaCo.es/"   # enlace del logo de la barra lateral de los paneles
 # Colores de la web VatiaCo (tema oscuro)
 COLOR_BG="#17181c"      # fondo de pagina y paneles
 COLOR_NAV="#23262f"     # barras superiores y menu lateral
@@ -1901,7 +1901,7 @@ def _ejecutar(j):
 
     api = mapa = None
     if reales and not datadis_configurado():
-        nota("AVISO: la comunidad no tiene cuenta de Datadis (el gestor la pone en Mi perfil, pestaña Gestor); "
+        nota("AVISO: la comunidad no tiene cuenta de Datadis (el gestor la pone en la pestaña Suministros autorizados); "
              "solo se cargan los socios simulados")
     elif reales:
         api = Datadis()
@@ -4189,13 +4189,21 @@ def borrar_documento(did):
             raise KeyError(did)
 __FASTAPI_EOF__
 cat > config/fastapi/app/plataforma.py <<'__FASTAPI_EOF__'
-"""Plataforma: superusuario -> gestores (uno por comunidad) -> socios.
+"""Plataforma: superusuario -> gestores (de una o varias comunidades) -> socios.
 
 Cada nivel crea, edita, suspende y borra a sus hijos desde su panel:
   superusuario  (SUPER_EMAIL, tenant Plataforma) -> gestor y su comunidad (tabla gestor y
                 comunidad de la base "plataforma"; borrar un gestor borra su comunidad)
   gestor        (TENANT_ADMIN encerrado en el panel de su comunidad) -> socios
-                (tabla socio de la base de su comunidad, cec_<id>)
+                (tabla socio de la base de su comunidad, cec_<id>). Puede crear mas
+                comunidades suyas (pestaña Gestor) y repartir entre ellas los suministros
+                que le han autorizado en Datadis (pestaña Suministros autorizados).
+
+Un gestor de varias comunidades tiene una fila de gestor por comunidad con el mismo email,
+nombre, telefono y cuenta de Datadis. En ThingsBoard un email es unico: en su comunidad
+principal (tb_email vacio) entra con su email y su contraseña; en cada una de las demas tiene
+un usuario propio (tb_email = gestor@<id>.<dominio>) y pasa a ella desde la pestaña Gestor (la
+API le da el token de ese usuario, como al superusuario cuando entra en una comunidad).
   socio  (CUSTOMER_USER, solo ve su panel): no tiene hijos
 Suspender bloquea la entrada del usuario en ThingsBoard sin borrar nada.
 
@@ -4261,33 +4269,51 @@ CREATE TABLE IF NOT EXISTS comunidad (
   lat          double precision,   -- centro del mapa (socios sin ubicacion)
   lon          double precision,
   datadis_nifs text,               -- NIF de los titulares que han autorizado al gestor, separados por comas
-  datadis_aut  jsonb,              -- ultima lista de autorizaciones leida de Datadis (panel del gestor)
-  datadis_aut_fecha timestamptz,
   creada       timestamptz NOT NULL DEFAULT now(),
   por          text
 );
 
--- Gestores (hijos del superusuario): uno por comunidad. hash: bcrypt de su contraseña de
--- ThingsBoard (para recrear su usuario al restaurar). suspendido: no puede entrar.
+-- Gestores (hijos del superusuario): una fila por comunidad; un gestor de varias tiene una
+-- fila en cada una con el mismo email (nombre, telefono y Datadis iguales en todas).
+-- tb_email: su usuario de ThingsBoard en esa comunidad si no es su principal (vacio = entra
+-- con su email). hash: bcrypt de la contraseña de ese usuario (para recrearlo al restaurar).
+-- suspendido: no puede entrar en esa comunidad.
 -- datadis_user/pass: su cuenta de Datadis (su DNI/NIF), la que tiene las autorizaciones de los
--- titulares; con ella se descargan los datos de la comunidad.
+-- titulares; con ella se descargan los datos de sus comunidades. datadis_aut: ultima lista de
+-- autorizaciones leida de Datadis (pestaña Suministros autorizados).
 CREATE TABLE IF NOT EXISTS gestor (
   comunidad    text PRIMARY KEY REFERENCES comunidad (id) ON DELETE CASCADE,
   superusuario text NOT NULL REFERENCES superusuario (email) ON UPDATE CASCADE,   -- su padre
   nombre      text NOT NULL,
-  email       text NOT NULL UNIQUE,
+  email       text NOT NULL,
+  tb_email    text UNIQUE,
   telefono    text,
   hash        text,
   estado      text NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'suspendido')),
   datadis_user text,
   datadis_pass text,
+  datadis_aut  jsonb,
+  datadis_aut_fecha timestamptz,
   alta        timestamptz NOT NULL DEFAULT now(),
   por         text,
   actualizado timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE comunidad ADD COLUMN IF NOT EXISTS datadis_aut jsonb;
-ALTER TABLE comunidad ADD COLUMN IF NOT EXISTS datadis_aut_fecha timestamptz;
+-- Bases y copias anteriores: un gestor por comunidad (email unico) y las autorizaciones de
+-- Datadis en la comunidad
+ALTER TABLE gestor DROP CONSTRAINT IF EXISTS gestor_email_key;
+ALTER TABLE gestor ADD COLUMN IF NOT EXISTS tb_email text UNIQUE;
+ALTER TABLE gestor ADD COLUMN IF NOT EXISTS datadis_aut jsonb;
+ALTER TABLE gestor ADD COLUMN IF NOT EXISTS datadis_aut_fecha timestamptz;
+CREATE INDEX IF NOT EXISTS gestor_email ON gestor (lower(email));
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema()
+             AND table_name = 'comunidad' AND column_name = 'datadis_aut') THEN
+    UPDATE gestor g SET datadis_aut = c.datadis_aut, datadis_aut_fecha = c.datadis_aut_fecha FROM comunidad c
+     WHERE g.comunidad = c.id AND g.datadis_aut IS NULL AND c.datadis_aut IS NOT NULL;
+    ALTER TABLE comunidad DROP COLUMN datadis_aut, DROP COLUMN datadis_aut_fecha;
+  END IF;
+END $$;
 
 -- Bases y copias anteriores: la cuenta de Datadis estaba en la comunidad; se pasa a su gestor
 ALTER TABLE gestor ADD COLUMN IF NOT EXISTS datadis_user text;
@@ -4328,10 +4354,12 @@ CREATE TABLE IF NOT EXISTS alta (
 );
 """
 
-# Comunidad con los datos de su gestor (los nombres que usa el resto de la API)
+# Comunidad con los datos de su gestor (los nombres que usa el resto de la API).
+# gestor_tb_email: su usuario de ThingsBoard en esta comunidad (su email en la principal)
 _SELECT = """SELECT c.*, g.nombre AS gestor_nombre, g.email AS gestor_email, g.telefono AS gestor_telefono,
                     g.hash AS gestor_hash, COALESCE(g.estado, 'sin gestor') AS gestor_estado, g.alta AS gestor_alta,
-                    g.datadis_user, g.datadis_pass
+                    g.datadis_user, g.datadis_pass, g.datadis_aut, g.datadis_aut_fecha, g.tb_email,
+                    COALESCE(g.tb_email, g.email) AS gestor_tb_email
              FROM comunidad c LEFT JOIN gestor g ON g.comunidad = c.id"""
 
 
@@ -4407,11 +4435,12 @@ _GESTORES = {"hasta": 0.0, "emails": frozenset()}
 
 
 def es_gestor(email):
-    """¿Es el email el de un gestor? (lo consulta Caddy en cada peticion a ThingsBoard: cache
-    de 60 s que se vacia al crear, editar o borrar gestores)."""
+    """¿Es el email el de un usuario de ThingsBoard de un gestor? (lo consulta Caddy en cada
+    peticion a ThingsBoard: cache de 60 s que se vacia al crear, editar o borrar gestores)."""
     if time.time() > _GESTORES["hasta"]:
         with _cx() as cx:
-            _GESTORES["emails"] = frozenset(r["email"].lower() for r in cx.execute("SELECT email FROM gestor").fetchall())
+            _GESTORES["emails"] = frozenset(r["e"].lower() for r in cx.execute(
+                "SELECT email AS e FROM gestor UNION SELECT tb_email FROM gestor WHERE tb_email IS NOT NULL").fetchall())
         _GESTORES["hasta"] = time.time() + 60
     return (email or "").lower() in _GESTORES["emails"]
 
@@ -4425,6 +4454,22 @@ def _comunidad(cid):
     if not c:
         raise KeyError(cid)
     return c
+
+
+def mias(c=None):
+    """Comunidades del gestor de c (por defecto, la comunidad en curso): las de su mismo
+    email, la principal primero."""
+    c = c or _comunidad(comunidad()["id"])
+    e = (c["gestor_email"] or "").lower()
+    if not e:
+        return [c]
+    return sorted((x for x in lista() if (x["gestor_email"] or "").lower() == e),
+                  key=lambda x: (x["tb_email"] is not None, x["creada"]))
+
+
+def _tb_secundario(cid):
+    """Usuario de ThingsBoard del gestor en una comunidad que no es su principal."""
+    return f"gestor@{cid}.{E.get('TENANT_DOMINIO') or 'local'}"
 
 
 def por_tenant(tid):
@@ -4583,7 +4628,7 @@ def _registro(c):
     if c["gestor_email"]:
         g = {"nombre": c["gestor_nombre"], "email": c["gestor_email"], "telefono": c["gestor_telefono"],
              "hash": c["gestor_hash"], "estado": c["gestor_estado"], "datadis_user": c["datadis_user"],
-             "datadis_pass": c["datadis_pass"]}
+             "datadis_pass": c["datadis_pass"], "tb_email": c["tb_email"]}
     return {"comunidad": {k: c[k] for k in ("id", "nombre", "base", "lat", "lon", "datadis_nifs")}, "gestor": g}
 
 
@@ -4591,8 +4636,8 @@ def guardar_credenciales(c):
     """ThingsBoard -> PostgreSQL: hash del gestor (plataforma) y de los socios (su base), y el
     registro de la comunidad en su base (para recrearla al restaurar la copia en otra plataforma)."""
     socios = [so["email"] for so in con(c, db.socios) if so["email"]]
-    h = _hashes_tb(socios + [c["gestor_email"]])
-    g = (c["gestor_email"] or "").lower()
+    h = _hashes_tb(socios + [c["gestor_tb_email"]])
+    g = (c["gestor_tb_email"] or "").lower()
     if h.get(g):
         with _cx() as cx:
             cx.execute("UPDATE gestor SET hash = %s WHERE comunidad = %s AND hash IS DISTINCT FROM %s",
@@ -4635,26 +4680,30 @@ def aprovisionar(c, gestor_password="", passwords=None):
             return {r["email"].lower(): r["hash"] for r in cx.execute(
                 "SELECT email, hash FROM socio WHERE email IS NOT NULL AND hash IS NOT NULL").fetchall()}
     guardados = con(c, leer)
-    if c["gestor_email"] and c["gestor_hash"]:
-        guardados[c["gestor_email"].lower()] = c["gestor_hash"]
-    existen = _hashes_tb([so["email"] for so in socios] + [c["gestor_email"]])
+    gtb = c["gestor_tb_email"]                 # usuario del gestor en esta comunidad
+    if gtb and c["gestor_hash"]:
+        guardados[gtb.lower()] = c["gestor_hash"]
+    existen = _hashes_tb([so["email"] for so in socios] + [gtb])
     recuperar = {}
     for so in socios:
         e = (so["email"] or "").lower()
         if e and e not in existen and not pw.get(so["id"]) and e in guardados:
             pw[so["id"]] = secrets.token_urlsafe(18)
             recuperar[e] = guardados[e]
-    g = (c["gestor_email"] or "").lower()
+    g = (gtb or "").lower()
     if g and g not in existen and not gestor_password and g in guardados:
         gestor_password = secrets.token_urlsafe(18)
         recuperar[g] = guardados[g]
+    elif g and g not in existen and not gestor_password and c["tb_email"]:
+        gestor_password = secrets.token_urlsafe(18)   # comunidad secundaria: se entra con su token
+
     lineas = "\n".join("|".join([so["nombre"], so["email"] or "", pw.get(so["id"], ""), "",
                                  "" if so["lat"] is None else str(so["lat"]), "" if so["lon"] is None else str(so["lon"]),
                                  so["id"]])
                        for so in socios)
     env = dict(os.environ, TB_URL=E.get("TB_URL", "http://thingsboard:8080"),
                TB_TENANT_EMAIL=c["tenant_email"], CEC_TENANT=c["nombre"], TB_LANG=E.get("TB_LANG", "es_ES"),
-               SUPER_EMAIL="", CEC_NOMBRE=c["nombre"], CEC_ADMIN_EMAIL=c["gestor_email"] or "",
+               SUPER_EMAIL="", CEC_NOMBRE=c["nombre"], CEC_ADMIN_EMAIL=gtb or "",
                CEC_ADMIN_PASSWORD=gestor_password or "", CEC_API="/cec-api", SOCIOS=lineas)
     with _LK:
         r = subprocess.run([sys.executable, TB_CONFIG], env=env, capture_output=True, text=True, timeout=1800)
@@ -4668,8 +4717,8 @@ def aprovisionar(c, gestor_password="", passwords=None):
     # Estado de cada usuario (los recien creados entran activos)
     _habilitar([so["email"] for so in socios if so["estado"] == "activo"], True)
     _habilitar([so["email"] for so in socios if so["estado"] == "suspendido"], False)
-    if c["gestor_email"]:
-        _habilitar([c["gestor_email"]], c["gestor_estado"] == "activo")
+    if gtb:
+        _habilitar([gtb], c["gestor_estado"] == "activo")
     try:   # tenant de esta instalacion (el de una copia restaurada es de otra)
         t = TB(c["tenant_email"]).tenant_id()
         with _cx() as cx:
@@ -4783,30 +4832,34 @@ def crear_comunidad(d, por):
 
 
 def editar_gestor(cid, d):
-    """Nombre, teléfono, email y contraseña del gestor. Cambiar el email crea su usuario nuevo
-    (con la contraseña nueva) y borra el anterior."""
+    """Nombre, teléfono, email y contraseña del gestor, en todas sus comunidades. Cambiar el
+    email crea su usuario nuevo en su comunidad principal (con la contraseña nueva) y borra el
+    anterior; la contraseña es la de ese usuario (en las demas entra con su token)."""
     c = _comunidad(cid)
+    viejo = (c["gestor_email"] or "").lower()
     nombre = _texto(d, "gestor_nombre") or c["gestor_nombre"]
     email = _email(d.get("gestor_email") or c["gestor_email"])
     pw = _password(d.get("gestor_password"), obligatoria=False)
-    nuevo = email != (c["gestor_email"] or "").lower()
+    nuevo = email != viejo
     if nuevo and not pw:
         raise ValueError("Al cambiar el email del gestor hay que ponerle contraseña")
     if nuevo and any((x["gestor_email"] or "").lower() == email for x in lista()):
         raise ValueError(f"{email} ya es gestor de otra comunidad")
+    p = next((x for x in mias(c) if not x["tb_email"]), c)      # su comunidad principal
     with _cx() as cx:
-        cx.execute("UPDATE gestor SET nombre = %s, email = %s, telefono = %s, actualizado = now(), "
-                   "hash = CASE WHEN %s THEN NULL ELSE hash END WHERE comunidad = %s",
-                   (nombre, email, _texto(d, "gestor_telefono", 30), nuevo, cid))
+        cx.execute("UPDATE gestor SET nombre = %s, email = %s, telefono = %s, actualizado = now() "
+                   "WHERE lower(email) = %s", (nombre, email, _texto(d, "gestor_telefono", 30), viejo))
+        if nuevo:
+            cx.execute("UPDATE gestor SET hash = NULL, tb_email = NULL WHERE comunidad = %s", (p["id"],))
     _cambian_gestores()
     if nuevo:
-        _borrar_usuario_tb(c, c["gestor_email"])
-        aprovisionar(por_id(cid), gestor_password=pw)
+        _borrar_usuario_tb(p, p["gestor_tb_email"])
+        aprovisionar(por_id(p["id"]), gestor_password=pw)
     elif pw:
         h = _hash(pw)
-        _poner_hashes({email: h})
+        _poner_hashes({p["gestor_tb_email"]: h})
         with _cx() as cx:
-            cx.execute("UPDATE gestor SET hash = %s WHERE comunidad = %s", (h, cid))
+            cx.execute("UPDATE gestor SET hash = %s WHERE comunidad = %s", (h, p["id"]))
     log.info("gestor de %s: %s%s", cid, email, " (contraseña cambiada)" if pw else "")
     return _fila(cid)
 
@@ -4819,20 +4872,26 @@ def suspender_gestor(cid, suspendido):
     estado = "suspendido" if suspendido else "activo"
     with _cx() as cx:
         cx.execute("UPDATE gestor SET estado = %s, actualizado = now() WHERE comunidad = %s", (estado, cid))
-    _habilitar([c["gestor_email"]], not suspendido)
+    _habilitar([c["gestor_tb_email"]], not suspendido)
     log.info("gestor %s de %s: %s", c["gestor_email"], cid, estado)
     return _fila(cid)
 
 
 def borrar_comunidad(cid):
     """Borra al gestor y su comunidad: tenant de ThingsBoard (usuarios, dispositivos y paneles),
-    base de datos y registro. Antes guarda una copia "previa" de la base de la comunidad."""
+    base de datos y registro. Antes guarda una copia "previa" de la base de la comunidad. Si era
+    la principal de un gestor con mas comunidades, otra de ellas pasa a serlo (con su email y
+    su contraseña de siempre)."""
     from . import cec, copias
     c = _comunidad(cid)
+    otra = None
+    if c["gestor_email"] and not c["tb_email"]:
+        otra = next((x for x in mias(c) if x["id"] != cid), None)
     if con(c, db.job_activo):
         raise ValueError("Hay una sincronización en curso en esa comunidad; prueba cuando termine")
     try:   # la copia previa lleva el registro de la comunidad: con ella se puede volver a crear
         guardar_credenciales(c)
+        c = por_id(cid)
     except Exception:
         log.exception("credenciales de %s", cid)
     previa = copias.crear([c["base"]], "previa", [c["base"]])[0]["nombre"]
@@ -4849,6 +4908,17 @@ def borrar_comunidad(cid):
     with _cx() as cx:
         cx.execute("DELETE FROM comunidad WHERE id = %s", (cid,))
     _cambian_gestores()
+    if otra:
+        h = c["gestor_hash"]
+        _borrar_usuario_tb(otra, otra["tb_email"])
+        with _cx() as cx:
+            cx.execute("UPDATE gestor SET tb_email = NULL, hash = %s WHERE comunidad = %s", (h, otra["id"]))
+        _cambian_gestores()
+        try:
+            aprovisionar(por_id(otra["id"]))
+        except Exception:
+            log.exception("comunidad principal nueva de %s: %s", c["gestor_email"], otra["id"])
+        log.info("%s pasa a ser la comunidad principal de %s", otra["id"], c["gestor_email"])
     log.info("comunidad %s borrada (copia previa %s)", cid, previa)
     return {"borrada": cid, "previa": previa}
 
@@ -4869,19 +4939,28 @@ def registrar_copia(base, meta=None, d=None, por=None):
         gestor = {"nombre": _texto(g, "nombre") or "Gestor", "email": _email(g.get("email"), False),
                   "telefono": _texto(g, "telefono", 30), "hash": g.get("hash"),
                   "estado": g.get("estado") if g.get("estado") in ESTADOS else "activo",
-                  "datadis_user": g.get("datadis_user"), "datadis_pass": g.get("datadis_pass")}
+                  "datadis_user": g.get("datadis_user"), "datadis_pass": g.get("datadis_pass"),
+                  "tb_email": g.get("tb_email")}
     else:
         nombre, cid, gnombre, email, pw, du, dp = validar_comunidad(dict(d or {}, id=cid))
         lat, lon, nifs = 37.18, -3.60, None
         gestor = {"nombre": gnombre, "email": email, "telefono": None, "hash": _hash(pw), "estado": "activo",
-                  "datadis_user": du, "datadis_pass": dp or None}
+                  "datadis_user": du, "datadis_pass": dp or None, "tb_email": None}
     if not re.match(r"^[a-z0-9][a-z0-9-]{1,29}$", cid) or base != "cec_" + cid.replace("-", "_"):
         raise ValueError(f"La base {base} no es la de una comunidad válida")
     for c in lista():
         if c["id"] == cid or c["base"] == base or c["nombre"].lower() == nombre.lower():
             raise ValueError(f"Ya hay una comunidad con ese nombre o identificador ({c['nombre']})")
-        if gestor["email"] and (c["gestor_email"] or "").lower() == gestor["email"]:
-            raise ValueError(f"{gestor['email']}, el gestor de la copia, ya es gestor de {c['nombre']}")
+    # El gestor de la copia ya lo es de otras comunidades: esta es una mas (con su usuario
+    # propio); si no tiene ninguna, esta es su principal (entra con su email; si en la copia era
+    # secundaria, su contraseña no viaja en ella: se la pone el superusuario)
+    if gestor["email"]:
+        otras = [c for c in lista() if (c["gestor_email"] or "").lower() == gestor["email"]]
+        if otras:
+            gestor["tb_email"] = gestor["tb_email"] or _tb_secundario(cid)
+            gestor["hash"] = gestor["hash"] if gestor["tb_email"] == _tb_secundario(cid) else None
+        else:
+            gestor["tb_email"] = None
     crear_base(base, PLANTILLA)
     with _cx() as cx:
         with cx.transaction():
@@ -4889,10 +4968,11 @@ def registrar_copia(base, meta=None, d=None, por=None):
                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                        (cid, nombre, base, f"api@{cid}.{E.get('TENANT_DOMINIO') or 'local'}", lat, lon, nifs, por))
             if gestor["email"]:
-                cx.execute("INSERT INTO gestor (comunidad, superusuario, nombre, email, telefono, hash, estado, "
-                           "datadis_user, datadis_pass, por) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                           (cid, E["SUPER_EMAIL"].lower(), gestor["nombre"], gestor["email"], gestor["telefono"],
-                            gestor["hash"], gestor["estado"], gestor["datadis_user"], gestor["datadis_pass"], por))
+                cx.execute("INSERT INTO gestor (comunidad, superusuario, nombre, email, tb_email, telefono, hash, estado, "
+                           "datadis_user, datadis_pass, por) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                           (cid, E["SUPER_EMAIL"].lower(), gestor["nombre"], gestor["email"], gestor["tb_email"],
+                            gestor["telefono"], gestor["hash"], gestor["estado"], gestor["datadis_user"],
+                            gestor["datadis_pass"], por))
     _cambian_gestores()
     log.info("comunidad %s dada de alta desde una copia de %s (%s)", cid, base,
              "con su registro" if meta else "con los datos del gestor indicados")
@@ -4916,12 +4996,13 @@ def fijar_datadis(cid, d):
     if not c["gestor_email"]:
         raise ValueError("La comunidad no tiene gestor")
     user, pw = _datos_datadis(d)
+    e = c["gestor_email"].lower()           # la misma cuenta en todas sus comunidades
     with _cx() as cx:
         if user and not pw:      # misma cuenta, contraseña sin cambiar
-            cx.execute("UPDATE gestor SET datadis_user = %s, actualizado = now() WHERE comunidad = %s", (user, cid))
+            cx.execute("UPDATE gestor SET datadis_user = %s, actualizado = now() WHERE lower(email) = %s", (user, e))
         else:
-            cx.execute("UPDATE gestor SET datadis_user = %s, datadis_pass = %s, actualizado = now() WHERE comunidad = %s",
-                       (user, pw if user else None, cid))
+            cx.execute("UPDATE gestor SET datadis_user = %s, datadis_pass = %s, actualizado = now() WHERE lower(email) = %s",
+                       (user, pw if user else None, e))
     log.info("cuenta de Datadis del gestor de %s: %s", cid, user or "ninguna")
     return _fila(cid)
 
@@ -4966,7 +5047,7 @@ def entrar(cid):
     if c["gestor_estado"] == "suspendido":
         raise ValueError("El gestor está suspendido: reactívalo para entrar")
     sa = _sa()
-    u = _usuario_tb(sa, c, c["gestor_email"])
+    u = _usuario_tb(sa, c, c["gestor_tb_email"])
     if not u:
         raise ValueError("El gestor aún no está en ThingsBoard (vuelve a restaurar la copia de la comunidad)")
     u = sa.req("GET", f"/api/user/{u['id']['id']}") or u
@@ -5016,69 +5097,233 @@ def editar_perfil(d):
     return perfil_gestor()
 
 
+def _cups_de(comunidades):
+    """CUPS -> (comunidad, socio) de los socios de esas comunidades."""
+    out = {}
+    for x in comunidades:
+        try:
+            for so in con(x, db.socios):
+                if so["cups"]:
+                    out[so["cups"].upper()] = (x, so)
+        except Exception:
+            log.exception("socios de %s", x["id"])
+    return out
+
+
 def autorizaciones():
-    """Ultima lista de autorizaciones de Datadis de la comunidad en curso (sin consultar a
-    Datadis), con el socio que tiene cada CUPS."""
+    """Suministros del gestor: los de la ultima lista de autorizaciones de Datadis de su cuenta
+    (sin consultar a Datadis) y, ademas, los de todos los socios de sus comunidades que no
+    estan en ella (simulados o sin autorizacion leida: estado SIMULADO o SOCIO), cada uno con
+    la comunidad y el socio que lo tienen."""
     c = _comunidad(comunidad()["id"])
-    socios = {(so["cups"] or "").upper(): so for so in db.socios() if so["cups"]}
-    lista = [{**a, "socio": socios[a["cups"]]["id"] if a["cups"] in socios else None,
-              "socio_nombre": socios[a["cups"]]["nombre"] if a["cups"] in socios else None}
-             for a in (c["datadis_aut"] or [])]
+    todas = mias(c)
+    donde = _cups_de(todas)
+    aut = c["datadis_aut"] or []
+    lista = [{**a, "comunidad": donde[a["cups"]][0]["id"] if a["cups"] in donde else None,
+              "socio": donde[a["cups"]][1]["id"] if a["cups"] in donde else None,
+              "socio_nombre": donde[a["cups"]][1]["nombre"] if a["cups"] in donde else None}
+             for a in aut]
+    en_datadis = {a["cups"] for a in aut}
+    orden = {x["id"]: i for i, x in enumerate(todas)}
+    for cups, (x, so) in sorted(donde.items(), key=lambda kv: (orden.get(kv[1][0]["id"], 0), kv[1][1]["nombre"])):
+        if cups not in en_datadis:
+            lista.append({"cups": cups, "titular": so["nombre"], "nif": so["nif"], "hasta": None,
+                          "estado": "SIMULADO" if so["simulado"] else "SOCIO",
+                          "comunidad": x["id"], "socio": so["id"], "socio_nombre": so["nombre"]})
     return {"fecha": c["datadis_aut_fecha"] and c["datadis_aut_fecha"].isoformat(), "autorizaciones": lista,
-            "datadis_user": c["datadis_user"]}
+            "datadis_user": c["datadis_user"], "actual": c["id"],
+            "comunidades": [{"id": x["id"], "nombre": x["nombre"]} for x in todas]}
 
 
-def socios_desde_datadis(por):
-    """Lee de Datadis las autorizaciones de la cuenta del gestor, las guarda y da de alta como
-    socios (con el nombre y NIF del titular) los CUPS con autorizacion VIGENTE que aun no lo son.
-    Un titular con varios CUPS: un socio por CUPS (nombre del titular y final del CUPS)."""
-    from .datadis import Datadis
-    c = _comunidad(comunidad()["id"])
-    if not (c["datadis_user"] and c["datadis_pass"]):
-        raise ValueError("Falta la cuenta de Datadis del gestor (Mi perfil, pestaña Gestor)")
-    lista = Datadis(c["datadis_user"], c["datadis_pass"]).autorizaciones()
-    with _cx() as cx:
-        cx.execute("UPDATE comunidad SET datadis_aut = %s, datadis_aut_fecha = now() WHERE id = %s",
-                   (Jsonb(lista), c["id"]))
-    socios = db.socios()
-    cups_socios = {(so["cups"] or "").upper() for so in socios}
-    ids = {so["id"] for so in socios}
-    vigentes = [a for a in lista if a["estado"] == "VIGENTE" and a["cups"] not in cups_socios]
-    vigentes = list({a["cups"]: a for a in vigentes}.values())
+def _altas_aut(c, auts, lista, por):
+    """Da de alta en la comunidad c como socios (nombre y NIF del titular) los CUPS
+    autorizados auts. Un titular con varios CUPS: un socio por CUPS (nombre del titular y
+    final del CUPS). Devuelve (ids nuevos, errores)."""
     por_titular = {}
     for a in lista:
         if a["estado"] == "VIGENTE":
             por_titular.setdefault(a["nif"], set()).add(a["cups"])
     nuevos, errores = [], []
-    cc = comunidad()
-    with db.conectar() as cx:
-        for a in vigentes:
-            base = a["titular"] or a["nif"] or a["cups"]
-            nombre = (base if len(por_titular.get(a["nif"], ())) <= 1 else f"{base} · {a['cups'][-8:]}")[:80]
-            sid = slug(nombre)
-            if not sid or sid in ids:
-                nombre = f"{base[:60]} · {a['cups'][-8:]}"
+
+    def f():
+        ids = {so["id"] for so in db.socios()}
+        with db.conectar() as cx:
+            for a in auts:
+                base = a["titular"] or a["nif"] or a["cups"]
+                nombre = (base if len(por_titular.get(a["nif"], ())) <= 1 else f"{base} · {a['cups'][-8:]}")[:80]
                 sid = slug(nombre)
-            if sid in ids:
-                errores.append(f"{a['cups']}: ya hay un socio llamado {nombre}")
-                continue
-            lat = (cc["lat"] or 37.18) + random.uniform(-0.004, 0.004)
-            lon = (cc["lon"] or -3.60) + random.uniform(-0.005, 0.005)
-            cx.execute("INSERT INTO socio (id, nombre, cups, nif, lat, lon, simulado, por) "
-                       "VALUES (%s, %s, %s, %s, %s, %s, false, %s)",
-                       (sid, nombre, a["cups"], a["nif"] if NIF.match(a["nif"] or "") else None, lat, lon, por))
-            ids.add(sid)
-            nuevos.append(sid)
+                if not sid or sid in ids:
+                    nombre = f"{base[:60]} · {a['cups'][-8:]}"
+                    sid = slug(nombre)
+                if sid in ids:
+                    errores.append(f"{a['cups']}: ya hay un socio llamado {nombre}")
+                    continue
+                lat = (c["lat"] or 37.18) + random.uniform(-0.004, 0.004)
+                lon = (c["lon"] or -3.60) + random.uniform(-0.005, 0.005)
+                cx.execute("INSERT INTO socio (id, nombre, cups, nif, lat, lon, simulado, por) "
+                           "VALUES (%s, %s, %s, %s, %s, %s, false, %s)",
+                           (sid, nombre, a["cups"], a["nif"] if NIF.match(a["nif"] or "") else None, lat, lon, por))
+                ids.add(sid)
+                nuevos.append(sid)
+    con(c, f)
     if nuevos:
         try:
-            aprovisionar(cc)
+            aprovisionar(c)
         except Exception:
-            with db.conectar() as cx:   # sin ThingsBoard no queda a medias
-                cx.execute("DELETE FROM socio WHERE id = ANY(%s)", (nuevos,))
+            def quitar():   # sin ThingsBoard no queda a medias
+                with db.conectar() as cx:
+                    cx.execute("DELETE FROM socio WHERE id = ANY(%s)", (nuevos,))
+            con(c, quitar)
             raise
-        gestion.preparar()           # libro de socios
+        con(c, gestion.preparar)        # libro de socios
         log.info("socios de %s dados de alta desde Datadis: %s", c["id"], ", ".join(nuevos))
-    return {**autorizaciones(), "nuevos": nuevos, "errores": errores}
+    return nuevos, errores
+
+
+def socios_desde_datadis(por, reusar_h=0):
+    """Lee de Datadis las autorizaciones de la cuenta del gestor y las guarda (en todas sus
+    comunidades). Los CUPS con autorizacion VIGENTE que aun no son socios de ninguna de sus
+    comunidades: si solo tiene una, se dan de alta en ella; si tiene varias, quedan sin asignar
+    (los asigna el gestor en la pestaña Suministros autorizados). reusar_h: si la lista se leyo
+    hace menos de esas horas (otra comunidad del mismo gestor), no se vuelve a pedir."""
+    from datetime import datetime, timedelta, timezone
+    from .datadis import Datadis
+    c = _comunidad(comunidad()["id"])
+    if not (c["datadis_user"] and c["datadis_pass"]):
+        raise ValueError("Falta la cuenta de Datadis del gestor (pestaña Suministros autorizados)")
+    if reusar_h and c["datadis_aut_fecha"] and \
+            datetime.now(timezone.utc) - c["datadis_aut_fecha"] < timedelta(hours=reusar_h):
+        lista = c["datadis_aut"] or []
+    else:
+        lista = Datadis(c["datadis_user"], c["datadis_pass"]).autorizaciones()
+        with _cx() as cx:
+            cx.execute("UPDATE gestor SET datadis_aut = %s, datadis_aut_fecha = now() WHERE lower(email) = %s",
+                       (Jsonb(lista), c["gestor_email"].lower()))
+    todas = mias(c)
+    ya = _cups_de(todas)
+    vigentes = [a for a in lista if a["estado"] == "VIGENTE" and a["cups"] not in ya]
+    vigentes = list({a["cups"]: a for a in vigentes}.values())
+    nuevos, errores = _altas_aut(c, vigentes, lista, por) if len(todas) == 1 else ([], [])
+    return {**autorizaciones(), "nuevos": nuevos, "errores": errores,
+            "sin_asignar": 0 if len(todas) == 1 else len(vigentes)}
+
+
+_TABLAS_CUPS = ("contrato", "consumo", "potencias", "energia")   # tablas de Datadis (columna "cups")
+
+
+def asignar_suministro(cups, destino, por):
+    """Lleva un suministro autorizado (CUPS) a otra comunidad del gestor: su socio pasa con su
+    usuario (y su contraseña), su ficha y sus lecturas, que se quedan tambien en la de origen
+    (como en una baja: informes de periodos pasados). Si aun no es socio de ninguna, se da de
+    alta en la de destino. Devuelve (comunidad destino, id del socio, comunidad origen o None)."""
+    cups = (cups or "").replace(" ", "").upper()
+    c = _comunidad(comunidad()["id"])
+    todas = mias(c)
+    dst = next((x for x in todas if x["id"] == destino), None)
+    if not dst:
+        raise ValueError("Esa comunidad no es tuya")
+    donde = _cups_de(todas).get(cups)
+    if not donde:
+        lista = c["datadis_aut"] or []
+        a = next((x for x in lista if x["cups"] == cups and x["estado"] == "VIGENTE"), None)
+        if not a:
+            raise ValueError("Ese CUPS no está entre los suministros con autorización vigente")
+        nuevos, errores = _altas_aut(dst, [a], lista, por)
+        if not nuevos:
+            raise ValueError("; ".join(errores) or "No se pudo dar de alta el socio")
+        return dst, nuevos[0], None
+    src, so = donde
+    if src["id"] == dst["id"]:
+        return dst, so["id"], None
+    for x in (src, dst):
+        if con(x, db.job_activo):
+            raise ValueError(f"Hay una sincronización en curso en {x['nombre']}; prueba cuando termine")
+    if con(dst, lambda: any(y["id"] == so["id"] for y in db.socios())):
+        raise ValueError(f"En {dst['nombre']} ya hay un socio llamado {so['nombre']}")
+    guardar_credenciales(src)                  # hash al dia de la contraseña de su usuario
+    with db.conectar(base=src["base"]) as a, db.conectar(base=dst["base"]) as b:
+        with b.transaction():
+            for tabla, flt in [("socio", "id")] + [("suministro", "socio")] + [(t, "cups") for t in _TABLAS_CUPS]:
+                filas = a.execute(sql.SQL("SELECT * FROM {} WHERE {} = %s").format(
+                    sql.Identifier(tabla), sql.Identifier(flt)), (cups if flt == "cups" else so["id"],)).fetchall()
+                if not filas:
+                    continue
+                cols = list(filas[0].keys())
+                b.cursor().executemany(sql.SQL("INSERT INTO {} ({}) VALUES ({}) ON CONFLICT DO NOTHING").format(
+                    sql.Identifier(tabla), sql.SQL(", ").join(map(sql.Identifier, cols)),
+                    sql.SQL(", ").join(sql.Placeholder() * len(cols))),
+                    [tuple(Jsonb(v) if isinstance(v, (dict, list)) else v for v in f.values()) for f in filas])
+            b.execute("UPDATE suministro SET socio = %s WHERE cups = %s", (so["id"], cups))
+        a.execute("DELETE FROM socio WHERE id = %s", (so["id"],))
+    aprovisionar(src)                          # se borran su dispositivo, cliente y usuario
+    aprovisionar(dst)                          # y se crean aqui (usuario con su contraseña)
+    con(dst, gestion.preparar)
+    log.info("socio %s (%s) pasa de %s a %s (%s)", so["id"], cups, src["id"], dst["id"], por)
+    return dst, so["id"], src
+
+
+# ---------------- comunidades del gestor ----------------
+def comunidades_gestor():
+    """Comunidades del gestor de la comunidad en curso, la principal primero."""
+    actual = comunidad()["id"]
+    out = []
+    for x in mias():
+        try:
+            n = len(con(x, db.socios))
+        except Exception:
+            n = None
+        out.append({"id": x["id"], "nombre": x["nombre"], "actual": x["id"] == actual,
+                    "principal": not x["tb_email"], "estado": x["gestor_estado"], "socios": n,
+                    "creada": x["creada"].isoformat()})
+    return out
+
+
+def crear_comunidad_gestor(d, por):
+    """El gestor crea otra comunidad suya: base de datos, tenant y paneles, con el mismo perfil
+    y cuenta de Datadis. En ThingsBoard tiene en ella un usuario propio (entra desde la
+    pestaña Gestor)."""
+    c0 = _comunidad(comunidad()["id"])
+    nombre = _texto(d, "nombre", 120) or ""
+    cid = slug(d.get("id") or nombre)[:30].strip("-")
+    if not 3 <= len(nombre) <= 120:
+        raise ValueError("El nombre de la comunidad debe tener entre 3 y 120 caracteres")
+    if not re.match(r"^[a-z0-9][a-z0-9-]{1,29}$", cid):
+        raise ValueError("Nombre no válido para una comunidad (letras y números)")
+    for x in lista():
+        if x["id"] == cid or x["nombre"].lower() == nombre.lower():
+            raise ValueError("Ya existe una comunidad con ese nombre")
+    lat, lon = _num(d.get("lat"), c0["lat"] or 37.18), _num(d.get("lon"), c0["lon"] or -3.60)
+    base = "cec_" + cid.replace("-", "_")
+    crear_base(base, PLANTILLA)
+    with _cx() as cx:
+        with cx.transaction():
+            cx.execute("INSERT INTO comunidad (id, nombre, base, tenant_email, lat, lon, por) "
+                       "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                       (cid, nombre, base, f"api@{cid}.{E.get('TENANT_DOMINIO') or 'local'}", lat, lon, por))
+            cx.execute("INSERT INTO gestor (comunidad, superusuario, nombre, email, tb_email, telefono, datadis_user, "
+                       "datadis_pass, datadis_aut, datadis_aut_fecha, por) "
+                       "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                       (cid, E["SUPER_EMAIL"].lower(), c0["gestor_nombre"], c0["gestor_email"], _tb_secundario(cid),
+                        c0["gestor_telefono"], c0["datadis_user"], c0["datadis_pass"],
+                        Jsonb(c0["datadis_aut"]) if c0["datadis_aut"] is not None else None,
+                        c0["datadis_aut_fecha"], por))
+    _cambian_gestores()
+    c = por_id(cid)
+    try:
+        con(c, _preparar_comunidad)
+        aprovisionar(c)
+    except Exception:
+        deshacer_registro(c)
+        raise
+    log.info("el gestor %s crea la comunidad %s", c0["gestor_email"], cid)
+    return next(x for x in comunidades_gestor() if x["id"] == cid)
+
+
+def entrar_gestor(cid):
+    """Token del usuario del gestor en otra de sus comunidades (pasa a su panel)."""
+    if not any(x["id"] == cid for x in mias()):
+        raise ValueError("No eres gestor de esa comunidad")
+    return entrar(cid)
 
 
 def fijar_nifs(texto):
@@ -6086,7 +6331,7 @@ async def admin(x_api_key: str | None = Header(None),
         if u.get("authority") == "TENANT_ADMIN" else None
     if not c:
         raise HTTPException(403, "Solo para administradores de la comunidad")
-    if c["gestor_estado"] != "activo" and (u.get("email") or "").lower() == (c["gestor_email"] or "").lower():
+    if c["gestor_estado"] != "activo" and (u.get("email") or "").lower() == (c["gestor_tb_email"] or "").lower():
         raise HTTPException(403, "Acceso bloqueado por la plataforma")
     COMUNIDAD.set(c)
     return u.get("email") or "admin"
@@ -6103,7 +6348,7 @@ async def socio_o_gestor(socio_id: str,
         raise HTTPException(403, "Solo para los socios y el gestor de la comunidad")
     email = (u.get("email") or "").lower()
     if u.get("authority") == "TENANT_ADMIN":
-        if c["gestor_estado"] != "activo" and email == (c["gestor_email"] or "").lower():
+        if c["gestor_estado"] != "activo" and email == (c["gestor_tb_email"] or "").lower():
             raise HTTPException(403, "Acceso bloqueado por la plataforma")
         COMUNIDAD.set(c)
         return {"gestor": True, "quien": email}
@@ -6157,8 +6402,8 @@ async def sync_programada():
             if c["datadis_user"] and c["datadis_pass"]:
                 try:     # CUPS autorizados en Datadis que aun no son socios
                     async with _LANZAR:
-                        if not await asyncio.to_thread(db.job_activo):
-                            await asyncio.to_thread(plataforma.socios_desde_datadis, "Datadis (diaria)")
+                        if not await asyncio.to_thread(db.job_activo):   # una vez al dia por cuenta de Datadis
+                            await asyncio.to_thread(plataforma.socios_desde_datadis, "Datadis (diaria)", 20)
                 except Exception:
                     log.exception("socios desde Datadis de %s", c["id"])
             jid = await lanzar("auto", None, None, False, None, "programada")
@@ -6649,6 +6894,53 @@ async def datadis_autorizaciones_actualizar(quien: str = Depends(admin)):
         return await asyncio.to_thread(_plat, plataforma.socios_desde_datadis, quien)
 
 
+class PeticionAsignar(BaseModel):
+    comunidad: str = Field(..., description="Comunidad del gestor a la que pasa el suministro")
+
+
+@app.put("/datadis/autorizaciones/{cups}/comunidad",
+         summary="Pasa un suministro autorizado a otra comunidad del gestor (su socio, con su usuario y sus "
+                 "lecturas) o, si aún no es socio, lo da de alta en ella")
+async def datadis_asignar(cups: str, p: PeticionAsignar, quien: str = Depends(admin)):
+    async with _LANZAR:
+        dst, sid, src = await asyncio.to_thread(_plat, plataforma.asignar_suministro, cups, p.comunidad, quien)
+    # Sus datos en la de destino (lo que falte desde Datadis y ThingsBoard) y los totales de la de origen
+    for c, origen, socios in ((dst, "auto", [sid]), (src, "comunidad", None)):
+        if not c:
+            continue
+        tok = COMUNIDAD.set(c)
+        try:
+            await lanzar(origen, None, None, False, socios, quien)
+        except Ocupado:
+            pass
+        finally:
+            COMUNIDAD.reset(tok)
+    log.info("%s asigna el suministro %s a %s", quien, cups, p.comunidad)
+    return await asyncio.to_thread(_plat, plataforma.autorizaciones)
+
+
+# ---------------- comunidades del gestor (pestaña Gestor) ----------------
+@app.get("/gestor/comunidades", summary="Comunidades del gestor (puede serlo de varias)")
+async def gestor_comunidades(_: str = Depends(admin)):
+    return await asyncio.to_thread(_plat, plataforma.comunidades_gestor)
+
+
+@app.post("/gestor/comunidades", status_code=201,
+          summary="El gestor crea otra comunidad suya (tenant, base de datos y paneles; tarda un minuto)")
+async def gestor_crear_comunidad(datos: dict, quien: str = Depends(admin)):
+    async with _LANZAR:
+        r = await asyncio.to_thread(_plat, plataforma.crear_comunidad_gestor, datos, quien)
+    log.info("%s crea la comunidad %s", quien, r["id"])
+    return r
+
+
+@app.post("/gestor/comunidades/{cid}/entrar", summary="Token para pasar al panel de otra comunidad del gestor")
+async def gestor_entrar(cid: str, quien: str = Depends(admin)):
+    r = await asyncio.to_thread(_plat, plataforma.entrar_gestor, cid)
+    log.info("%s pasa a la comunidad %s", quien, cid)
+    return r
+
+
 @app.put("/datadis/nifs", summary="NIF de los titulares que han autorizado a la cuenta de Datadis de la comunidad")
 async def datadis_nifs(p: PeticionNifs, _: str = Depends(admin)):
     return await asyncio.to_thread(_plat, plataforma.fijar_nifs, p.nifs)
@@ -6948,14 +7240,6 @@ mat-toolbar.tb-primary-toolbar, .mat-fab-toolbar-background { background-color: 
 .tb-dashboard-title, .tb-dashboard-page .tb-dashboard-title { color: var(--vl-text) !important; }
 /* Pie "Powered by ThingsBoard" */
 section.tb-powered-by-footer { display: none !important; }
-/* Rayo (enlace a la web) a la izquierda del titulo de los paneles */
-section.tb-dashboard-title { display: flex !important; align-items: center; }
-section.tb-dashboard-title .vl-home { order: -1; margin: 0 10px 0 12px; font-size: 30px; line-height: 1;
-  text-decoration: none; transition: transform .15s; }
-section.tb-dashboard-title .vl-home:hover { transform: scale(1.15); }
-/* Pestañas de gestion de la comunidad (widget VatiaCo.nav, arriba del panel): siempre
-   visibles al desplazar el panel */
-gridster-item:has(.vl-nav-w) { position: sticky !important; top: 0; z-index: 20; }
 /* Impresion / PDF (boton de imprimir de los paneles): sin barras ni botones, sin scroll
    y los widgets uno debajo de otro, A4 apaisado. Va aqui y no en el CSS del panel porque
    ThingsBoard limita ese al interior del panel y no llega a html/body/tb-root. */
@@ -6975,7 +7259,6 @@ gridster-item:has(.vl-nav-w) { position: sticky !important; top: 0; z-index: 20;
     top: 0 !important; width: 100% !important; margin: 0 0 6mm 0 !important;
     break-inside: avoid; page-break-inside: avoid; }
   .tb-dashboard-title, .tb-dashboard-page .tb-dashboard-title { color: #222 !important; }
-  .vl-home { display: none !important; }
   gridster-item:has(.vl-nav-w), gridster-item:has(.vl-sub-w) { display: none !important; }
 }
 EOF
@@ -7531,15 +7814,11 @@ titulo = ("<script>(function(){var B=" + repr(brand) + ";var t=document.querySel
           "document.title=document.title.replace(/ThingsBoard/g,B);}"
           "new MutationObserver(f).observe(t,{childList:true,characterData:true,subtree:true});f();})();"
           "</script>")
-# Rayo a la izquierda del titulo de cada panel, enlazado a la web (nueva pestaña),
-# y el logo (login y menu lateral) enlazado tambien a la web en lugar de a thingsboard.io
-home = ("<script>(function(){var U=" + repr(web) + ";"
+# Web de la marca: la enlaza el logo de la barra lateral de los paneles (VL_WEB, widgets
+# VatiaCo.nav) y el de ThingsBoard (login y menu lateral) en lugar de thingsboard.io
+home = ("<script>(function(){var U=" + repr(web) + ";window.VL_WEB=U;"
         "function f(){document.querySelectorAll('tb-logo a').forEach(function(a){"
-        "if(a.getAttribute('href')!==U){a.href=U;a.target='_blank';a.rel='noopener';a.title=U;}});"
-        "document.querySelectorAll('section.tb-dashboard-title').forEach(function(s){"
-        "if(s.querySelector('.vl-home'))return;var a=document.createElement('a');a.className='vl-home';"
-        "a.href=U;a.target='_blank';a.rel='noopener';a.title=U;"
-        "a.textContent='\u26a1';s.insertBefore(a,s.firstChild);});}"
+        "if(a.getAttribute('href')!==U){a.href=U;a.target='_blank';a.rel='noopener';a.title=U;}});}"
         "new MutationObserver(f).observe(document.documentElement,{childList:true,subtree:true});})();"
         "</script>")
 # Idioma antes de iniciar sesion (login, recuperar contraseña): ThingsBoard lo toma del
@@ -7804,7 +8083,7 @@ def usuario_cliente(cid, c, dash_id, fullscreen=False):
 import unicodedata
 
 CEC = E.get("CEC_NOMBRE", "")
-CEC_DASH_VERSION = 37           # sube este numero para regenerar el panel de la comunidad
+CEC_DASH_VERSION = 45           # sube este numero para regenerar el panel de la comunidad
 OCULTAR_PIE = "section.tb-powered-by-footer { display: none !important; }"
 # El CSS de impresion esta en config/branding/VatiaCo.css (global)
 CSS_PANEL = OCULTAR_PIE
@@ -8017,6 +8296,11 @@ CONSUMO_CSS = """
 .dd-cab { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px;
   padding: 0 4px 6px; border-bottom: 1px solid #eee; }
 .dd-nombre { font-size: 17px; font-weight: 700; }
+/* Selector de la comunidad o de un socio (gestor, vista de la comunidad): sustituye al nombre */
+.dd-quien { display: none; max-width: 100%; font: 700 16px Roboto, Arial, sans-serif; color: #333; padding: 3px 6px;
+  border: 1px solid #d9c6e6; border-radius: 6px; background: #fff; cursor: pointer; }
+.dd.con-quien .dd-quien { display: inline-block; }
+.dd.con-quien .dd-nombre { display: none; }
 .dd-sub { font-size: 12px; color: #777; margin-top: 2px; }
 .dd-metricas button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 4px 10px;
   font: inherit; color: #555; cursor: pointer; }
@@ -8070,7 +8354,7 @@ CONSUMO_CSS = """
 
 CONSUMO_HTML = """<div class="dd">
   <div class="dd-cab">
-    <div><div class="dd-nombre"></div><div class="dd-sub"></div></div>
+    <div><select class="dd-quien" aria-label="Comunidad o socio"></select><div class="dd-nombre"></div><div class="dd-sub"></div></div>
     <div class="dd-metricas"><button type="button" data-m="consumo">Consumos y excedentes</button><button type="button" data-m="pot">Potencias máximas</button><button type="button" data-m="contrato">Contrato</button></div>
   </div>
   <div class="dd-barra">
@@ -8188,12 +8472,37 @@ self.onInit = function () {
   q('.dd-pper').onchange = function () { S.pper = +q('.dd-pper').value; cargar(); };
   S.mini.on('click', function (e) { S.ref = mover(S.ref, S.modo, e.dataIndex - 3); cargar(); });
   var ds = VL.ds(S.ctx);
-  q('.dd-nombre').textContent = ds ? (ds.entityLabel || ds.entityName || '') : '';
-  if (!ds || !ds.entityId) return;
+  if (!ds || !ds.entityId) { q('.dd-nombre').textContent = ds ? (ds.entityLabel || ds.entityName || '') : ''; return; }
+  entidad(ds);
+  // Gestor en la vista de la comunidad: selector de toda la comunidad o de cada socio (sus
+  // dispositivos, tipo "socio"); el grafico pasa a ese, en la misma fecha
+  if ((S.ctx.currentUser || {}).authority === 'TENANT_ADMIN' && ds.entityName === 'comunidad') {
+    S.ctx.http.get('/api/tenant/devices?type=socio&pageSize=1000&page=0').subscribe(function (r) {
+      var socios = ((r || {}).data || []).map(function (d) { return { id: d.id, nombre: d.label || d.name, name: d.name }; })
+        .sort(function (a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); });
+      var sel = q('.dd-quien'), op = function (v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t; return o; };
+      sel.appendChild(op('', ds.entityLabel || 'Toda la comunidad'));
+      socios.forEach(function (x, i) { sel.appendChild(op(String(i), '\u00a0\u00a0' + x.nombre)); });
+      sel.onchange = function () {
+        var x = socios[+sel.value];
+        entidad(sel.value === '' ? ds : { entityType: x.id.entityType, entityId: x.id.id, entityName: x.name, entityLabel: x.nombre }, true);
+      };
+      q('.dd').classList.add('con-quien');
+    });
+  }
+};
+
+// Entidad del grafico (la comunidad o un socio): su suministro y sus claves; seguir = misma fecha
+function entidad(ds, seguir) {
+  q('.dd-nombre').textContent = ds.entityLabel || ds.entityName || '';
+  q('.dd-sub').textContent = '';
   S.base = '/api/plugins/telemetry/' + ds.entityType + '/' + ds.entityId;
+  S.peaje = S.contrato = null; S.pcon = {};
+  var n = (S.entidad = (S.entidad || 0) + 1);
   // Datos del suministro y ultimo dia con datos (Datadis publica con retraso)
   S.ctx.http.get(S.base + '/values/attributes/SERVER_SCOPE?keys=cups,peaje,periodos,potencia,contrato,pcontratada_kw')
     .subscribe(function (a) {
+    if (n !== S.entidad) return;
     var at = {};
     (a || []).forEach(function (x) { at[x.key] = typeof x.value === 'string' && /^[{[]/.test(x.value) ? JSON.parse(x.value) : x.value; });
     S.peaje = at.peaje || at.periodos || null;
@@ -8201,12 +8510,13 @@ self.onInit = function () {
     S.pcon = at.pcontratada_kw || {};
     q('.dd-sub').textContent = [at.cups ? 'CUPS ' + at.cups : '', at.peaje ? 'Peaje ' + at.peaje : '',
                                 at.potencia ? at.potencia + ' kW' : ''].filter(Boolean).join(' · ');
-    ultimo();
-  }, ultimo);
-};
+    ultimo(seguir);
+  }, function () { if (n === S.entidad) ultimo(seguir); });
+}
 
 // Claves que tiene la entidad (generacion y pestaña Potencias) y ultimo dia con datos
-function ultimo() {
+// (seguir: se queda en la fecha que se esta viendo)
+function ultimo(seguir) {
   S.ctx.http.get(S.base + '/keys/timeseries').subscribe(function (ks) {
     ks = Array.isArray(ks) ? ks : [];
     S.hayGen = ks.indexOf('d_generada_kwh') >= 0;
@@ -8214,6 +8524,7 @@ function ultimo() {
                .filter(Boolean).sort();
     q('.dd-pper').innerHTML = S.pers.map(function (p) { return '<option value="' + p + '">Potencia P' + p + '</option>'; }).join('');
     S.pper = S.pers[0];
+    if (seguir && S.ref) { cargar(); return; }
     S.ctx.http.get(S.base + '/values/timeseries?keys=d_consumo_kwh').subscribe(function (r) {
       var c = ((r || {}).d_consumo_kwh || [])[0];
       S.ref = c ? new Date(c.ts) : new Date();
@@ -8647,6 +8958,8 @@ NAV_CSS = """
 .vl-tabs button:hover:not(:disabled) { color: #7b2fa8; background: #faf5fd; }
 .vl-tabs button.on { color: #7b2fa8; border-bottom-color: #7b2fa8; font-weight: 500; cursor: default; }
 .vl-tabs button:disabled { opacity: .4; cursor: default; }
+.vl-tabs button .material-icons { font-size: 18px; vertical-align: -4px; margin-right: 6px; }
+.vl-tabs .vl-sep { display: none; }
 /* Pantalla estrecha (las pestañas no caben): menu hamburguesa con la pestaña activa */
 .vl-burger { display: none; align-items: center; gap: 10px; border: 0; background: none; padding: 6px 10px; min-width: 0;
   font: 500 14px Roboto, Arial, sans-serif; color: #7b2fa8; cursor: pointer; white-space: nowrap; }
@@ -8662,7 +8975,8 @@ NAV_CSS = """
 VL_BURGER_JS = r"""
 function vlBurger(raiz) {
   var tabs = raiz.querySelector('.vl-tabs'), bt = raiz.querySelector('.vl-burger'), menu = null, necesario = 0, ro = null;
-  function etiqueta() { var on = tabs.querySelector('.on'); bt.querySelector('span').textContent = on ? on.textContent : 'Menú'; }
+  function texto(b) { return (b.querySelector('span') || b).textContent; }
+  function etiqueta() { var on = tabs.querySelector('.on'); bt.querySelector('span').textContent = on ? texto(on) : 'Menú'; }
   function fuera(e) { if (menu && !menu.contains(e.target) && !bt.contains(e.target)) cerrar(); }
   function cerrar() {
     if (!menu) return;
@@ -8679,7 +8993,7 @@ function vlBurger(raiz) {
       'box-shadow:0 6px 24px rgba(0,0,0,.22);padding:4px 0;font:14px Roboto,Arial,sans-serif;';
     [].forEach.call(tabs.querySelectorAll('button'), function (b) {
       var on = b.classList.contains('on'), i = document.createElement('button');
-      i.type = 'button'; i.textContent = b.textContent; i.disabled = b.disabled; i.setAttribute('role', 'menuitem');
+      i.type = 'button'; i.textContent = texto(b); i.disabled = b.disabled; i.setAttribute('role', 'menuitem');
       i.style.cssText = 'display:block;width:100%;text-align:left;border:0;padding:12px 16px;font:inherit;' +
         'cursor:' + (b.disabled || on ? 'default' : 'pointer') + ';background:' + (on ? '#faf5fd' : 'none') + ';' +
         'color:' + (on ? '#7b2fa8' : (b.disabled ? '#bbb' : '#333')) + ';font-weight:' + (on ? '500' : '400') + ';' +
@@ -8711,15 +9025,148 @@ function vlBurger(raiz) {
 }
 """
 
-NAV_JS = VL_BURGER_JS + r"""
+# Boton de pestaña (icono de Material Icons y texto) y barra de navegacion como la de Datadis:
+# la barra (.vl-tabs) se saca del widget a un <nav id="vl-rail"> fijo en <body> (estilos en
+# VL_RAIL_CSS, que pone el widget en <head>): pantallas anchas a la izquierda con icono y texto, medianas solo
+# icono y pequeñas abajo. ThingsBoard (tb-root) se desplaza para dejarle sitio, el widget de
+# la barra se oculta y el widget principal del estado (el mayor) ocupa todo el alto.
+# Estilos de la barra: el widget los pone en <head> (no dependen del tema VatiaCo.css, que el
+# navegador puede tener aun en su version anterior si la pagina estaba abierta al reinstalar)
+VL_RAIL_CSS = """
+#vl-rail { position: fixed; z-index: 30; left: 0; top: 0; bottom: 0; width: 200px; display: flex;
+  flex-direction: column; background: var(--vl-nav, #23262f); color: #fff; font: 14px Roboto, Arial, sans-serif;
+  box-shadow: 2px 0 8px rgba(0,0,0,.25); }
+#vl-rail .vl-rail-logo { flex: none; height: 64px; display: flex; align-items: center; padding: 0 18px; }
+#vl-rail .vl-rail-logo img { height: 30px; }
+#vl-rail .vl-logo-c { display: none; }
+#vl-rail .vl-tabs { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 8px 0;
+  border: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
+#vl-rail .vl-tabs button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 16px;
+  border: 0; border-left: 4px solid transparent; background: none; color: #fff; font: inherit; font-size: 14px;
+  text-align: left; white-space: normal; line-height: 1.2; cursor: pointer; }
+#vl-rail .vl-tabs button .material-icons { flex: none; font-size: 24px; margin: 0; vertical-align: 0; }
+#vl-rail .vl-tabs button:hover:not(:disabled) { background: rgba(255,255,255,.10); color: #fff; }
+#vl-rail .vl-tabs button.on { background: rgba(255,255,255,.18); border-left-color: #ffd54f; color: #fff;
+  font-weight: 500; cursor: default; }
+#vl-rail .vl-tabs button:disabled { opacity: .45; cursor: default; }
+/* Separador: lo de arriba es del gestor; lo de abajo, de la comunidad seleccionada (su nombre) */
+#vl-rail .vl-sep { display: block; flex: none; margin: 8px 0 2px; padding: 10px 16px 4px; border-top: 1px solid rgba(255,255,255,.25);
+  font-size: 11px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.75);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.vl-con-rail tb-root { position: fixed !important; top: 0; right: 0; bottom: 0; left: 200px;
+  width: auto !important; height: auto !important; min-height: 0 !important; }
+@media (max-width: 1199px) {
+  #vl-rail { width: 64px; }
+  #vl-rail .vl-rail-logo { justify-content: center; padding: 0; }
+  #vl-rail .vl-logo-t { display: none; }
+  #vl-rail .vl-logo-c { display: block; }
+  #vl-rail .vl-tabs button { justify-content: center; padding: 14px 0; }
+  #vl-rail .vl-tabs button span { display: none; }
+  #vl-rail .vl-sep { padding: 0; margin: 8px 12px; }
+  #vl-rail .vl-sep span { display: none; }
+  body.vl-con-rail tb-root { left: 64px; }
+}
+@media (max-width: 767px) {
+  #vl-rail { top: auto; right: 0; width: auto; height: 56px; flex-direction: row; box-shadow: 0 -2px 8px rgba(0,0,0,.25); }
+  #vl-rail .vl-rail-logo { display: none; }
+  #vl-rail .vl-tabs { flex-direction: row; padding: 0; overflow-x: auto; overflow-y: hidden; }
+  #vl-rail .vl-tabs button { flex: 1 0 48px; height: 100%; padding: 0; border-left: 0; border-top: 3px solid transparent; }
+  #vl-rail .vl-tabs button.on { border-top-color: #ffd54f; }
+  #vl-rail .vl-sep { width: 1px; margin: 10px 2px; padding: 0; border-top: 0; background: rgba(255,255,255,.3); }
+  body.vl-con-rail tb-root { left: 0; bottom: 56px; }
+}
+@media screen {
+  gridster.vl-lleno { height: 100% !important; overflow: hidden !important; }
+  gridster.vl-lleno > gridster-item.vl-rail-item, gridster.vl-varios > gridster-item.vl-rail-item { display: none !important; }
+  gridster.vl-varios > gridster-item:not(.vl-rail-item) { margin-top: calc(-1 * var(--vl-sube, 0px)) !important; }
+  gridster.vl-lleno > gridster-item.vl-secundario { visibility: hidden !important; width: 1px !important;
+    height: 1px !important; overflow: hidden !important; }
+  gridster.vl-lleno > gridster-item.vl-principal { position: absolute !important; transform: none !important;
+    top: 10px !important; left: 10px !important; margin: 0 !important;
+    width: calc(100% - 20px) !important; height: calc(100% - 20px) !important; }
+}
+@media print {
+  #vl-rail { display: none !important; }
+  body.vl-con-rail tb-root { position: static !important; }
+}
+"""
+VL_RAIL_JS = "var VL_RAIL_CSS = " + json.dumps(VL_RAIL_CSS) + ";\n" + r"""
+function vlBoton(i, texto, icono, on) {
+  var esc = function (t) { return String(t).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); };
+  return '<button type="button" data-i="' + i + '" title="' + esc(texto) + '"' + (on ? ' class="on" aria-current="page"' : '') + '>' +
+    (icono ? '<i class="material-icons" aria-hidden="true">' + esc(icono) + '</i>' : '') + '<span>' + esc(texto) + '</span></button>';
+}
+function vlRail(ctx, tabs) {
+  var item = ctx.$container[0].closest('gridster-item'), grid = item && item.closest('gridster'), mo = null;
+  var rail = document.getElementById('vl-rail');
+  if (!rail) {
+    rail = document.createElement('nav');
+    rail.id = 'vl-rail';
+    rail.setAttribute('aria-label', 'Navegación');
+    document.body.appendChild(rail);
+  }
+  clearTimeout(rail.vlQuitar);
+  var st = document.getElementById('vl-rail-css');
+  if (!st) { st = document.createElement('style'); st.id = 'vl-rail-css'; document.head.appendChild(st); }
+  if (st.textContent !== VL_RAIL_CSS) st.textContent = VL_RAIL_CSS;
+  var web = String(window.VL_WEB || 'https://vatiaco.es/').replace(/"/g, '&quot;');   // la pone el index.html de la marca
+  rail.innerHTML = '<a class="vl-rail-logo" href="' + web + '" target="_blank" rel="noopener" title="' + web + '">' +
+    '<img class="vl-logo-t" src="/branding/logo_title_white.svg" alt=""><img class="vl-logo-c" src="/branding/logo_white.svg" alt=""></a>';
+  rail.appendChild(tabs);
+  document.body.classList.add('vl-con-rail');
+  var on = tabs.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  // Un solo widget grande en el estado (tamaño que le da gridster): ocupa todo el alto y los
+  // pequeños (p.ej. el que redirige a los socios) siguen funcionando, pero sin ocupar sitio
+  // (vl-lleno). Varios grandes (p.ej. Socios: tabla y sincronizacion): uno debajo de otro,
+  // subidos lo que ocupaba la fila de la barra (vl-varios)
+  function marcar() {
+    var area = function (it) { return (parseFloat(it.style.width) || it.offsetWidth) * (parseFloat(it.style.height) || it.offsetHeight); };
+    var its = [].filter.call(grid.children, function (it) { return it.tagName === 'GRIDSTER-ITEM' && it !== item; });
+    var max = its.reduce(function (m, it) { return !m || area(it) > area(m) ? it : m; }, null);
+    var lleno = its.filter(function (it) { return max && area(it) >= 0.15 * area(max); }).length <= 1;
+    grid.classList.toggle('vl-lleno', lleno);
+    grid.classList.toggle('vl-varios', !lleno);
+    its.forEach(function (it) { it.classList.toggle('vl-principal', lleno && it === max); it.classList.toggle('vl-secundario', lleno && it !== max); });
+    var sube = lleno ? '' : ((parseFloat(item.style.height) || 0) + 10) + 'px';
+    if (grid.style.getPropertyValue('--vl-sube') !== sube) grid.style.setProperty('--vl-sube', sube);
+  }
+  if (grid) {
+    item.classList.add('vl-rail-item');
+    marcar();
+    if (window.MutationObserver) {
+      mo = new MutationObserver(function (ms) {   // solo cambios de los propios gridster-item
+        if (ms.some(function (m) { return m.target === grid || m.target.tagName === 'GRIDSTER-ITEM'; })) marcar();
+      });
+      mo.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    }
+  }
+  return { quitar: function () {
+    if (mo) mo.disconnect();
+    if (tabs.parentNode === rail) tabs.remove();
+    if (grid) {
+      item.classList.remove('vl-rail-item');
+      if (!grid.querySelector('.vl-rail-item')) { grid.classList.remove('vl-lleno', 'vl-varios'); grid.style.removeProperty('--vl-sube'); }
+    }
+    // Al cambiar de estado o de panel este widget se destruye y se crea otro: la barra solo
+    // se quita si no llega ninguno
+    rail.vlQuitar = setTimeout(function () {
+      if (document.querySelector('tb-root .vl-nav-w:not(.vl-oculto), tb-root .vl-sub-w')) return;
+      rail.remove();
+      document.body.classList.remove('vl-con-rail');
+    }, 300);
+  } };
+}
+"""
+
+NAV_JS = VL_BURGER_JS + VL_RAIL_JS + r"""
 function vlNav(ctx, el, nav, activo) {
   // n[3]: estado del panel principal (vistas de la comunidad); el resto, un panel cada una
   var sc = ctx.stateController, estado = sc && sc.getStateId ? sc.getStateId() : '';
   var esActiva = function (n) { return n[0] === activo && (!n[3] || n[3] === estado); };
   el.innerHTML = nav.map(function (n, i) {
-    return '<button type="button" data-i="' + i + '"' + (esActiva(n) ? ' class="on" aria-current="page"' : '') + '>' +
-      String(n[1]).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }) +
-      '</button>';
+    if (n[0] === '-') return '<div class="vl-sep" title="' + String(n[1]).replace(/"/g, '&quot;') + '"><span>' +
+      String(n[1]).replace(/[&<>]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[x]; }) + '</span></div>';
+    return vlBoton(i, n[1], n[4], esActiva(n));
   }).join('');
   var on = el.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   ctx.http.get('/api/tenant/dashboards?pageSize=200&page=0').subscribe(function (r) {
@@ -8757,10 +9204,11 @@ NAV_W_JS = NAV_JS + r"""
 self.onInit = function () {
   var c = self.ctx.$container[0], s = self.ctx.settings || {};
   if ((self.ctx.currentUser || {}).authority !== 'TENANT_ADMIN') { c.querySelector('.vl-nav-w').classList.add('vl-oculto'); return; }
-  vlNav(self.ctx, c.querySelector('.vl-tabs'), s.nav || [], s.activo || '');
-  self.burger = vlBurger(c.querySelector('.vl-nav-w'));
+  var tabs = c.querySelector('.vl-tabs');
+  vlNav(self.ctx, tabs, s.nav || [], s.activo || '');
+  self.rail = vlRail(self.ctx, tabs);
 };
-self.onDestroy = function () { if (self.burger) self.burger.cerrar(); };
+self.onDestroy = function () { if (self.rail) self.rail.quitar(); };
 """
 
 
@@ -8769,19 +9217,17 @@ self.onDestroy = function () { if (self.burger) self.burger.cerrar(); };
 # cabecera sigue siendo "Comunidad › Socio").
 # settings.tabs: [estado, nombre, nombre para el socio]; settings.sub: clase vl-sub-w (no se
 # queda fija al desplazar, por si va debajo de la barra de gestion).
-SOCIO_NAV_JS = VL_BURGER_JS + r"""
+SOCIO_NAV_JS = VL_BURGER_JS + VL_RAIL_JS + r"""
 self.onInit = function () {
   var c = self.ctx.$container[0], el = c.querySelector('.vl-tabs'), sc = self.ctx.stateController;
   var tabs = (self.ctx.settings || {}).tabs || [], socio = (self.ctx.currentUser || {}).authority === 'CUSTOMER_USER';
   if ((self.ctx.settings || {}).sub) c.querySelector('.vl-nav-w').className = 'vl-sub-w';
   var activo = sc ? sc.getStateId() : '';
-  var esc = function (t) { return String(t).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); };
   el.innerHTML = tabs.map(function (t, i) {
-    return '<button type="button" data-i="' + i + '"' + (t[0] === activo ? ' class="on" aria-current="page"' : '') + '>' +
-      esc(socio && t[2] ? t[2] : t[1]) + '</button>';
+    return vlBoton(i, socio && t[2] ? t[2] : t[1], t[3], t[0] === activo);
   }).join('');
   var on = el.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  self.burger = vlBurger(el.parentNode);
+  self.rail = vlRail(self.ctx, el);
   [].forEach.call(el.querySelectorAll('button'), function (b) {
     var t = tabs[+b.dataset.i];
     if (!sc || t[0] === activo) return;
@@ -8791,17 +9237,16 @@ self.onInit = function () {
     };
   });
 };
-self.onDestroy = function () { if (self.burger) self.burger.cerrar(); };
+self.onDestroy = function () { if (self.rail) self.rail.quitar(); };
 """
 
-# Pestañas de la vista de un socio: estado del panel, nombre (gestor) y nombre para el socio
-SOCIO_TABS = [["socio", "Gráfico", ""], ["socio_energia", "Tabla", ""],
-              ["socio_mapa", "Ubicación", ""], ["socio_datos", "Datos del socio", "Mis datos"]]
+# Pestañas de la vista de un socio: estado del panel, nombre (gestor), nombre para el socio e
+# icono (Material Icons, la fuente de ThingsBoard)
+SOCIO_TABS = [["socio", "Gráfico", "", "show_chart"], ["socio_mapa", "Ubicación", "", "place"], ["socio_datos", "Datos del socio", "Mis datos", "badge"]]
 
 
 # Vistas de la comunidad (estados del panel principal), en la barra de gestion: el consumo primero
-COM_TABS = [["default", "⚡ Gráfico", ""], ["com_energia", "Tabla", ""],
-            ["com_socios", "Tabla por socio", ""], ["com_mapa", "Ubicación", ""]]
+COM_TABS = [["default", "Gráfico", "", "show_chart"], ["com_mapa", "Ubicación", "", "place"]]
 
 
 def w_socio_nav(x, y, w, h, tabs=None, sub=False):
@@ -8857,7 +9302,7 @@ BD_HTML = """<div class="bd">
   <div class="bd-tabla">Cargando…</div>
   <p><b>Restaurar</b> sustituye todos los datos de la comunidad (lecturas, socios, gestión y documentos) por los de la copia,
    en una sola operación: si algo falla no se cambia nada. Antes se guarda el estado actual como copia <i>previa</i>.
-   ThingsBoard se pone al día en la siguiente sincronización (pestaña Gestor).</p>
+   ThingsBoard se pone al día en la siguiente sincronización (pestaña Suministros autorizados).</p>
   <p class="bd-tbnota bd-oculto">La base de ThingsBoard no se restaura desde aquí (hay que pararlo): en el servidor,
    <code>docker compose stop thingsboard &amp;&amp; docker compose exec -T postgres pg_restore -U &lt;usuario&gt; -d thingsboard --clean --if-exists &lt; backups/postgres/&lt;fichero&gt; &amp;&amp; docker compose start thingsboard</code></p>
  </section>
@@ -9102,6 +9547,28 @@ var CSV = {
 """
 
 # Funciones comunes: llamada a la API de la comunidad con la sesion de ThingsBoard
+# Entrar en un panel como otro usuario de ThingsBoard (el superusuario como gestor, el gestor en
+# otra de sus comunidades) con el token que da la API: se deja la sesion en localStorage, como al
+# iniciar sesion, y se recarga. (Con ?accessToken= en la URL ThingsBoard recarga la ruta mientras
+# descarga sus modulos y los widgets fallan con "Failed to load widget modules".)
+VL_ENTRAR_JS = r"""
+function vlEntrarComo(t) {
+  function caduca(j) {
+    try { return JSON.parse(atob(j.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp * 1000; }
+    catch (e) { return Date.now() + 3600 * 1000; }
+  }
+  localStorage.setItem('jwt_token', t.token);
+  localStorage.setItem('jwt_token_expiration', String(caduca(t.token)));
+  if (t.refreshToken) {
+    localStorage.setItem('refresh_token', t.refreshToken);
+    localStorage.setItem('refresh_token_expiration', String(caduca(t.refreshToken)));
+  } else {
+    localStorage.removeItem('refresh_token'); localStorage.removeItem('refresh_token_expiration');
+  }
+  location.href = t.panel ? '/dashboard/' + encodeURIComponent(t.panel) : '/';
+}
+"""
+
 ALTA_JS = r"""
 var API = '/cec-api';
 function api(metodo, ruta, cuerpo, tipo) {
@@ -9506,7 +9973,7 @@ self.onInit = function () {
   form(null);
   lista();
   leerPendiente();
-  // Si el widget de administracion de datos (pestaña Gestor) carga datos, se recarga la tabla
+  // Si el widget de administracion de datos (pestaña Suministros autorizados) carga datos, se recarga la tabla
   self.recarga = function () { lista(); };
   window.addEventListener('vatiaco-datos', self.recarga);
 };
@@ -9666,7 +10133,7 @@ PLAT_HTML = """<div class="al">
   </div>
   <p class="f-ayuda">Se crea la comunidad (tenant de ThingsBoard, base de datos y paneles) y el usuario del gestor, que entra
    directamente en su comunidad y da de alta a sus socios. La <b>cuenta de Datadis</b>, con la que la comunidad descarga
-   los datos de los suministros, la pone el gestor en <i>Mi perfil</i>, pestaña Gestor; el teléfono, con <i>Editar</i>.
+   los datos de los suministros, la pone el gestor en su pestaña <i>Suministros autorizados</i>; el teléfono, con <i>Editar</i>.
    Tarda un minuto.</p>
   <div class="al-ctrl"><button class="al-b al-guardar">Crear gestor y comunidad</button><button class="al-b sec al-cancelar al-oculto">Cancelar</button></div>
  </section>
@@ -9713,7 +10180,7 @@ PLAT_HTML = """<div class="al">
  </div>
 </div>"""
 
-PLAT_JS = ALTA_JS + r"""
+PLAT_JS = ALTA_JS + VL_ENTRAR_JS + r"""
 var P = { filas: [], edita: null, copias: [], csel: {} };
 var TIPOS = { diaria: 'diaria', manual: 'manual', subida: 'subida', previa: 'previa a restaurar' };
 function tam(b) { var u = ['B', 'KB', 'MB', 'GB'], i = 0; while (b >= 1024 && i < 3) { b /= 1024; i++; }
@@ -9798,8 +10265,7 @@ self.onInit = function () {
                      'Tu sesión de superusuario se cierra: para volver, sal y entra otra vez con tu usuario.')) return;
         msg('Entrando en ' + n + '…'); ocupado(true);
         api('POST', ruta(b.dataset.e) + '/entrar').then(function (t) {
-          location.href = (t.panel ? '/dashboard/' + encodeURIComponent(t.panel) : '/') + '?accessToken=' + encodeURIComponent(t.token) +
-            (t.refreshToken ? '&refreshToken=' + encodeURIComponent(t.refreshToken) : '');
+          vlEntrarComo(t);
         }).catch(function (e) { ocupado(false); msg(e.message, 'err'); });
       }; });
       [].forEach.call(c.querySelectorAll('[data-ed]'), function (b) { b.onclick = function () { form(fila(b.dataset.ed)); }; });
@@ -10171,6 +10637,9 @@ ADMIN_CSS = """
 .ad table { border-collapse: collapse; width: 100%; }
 .ad th, .ad td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
 .ad th { font-weight: 700; color: #555; } .ad td.n { text-align: right; }
+/* Tablas anchas: se desplazan dentro de su caja (pantallas pequeñas); el nombre de la comunidad parte lineas */
+.ad-tabla, .ad-aut-tabla, .ad-com-tabla { overflow-x: auto; }
+.ad-com-tabla td:first-child { white-space: normal; }
 """
 
 ADMIN_HTML = """<div class="ad">
@@ -10196,27 +10665,50 @@ ADMIN_HTML = """<div class="ad">
    <label>Email <input class="ad-pemail" disabled title="Es tu usuario: lo cambia el superusuario"></label>
    <label>Nueva contraseña <input type="password" class="ad-ppw" autocomplete="new-password" placeholder="sin cambios"></label>
   </div>
+  <div class="ad-ctrl"><button class="ad-b ad-gperfil">Guardar perfil</button><span class="ad-msg ad-pmsg"></span></div>
+  <div class="ad-msg">El mismo perfil en todas tus comunidades. Entras con tu email y tu contraseña en tu comunidad
+   principal; para trabajar con otra, selecciónala en <i>Mis comunidades</i>.</div>
+ </section>
+ <section class="ad-caja" data-sec="gestor">
+  <h3>Mis comunidades</h3>
+  <div class="ad-com-tabla">Cargando…</div>
+  <div class="ad-ctrl">
+   <label>Nueva comunidad <input class="ad-cnombre" maxlength="120" placeholder="Nombre de la comunidad"></label>
+   <label>Latitud <input class="ad-clat" size="9" placeholder="37.18"></label>
+   <label>Longitud <input class="ad-clon" size="9" placeholder="-3.60"></label>
+   <button class="ad-b ad-ccrear">Crear comunidad</button><span class="ad-msg ad-cmsg"></span>
+  </div>
+  <div class="ad-msg">Eres el gestor de todas ellas, con tu misma cuenta de Datadis. Las pestañas que hay bajo el nombre
+   de la comunidad en la barra (Socios, Gráfico, Ubicación, Informes…) son las de la comunidad
+   <b>seleccionada</b>; <i>Seleccionar</i> cambia a otra. Los suministros que te han autorizado en Datadis se reparten
+   entre ellas en <i>Suministros autorizados</i>. Una comunidad nueva se crea vacía (tarda un minuto); la latitud y la
+   longitud son el centro de su mapa (vacías = las de la seleccionada).</div>
+ </section>
+ <section class="ad-caja" data-sec="suministros">
+  <h3>Mi cuenta de Datadis</h3>
   <div class="ad-ctrl">
    <label>Mi DNI/NIF en Datadis <input class="ad-duser" maxlength="12" placeholder="12345678Z"></label>
    <label>Mi contraseña de Datadis <input type="password" class="ad-dpass" autocomplete="new-password" placeholder="sin cambios"></label>
   </div>
-  <div class="ad-ctrl"><button class="ad-b ad-gperfil">Guardar perfil</button>
-   <button class="ad-b sec ad-pprobar">Probar Datadis</button><span class="ad-msg ad-pmsg"></span></div>
-  <div class="ad-msg">Tu cuenta de Datadis (con la que entras en datadis.es): la que tiene las autorizaciones de los
-   titulares de los suministros. Con ella se descargan los datos de los socios, también los de terceros autorizados.
-   <i>Probar Datadis</i> usa lo escrito aquí aunque aún no lo hayas guardado. Contraseñas vacías = se conservan.
-   Varios intentos fallidos pueden bloquear la cuenta en Datadis.</div>
+  <div class="ad-ctrl"><button class="ad-b ad-gdatadis">Guardar</button>
+   <button class="ad-b sec ad-pprobar">Probar Datadis</button><span class="ad-msg ad-dmsg"></span></div>
+  <div class="ad-msg">Tu cuenta de Datadis (con la que entras en datadis.es), la misma en todas tus comunidades: la
+   que tiene las autorizaciones de los titulares de los suministros. Con ella se descargan los datos de los socios,
+   también los de terceros autorizados. <i>Probar Datadis</i> usa lo escrito aquí aunque aún no lo hayas guardado.
+   Contraseña vacía = se conserva. Varios intentos fallidos pueden bloquear la cuenta en Datadis.</div>
  </section>
- <section class="ad-caja" data-sec="gestor">
+ <section class="ad-caja" data-sec="suministros">
   <h3>Suministros autorizados en Datadis</h3>
   <div class="ad-ctrl"><button class="ad-b sec ad-aut">Actualizar desde Datadis</button><span class="ad-msg ad-amsg"></span></div>
   <div class="ad-aut-tabla">Cargando…</div>
-  <div class="ad-msg">Autorizaciones que los titulares han dado en Datadis a tu cuenta (<i>Mi perfil</i>). Al actualizar,
-   los CUPS con autorización <b>vigente</b> que aún no son socios se dan de alta (con el nombre y NIF del titular) y se
-   cargan sus datos. También se hace cada día antes de la sincronización.</div>
+  <div class="ad-msg">Los suministros de todas tus comunidades: los que los titulares te han autorizado en Datadis (se
+   leen también cada día) y los de tus socios que no están entre ellos (<i>simulado</i> o <i>sin autorización</i>). Son
+   tuyos, no de una comunidad: en la columna <i>Comunidad</i> asignas cada suministro con autorización <b>vigente</b> a
+   cualquiera de tus comunidades (se da de alta como socio, con el nombre y NIF del titular, y se cargan sus datos) o lo
+   pasas a otra (su socio pasa con su usuario y sus datos). Si solo tienes una comunidad, los nuevos se asignan a ella.</div>
  </section>
- <section class="ad-caja" data-sec="gestor"><h3>Datos cargados en la base de datos (PostgreSQL)</h3><div class="ad-tabla"></div></section>
- <section class="ad-caja" data-sec="gestor">
+ <section class="ad-caja" data-sec="datos"><h3>Datos cargados en la base de datos (PostgreSQL)</h3><div class="ad-tabla"></div></section>
+ <section class="ad-caja" data-sec="datos">
   <h3>Sincronización con Datadis</h3>
   <div class="ad-estado">Cargando…</div>
   <div class="ad-barra"><div></div></div>
@@ -10234,13 +10726,14 @@ ADMIN_HTML = """<div class="ad">
  </section>
 </div>"""
 
-ADMIN_JS = VL_COMUN_JS + r"""
+ADMIN_JS = VL_COMUN_JS + VL_ENTRAR_JS + r"""
 self.onInit = function () {
   var c = self.ctx.$container[0], u = self.ctx.currentUser || {};
   var q = function (s) { return c.querySelector('.' + s); };
   self.vivo = true;
   if (u.authority !== 'TENANT_ADMIN') { q('ad').classList.add('ad-oculto'); return; }
-  // Pestaña Gestor (sincronizacion, perfil, autorizaciones y datos) o Informes: settings.seccion
+  // Pestaña Gestor (perfil y comunidades), Suministros autorizados (del gestor), Sincronizacion
+  // (de la comunidad: Datadis y datos cargados) o Informes: settings.seccion
   var sec = (self.ctx.settings || {}).seccion;
   if (sec) [].forEach.call(c.querySelectorAll('[data-sec]'), function (s) { s.classList.toggle('ad-oculto', s.dataset.sec !== sec); });
   var API = '/cec-api', jobVisto = null, siguiendo = false;
@@ -10316,7 +10809,7 @@ self.onInit = function () {
       pintarSocios(s);
       if (soloTabla) return;
       q('ad-estado').innerHTML = 'Automática cada día a las <b>' + esc(s.sync_hora) + '</b> desde la <b>API de Datadis</b> ' +
-        (s.datadis_api ? '(cuenta ' + esc(s.datadis_user) + ')' : '<b>— la comunidad aún no tiene cuenta de Datadis</b> (ponla en <i>Mi perfil</i>, más abajo; ' +
+        (s.datadis_api ? '(cuenta ' + esc(s.datadis_user) + ')' : '<b>— la comunidad aún no tiene cuenta de Datadis</b> (ponla en la pestaña <i>Suministros autorizados</i>; ' +
                          'mientras, solo se cargan los socios simulados)') + ' · próxima: ' + fecha(s.proxima_sync);
       var m = s.meses_por_defecto || [];
       if (m[0]) { q('ad-desde').value = m[0].replace('/', '-'); q('ad-hasta').value = m[1].replace('/', '-'); }
@@ -10349,33 +10842,61 @@ self.onInit = function () {
   window.addEventListener('vatiaco-datos', self.recarga);
 
   // Suministros autorizados en Datadis a la cuenta del gestor (ultima lista leida; se actualiza
-  // con el boton, que ademas da de alta como socios los CUPS vigentes nuevos y carga sus datos)
+  // con el boton, que ademas da de alta como socios los CUPS vigentes nuevos y carga sus datos).
+  // Columna Comunidad: a cual de las del gestor pertenece cada uno (se cambia con el selector)
   function pintarAut(d) {
-    var a = d.autorizaciones || [];
-    if (!d.fecha) {
-      q('ad-aut-tabla').innerHTML = d.datadis_user ? 'Aún no se ha consultado: pulsa <i>Actualizar desde Datadis</i>.'
-        : '<b>Pon tu cuenta de Datadis en <i>Mi perfil</i></b> y pulsa <i>Actualizar desde Datadis</i>.';
-      return;
+    // Filas: autorizaciones de Datadis y socios de sus comunidades que no estan en ellas
+    // (estado SIMULADO o SOCIO: sin autorizacion leida de Datadis)
+    var a = d.autorizaciones || [], coms = d.comunidades || [];
+    var nota = d.fecha ? 'Autorizaciones de Datadis consultadas el ' + fecha(d.fecha) + ' con la cuenta ' + esc(d.datadis_user) + '.'
+      : d.datadis_user ? 'Aún no se han consultado las autorizaciones de Datadis: pulsa <i>Actualizar desde Datadis</i>.'
+      : '<b>Pon tu cuenta de Datadis en <i>Mi cuenta de Datadis</i></b> y pulsa <i>Actualizar desde Datadis</i> para ver los suministros que te han autorizado.';
+    if (!a.length) { q('ad-aut-tabla').innerHTML = 'Aún no hay suministros en tus comunidades. ' + nota; return; }
+    var EST = { VIGENTE: ' ok', SIMULADO: ' pendiente' };
+    function selector(x) {
+      if (!x.comunidad && x.estado !== 'VIGENTE') return '–';
+      return '<select data-cups="' + esc(x.cups) + '" data-socio="' + esc(x.socio_nombre || '') + '">' +
+        (x.comunidad ? '' : '<option value="" selected>— sin asignar —</option>') + coms.map(function (o) {
+          return '<option value="' + esc(o.id) + '"' + (o.id === x.comunidad ? ' selected' : '') + '>' + esc(o.nombre) +
+            (o.id === d.actual ? ' (esta)' : '') + '</option>';
+        }).join('') + '</select>';
     }
-    if (!a.length) { q('ad-aut-tabla').innerHTML = 'Ningún titular ha autorizado a ' + esc(d.datadis_user) + ' (' + fecha(d.fecha) + ').'; return; }
-    q('ad-aut-tabla').innerHTML = '<table><tr><th>Titular</th><th>NIF</th><th>CUPS</th><th>Estado</th><th>Vigente hasta</th><th>Socio</th></tr>' +
+    q('ad-aut-tabla').innerHTML = '<table><tr><th>Titular</th><th>NIF</th><th>CUPS</th><th>Estado</th><th>Vigente hasta</th><th>Socio</th><th>Comunidad</th></tr>' +
       a.map(function (x) {
         return '<tr><td>' + esc(x.titular || '–') + '</td><td>' + esc(x.nif || '–') + '</td><td>' + esc(x.cups) + '</td><td>' +
-          '<span class="ad-chip' + (x.estado === 'VIGENTE' ? ' ok' : '') + '">' + esc((x.estado || '').toLowerCase()) + '</span></td><td>' +
-          dia(x.hasta) + '</td><td>' + (x.socio ? esc(x.socio_nombre) : '–') + '</td></tr>';
-      }).join('') + '</table><div class="ad-msg">Consultado el ' + fecha(d.fecha) + ' con la cuenta ' + esc(d.datadis_user) + '.</div>';
+          '<span class="ad-chip' + (EST[x.estado] || '') + '"' + (x.estado === 'SOCIO' ? ' title="Socio sin autorización leída de Datadis"' : '') + '>' +
+          esc(x.estado === 'SOCIO' ? 'sin autorización' : (x.estado || '').toLowerCase()) + '</span></td><td>' +
+          dia(x.hasta) + '</td><td>' + (x.socio ? esc(x.socio_nombre) : '–') + '</td><td>' + selector(x) + '</td></tr>';
+      }).join('') + '</table><div class="ad-msg">' + nota + '</div>';
+    [].forEach.call(q('ad-aut-tabla').querySelectorAll('select[data-cups]'), function (sel) {
+      var antes = sel.value;
+      sel.onchange = function () {
+        var dst = sel.options[sel.selectedIndex].textContent, socio = sel.dataset.socio, cups = sel.dataset.cups;
+        if (!sel.value || !confirm(socio
+            ? '¿Pasar el suministro ' + cups + ' (socio ' + socio + ') a ' + dst + '? El socio pasa con su usuario y sus datos.'
+            : '¿Dar de alta el suministro ' + cups + ' como socio de ' + dst + '?')) { sel.value = antes; return; }
+        sel.disabled = true; msg('ad-amsg', 'Pasando ' + cups + ' a ' + dst + '…');
+        api('PUT', '/datadis/autorizaciones/' + encodeURIComponent(cups) + '/comunidad', { comunidad: sel.value }).then(function (r) {
+          pintarAut(r);
+          msg('ad-amsg', 'Suministro ' + cups + ' en ' + dst + ': se cargan sus datos allí.');
+          window.dispatchEvent(new CustomEvent('vatiaco-datos'));
+          cargarEstado(true);
+        }).catch(function (e) { sel.value = antes; sel.disabled = false; msg('ad-amsg', e.message, true); });
+      };
+    });
   }
   api('GET', '/datadis/autorizaciones').then(pintarAut).catch(function (e) { q('ad-aut-tabla').textContent = e.message; });
   q('ad-aut').onclick = function () {
     var b = q('ad-aut'); b.disabled = true; msg('ad-amsg', 'Consultando Datadis… (puede tardar un par de minutos)');
     api('POST', '/datadis/autorizaciones').then(function (d) {
       pintarAut(d);
-      msg('ad-amsg', d.autorizaciones.length + ' autorizaciones' + (d.nuevos.length ? ', ' + d.nuevos.length + ' socios nuevos: se cargan sus datos.' : ', ningún socio nuevo.') +
+      msg('ad-amsg', d.autorizaciones.length + ' autorizaciones' + (d.nuevos.length ? ', ' + d.nuevos.length + ' socios nuevos: se cargan sus datos.' : '.') +
+        (d.sin_asignar ? ' ' + d.sin_asignar + ' vigentes sin asignar: elige su comunidad en la columna Comunidad.' : '') +
         (d.errores.length ? ' Avisos: ' + d.errores.join('; ') : ''), d.errores.length > 0);
       if (d.nuevos.length) { window.dispatchEvent(new CustomEvent('vatiaco-datos')); lanzar({ origen: 'auto', socios: d.nuevos }); }
     }).catch(function (e) { msg('ad-amsg', e.message, true); }).then(function () { b.disabled = false; });
   };
-  // Perfil del gestor y cuenta de Datadis de la comunidad
+  // Perfil del gestor (en todas sus comunidades)
   function pintarPerfil(p) {
     q('ad-pnombre').value = p.gestor_nombre || ''; q('ad-ptel').value = p.gestor_telefono || '';
     q('ad-pemail').value = p.gestor_email || ''; q('ad-duser').value = p.datadis_user || '';
@@ -10386,17 +10907,54 @@ self.onInit = function () {
   q('ad-gperfil').onclick = function () {
     var b = q('ad-gperfil'); b.disabled = true; msg('ad-pmsg', 'Guardando…');
     api('PUT', '/perfil', { gestor_nombre: q('ad-pnombre').value.trim(), gestor_telefono: q('ad-ptel').value.trim(),
-      gestor_password: q('ad-ppw').value, datadis_user: q('ad-duser').value.trim(), datadis_pass: q('ad-dpass').value })
-      .then(function (p) {
-        pintarPerfil(p); msg('ad-pmsg', 'Perfil guardado.'); cargarEstado(true);
-      }).catch(function (e) { msg('ad-pmsg', e.message, true); }).then(function () { b.disabled = false; });
+      gestor_password: q('ad-ppw').value })
+      .then(function (p) { pintarPerfil(p); msg('ad-pmsg', 'Perfil guardado.'); })
+      .catch(function (e) { msg('ad-pmsg', e.message, true); }).then(function () { b.disabled = false; });
+  };
+  // Cuenta de Datadis del gestor (la misma en todas sus comunidades)
+  q('ad-gdatadis').onclick = function () {
+    var b = q('ad-gdatadis'); b.disabled = true; msg('ad-dmsg', 'Guardando…');
+    api('PUT', '/perfil', { datadis_user: q('ad-duser').value.trim(), datadis_pass: q('ad-dpass').value })
+      .then(function (p) { pintarPerfil(p); msg('ad-dmsg', 'Cuenta de Datadis guardada.'); cargarEstado(true); })
+      .catch(function (e) { msg('ad-dmsg', e.message, true); }).then(function () { b.disabled = false; });
   };
   q('ad-pprobar').onclick = function () {
-    var b = q('ad-pprobar'); b.disabled = true; msg('ad-pmsg', 'Entrando en Datadis… (puede tardar un par de minutos)');
+    var b = q('ad-pprobar'); b.disabled = true; msg('ad-dmsg', 'Entrando en Datadis… (puede tardar un par de minutos)');
     api('POST', '/perfil/datadis/probar', { datadis_user: q('ad-duser').value.trim(), datadis_pass: q('ad-dpass').value }).then(function (r) {
-      msg('ad-pmsg', 'Datadis correcto: ' + r.suministros + ' suministros accesibles' +
+      msg('ad-dmsg', 'Datadis correcto: ' + r.suministros + ' suministros accesibles' +
         (r.cups.length ? ' (' + r.cups.join(', ') + ')' : '') + (r.avisos.length ? '. Avisos: ' + r.avisos.join('; ') : '.'));
-    }).catch(function (e) { msg('ad-pmsg', e.message, true); }).then(function () { b.disabled = false; });
+    }).catch(function (e) { msg('ad-dmsg', e.message, true); }).then(function () { b.disabled = false; });
+  };
+  // Comunidades del gestor: pasar a otra (token de su usuario en ella) y crear una nueva
+  function pintarCom(l) {
+    q('ad-com-tabla').innerHTML = '<table><tr><th>Comunidad</th><th class="n">Socios</th><th>Estado</th><th></th></tr>' +
+      l.map(function (x) {
+        return '<tr><td>' + esc(x.nombre) + (x.principal ? ' <small>(principal: entras en ella con tu email)</small>' : '') +
+          '</td><td class="n">' + (x.socios == null ? '–' : x.socios) + '</td><td>' +
+          (x.estado === 'activo' ? '<span class="ad-chip ok">activa</span>' : '<span class="ad-chip error">' + esc(x.estado) + '</span>') +
+          '</td><td>' + (x.actual ? '<span class="ad-chip ok">seleccionada</span>' : '<button class="ad-b sec" data-entrar="' + esc(x.id) + '">Seleccionar</button>') + '</td></tr>';
+      }).join('') + '</table>';
+    [].forEach.call(q('ad-com-tabla').querySelectorAll('[data-entrar]'), function (b) {
+      b.onclick = function () {
+        b.disabled = true; msg('ad-cmsg', 'Abriendo la comunidad…');
+        api('POST', '/gestor/comunidades/' + encodeURIComponent(b.dataset.entrar) + '/entrar').then(function (t) {
+          vlEntrarComo(t);
+        }).catch(function (e) { b.disabled = false; msg('ad-cmsg', e.message, true); });
+      };
+    });
+  }
+  function cargarCom() { return api('GET', '/gestor/comunidades').then(pintarCom).catch(function (e) { q('ad-com-tabla').textContent = e.message; }); }
+  cargarCom();
+  q('ad-ccrear').onclick = function () {
+    var n = q('ad-cnombre').value.trim(), b = q('ad-ccrear');
+    if (n.length < 3) { msg('ad-cmsg', 'Pon el nombre de la comunidad (3 caracteres o más)', true); return; }
+    var num = function (v) { v = v.trim().replace(',', '.'); return v === '' ? null : +v; };
+    b.disabled = true; msg('ad-cmsg', 'Creando ' + n + '… (un minuto)');
+    api('POST', '/gestor/comunidades', { nombre: n, lat: num(q('ad-clat').value), lon: num(q('ad-clon').value) }).then(function (r) {
+      q('ad-cnombre').value = q('ad-clat').value = q('ad-clon').value = '';
+      msg('ad-cmsg', 'Comunidad ' + r.nombre + ' creada: pulsa Seleccionar para trabajar con ella.');
+      cargarCom();
+    }).catch(function (e) { msg('ad-cmsg', e.message, true); }).then(function () { b.disabled = false; });
   };
   q('ad-rango').onclick = function () {
     var d = q('ad-desde').value, h = q('ad-hasta').value;
@@ -10535,7 +11093,7 @@ SOCIOS_CSS = VP_CSS + """
 
 SOCIOS_HTML = """<div class="ts"><div class="vp"></div><div class="ts-ayuda"><span class="ts-per"></span> Pulsa una
 cabecera para ordenar (otra vez para invertir) y una fila para ver los datos del socio. Los deshabilitados (en
-<b>Gestión de socios</b>) salen en gris.</div>
+<b>Socios</b>) salen en gris.</div>
 <div class="ts-cuerpo">Cargando…</div><div class="ts-msg"></div></div>"""
 
 SOCIOS_JS = VL_COMUN_JS + VP_JS + r"""
@@ -10742,7 +11300,9 @@ def w_redirige_socio(alias, x, y, w, h):
 
 def w_admin(x, y, w, h, seccion=None, titulo="Administración de datos de la comunidad"):
     """Administracion de los datos (VatiaCo.admin_datos): widget estatico, sin datasource.
-    seccion: "gestor" (sincronizacion, perfil, autorizaciones y datos) o "informes"; sin ella, todo."""
+    seccion: "gestor" (perfil y comunidades del gestor), "suministros" (cuenta de Datadis y
+    suministros autorizados del gestor), "datos" (sincronizacion de la comunidad y datos
+    cargados) o "informes"; sin ella, todo."""
     cfg = {"datasources": [], "showTitle": True, "title": titulo,
            "settings": {"seccion": seccion} if seccion else {}, "backgroundColor": "#fff", "color": "rgba(0,0,0,0.87)", "padding": "8px",
            "dropShadow": True, "enableFullscreen": True, "mobileHeight": 20}
@@ -11115,19 +11675,25 @@ function archivo() {
 # ninguna (gobernanza, tecnica, reparto, economica, tramites, participacion, rgpd): sus datos
 # siguen en la base (el libro de socios lo rellena la ficha de cada socio)
 AREAS_GESTION = []
-GESTION_DASH_VERSION = 10         # sube este numero para regenerar los paneles de gestion
+GESTION_DASH_VERSION = 11         # sube este numero para regenerar los paneles de gestion
 
 
 def nav_gestion():
-    """Barra unica del gestor: [area, nombre, titulo del panel, estado]. Primero las vistas
-    de la comunidad (estados del panel principal, COM_TABS: el consumo el primero), luego la
-    gestion de los socios, el gestor (Datadis), las areas de gestion y las copias de la base
-    de datos (cada una su panel)."""
-    return [["", t[1], CEC, t[0]] for t in COM_TABS] + \
-           [["participantes", "Gestión de socios", "Gestión · Socios"],
-            ["gestor", "Gestor", "Gestión · Gestor"], ["informes", "Informes", "Gestión · Informes"]] + \
-           [[a, n, f"Gestión · {n}"] for a, n in AREAS_GESTION] + \
-           [["bd", "Base de datos", "Gestión · Base de datos"]]
+    """Barra unica del gestor: [area, nombre, titulo del panel, estado, icono]. Primero lo del
+    gestor, comun a todas sus comunidades: su perfil y sus comunidades (donde elige la
+    comunidad con la que trabaja) y los suministros que le han autorizado en Datadis (con la
+    comunidad de cada uno). Tras un separador con el nombre de la comunidad seleccionada
+    (area "-"), lo de esa comunidad: sus socios (gestion, sincronizacion con Datadis y datos
+    cargados), sus vistas (estados del panel principal, COM_TABS: el consumo el primero), las
+    areas de gestion y las copias de la base de datos (cada una su panel)."""
+    return [["gestor", "Gestor", "Gestión · Gestor", "", "account_circle"],
+            ["suministros", "Suministros autorizados", "Gestión · Suministros autorizados", "", "fact_check"],
+            ["-", CEC, "", "", ""]] + \
+           [["participantes", "Socios", "Gestión · Socios", "", "manage_accounts"]] + \
+           [["", t[1], CEC, t[0], t[3]] for t in COM_TABS] + \
+           [["informes", "Informes", "Gestión · Informes", "", "description"]] + \
+           [[a, n, f"Gestión · {n}", "", "folder"] for a, n in AREAS_GESTION] + \
+           [["bd", "Base de datos", "Gestión · Base de datos", "", "storage"]]
 
 
 def panel_admin(title, descripcion, ws, autofill, area):
@@ -11140,7 +11706,7 @@ def panel_admin(title, descripcion, ws, autofill, area):
                                  "backgroundColor": "#eeeeee"}}}}},
             "entityAliases": {}, "filters": {},
             "timewindow": {"selectedTab": 0, "realtime": {"realtimeType": 0, "timewindowMs": 86400000, "interval": 60000}},
-            "settings": {"stateControllerId": "entity", "showTitle": True, "showDashboardsSelect": False,
+            "settings": {"stateControllerId": "entity", "showTitle": False, "showDashboardsSelect": False,
                          "showEntitiesSelect": False, "showDashboardTimewindow": False, "showDashboardExport": False,
                          "toolbarAlwaysOpen": True, "dashboardCss": CSS_PANEL},
             "gestionFirma": json.dumps([GESTION_DASH_VERSION, area, nav_gestion()], ensure_ascii=False)}
@@ -11158,14 +11724,20 @@ def panel_admin(title, descripcion, ws, autofill, area):
 
 
 def gestion_paneles():
-    """Pestañas Socios, Gestor (administracion de los datos: sincronizacion con Datadis, datos
-    cargados, perfil y cuenta de Datadis del gestor y suministros autorizados), Informes, Base
+    """Pestañas Gestor (perfil y comunidades del gestor), Suministros autorizados (cuenta de
+    Datadis del gestor y sus suministros autorizados, con su comunidad), Socios (gestion de
+    los socios, sincronizacion de la comunidad con Datadis y datos cargados), Informes, Base
     de datos (copias) y un panel por area de gestion. Borra los paneles de gestion que ya no
     tienen pestaña."""
-    panel_admin("Gestión · Socios", "Socios de la comunidad",
-                [w_nav("participantes", 0, 0, 24, 1), w_participantes(0, 1, 24, 16)], False, "participantes")
-    panel_admin("Gestión · Gestor", "Administración de los datos de la comunidad: Datadis y perfil del gestor",
-                [w_nav("gestor", 0, 0, 24, 1), w_admin(0, 1, 24, 14, "gestor")], False, "gestor")
+    panel_admin("Gestión · Socios", "Socios de la comunidad, su sincronización con Datadis y los datos cargados",
+                [w_nav("participantes", 0, 0, 24, 1), w_participantes(0, 1, 24, 16),
+                 w_admin(0, 17, 24, 14, "datos", "Sincronización con Datadis")], False, "participantes")
+    panel_admin("Gestión · Gestor", "Perfil del gestor y sus comunidades",
+                [w_nav("gestor", 0, 0, 24, 1), w_admin(0, 1, 24, 14, "gestor", "Gestor")], False, "gestor")
+    panel_admin("Gestión · Suministros autorizados",
+                "Cuenta de Datadis del gestor y suministros que le han autorizado, con la comunidad de cada uno",
+                [w_nav("suministros", 0, 0, 24, 1), w_admin(0, 1, 24, 14, "suministros", "Suministros autorizados en Datadis")],
+                False, "suministros")
     panel_admin("Gestión · Informes", "Informes de la comunidad y de cada socio (PDF, Excel y CSV)",
                 [w_nav("informes", 0, 0, 24, 1), w_admin(0, 1, 24, 6, "informes", "Informes")], False, "informes")
     panel_admin("Gestión · Base de datos", "Copias de seguridad de PostgreSQL: hacer, subir, descargar y restaurar",
@@ -11177,7 +11749,7 @@ def gestion_paneles():
                "settings": {"area": area, "nav": nav_gestion()}}
         panel_admin(title, f"Gestión de la comunidad: {nombre}",
                     [_w("tenant.VatiaCo.gestion", cfg, "static", 0, 0, 24, 20)], True, area)
-    validos = {n[2] for n in nav_gestion()}
+    validos = {n[2] for n in nav_gestion() if n[2]}
     for d in tb.get(page("/api/tenant/dashboards"))["data"]:
         if d["title"].startswith("Gestión · ") and d["title"] not in validos:
             tb.delete(f"/api/dashboard/{d['id']['id']}")
@@ -11219,13 +11791,13 @@ def cec_config(title):
     # Vista de la comunidad (gestor): una pestaña (estado del panel) por widget, el consumo
     # primero, en la barra unica de gestion (solo la ve el administrador). Los socios no se
     # quedan en ella (w_redirige_socio los lleva a su vista)
-    for st, wd in (("default", w_consumo(mio, 0, 1, 24, 15)), ("com_energia", w_diaria(mio, 0, 1, 24, 12)),
-                   ("com_socios", w_socios(a_socios, 0, 1, 24, 12)), ("com_mapa", con_imprimir(w_mapa(a_socios, 0, 1, 24, 12)))):
+    for st, wd in (("default", w_consumo(mio, 0, 1, 24, 15)),
+                   ("com_mapa", con_imprimir(w_mapa(a_socios, 0, 1, 24, 12)))):
         add(st, w_nav("", 0, 0, 24, 1))
         add(st, wd)
     add("default", w_redirige_socio(mio, 0, 16, 24, 1))
     # Vista de un socio: una pestaña (estado del panel) por widget, con sus pestañas arriba
-    for st, wd in (("socio", w_consumo(elegido, 0, 1, 24, 15)), ("socio_energia", w_diaria(elegido, 0, 1, 24, 12)),
+    for st, wd in (("socio", w_consumo(elegido, 0, 1, 24, 15)),
                    ("socio_mapa", con_imprimir(w_mapa(elegido, 0, 1, 24, 12))), ("socio_datos", w_ficha(elegido, 0, 1, 24, 8))):
         add(st, w_socio_nav(0, 0, 24, 1))
         add(st, wd)
@@ -11244,7 +11816,7 @@ def cec_config(title):
         "timewindow": {"selectedTab": 0, "timezone": E.get("TZ", "Europe/Madrid"),
                        "realtime": {"realtimeType": 0, "timewindowMs": 30 * 86400000, "interval": 86400000},
                        "aggregation": {"type": "NONE", "limit": 50000}},
-        "settings": {"stateControllerId": "entity", "showTitle": True,
+        "settings": {"stateControllerId": "entity", "showTitle": False,
                      "showDashboardsSelect": False, "showEntitiesSelect": False,
                      "showDashboardTimewindow": False, "showDashboardExport": False,
                      "toolbarAlwaysOpen": True, "dashboardCss": CSS_PANEL},
@@ -11337,15 +11909,15 @@ def plataforma_super():
             "states": {"default": {"name": "Plataforma", "root": True, "layouts": {"main": {"widgets": {wid: l},
                        "gridSettings": {"columns": 24, "margin": 10, "outerMargin": True, "backgroundColor": "#eeeeee"}}}}},
             "entityAliases": {}, "filters": {}, "timewindow": {"selectedTab": 0, "realtime": {"realtimeType": 0, "timewindowMs": 86400000}},
-            "settings": {"stateControllerId": "entity", "showTitle": True, "showDashboardsSelect": False,
+            "settings": {"stateControllerId": "entity", "showTitle": False, "showDashboardsSelect": False,
                          "showEntitiesSelect": False, "showDashboardTimewindow": False, "showDashboardExport": False,
                          "toolbarAlwaysOpen": True, "dashboardCss": CSS_PANEL},
-            "plataformaFirma": "2"}
+            "plataformaFirma": "3"}
     d = find(tb.get(page("/api/tenant/dashboards"))["data"], "title", "Plataforma")
     if not d:
         d = tb.post("/api/dashboard", {"title": "Plataforma", "configuration": conf})
         print("    panel 'Plataforma' creado")
-    elif (tb.get(f"/api/dashboard/{d['id']['id']}").get("configuration") or {}).get("plataformaFirma") != "2":
+    elif (tb.get(f"/api/dashboard/{d['id']['id']}").get("configuration") or {}).get("plataformaFirma") != "3":
         full = tb.get(f"/api/dashboard/{d['id']['id']}")
         full["configuration"] = conf
         d = tb.post("/api/dashboard", full)
@@ -11618,13 +12190,19 @@ edita, suspende (no puede entrar; no se borra nada) y borra a sus hijos en una t
 
 | Nivel | Sus hijos | Tabla (base de datos) | Columnas de gestión |
 |---|---|---|---|
-| Superusuario ($SUPER_EMAIL, tabla \`superusuario\`) | gestores, uno por comunidad | \`gestor\` y \`comunidad\` (\`plataforma\`) | gestor, contacto, estado, comunidad, cuenta de Datadis, socios, alta |
-| Gestor | socios de su comunidad | \`socio\` (\`cec_<id>\`) | socio, usuario y teléfono, estado (y si cuenta en los totales), CUPS y contrato, datos cargados, origen |
+| Superusuario ($SUPER_EMAIL, tabla \`superusuario\`) | gestores (cada uno de una o varias comunidades) | \`gestor\` y \`comunidad\` (\`plataforma\`) | gestor, contacto, estado, comunidad, cuenta de Datadis, socios, alta |
+| Gestor | sus comunidades (las crea en su pestaña *Gestor*) y sus socios | \`socio\` (\`cec_<id>\`) | socio, usuario y teléfono, estado (y si cuenta en los totales), CUPS y contrato, datos cargados, origen |
 | Socio | — (solo ve su panel) | | |
 
 - **Nuevo gestor**: con su comunidad (nombre del gestor, email, contraseña y nombre de la
   comunidad). Se crean su tenant de ThingsBoard, su base \`cec_<id>\`, sus paneles y el usuario
-  del gestor (un minuto). La **cuenta de Datadis** la pone el gestor en *Mi perfil*.
+  del gestor (un minuto). La **cuenta de Datadis** la pone el gestor en su pestaña *Suministros
+  autorizados*, donde reparte entre sus comunidades los suministros que le han autorizado.
+- **Gestor de varias comunidades**: las crea él mismo (pestaña *Gestor* → *Mis comunidades*) con
+  su mismo perfil y cuenta de Datadis. Entra con su email en la principal (la primera) y pasa a
+  las demás con *Entrar* (en ThingsBoard tiene en cada una un usuario propio,
+  \`gestor@<id>.$HOSTNAME_LAN.local\`). Editar su nombre, email o contraseña vale para todas.
+  Suspenderlo es por comunidad. Las comunidades que crea él no pasan por el alta online (Stripe).
 - Por gestor: **Entrar** (en el panel de su comunidad, como el gestor), **Editar** (nombre,
   email, teléfono, contraseña), **Suspender / Reactivar** y **Borrar** (borra también su
   comunidad: tenant y base de datos; antes guarda una copia *previa*).
