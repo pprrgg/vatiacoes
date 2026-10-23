@@ -1,5 +1,0 @@
-﻿id;nombre;lat;lon;gestor_nombre;gestor_email;gestor_telefono;gestor_estado;gestor_password;datadis_user;datadis_pass
-albaicin;Comunidad Energética Albaicín;37,1810;-3,5925;Lucía Romero;lucia.romero@ejemplo.es;600 111 222;activo;albaicin2026;;
-teatinos;Comunidad Energética Teatinos;36,7155;-4,4730;Javier Ortega;demo@vatiaco.es;600 333 444;activo;demo;;
-poligono-sur;Comunidad Energética Polígono Sur;37,8710;-4,7900;Marta Navarro;marta.navarro@ejemplo.es;600 555 666;activo;poligono2026;;
-pkpk;Comunidad Energética pkpk;37,8710;-4,7900;pkpk;pkpk@ejemplo.es;600 555 666;activo;pkpk;;

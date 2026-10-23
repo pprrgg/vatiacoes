@@ -1,4 +1,0 @@
-﻿id;nombre;email;password;telefono;estado;deshabilitado;cups;nif;lat;lon;simulado;sim_tipo;sim_kwh_mes
-elena-martin;Elena Martín;elena.martin@ejemplo.es;elena2026;622 200 001;activo;no;;;36,7162;-4,4741;sí;residencial_fv;310
-pablo-sanchez;Pablo Sánchez;pablo.sanchez@ejemplo.es;pablo2026;622 200 002;activo;no;;;36,7148;-4,4722;sí;residencial_fv;390
-farmacia-teatinos;Farmacia Teatinos;farmacia@ejemplo.es;farmacia2026;952 200 003;activo;no;;;36,7170;-4,4735;sí;comercial;1.500
