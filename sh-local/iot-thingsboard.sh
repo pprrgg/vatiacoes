@@ -430,6 +430,9 @@ CREATE TABLE IF NOT EXISTS socio (
 -- (bases creadas antes de los tipos residencial_fv, cargador_ve_lento y generador_fv)
 ALTER TABLE socio DROP CONSTRAINT IF EXISTS socio_sim_tipo_check;
 ALTER TABLE socio ADD CONSTRAINT socio_sim_tipo_check CHECK (sim_tipo IN ('residencial', 'residencial_fv', 'comercial', 'industrial', 'cargador_ve', 'cargador_ve_lento', 'generador_fv'));
+-- Coeficiente de reparto (fijo) de la energia del autoconsumo colectivo: los de la comunidad
+-- suman 1; van en el fichero que se entrega a la distribuidora (pestaña Suministros autorizados)
+ALTER TABLE socio ADD COLUMN IF NOT EXISTS coeficiente double precision CHECK (coeficiente >= 0 AND coeficiente <= 1);
 
 -- Suministro de cada socio (su contrato esta en la tabla contrato)
 CREATE TABLE IF NOT EXISTS suministro (
@@ -573,7 +576,7 @@ def conectar(autocommit=True, base=None):
 def socios():
     with conectar() as cx:
         return cx.execute("SELECT id, nombre, email, telefono, estado, deshabilitado, cups, nif, lat, lon, simulado, "
-                          "sim_tipo, sim_kwh_mes, alta FROM socio ORDER BY alta, nombre").fetchall()
+                          "sim_tipo, sim_kwh_mes, coeficiente, alta FROM socio ORDER BY alta, nombre").fetchall()
 
 
 
@@ -2351,8 +2354,9 @@ MESES_L = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agos
            "octubre", "noviembre", "diciembre"]
 
 
-def datos(socio_id, desde, hasta):
-    """Totales por socio y por dia del periodo [desde, hasta] (fechas locales)."""
+def datos(socio_id, desde, hasta, agregado=False):
+    """Totales por socio y por dia del periodo [desde, hasta] (fechas locales). agregado (informe
+    de la comunidad para un socio): solo los totales del conjunto, sin nombres ni CUPS de nadie."""
     cfg = config()
     socios = [so for so in cfg["socios"] if socio_id is None or so["id"] == socio_id]
     if socio_id and not socios:
@@ -2383,9 +2387,27 @@ def datos(socio_id, desde, hasta):
             c = s["contrato"] or {}
             resumen.append({"socio": so["nombre"], "cups": s["cups"], "peaje": pj,
                             "coef": c.get("coeficienteReparto") or "", "dias": len(dias), **tot})
+    n_socios = len(resumen)
+    if agregado and socio_id is None:
+        def sumar(filas):
+            t = {}
+            for r in filas:
+                for k, v in r.items():
+                    if k.startswith("d_") and isinstance(v, (int, float)):
+                        t[k] = t.get(k, 0) + v
+            return t
+        etiqueta = f"Comunidad ({n_socios} socios)"
+        resumen = [{"socio": etiqueta, "cups": "", "peaje": "", "coef": "",
+                    "dias": max((r["dias"] for r in resumen), default=0), **sumar(resumen)}] if resumen else []
+        dias = {}
+        for x in diario:
+            dias.setdefault(x["fecha"], []).append(x)
+        diario = [{"fecha": f, "socio": "Comunidad", "cups": "", **sumar(xs)} for f, xs in sorted(dias.items())]
+        excluidos = []
     return {"titulo": cfg["cec"] if socio_id is None else socios[0]["nombre"],
             "subtitulo": "Informe de energía de la comunidad" if socio_id is None else f"Informe de energía · {cfg['cec']}",
-            "comunidad": socio_id is None, "socio_id": socio_id, "excluidos": excluidos, "resumen": resumen, "diario": diario,
+            "comunidad": socio_id is None, "agregado": bool(agregado and socio_id is None), "n_socios": n_socios,
+            "socio_id": socio_id, "excluidos": excluidos, "resumen": resumen, "diario": diario,
             "periodos": sorted(periodos), "desde": desde, "hasta": hasta}
 
 
@@ -2400,7 +2422,7 @@ def _tablas(D):
              + [f"P{p}" for p in P] + ["Saldo red"])
     filas_r = [[r["socio"], r["cups"], r["peaje"], r["coef"], r["dias"]] + [r.get("d_" + k, 0.0) for k, _ in ENERGIA]
                + [r.get(f"d_p{p}_kwh", 0.0) for p in P] + [_neto(r)] for r in D["resumen"]]
-    if D["comunidad"] and filas_r:
+    if D["comunidad"] and filas_r and not D.get("agregado"):
         filas_r.append(["Total comunidad", "", "", "", ""] + [sum(f[i] for f in filas_r) for i in range(5, len(cab_r))])
     # Diario: por socio (CSV/Excel) y, en el PDF de la comunidad, la suma de todos
     cab_d = ["Fecha", "Socio", "CUPS"] + [n for _, n in ENERGIA] + [f"P{p}" for p in P] + ["Saldo red"]
@@ -2732,7 +2754,8 @@ def _metodo(cfg, D, socios, g):
             f"{'por los socios de ' + cfg['cec'] if D['comunidad'] else 'por el suministro de ' + D['titulo'] + ', socio de ' + cfg['cec']}"
             f" durante el periodo {_periodo(D)}, como apoyo a la gestión de la comunidad y al reparto de la energía."]},
         {"titulo": "Alcance", "parrafos": [
-            (f"Comprende {len(socios)} suministros: {nombres}. " if D["comunidad"] else "")
+            (f"Comprende {len(socios)} suministros" + ("" if D.get("agregado") else f": {nombres}") + ". "
+             if D["comunidad"] else "")
             + (f"No se incluyen los socios deshabilitados por la administración: {', '.join(D['excluidos'])}. "
                if D["comunidad"] and D["excluidos"] else "")
             + f"Los resultados se presentan con resolución {res}; la tabla de cada capítulo tiene las mismas filas que su gráfico "
@@ -2761,7 +2784,8 @@ def _resumen(cfg, D, secciones):
     """Resumen del informe (texto) a partir de las cifras de cada capitulo."""
     s0 = secciones[0]
     x = s0["num"]
-    que = f"de los {len(secciones) - 1} socios de {cfg['cec']}" if D["comunidad"] else f"del suministro de {D['titulo']}"
+    que = (f"del conjunto de los {D['n_socios']} socios de {cfg['cec']}" if D.get("agregado") else
+           f"de los {len(secciones) - 1} socios de {cfg['cec']}" if D["comunidad"] else f"del suministro de {D['titulo']}")
     out = [f"Este informe técnico recoge la energía eléctrica {que} entre el {D['desde']:%d/%m/%Y} y el "
            f"{D['hasta']:%d/%m/%Y}, a partir de las curvas de carga publicadas por las distribuidoras en Datadis."]
     if not x["n"]:
@@ -2817,10 +2841,11 @@ def a_pdf(D):
             # Comunidad: suma horaria de todos los socios, repartida como 2.0TD (igual que en el panel)
             sec = _seccion(cx, raiz, "com", "Comunidad: " + cfg["cec"], f"{len(sums)} socios · periodos del peaje 2.0TD",
                            [s["cups"] for _, s in sums], "2.0TD", D["desde"], D["hasta"], horaria=True)
-            sec["resumen"], sec["resumen_p"] = _resumen_pdf(D)
+            # Para un socio (agregado), sin las tablas por socio
+            sec["resumen"], sec["resumen_p"] = (None, None) if D.get("agregado") else _resumen_pdf(D)
             sec["titulo_tabla"] += " de la comunidad"
             secciones.append(sec)
-        for i, (so, s) in enumerate(sums):
+        for i, (so, s) in enumerate([] if D.get("agregado") else sums):
             c = s["contrato"] or {}
             pot = " / ".join(p for p in (c.get("potenciaContratadakW") or "").split(";") if p)
             sub = " · ".join(x for x in (f"CUPS {s['cups']}", f"Peaje {s['peaje'] or '2.0TD'}",
@@ -2857,9 +2882,9 @@ FORMATOS = {"csv": (a_csv, "text/csv; charset=utf-8"),
             "pdf": (a_pdf, "application/pdf")}
 
 
-def generar(socio_id, desde, hasta, formato):
-    """-> (bytes, tipo MIME, nombre de fichero)."""
-    D = datos(socio_id, desde, hasta)
+def generar(socio_id, desde, hasta, formato, agregado=False):
+    """-> (bytes, tipo MIME, nombre de fichero). agregado: el de la comunidad para un socio."""
+    D = datos(socio_id, desde, hasta, agregado)
     f, mime = FORMATOS[formato]
     return f(D), mime, _nombre(D, formato)
 __FASTAPI_EOF__
@@ -5138,7 +5163,10 @@ def autorizaciones():
     aut = c["datadis_aut"] or []
     lista = [{**a, "comunidad": donde[a["cups"]][0]["id"] if a["cups"] in donde else None,
               "socio": donde[a["cups"]][1]["id"] if a["cups"] in donde else None,
-              "socio_nombre": donde[a["cups"]][1]["nombre"] if a["cups"] in donde else None}
+              "socio_nombre": donde[a["cups"]][1]["nombre"] if a["cups"] in donde else None,
+              "bloqueado": a["cups"] in donde and donde[a["cups"]][1]["estado"] == "suspendido",
+              "coeficiente": donde[a["cups"]][1]["coeficiente"] if a["cups"] in donde else None,
+              "vigente": a.get("estado") == "VIGENTE"}
              for a in aut]
     en_datadis = {a["cups"] for a in aut}
     orden = {x["id"]: i for i, x in enumerate(todas)}
@@ -5146,7 +5174,9 @@ def autorizaciones():
         if cups not in en_datadis:
             lista.append({"cups": cups, "titular": so["nombre"], "nif": so["nif"], "hasta": None,
                           "estado": "SIMULADO" if so["simulado"] else "SOCIO",
-                          "comunidad": x["id"], "socio": so["id"], "socio_nombre": so["nombre"]})
+                          "comunidad": x["id"], "socio": so["id"], "socio_nombre": so["nombre"],
+                          "bloqueado": so["estado"] == "suspendido", "coeficiente": so["coeficiente"],
+                          "vigente": True})
     return {"fecha": c["datadis_aut_fecha"] and c["datadis_aut_fecha"].isoformat(), "autorizaciones": lista,
             "datadis_user": c["datadis_user"], "actual": c["id"],
             "comunidades": [{"id": x["id"], "nombre": x["nombre"]} for x in todas]}
@@ -5197,12 +5227,40 @@ def _altas_aut(c, auts, lista, por):
     return nuevos, errores
 
 
+SIN_VIGENCIA = "SIN VIGENCIA"   # autorizacion que ya no esta en Datadis (la retiro el titular o caduco)
+
+
+def _fusionar(vieja, nueva):
+    """Lista de autorizaciones guardada + la leida ahora de Datadis, sin perder lineas: las que
+    siguen se actualizan (estado y vigencia); las que ya no estan se quedan, SIN VIGENCIA (con la
+    fecha en que se vio); las nuevas se añaden (marcadas "nueva" hasta que se asignan)."""
+    from datetime import date
+    hoy = date.today().isoformat()
+    por_cups = {}
+    for a in nueva:                      # un CUPS con varias: la vigente
+        if a["cups"] not in por_cups or a["estado"] == "VIGENTE":
+            por_cups[a["cups"]] = a
+    vistos = {a["cups"] for a in vieja}
+    out = []
+    for a in vieja:
+        n = por_cups.pop(a["cups"], None)
+        if n:
+            out.append({**a, **n, "perdida": None})
+        elif a.get("estado") == SIN_VIGENCIA:
+            out.append(a)
+        else:
+            out.append({**a, "estado": SIN_VIGENCIA, "estado_anterior": a.get("estado"), "perdida": hoy})
+    out += [{**a, "nueva": hoy} for a in por_cups.values() if a["cups"] not in vistos]
+    return out
+
+
 def socios_desde_datadis(por, reusar_h=0):
-    """Lee de Datadis las autorizaciones de la cuenta del gestor y las guarda (en todas sus
-    comunidades). Los CUPS con autorizacion VIGENTE que aun no son socios de ninguna de sus
-    comunidades: si solo tiene una, se dan de alta en ella; si tiene varias, quedan sin asignar
-    (los asigna el gestor en la pestaña Suministros autorizados). reusar_h: si la lista se leyo
-    hace menos de esas horas (otra comunidad del mismo gestor), no se vuelve a pedir."""
+    """Lee de Datadis las autorizaciones de la cuenta del gestor y las fusiona con las guardadas
+    (en todas sus comunidades; _fusionar: no se borra ninguna, las que se pierden quedan SIN
+    VIGENCIA). Los CUPS nuevos con autorizacion VIGENTE que aun no son socios de ninguna de sus
+    comunidades quedan pendientes de asignar: el gestor elige su comunidad en la pestaña
+    Suministros autorizados. reusar_h: si la lista se leyo hace menos de esas horas (otra
+    comunidad del mismo gestor), no se vuelve a pedir."""
     from datetime import datetime, timedelta, timezone
     from .datadis import Datadis
     c = _comunidad(comunidad()["id"])
@@ -5212,17 +5270,14 @@ def socios_desde_datadis(por, reusar_h=0):
             datetime.now(timezone.utc) - c["datadis_aut_fecha"] < timedelta(hours=reusar_h):
         lista = c["datadis_aut"] or []
     else:
-        lista = Datadis(c["datadis_user"], c["datadis_pass"]).autorizaciones()
+        lista = _fusionar(c["datadis_aut"] or [], Datadis(c["datadis_user"], c["datadis_pass"]).autorizaciones())
         with _cx() as cx:
             cx.execute("UPDATE gestor SET datadis_aut = %s, datadis_aut_fecha = now() WHERE lower(email) = %s",
                        (Jsonb(lista), c["gestor_email"].lower()))
-    todas = mias(c)
-    ya = _cups_de(todas)
-    vigentes = [a for a in lista if a["estado"] == "VIGENTE" and a["cups"] not in ya]
-    vigentes = list({a["cups"]: a for a in vigentes}.values())
-    nuevos, errores = _altas_aut(c, vigentes, lista, por) if len(todas) == 1 else ([], [])
-    return {**autorizaciones(), "nuevos": nuevos, "errores": errores,
-            "sin_asignar": 0 if len(todas) == 1 else len(vigentes)}
+    ya = _cups_de(mias(c))
+    pendientes = {a["cups"] for a in lista if a["estado"] == "VIGENTE" and a["cups"] not in ya}
+    return {**autorizaciones(), "nuevos": [], "errores": [], "sin_asignar": len(pendientes),
+            "sin_vigencia": sum(a["estado"] == SIN_VIGENCIA for a in lista)}
 
 
 _TABLAS_CUPS = ("contrato", "consumo", "potencias", "energia")   # tablas de Datadis (columna "cups")
@@ -5277,6 +5332,97 @@ def asignar_suministro(cups, destino, por):
     con(dst, gestion.preparar)
     log.info("socio %s (%s) pasa de %s a %s (%s)", so["id"], cups, src["id"], dst["id"], por)
     return dst, so["id"], src
+
+
+def bloquear_suministro(cups, bloqueado):
+    """Bloquea (o desbloquea) al socio de un suministro, en la comunidad del gestor que lo tenga:
+    no puede entrar en su panel (sus datos siguen contando en la comunidad)."""
+    donde = _cups_de(mias()).get((cups or "").replace(" ", "").upper())
+    if not donde:
+        raise ValueError("Ese suministro no es de ningún socio de tus comunidades")
+    c, so = donde
+    con(c, suspender_socio, so["id"], bloqueado)
+    log.info("socio %s de %s: %s", so["id"], c["id"], "bloqueado" if bloqueado else "desbloqueado")
+    return autorizaciones()
+
+
+# ---------------- coeficientes de reparto (fichero para la distribuidora) ----------------
+CRITERIOS_COEF = ("Consumo", "Potencia contratada", "Igualitario")
+
+
+def _mia(cid):
+    c = next((x for x in mias() if x["id"] == cid), None)
+    if not c:
+        raise ValueError("Esa comunidad no es tuya")
+    return c
+
+
+def fijar_coeficiente(cups, coeficiente):
+    """Coeficiente de reparto del socio de un suministro (0..1, 6 decimales; None = sin él)."""
+    donde = _cups_de(mias()).get((cups or "").replace(" ", "").upper())
+    if not donde:
+        raise ValueError("Ese suministro no es de ningún socio de tus comunidades")
+    if coeficiente is not None:
+        coeficiente = round(float(coeficiente), 6)
+        if not 0 <= coeficiente <= 1:
+            raise ValueError("El coeficiente va de 0 a 1 (p. ej. 0,250000)")
+    c, so = donde
+
+    def f():
+        with db.conectar() as cx:
+            cx.execute("UPDATE socio SET coeficiente = %s, actualizado = now() WHERE id = %s", (coeficiente, so["id"]))
+    con(c, f)
+    return autorizaciones()
+
+
+def proponer_coeficientes(cid, criterio):
+    """Calcula y guarda los coeficientes de los socios habilitados de una comunidad: por su
+    consumo de los ultimos 12 meses completos, su potencia contratada o a partes iguales (suman
+    1; los deshabilitados, 0)."""
+    from datetime import date, timedelta
+    if criterio not in CRITERIOS_COEF:
+        raise ValueError("Criterio no válido")
+    c = _mia(cid)
+    hoy = date.today()
+    d1 = hoy.replace(day=1) - timedelta(days=1)
+    d0 = d1.replace(year=d1.year - 1) + timedelta(days=1)
+
+    def f():
+        with db.conectar() as cx:
+            co = {so["id"]: x for so, _, _, x in gestion.coeficientes(cx, d0.isoformat(), d1.isoformat(), criterio)}
+            cx.execute("UPDATE socio SET coeficiente = 0 WHERE cups IS NOT NULL")
+            for sid, x in co.items():
+                cx.execute("UPDATE socio SET coeficiente = %s WHERE id = %s", (x, sid))
+        return len(co)
+    n = con(c, f)
+    log.info("coeficientes de %s propuestos por %s (%s socios)", cid, criterio, n)
+    return autorizaciones()
+
+
+def fichero_coeficientes(cid):
+    """Fichero de coeficientes fijos para la distribuidora: una linea "CUPS;coeficiente" por
+    suministro (6 decimales, coma decimal), de los socios con coeficiente; deben sumar 1. Nombre:
+    el CAU de la instalacion si esta en los contratos de Datadis (si no, el id de la comunidad).
+    Conviene confirmar con la distribuidora el formato exacto que pide. -> (texto, nombre)."""
+    from datetime import date
+    c = _mia(cid)
+
+    def f():
+        with db.conectar() as cx:
+            filas = cx.execute("SELECT s.cups, s.coeficiente, (SELECT k.\"cau\" FROM contrato k WHERE k.\"cups\" = s.cups "
+                               "AND k.\"cau\" IS NOT NULL ORDER BY k.\"fechaInicioVigencia\" DESC LIMIT 1) AS cau "
+                               "FROM socio s WHERE s.cups IS NOT NULL AND s.coeficiente IS NOT NULL ORDER BY s.cups").fetchall()
+        return filas
+    filas = con(c, f)
+    if not filas:
+        raise ValueError(f"{c['nombre']}: ningún socio tiene coeficiente (ponlos en la columna Coef. reparto o pulsa Proponer)")
+    suma = sum(r["coeficiente"] for r in filas)
+    if abs(suma - 1) > 0.0000005:
+        raise ValueError(f"{c['nombre']}: los coeficientes suman {suma:.6f}".replace(".", ",") + " y deben sumar 1")
+    caus = {r["cau"] for r in filas if r["cau"]}
+    base = caus.pop() if len(caus) == 1 else f"coeficientes_{cid}"
+    txt = "".join(f"{r['cups']};{r['coeficiente']:.6f}".replace(".", ",") + "\r\n" for r in filas)
+    return txt, f"{base}_{date.today().year}.txt"
 
 
 # ---------------- comunidades del gestor ----------------
@@ -6417,7 +6563,7 @@ async def sync_programada():
         tok = COMUNIDAD.set(c)   # la tarea de lanzar() copia este contexto
         try:
             if c["datadis_user"] and c["datadis_pass"]:
-                try:     # CUPS autorizados en Datadis que aun no son socios
+                try:     # autorizaciones de Datadis al dia (las nuevas, pendientes de asignar)
                     async with _LANZAR:
                         if not await asyncio.to_thread(db.job_activo):   # una vez al dia por cuenta de Datadis
                             await asyncio.to_thread(plataforma.socios_desde_datadis, "Datadis (diaria)", 20)
@@ -6659,7 +6805,7 @@ def _mes_anterior():
     return fin.replace(day=1), fin
 
 
-async def _informe(socio_id, desde, hasta, formato):
+async def _informe(socio_id, desde, hasta, formato, agregado=False):
     d0, d1 = _mes_anterior()
     desde, hasta = desde or d0, hasta or d1
     if hasta < desde:
@@ -6667,7 +6813,7 @@ async def _informe(socio_id, desde, hasta, formato):
     if (hasta - desde).days > 3 * 366:
         raise HTTPException(422, "Periodo demasiado largo (máximo 3 años)")
     try:
-        contenido, mime, nombre = await asyncio.to_thread(informes.generar, socio_id, desde, hasta, formato)
+        contenido, mime, nombre = await asyncio.to_thread(informes.generar, socio_id, desde, hasta, formato, agregado)
     except KeyError:
         raise HTTPException(404, "No existe ese socio")
     return Response(contenido, media_type=mime, headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
@@ -6686,6 +6832,21 @@ async def informe_comunidad(desde: date | None = Query(None), hasta: date | None
 async def informe_socio(socio_id: str, desde: date | None = Query(None), hasta: date | None = Query(None),
                         formato: Formato = "pdf", _: str = Depends(admin)):
     return await _informe(socio_id, desde, hasta, formato)
+
+
+# Pestaña Informes de la vista de un socio: el propio socio (o su gestor) descarga el informe de
+# sus datos o el del conjunto de la comunidad (solo totales: sin datos de los demas socios)
+@app.get("/informes/mio/{socio_id}", summary="Informe de un socio para el propio socio o su gestor")
+async def informe_mio(socio_id: str, desde: date | None = Query(None), hasta: date | None = Query(None),
+                      formato: Formato = "pdf", _: dict = Depends(socio_o_gestor)):
+    return await _informe(socio_id, desde, hasta, formato)
+
+
+@app.get("/informes/mio/{socio_id}/comunidad",
+         summary="Informe del conjunto de la comunidad para un socio (solo totales, sin datos de los demás socios)")
+async def informe_mio_comunidad(socio_id: str, desde: date | None = Query(None), hasta: date | None = Query(None),
+                                formato: Formato = "pdf", _: dict = Depends(socio_o_gestor)):
+    return await _informe(None, desde, hasta, formato, agregado=True)
 
 
 # ---------------- gestion de la comunidad (paneles "Gestión · ...") ----------------
@@ -6934,6 +7095,44 @@ async def datadis_asignar(cups: str, p: PeticionAsignar, quien: str = Depends(ad
             COMUNIDAD.reset(tok)
     log.info("%s asigna el suministro %s a %s", quien, cups, p.comunidad)
     return await asyncio.to_thread(_plat, plataforma.autorizaciones)
+
+
+@app.put("/datadis/autorizaciones/{cups}/bloqueo",
+         summary="Bloquea o desbloquea al socio de un suministro del gestor (no puede entrar en su panel)")
+async def datadis_bloqueo(cups: str, p: PeticionSuspension, quien: str = Depends(admin)):
+    r = await asyncio.to_thread(_plat, plataforma.bloquear_suministro, cups, p.suspendido)
+    log.info("%s %s el suministro %s", quien, "bloquea" if p.suspendido else "desbloquea", cups)
+    return r
+
+
+class PeticionCoeficiente(BaseModel):
+    coeficiente: float | None = Field(None, ge=0, le=1, description="Coeficiente de reparto (0..1); vacío = sin coeficiente")
+
+
+@app.put("/datadis/autorizaciones/{cups}/coeficiente", summary="Coeficiente de reparto del socio de un suministro del gestor")
+async def datadis_coeficiente(cups: str, p: PeticionCoeficiente, _: str = Depends(admin)):
+    return await asyncio.to_thread(_plat, plataforma.fijar_coeficiente, cups, p.coeficiente)
+
+
+class PeticionProponer(BaseModel):
+    criterio: Literal["Consumo", "Potencia contratada", "Igualitario"] = "Consumo"
+
+
+@app.post("/gestor/comunidades/{cid}/coeficientes/proponer",
+          summary="Calcula y guarda los coeficientes de reparto de una comunidad del gestor (consumo de los últimos 12 "
+                  "meses, potencia contratada o a partes iguales)")
+async def gestor_proponer_coeficientes(cid: str, p: PeticionProponer, quien: str = Depends(admin)):
+    r = await asyncio.to_thread(_plat, plataforma.proponer_coeficientes, cid, p.criterio)
+    log.info("%s propone los coeficientes de %s (%s)", quien, cid, p.criterio)
+    return r
+
+
+@app.get("/gestor/comunidades/{cid}/coeficientes.txt",
+         summary="Fichero de coeficientes de reparto de una comunidad para la distribuidora (CUPS;coeficiente)")
+async def gestor_fichero_coeficientes(cid: str, _: str = Depends(admin)):
+    txt, nombre = await asyncio.to_thread(_plat, plataforma.fichero_coeficientes, cid)
+    return Response(txt.encode("utf-8"), media_type="text/plain; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
 # ---------------- comunidades del gestor (pestaña Gestor) ----------------
@@ -8100,7 +8299,7 @@ def usuario_cliente(cid, c, dash_id, fullscreen=False):
 import unicodedata
 
 CEC = E.get("CEC_NOMBRE", "")
-CEC_DASH_VERSION = 45           # sube este numero para regenerar el panel de la comunidad
+CEC_DASH_VERSION = 46           # sube este numero para regenerar el panel de la comunidad
 OCULTAR_PIE = "section.tb-powered-by-footer { display: none !important; }"
 # El CSS de impresion esta en config/branding/VatiaCo.css (global)
 CSS_PANEL = OCULTAR_PIE
@@ -8310,8 +8509,9 @@ var VP = {
 CONSUMO_CSS = """
 .dd { display: flex; flex-direction: column; height: 100%; font: 13px Roboto, Arial, sans-serif; color: #333;
   --ac: #7b2fa8; --ac2: #f1e6f8; }
+/* Cabecera (quien y su suministro) sobre fondo gris y debajo las pestañas, como en Datadis */
 .dd-cab { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px;
-  padding: 0 4px 6px; border-bottom: 1px solid #eee; }
+  padding: 10px 12px; background: #f6f6f8; border-radius: 4px; }
 .dd-nombre { font-size: 17px; font-weight: 700; }
 /* Selector de la comunidad o de un socio (gestor, vista de la comunidad): sustituye al nombre */
 .dd-quien { display: none; max-width: 100%; font: 700 16px Roboto, Arial, sans-serif; color: #333; padding: 3px 6px;
@@ -8319,8 +8519,9 @@ CONSUMO_CSS = """
 .dd.con-quien .dd-quien { display: inline-block; }
 .dd.con-quien .dd-nombre { display: none; }
 .dd-sub { font-size: 12px; color: #777; margin-top: 2px; }
-.dd-metricas button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 4px 10px;
-  font: inherit; color: #555; cursor: pointer; }
+.dd-metricas { display: flex; gap: 8px; margin-top: 8px; padding: 0 4px; border-bottom: 1px solid #e6e6e6; overflow-x: auto; }
+.dd-metricas button { flex: none; background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 6px;
+  font: inherit; font-size: 14px; color: #444; cursor: pointer; white-space: nowrap; }
 .dd-metricas button.on { color: var(--ac); border-bottom-color: var(--ac); font-weight: 500; }
 .dd-barra { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 4px; }
 .dd-tabs { display: inline-flex; background: var(--ac2); border-radius: 16px; padding: 2px; }
@@ -8372,8 +8573,8 @@ CONSUMO_CSS = """
 CONSUMO_HTML = """<div class="dd">
   <div class="dd-cab">
     <div><select class="dd-quien" aria-label="Comunidad o socio"></select><div class="dd-nombre"></div><div class="dd-sub"></div></div>
-    <div class="dd-metricas"><button type="button" data-m="consumo">Consumos y excedentes</button><button type="button" data-m="pot">Potencias máximas</button><button type="button" data-m="contrato">Contrato</button></div>
   </div>
+  <div class="dd-metricas"><button type="button" data-m="consumo">Consumos y excedentes</button><button type="button" data-m="pot">Potencias máximas</button><button type="button" data-m="contrato">Contrato</button></div>
   <div class="dd-barra">
     <div class="dd-tabs"><button type="button" data-v="dia">Diario</button><button type="button" data-v="semana">Semanal</button><button type="button" data-v="mes">Mensual</button><button type="button" data-v="anio">Anual</button></div>
     <div class="dd-nav">
@@ -9259,7 +9460,8 @@ self.onDestroy = function () { if (self.rail) self.rail.quitar(); };
 
 # Pestañas de la vista de un socio: estado del panel, nombre (gestor), nombre para el socio e
 # icono (Material Icons, la fuente de ThingsBoard)
-SOCIO_TABS = [["socio", "Gráfico", "", "show_chart"], ["socio_mapa", "Ubicación", "", "place"], ["socio_datos", "Datos del socio", "Mis datos", "badge"]]
+SOCIO_TABS = [["socio", "Gráfico", "", "show_chart"], ["socio_mapa", "Ubicación", "", "place"],
+              ["socio_informes", "Informes", "", "description"], ["socio_datos", "Datos del socio", "Mis datos", "badge"]]
 
 
 # Vistas de la comunidad (estados del panel principal), en la barra de gestion: el consumo primero
@@ -9297,6 +9499,11 @@ BD_CSS = """
 .bd-chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11.5px; background: #eee; color: #555; }
 .bd-chip.cec { background: #f1e6f8; color: #7b2fa8; } .bd-chip.previa { background: #fff3e0; color: #b26a00; }
 .bd-oculto { display: none; }
+/* Registro de lo que se hace en la pestaña (se conserva en el navegador; se descarga en .txt) */
+.bd-log-cab { display: flex; align-items: center; gap: 8px; } .bd-log-cab h3 { flex: 1; margin: 0; }
+.bd-log { height: 180px; overflow: auto; margin-top: 8px; background: #1e1f24; color: #d6d8de; border-radius: 4px;
+  padding: 6px 8px; font: 11.5px/1.5 monospace; white-space: pre-wrap; }
+.bd-log .err { color: #ff8a80; } .bd-log .ok { color: #8fd19e; } .bd-log .vacio { color: #888; }
 """
 
 BD_HTML = """<div class="bd">
@@ -9322,6 +9529,11 @@ BD_HTML = """<div class="bd">
    ThingsBoard se pone al día en la siguiente sincronización (pestaña Suministros autorizados).</p>
   <p class="bd-tbnota bd-oculto">La base de ThingsBoard no se restaura desde aquí (hay que pararlo): en el servidor,
    <code>docker compose stop thingsboard &amp;&amp; docker compose exec -T postgres pg_restore -U &lt;usuario&gt; -d thingsboard --clean --if-exists &lt; backups/postgres/&lt;fichero&gt; &amp;&amp; docker compose start thingsboard</code></p>
+ </section>
+ <section class="bd-caja">
+  <div class="bd-log-cab"><h3>Registro</h3><button class="bd-b sec peq bd-log-desc">Descargar</button>
+   <button class="bd-b sec peq bd-log-limpiar">Limpiar</button></div>
+  <div class="bd-log"><div class="vacio">Aquí queda anotado, con su fecha y hora, todo lo que se hace en esta pestaña.</div></div>
  </section>
 </div>"""
 
@@ -9349,8 +9561,43 @@ self.onInit = function () {
   var c = self.ctx.$container[0];
   var q = function (s) { return c.querySelector('.' + s); };
   if ((self.ctx.currentUser || {}).authority !== 'TENANT_ADMIN') { q('bd').classList.add('bd-oculto'); return; }
-  function msg(t, tipo) { var m = q('bd-msg'); m.textContent = t || ''; m.className = 'bd-msg' + (tipo ? ' ' + tipo : ''); }
-  function ocupado(si) { [].forEach.call(c.querySelectorAll('button'), function (b) { b.disabled = si; }); }
+  // Registro: cada mensaje con su fecha y hora; se guarda en el navegador (por comunidad, ultimas
+  // 500 lineas) y se descarga como .txt
+  var LOG = 'vatiaco-bd-log-' + ((self.ctx.currentUser || {}).tenantId || ''), lineas = [];
+  try { lineas = JSON.parse(localStorage.getItem(LOG) || '[]'); } catch (e) { lineas = []; }
+  function pintarLog() {
+    var l = q('bd-log');
+    if (!lineas.length) { l.innerHTML = '<div class="vacio">Aquí queda anotado, con su fecha y hora, todo lo que se hace en esta pestaña.</div>'; return; }
+    l.innerHTML = lineas.map(function (x) { return '<div class="' + (x.tipo || '') + '">' + esc(x.t + '  ' + x.m) + '</div>'; }).join('');
+    l.scrollTop = l.scrollHeight;
+  }
+  function anota(m, tipo) {
+    if (!m) return;
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    lineas.push({ t: d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' +
+                     p(d.getMinutes()) + ':' + p(d.getSeconds()), m: m, tipo: tipo || '' });
+    lineas = lineas.slice(-500);
+    try { localStorage.setItem(LOG, JSON.stringify(lineas)); } catch (e) {}
+    pintarLog();
+  }
+  q('bd-log-limpiar').onclick = function () {
+    if (!confirm('¿Borrar el registro?')) return;
+    lineas = []; try { localStorage.removeItem(LOG); } catch (e) {} pintarLog();
+  };
+  q('bd-log-desc').onclick = function () {
+    var txt = lineas.map(function (x) { return x.t + '  ' + (x.tipo === 'err' ? 'ERROR ' : '') + x.m; }).join('\r\n') + '\r\n';
+    var a = document.createElement('a'), d = new Date();
+    a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' }));
+    a.download = 'registro-base-de-datos-' + d.toISOString().slice(0, 10) + '.txt';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  };
+  pintarLog();
+  function msg(t, tipo) { var m = q('bd-msg'); m.textContent = t || ''; m.className = 'bd-msg' + (tipo ? ' ' + tipo : ''); anota(t, tipo); }
+  function ocupado(si) {
+    [].forEach.call(c.querySelectorAll('button'), function (b) {
+      if (!b.classList.contains('bd-log-desc') && !b.classList.contains('bd-log-limpiar')) b.disabled = si; });
+  }
   function tarea(texto, p, ok) {
     ocupado(true); msg(texto);
     return p.then(function (r) { msg(ok(r), 'ok'); }).catch(function (e) { msg(e.message, 'err'); })
@@ -9622,8 +9869,8 @@ PART_HTML = """<div class="al">
   <h3>Socios</h3>
   <div class="al-ctrl al-csv"><button class="al-b peq al-datadis">Actualizar desde Datadis</button>
    <button class="al-b sec peq al-exp">Exportar CSV</button><button class="al-b sec peq al-imp">Importar CSV</button>
-   <small><b>Datadis</b>: da de alta los CUPS con autorización vigente a tu cuenta que aún no son socios (también cada
-   día). <b>Importar</b>: crea los socios nuevos y actualiza los que ya existen (por <code>id</code> o, si no lo trae, por
+   <small><b>Datadis</b>: pone al día las autorizaciones de tu cuenta (también cada día); las nuevas quedan pendientes de
+   asignar a una comunidad en la pestaña <i>Suministros autorizados</i>. <b>Importar</b>: crea los socios nuevos y actualiza los que ya existen (por <code>id</code> o, si no lo trae, por
    <code>nombre</code>); con email nuevo hace falta <code>password</code>. Después se cargan sus datos.</small></div>
   <div class="al-sync">
    <div class="al-sync-estado">Cargando…</div>
@@ -9637,7 +9884,7 @@ PART_HTML = """<div class="al">
   </div>
   <div class="al-ctrl al-bloque"><span class="al-nsel">0 seleccionados</span>
    <button class="al-b sec peq al-bcargar">Cargar datos</button><button class="al-b sec peq al-beditar">Editar</button>
-   <button class="al-b peligro peq al-bborrar">Borrar</button><button class="al-b sec peq al-bquitar">Quitar selección</button>
+   <button class="al-b sec peq al-bquitar">Quitar selección</button>
    <button class="al-b sec peq al-recalc" title="Recalcula los totales de la comunidad con los socios habilitados">Recalcular totales</button></div>
   <small>Pulsa una fila para ver los datos del socio. Marca <b>Deshabilitado</b> para sacarlo de los totales de la comunidad
    (se muestra en gris en el mapa y en la tabla de socios) y pulsa <b>Recalcular totales</b> para aplicar los cambios.</small>
@@ -9646,13 +9893,11 @@ PART_HTML = """<div class="al">
  <section class="al-caja al-bform al-oculto">
   <h3 class="al-btitulo">Editar los socios seleccionados</h3>
   <div class="al-campos">
-   <label>Acceso a su panel<select class="b-estado"><option value="">Sin cambios</option><option value="activo">Activo</option>
-    <option value="suspendido">Suspendido</option></select></label>
    <label>Totales de la comunidad<select class="b-desh"><option value="">Sin cambios</option><option value="no">Cuenta en los totales</option>
     <option value="si">Fuera de los totales</option></select></label>
   </div>
-  <p>Solo se cambia lo que elijas. Suspender o reactivar afecta a los socios con usuario (email). Si cambian los totales,
-   después se recalcula la comunidad.</p>
+  <p>Si cambian los totales, después se recalcula la comunidad. Bloquear el acceso de un socio a su panel se hace en la
+   pestaña <i>Suministros autorizados</i>.</p>
   <div class="al-ctrl"><button class="al-b al-bguardar">Aplicar a los seleccionados</button><button class="al-b sec al-bcancelar">Cancelar</button></div>
  </section>
  <section class="al-caja al-form al-oculto">
@@ -9888,7 +10133,7 @@ self.onInit = function () {
   function contar() {
     var n = seleccionados().length;
     q('al-nsel').textContent = n + (n === 1 ? ' seleccionado' : ' seleccionados');
-    ['al-bcargar', 'al-beditar', 'al-bborrar', 'al-bquitar'].forEach(function (k) { q(k).disabled = !n; });
+    ['al-bcargar', 'al-beditar', 'al-bquitar'].forEach(function (k) { q(k).disabled = !n; });
     var t = q('al-todos'); if (t) { t.checked = n > 0 && n === P.filas.length; t.indeterminate = n > 0 && n < P.filas.length; }
   }
   function nombres(s) { return s.map(function (f) { return f.nombre; }).join(', '); }
@@ -9911,43 +10156,25 @@ self.onInit = function () {
     tarea(api('POST', '/sync', { origen: 'auto', socios: s.map(function (f) { return f.id; }) })
       .then(function (j) { return seguir(j.job_id, { nombre: s.length + ' socios' }); }));
   };
-  q('al-bborrar').onclick = function () {
-    var s = seleccionados(); if (!s.length) return;
-    if (!confirm('¿Borrar ' + s.length + ' socios?\n\n' + nombres(s) + '\n\nSe borran sus dispositivos, clientes y usuarios de ' +
-                 'ThingsBoard; sus lecturas se conservan en la base de datos.')) return;
-    msg('Borrando ' + s.length + ' socios… (actualizando ThingsBoard)');
-    tarea(enSerie(s, 'Borrando', function (so) {
-      return api('DELETE', '/socios/' + encodeURIComponent(so.id)).then(function () { delete P.sel[so.id]; apunta(so.nombre + ' borrado.', 'ok'); });
-    }).then(function (err) {
-      msg('Borrado terminado: ' + (s.length - err) + ' de ' + s.length + ' socios' + (err ? ', ' + err + ' con errores.' : '.'), err ? 'err' : 'ok');
-    }));
-  };
   function cerrarBloque() { q('al-bform').classList.add('al-oculto'); }
   q('al-beditar').onclick = function () {
     var s = seleccionados(); if (!s.length) return;
     if (s.length === 1) { editar(s[0]); return; }   // uno: su ficha completa (nombre, usuario, CUPS...)
     form(null);
-    q('b-estado').value = q('b-desh').value = '';
+    q('b-desh').value = '';
     q('al-btitulo').textContent = 'Editar ' + s.length + ' socios: ' + nombres(s);
     q('al-bform').classList.remove('al-oculto');
     q('al-bform').scrollIntoView({ behavior: 'smooth' });
   };
   q('al-bcancelar').onclick = cerrarBloque;
   q('al-bguardar').onclick = function () {
-    var s = seleccionados(), est = q('b-estado').value, des = q('b-desh').value, totales = false;
+    var s = seleccionados(), des = q('b-desh').value, totales = false;
     if (!s.length) return;
-    if (!est && !des) { msg('Elige qué cambiar en los socios seleccionados.', 'err'); return; }
+    if (!des) { msg('Elige qué cambiar en los socios seleccionados.', 'err'); return; }
     cerrarBloque();
     msg('Editando ' + s.length + ' socios…');
     tarea(enSerie(s, 'Editando', function (so) {
       var pasos = Promise.resolve(), hecho = [];
-      if (est && (so.estado === 'suspendido') !== (est === 'suspendido')) {
-        if (!so.email) apunta(so.nombre + ': sin usuario, no se puede suspender ni reactivar');
-        else {
-          pasos = pasos.then(function () { return api('PUT', '/socios/' + encodeURIComponent(so.id) + '/estado', { suspendido: est === 'suspendido' }); });
-          hecho.push(est === 'suspendido' ? 'suspendido' : 'reactivado');
-        }
-      }
       if (des && !!so.deshabilitado !== (des === 'si')) {
         totales = true;
         pasos = pasos.then(function () { return api('PUT', '/socios/' + encodeURIComponent(so.id) + '/deshabilitado', { deshabilitado: des === 'si' }); });
@@ -10050,8 +10277,11 @@ self.onInit = function () {
     api('POST', '/datadis/autorizaciones').then(function (d) {
       ocupado(false);
       log(d.errores.join('\n'));
-      var vig = d.autorizaciones.filter(function (x) { return x.estado === 'VIGENTE'; }).length;
-      if (!d.nuevos.length) { msg(vig + ' suministros autorizados en Datadis: todos son ya socios.' + (d.errores.length ? ' Avisos abajo.' : ''), d.errores.length ? 'err' : 'ok'); return lista(); }
+      if (!d.nuevos.length) {
+        msg('Autorizaciones de Datadis al día' + (d.sin_asignar ? ': ' + d.sin_asignar + ' suministros pendientes de asignar a una comunidad ' +
+            '(pestaña Suministros autorizados, columna Comunidad).' : '.') + (d.sin_vigencia ? ' ' + d.sin_vigencia + ' han perdido la autorización.' : ''), 'ok');
+        return lista();
+      }
       msg(d.nuevos.length + ' socios nuevos desde Datadis: cargando todo su histórico (puede tardar varios minutos)…', 'ok');
       return lista().then(function () {
         return api('POST', '/sync', { origen: 'auto', socios: d.nuevos })
@@ -10172,6 +10402,70 @@ self.onInit = function () {
 self.onDataUpdated = function () {};
 self.onDestroy = function () {};
 """
+
+
+# VatiaCo.informes_socio: pestaña Informes de la vista de un socio (la ven el socio y su
+# gestor). Informe de sus datos o del conjunto de la comunidad (solo totales), en PDF, Excel o
+# CSV, de las fechas elegidas (por defecto el mes anterior). El socio es el de la vista (su
+# device name es su id).
+INFS_HTML = """<div class="al"><section class="al-caja">
+  <h3>Informes</h3>
+  <div class="al-ctrl"><label>De <select class="i-ambito"><option value="socio"></option>
+   <option value="comunidad">Conjunto de la comunidad (solo totales)</option></select></label></div>
+  <div class="al-ctrl"><label>Desde <input type="date" class="i-desde"></label><label>Hasta <input type="date" class="i-hasta"></label>
+   <label>Formato <select class="i-fmt"><option value="pdf">PDF</option><option value="xlsx">Excel</option>
+   <option value="csv">CSV</option></select></label><button class="al-b i-desc">Descargar</button></div>
+  <p class="i-msg">PDF con los mismos gráficos que el panel (reparto por periodos, periodos anteriores, consumo apilado,
+   potencias máximas) y el contrato; Excel y CSV con los datos diarios. El de la comunidad solo lleva los totales del
+   conjunto de sus socios, sin los datos de ninguno de ellos.</p>
+</section></div>"""
+INFS_CSS = ALTA_CSS + """
+.al label { display: inline-flex; gap: 6px; align-items: center; color: #555; }
+.al input, .al select { font: inherit; padding: 3px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+.i-msg { color: #666; font-size: 12px; } .i-msg.err { color: #e0541f; }
+"""
+INFS_JS = ALTA_JS + r"""
+self.onInit = function () {
+  var c = self.ctx.$container[0], q = function (s) { return c.querySelector('.' + s); };
+  var u = self.ctx.currentUser || {}, ds = (self.ctx.datasources || [])[0], sid = ds && ds.entityName;
+  if (!sid || (u.authority !== 'TENANT_ADMIN' && u.authority !== 'CUSTOMER_USER')) { q('al').classList.add('al-oculto'); return; }
+  var socio = u.authority === 'CUSTOMER_USER';
+  q('i-ambito').options[0].textContent = socio ? 'Mis datos' : 'Datos de ' + (ds.entityLabel || sid);
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var iso = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var hoy = new Date(), fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);   // mes anterior
+  q('i-desde').value = iso(new Date(fin.getFullYear(), fin.getMonth(), 1));
+  q('i-hasta').value = iso(fin);
+  function msg(t, err) { var m = q('i-msg'); m.textContent = t; m.classList.toggle('err', !!err); }
+  q('i-desc').onclick = function () {
+    var b = q('i-desc'), fmt = q('i-fmt').value;
+    var ruta = '/informes/mio/' + encodeURIComponent(sid) + (q('i-ambito').value === 'comunidad' ? '/comunidad' : '') +
+      '?desde=' + q('i-desde').value + '&hasta=' + q('i-hasta').value + '&formato=' + fmt;
+    b.disabled = true; msg('Generando el informe…');
+    fetch(API + ruta, { headers: { 'X-Authorization': 'Bearer ' + (localStorage.getItem('jwt_token') || '') } }).then(function (r) {
+      if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(j.detail || 'HTTP ' + r.status); });
+      var n = (r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+      return r.blob().then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = n ? n[1] : 'informe.' + fmt;
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+        msg('Descargado ' + a.download);
+      });
+    }).catch(function (e) { msg(e.message, true); }).then(function () { b.disabled = false; });
+  };
+};
+self.onDestroy = function () {};
+"""
+
+
+def w_informes_socio(alias, x, y, w, h):
+    """Informes del socio de la vista (VatiaCo.informes_socio): sus datos o los de la comunidad."""
+    cfg = {"datasources": [{"type": "entity", "entityAliasId": alias, "dataKeys": [_dk("d_consumo_kwh", "Consumo")]}],
+           "showTitle": True, "title": "Informes", "settings": {}, "backgroundColor": "#fff",
+           "color": "rgba(0,0,0,0.87)", "padding": "8px", "dropShadow": True, "enableFullscreen": False,
+           "mobileHeight": 8}
+    return _w("tenant.VatiaCo.informes_socio", cfg, "latest", x, y, w, h)
 
 
 def w_ficha(alias, x, y, w, h):
@@ -10729,6 +11023,16 @@ ADMIN_CSS = """
 .ad th { font-weight: 700; color: #555; } .ad td.n { text-align: right; }
 /* Tablas anchas: se desplazan dentro de su caja (pantallas pequeñas); el nombre de la comunidad parte lineas */
 .ad-tabla, .ad-aut-tabla, .ad-com-tabla { overflow-x: auto; }
+.ad-coef { width: 90px; text-align: right; }
+.ad th.ad-ord { cursor: pointer; user-select: none; } .ad th.ad-ord:hover, .ad th.ad-ord.on { color: #7b2fa8; }
+.ad th .fl { display: inline-block; width: 12px; font-size: 10px; margin-left: 2px; }
+.ad tr.ad-filtros th { border-bottom: 1px solid #e6e6e6; padding-top: 0; }
+.ad-fcom, .ad-fvig, .ad-aut-tabla select[data-cups] { max-width: 190px; font-size: 12px; }
+.ad tr.ad-sinvig td { color: #999; } .ad tr.ad-nueva td { background: #fffaf0; }
+.ad-aut-tabla td, .ad-aut-tabla th { padding-left: 5px; padding-right: 5px; }
+.ad-coefs { margin-top: 10px; padding: 8px 10px; border: 1px solid #eee; border-radius: 6px; background: #fcfaff; }
+.ad-coef-com { min-width: 230px; font-weight: 500; }
+.ad code { background: #f5f5f5; padding: 1px 4px; border-radius: 3px; font-size: 11.5px; }
 .ad-com-tabla td:first-child { white-space: normal; }
 """
 
@@ -10792,10 +11096,12 @@ ADMIN_HTML = """<div class="ad">
   <div class="ad-ctrl"><button class="ad-b sec ad-aut">Actualizar desde Datadis</button><span class="ad-msg ad-amsg"></span></div>
   <div class="ad-aut-tabla">Cargando…</div>
   <div class="ad-msg">Los suministros de todas tus comunidades: los que los titulares te han autorizado en Datadis (se
-   leen también cada día) y los de tus socios que no están entre ellos (<i>simulado</i> o <i>sin autorización</i>). Son
-   tuyos, no de una comunidad: en la columna <i>Comunidad</i> asignas cada suministro con autorización <b>vigente</b> a
+   leen también cada día) y los de tus socios que no están entre ellos. Al actualizar no se borra ninguno: se pone al día su
+   vigencia, los que han perdido la autorización quedan <i>sin vigencia</i> (filtro de la columna <i>Vigente hasta</i>) y los
+   nuevos llegan como <i>Pendiente de asignar</i>. Son tuyos, no de una comunidad: en la columna <i>Comunidad</i> asignas cada suministro con autorización <b>vigente</b> a
    cualquiera de tus comunidades (se da de alta como socio, con el nombre y NIF del titular, y se cargan sus datos) o lo
-   pasas a otra (su socio pasa con su usuario y sus datos). Si solo tienes una comunidad, los nuevos se asignan a ella.</div>
+   pasas a otra (su socio pasa con su usuario y sus datos).
+   <i>Bloqueado</i>: el socio no puede entrar en su panel (sus datos siguen contando en la comunidad).</div>
  </section>
  <section class="ad-caja" data-sec="datos"><h3>Datos cargados en la base de datos (PostgreSQL)</h3><div class="ad-tabla"></div></section>
  <section class="ad-caja" data-sec="datos">
@@ -10934,30 +11240,148 @@ self.onInit = function () {
   // Suministros autorizados en Datadis a la cuenta del gestor (ultima lista leida; se actualiza
   // con el boton, que ademas da de alta como socios los CUPS vigentes nuevos y carga sus datos).
   // Columna Comunidad: a cual de las del gestor pertenece cada uno (se cambia con el selector)
+  // Coeficiente con 6 decimales y coma; pie de la tabla: por comunidad, la suma de sus
+  // coeficientes (debe ser 1), el calculo propuesto y el fichero para la distribuidora
+  function coefTxt(v) { return v == null ? '' : Number(v).toFixed(6).replace('.', ','); }
+  function pieCoef(a, coms) {
+    var crit = ['Consumo', 'Potencia contratada', 'Igualitario'];
+    return '<div class="ad-coefs"><b>Coeficientes de reparto</b> (fijos, por comunidad; cada una debe sumar 1):' + coms.map(function (o) {
+      var xs = a.filter(function (x) { return x.comunidad === o.id && x.socio; });
+      var suma = xs.reduce(function (t, x) { return t + (x.coeficiente || 0); }, 0), ok = xs.length && Math.abs(suma - 1) < 0.0000005;
+      return '<div class="ad-ctrl"><span class="ad-coef-com">' + esc(o.nombre) + '</span>' +
+        '<span class="ad-chip' + (ok ? ' ok' : ' error') + '">suma ' + coefTxt(suma) + '</span>' +
+        '<select data-crit="' + esc(o.id) + '">' + crit.map(function (c) { return '<option>' + c + '</option>'; }).join('') + '</select>' +
+        '<button class="ad-b sec" data-prop="' + esc(o.id) + '" data-nombre="' + esc(o.nombre) + '">Proponer</button>' +
+        '<button class="ad-b" data-txt="' + esc(o.id) + '" data-nombre="' + esc(o.nombre) + '"' + (ok ? '' : ' disabled title="Los coeficientes deben sumar 1"') +
+        '>Generar TXT</button></div>';
+    }).join('') + '<div class="ad-msg">El fichero tiene una línea <code>CUPS;coeficiente</code> por suministro (6 decimales) y se llama como ' +
+      'el CAU de la instalación si está en los contratos de Datadis. <i>Proponer</i> los calcula con los socios habilitados: por su consumo ' +
+      'de los últimos 12 meses, su potencia contratada o a partes iguales. Confirma con la distribuidora el formato que pide.</div></div>';
+  }
+  // Orden de la tabla (pulsando la cabecera; otra vez, al reves) y filtro por comunidad
+  var VA = { orden: null, asc: true, filtro: '', vig: '' }, ultimaAut = null;
   function pintarAut(d) {
     // Filas: autorizaciones de Datadis y socios de sus comunidades que no estan en ellas
     // (estado SIMULADO o SOCIO: sin autorizacion leida de Datadis)
-    var a = d.autorizaciones || [], coms = d.comunidades || [];
+    ultimaAut = d;
+    var todas = d.autorizaciones || [], coms = d.comunidades || [], nomCom = {};
+    coms.forEach(function (o) { nomCom[o.id] = o.nombre; });
+    var a = todas.filter(function (x) {
+      return (!VA.filtro || (VA.filtro === '-' ? !x.comunidad : x.comunidad === VA.filtro)) &&
+             (!VA.vig || (VA.vig === 'si') === !!x.vigente);
+    });
+    var VAL = { titular: function (x) { return x.titular; }, cups: function (x) { return x.cups; },
+                hasta: function (x) { return x.hasta; }, bloqueado: function (x) { return x.socio ? (x.bloqueado ? 1 : 0) : null; },
+                comunidad: function (x) { return x.comunidad ? nomCom[x.comunidad] : null; },
+                coeficiente: function (x) { return x.coeficiente; } };
+    if (VA.orden) {
+      var f = VAL[VA.orden], dir = VA.asc ? 1 : -1;
+      a = a.slice().sort(function (p, r) {
+        var x = f(p), y = f(r);
+        if (x == null || x === '') return y == null || y === '' ? 0 : 1;   // vacios siempre al final
+        if (y == null || y === '') return -1;
+        return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'es')) * dir;
+      });
+    }
+    function th(k, t, tit) {
+      return '<th class="ad-ord' + (VA.orden === k ? ' on' : '') + '" data-ord="' + k + '"' + (tit ? ' title="' + tit + '"' : '') + '>' + t +
+        '<span class="fl">' + (VA.orden === k ? (VA.asc ? '▲' : '▼') : '') + '</span></th>';
+    }
+    var filtroCom = '<select class="ad-fcom" title="Filtrar por comunidad"><option value="">Todas</option>' +
+      coms.map(function (o) { return '<option value="' + esc(o.id) + '"' + (VA.filtro === o.id ? ' selected' : '') + '>' + esc(o.nombre) + '</option>'; }).join('') +
+      '<option value="-"' + (VA.filtro === '-' ? ' selected' : '') + '>Pendiente de asignar</option></select>';
+    var filtroVig = '<select class="ad-fvig" title="Filtrar por vigencia de la autorización">' +
+      [['', 'Todas'], ['si', 'Vigentes'], ['no', 'Sin vigencia']].map(function (o) {
+        return '<option value="' + o[0] + '"' + (VA.vig === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>';
     var nota = d.fecha ? 'Autorizaciones de Datadis consultadas el ' + fecha(d.fecha) + ' con la cuenta ' + esc(d.datadis_user) + '.'
       : d.datadis_user ? 'Aún no se han consultado las autorizaciones de Datadis: pulsa <i>Actualizar desde Datadis</i>.'
       : '<b>Pon tu cuenta de Datadis en <i>Mi cuenta de Datadis</i></b> y pulsa <i>Actualizar desde Datadis</i> para ver los suministros que te han autorizado.';
-    if (!a.length) { q('ad-aut-tabla').innerHTML = 'Aún no hay suministros en tus comunidades. ' + nota; return; }
-    var EST = { VIGENTE: ' ok', SIMULADO: ' pendiente' };
+    if (!todas.length) { q('ad-aut-tabla').innerHTML = 'Aún no hay suministros en tus comunidades. ' + nota; return; }
     function selector(x) {
       if (!x.comunidad && x.estado !== 'VIGENTE') return '–';
       return '<select data-cups="' + esc(x.cups) + '" data-socio="' + esc(x.socio_nombre || '') + '">' +
-        (x.comunidad ? '' : '<option value="" selected>— sin asignar —</option>') + coms.map(function (o) {
+        (x.comunidad ? '' : '<option value="" selected>Pendiente de asignar</option>') + coms.map(function (o) {
           return '<option value="' + esc(o.id) + '"' + (o.id === x.comunidad ? ' selected' : '') + '>' + esc(o.nombre) +
             (o.id === d.actual ? ' (esta)' : '') + '</option>';
         }).join('') + '</select>';
     }
-    q('ad-aut-tabla').innerHTML = '<table><tr><th>Titular</th><th>NIF</th><th>CUPS</th><th>Estado</th><th>Vigente hasta</th><th>Socio</th><th>Comunidad</th></tr>' +
+    q('ad-aut-tabla').innerHTML = '<table><tr>' + th('titular', 'Titular') + th('cups', 'CUPS') +
+      th('hasta', 'Vigente hasta') + th('bloqueado', 'Bloqueado', 'El socio no puede entrar en su panel') +
+      th('comunidad', 'Comunidad') + th('coeficiente', 'Coef. reparto', 'Coeficiente de reparto del autoconsumo colectivo (los de cada comunidad suman 1)') +
+      '</tr><tr class="ad-filtros"><th colspan="2"></th><th>' + filtroVig + '</th><th></th><th>' + filtroCom + '</th><th></th></tr>' +
+      (a.length ? '' : '<tr><td colspan="6">Ningún suministro con ese filtro.</td></tr>') +
       a.map(function (x) {
-        return '<tr><td>' + esc(x.titular || '–') + '</td><td>' + esc(x.nif || '–') + '</td><td>' + esc(x.cups) + '</td><td>' +
-          '<span class="ad-chip' + (EST[x.estado] || '') + '"' + (x.estado === 'SOCIO' ? ' title="Socio sin autorización leída de Datadis"' : '') + '>' +
-          esc(x.estado === 'SOCIO' ? 'sin autorización' : (x.estado || '').toLowerCase()) + '</span></td><td>' +
-          dia(x.hasta) + '</td><td>' + (x.socio ? esc(x.socio_nombre) : '–') + '</td><td>' + selector(x) + '</td></tr>';
-      }).join('') + '</table><div class="ad-msg">' + nota + '</div>';
+        var sinVig = !x.vigente;
+        return '<tr' + (sinVig ? ' class="ad-sinvig"' : (x.nueva && !x.comunidad ? ' class="ad-nueva"' : '')) + '><td>' + esc(x.titular || '–') +
+          (x.nueva && !x.comunidad ? ' <span class="ad-chip pendiente">nueva</span>' : '') + '</td><td>' + esc(x.cups) + '</td><td>' +
+          (sinVig ? '<span class="ad-chip error" title="' + (x.perdida ? 'Perdió la autorización el ' + dia(x.perdida) : esc(x.estado || '')) + '">sin vigencia</span> '
+                  : '') + dia(x.hasta) + '</td><td class="n">' +
+          (x.socio ? '<input type="checkbox" data-bloq="' + esc(x.cups) + '" data-nombre="' + esc(x.socio_nombre) + '"' +
+                     (x.bloqueado ? ' checked' : '') + ' title="Bloqueado: no puede entrar en su panel">' : '–') +
+          '</td><td>' + selector(x) + '</td><td>' +
+          (x.socio ? '<input class="ad-coef" size="9" data-coef="' + esc(x.cups) + '" value="' + coefTxt(x.coeficiente) + '" placeholder="–">' : '–') +
+          '</td></tr>';
+      }).join('') + '</table>' + pieCoef(todas, VA.filtro && VA.filtro !== '-' ? coms.filter(function (o) { return o.id === VA.filtro; }) : coms) +
+      '<div class="ad-msg">' + nota + '</div>';
+    [].forEach.call(q('ad-aut-tabla').querySelectorAll('th[data-ord]'), function (h) {
+      h.onclick = function () {
+        var k = h.dataset.ord;
+        VA.asc = VA.orden === k ? !VA.asc : true; VA.orden = k;
+        pintarAut(ultimaAut);
+      };
+    });
+    q('ad-aut-tabla').querySelector('.ad-fcom').onchange = function (e) { VA.filtro = e.target.value; pintarAut(ultimaAut); };
+    q('ad-aut-tabla').querySelector('.ad-fvig').onchange = function (e) { VA.vig = e.target.value; pintarAut(ultimaAut); };
+    // Coeficientes de reparto: se guardan al cambiar; Proponer los calcula y Generar TXT descarga
+    // el fichero de la comunidad para la distribuidora
+    [].forEach.call(q('ad-aut-tabla').querySelectorAll('input[data-coef]'), function (inp) {
+      inp.onchange = function () {
+        var v = inp.value.trim().replace(',', '.'), n = v === '' ? null : Number(v);
+        if (n !== null && (isNaN(n) || n < 0 || n > 1)) { msg('ad-amsg', 'El coeficiente va de 0 a 1 (p. ej. 0,250000).', true); return; }
+        inp.disabled = true;
+        api('PUT', '/datadis/autorizaciones/' + encodeURIComponent(inp.dataset.coef) + '/coeficiente', { coeficiente: n })
+          .then(function (r) { pintarAut(r); msg('ad-amsg', 'Coeficiente guardado.'); })
+          .catch(function (e) { inp.disabled = false; msg('ad-amsg', e.message, true); });
+      };
+    });
+    [].forEach.call(q('ad-aut-tabla').querySelectorAll('[data-prop]'), function (b) {
+      b.onclick = function () {
+        var cid = b.dataset.prop, cr = q('ad-aut-tabla').querySelector('[data-crit="' + cid + '"]').value;
+        if (!confirm('¿Calcular los coeficientes de ' + b.dataset.nombre + ' (' + cr.toLowerCase() + ')? Se sustituyen los que hay.')) return;
+        b.disabled = true; msg('ad-amsg', 'Calculando los coeficientes de ' + b.dataset.nombre + '…');
+        api('POST', '/gestor/comunidades/' + encodeURIComponent(cid) + '/coeficientes/proponer', { criterio: cr })
+          .then(function (r) { pintarAut(r); msg('ad-amsg', 'Coeficientes de ' + b.dataset.nombre + ' calculados (' + cr.toLowerCase() + ').'); })
+          .catch(function (e) { b.disabled = false; msg('ad-amsg', e.message, true); });
+      };
+    });
+    [].forEach.call(q('ad-aut-tabla').querySelectorAll('[data-txt]'), function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api('GET', '/gestor/comunidades/' + encodeURIComponent(b.dataset.txt) + '/coeficientes.txt', null, true).then(function (r) {
+          var n = (r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+          return r.blob().then(function (blob) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = n ? n[1] : 'coeficientes.txt';
+            document.body.appendChild(a); a.click();
+            setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+            msg('ad-amsg', 'Descargado ' + a.download + ': entrégalo a la distribuidora de ' + b.dataset.nombre + '.');
+          });
+        }).catch(function (e) { msg('ad-amsg', e.message, true); }).then(function () { b.disabled = false; });
+      };
+    });
+    // Bloqueado: el socio no puede entrar en su panel (sus datos siguen contando)
+    [].forEach.call(q('ad-aut-tabla').querySelectorAll('input[data-bloq]'), function (ck) {
+      ck.onchange = function () {
+        var si = ck.checked, n = ck.dataset.nombre;
+        if (!confirm(si ? '¿Bloquear a ' + n + '? No podrá entrar en su panel (sus datos siguen contando en la comunidad).'
+                        : '¿Desbloquear a ' + n + '? Podrá volver a entrar en su panel.')) { ck.checked = !si; return; }
+        ck.disabled = true;
+        api('PUT', '/datadis/autorizaciones/' + encodeURIComponent(ck.dataset.bloq) + '/bloqueo', { suspendido: si }).then(function (r) {
+          pintarAut(r); msg('ad-amsg', n + (si ? ' bloqueado.' : ' desbloqueado.'));
+          window.dispatchEvent(new CustomEvent('vatiaco-datos'));
+        }).catch(function (e) { ck.checked = !si; ck.disabled = false; msg('ad-amsg', e.message, true); });
+      };
+    });
     [].forEach.call(q('ad-aut-tabla').querySelectorAll('select[data-cups]'), function (sel) {
       var antes = sel.value;
       sel.onchange = function () {
@@ -10980,8 +11404,9 @@ self.onInit = function () {
     var b = q('ad-aut'); b.disabled = true; msg('ad-amsg', 'Consultando Datadis… (puede tardar un par de minutos)');
     api('POST', '/datadis/autorizaciones').then(function (d) {
       pintarAut(d);
-      msg('ad-amsg', d.autorizaciones.length + ' autorizaciones' + (d.nuevos.length ? ', ' + d.nuevos.length + ' socios nuevos: se cargan sus datos.' : '.') +
-        (d.sin_asignar ? ' ' + d.sin_asignar + ' vigentes sin asignar: elige su comunidad en la columna Comunidad.' : '') +
+      msg('ad-amsg', 'Autorizaciones de Datadis al día.' +
+        (d.sin_asignar ? ' ' + d.sin_asignar + ' vigentes pendientes de asignar: elige su comunidad en la columna Comunidad.' : '') +
+        (d.sin_vigencia ? ' ' + d.sin_vigencia + ' sin vigencia (filtro Sin vigencia).' : '') +
         (d.errores.length ? ' Avisos: ' + d.errores.join('; ') : ''), d.errores.length > 0);
       if (d.nuevos.length) { window.dispatchEvent(new CustomEvent('vatiaco-datos')); lanzar({ origen: 'auto', socios: d.nuevos }); }
     }).catch(function (e) { msg('ad-amsg', e.message, true); }).then(function () { b.disabled = false; });
@@ -11887,7 +12312,8 @@ def cec_config(title):
     add("default", w_redirige_socio(mio, 0, 16, 24, 1))
     # Vista de un socio: una pestaña (estado del panel) por widget, con sus pestañas arriba
     for st, wd in (("socio", w_consumo(elegido, 0, 1, 24, 15)),
-                   ("socio_mapa", con_imprimir(w_mapa(elegido, 0, 1, 24, 12))), ("socio_datos", w_ficha(elegido, 0, 1, 24, 8))):
+                   ("socio_mapa", con_imprimir(w_mapa(elegido, 0, 1, 24, 12))),
+                   ("socio_informes", w_informes_socio(elegido, 0, 1, 24, 8)), ("socio_datos", w_ficha(elegido, 0, 1, 24, 8))):
         add(st, w_socio_nav(0, 0, 24, 1))
         add(st, wd)
 
@@ -12080,6 +12506,7 @@ cec_widget("VatiaCo.gestion", "Gestión de la comunidad", GESTION_HTML, GESTION_
 cec_widget("VatiaCo.nav", "Pestañas de gestión", NAV_W_HTML, NAV_W_JS, 1, NAV_W_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.participantes", "Socios", PART_HTML, PART_JS, 16, ALTA_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.ficha_socio", "Datos del socio", FICHA_HTML, FICHA_JS, 7, FICHA_CSS, recursos=[])
+cec_widget("VatiaCo.informes_socio", "Informes del socio", INFS_HTML, INFS_JS, 6, INFS_CSS, recursos=[])
 cec_widget("VatiaCo.socio_nav", "Pestañas del socio", NAV_W_HTML, SOCIO_NAV_JS, 1, NAV_W_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.basedatos", "Copias de la base de datos", BD_HTML, BD_JS, 14, BD_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.admin_datos", "Administración de datos", ADMIN_HTML, ADMIN_JS, 11, ADMIN_CSS,
