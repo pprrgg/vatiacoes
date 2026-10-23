@@ -85,12 +85,29 @@ PG_PASSWORD="$IOT_PASSWORD"
 SUPER_EMAIL="super@vatiaco.es"
 SUPER_PASSWORD="super"
 
-# Comunidades de ejemplo que se crean en cada instalacion (ids separados por espacios; vacio =
-# ninguna), como las crearia el superusuario, con los datos de ejemplos/ junto a este script:
-# gestores_comunidades.csv (comunidad y gestor) y participantes_<id>.csv (socios simulados).
-# El gestor de teatinos (demo@vatiaco.es / demo) es el usuario de la demo de la pagina de alta.
-COMUNIDADES_EJEMPLO="teatinos"
-EJEMPLOS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ejemplos"
+# Comunidades de ejemplo que se crean en cada instalacion, todas del mismo gestor
+# (demo@vatiaco.es / demo, el usuario de la demo de la pagina de alta): la primera es su
+# principal (la crea el superusuario); las demas, otras comunidades suyas (como si las creara
+# el desde su pestaña Gestor). Sus socios tienen datos simulados. CSV separados por ";",
+# decimales con punto; sim_tipo: residencial, residencial_fv, comercial, industrial,
+# cargador_ve, cargador_ve_lento o generador_fv; sim_kwh_mes: consumo mensual. Socio sin email:
+# sin usuario. EJEMPLO_COMUNIDADES vacio = sin comunidades de ejemplo.
+EJEMPLO_GESTOR_NOMBRE="Javier Ortega"
+EJEMPLO_GESTOR_EMAIL="demo@vatiaco.es"
+EJEMPLO_GESTOR_TELEFONO="600 333 444"
+EJEMPLO_GESTOR_PASSWORD="demo"
+EJEMPLO_COMUNIDADES="id;nombre;lat;lon
+teatinos;Comunidad Energética Teatinos;36.7155;-4.4730
+albaicin;Comunidad Energética Albaicín;37.1810;-3.5925"
+EJEMPLO_SOCIOS="comunidad;nombre;email;password;telefono;lat;lon;sim_tipo;sim_kwh_mes
+teatinos;Elena Martín;elena.martin@ejemplo.es;elena2026;622 200 001;36.7162;-4.4741;residencial_fv;310
+teatinos;Pablo Sánchez;pablo.sanchez@ejemplo.es;pablo2026;622 200 002;36.7148;-4.4722;residencial_fv;390
+teatinos;Farmacia Teatinos;farmacia@ejemplo.es;farmacia2026;952 200 003;36.7170;-4.4735;comercial;1500
+albaicin;Carmen Ruiz;carmen.ruiz@ejemplo.es;carmen2026;611 100 001;37.1815;-3.5930;residencial;280
+albaicin;Antonio García;antonio.garcia@ejemplo.es;antonio2026;611 100 002;37.1802;-3.5911;residencial;420
+albaicin;Panadería San Nicolás;panaderia@ejemplo.es;panaderia2026;958 100 003;37.1821;-3.5938;comercial;2800
+albaicin;Talleres Darro;;;958 100 004;37.1796;-3.5902;industrial;35000
+albaicin;Parking Plaza Larga;parking@ejemplo.es;parking2026;958 100 005;37.1830;-3.5921;cargador_ve;3500"
 
 # Alta online de comunidades: la pagina esta en la web (Astro, <ALTA_URL_WEB>/alta/, menu
 # "Alta comunidad") y llama a la API (https://<TB_DOMAIN>/cec-api/alta/*). La comunidad
@@ -9453,6 +9470,13 @@ ALTA_CSS = """
   padding: 6px; margin-top: 6px; font: 11.5px/1.45 monospace; white-space: pre-wrap; }
 .al-con-lineas .err { color: #c62828; } .al-con-lineas .ok { color: #2e7d32; } .al-con-lineas .vacio { color: #999; }
 .al-chip.trab { background: #e3eefc; color: #1f5fb4; }
+/* Sincronizacion con Datadis (pestaña Socios) */
+.al-sync { border: 1px solid #eee; border-radius: 6px; padding: 6px 10px 8px; margin: 10px 0 4px; background: #fcfaff; }
+.al-sync-estado { font-size: 12.5px; color: #555; }
+.al-sync .al-ctrl { margin-top: 4px; }
+.al-sync label { display: inline-flex; gap: 4px; align-items: center; font-size: 12.5px; color: #555; }
+.al-barra { height: 5px; background: #eee; border-radius: 3px; margin: 6px 0 2px; overflow: hidden; }
+.al-barra div { height: 100%; width: 0; background: #2f7fd8; transition: width .3s; }
 .al-reg .al-con-lineas { height: 180px; resize: vertical; }
 .al-tabs { display: flex; gap: 2px; border-bottom: 2px solid #e8daf1; margin-bottom: 10px; }
 .al-tab { font: inherit; font-weight: 700; padding: 6px 14px; border: 0; border-radius: 4px 4px 0 0; background: none;
@@ -9601,6 +9625,16 @@ PART_HTML = """<div class="al">
    <small><b>Datadis</b>: da de alta los CUPS con autorización vigente a tu cuenta que aún no son socios (también cada
    día). <b>Importar</b>: crea los socios nuevos y actualiza los que ya existen (por <code>id</code> o, si no lo trae, por
    <code>nombre</code>); con email nuevo hace falta <code>password</code>. Después se cargan sus datos.</small></div>
+  <div class="al-sync">
+   <div class="al-sync-estado">Cargando…</div>
+   <div class="al-barra"><div></div></div>
+   <div class="al-ctrl"><button class="al-b peq al-sya">Actualizar ahora</button>
+    <button class="al-b sec peq al-syparar" disabled title="Para la sincronización en curso al terminar el paso que está haciendo">Detener</button>
+    <label>Desde <input type="month" class="al-sydesde"></label><label>Hasta <input type="month" class="al-syhasta"></label>
+    <label title="Repite consultas de las últimas 24 h y recarga ThingsBoard entero"><input type="checkbox" class="al-syforzar"> Forzar</label>
+    <button class="al-b sec peq al-syrango">Recargar rango</button>
+    <small>Con socios seleccionados, solo esos; sin selección, todos. El progreso sale en <i>Actividad</i>.</small></div>
+  </div>
   <div class="al-ctrl al-bloque"><span class="al-nsel">0 seleccionados</span>
    <button class="al-b sec peq al-bcargar">Cargar datos</button><button class="al-b sec peq al-beditar">Editar</button>
    <button class="al-b peligro peq al-bborrar">Borrar</button><button class="al-b sec peq al-bquitar">Quitar selección</button>
@@ -9677,6 +9711,7 @@ self.onInit = function () {
   }
   function ocupado(si) {
     [].forEach.call(c.querySelectorAll('button'), function (b) { if (!b.classList.contains('al-con-limpiar')) b.disabled = si; });
+    q('al-syparar').disabled = !(si && P.job);      // Detener: solo con una sincronizacion en marcha
     if (si) estado('trabajando…', 'trab'); else contar();
   }
   function log(lineas) { (lineas || '').split('\n').forEach(function (l) { apunta(l, 'err'); }); }
@@ -9779,20 +9814,74 @@ self.onInit = function () {
   function seguir(id, so) {
     var visto = 0;
     estado('trabajando…', 'trab');
+    P.job = id; q('al-syparar').disabled = false;
     return new Promise(function (ok, mal) {
       (function paso() {
         api('GET', '/sync/' + id).then(function (j) {
           (j.log || []).slice(visto).forEach(function (l) { apunta(l.m, /^(ERROR|AVISO)/.test(l.m) ? 'err' : ''); });
           visto = (j.log || []).length;
-          if (j.estado === 'pendiente' || j.estado === 'en_curso') return setTimeout(paso, 2000);
+          var activo = j.estado === 'pendiente' || j.estado === 'en_curso';
+          q('al-barra').firstChild.style.width = (j.total ? Math.round(100 * j.hechos / j.total) : (activo ? 5 : 100)) + '%';
+          if (activo) return setTimeout(paso, 2000);
+          P.job = null; q('al-syparar').disabled = true; syncEstado();
           if (j.estado !== 'error') setTimeout(function () { window.dispatchEvent(new CustomEvent('vatiaco-datos')); }, 0);
           msg('Terminada la carga de ' + so.nombre + ': ' + ({ ok: 'correcta', con_errores: 'con errores (mira los mensajes)', error: 'error' }[j.estado] || j.estado) +
               (/totales/.test(so.nombre) ? '.' : '. Pulsa Recalcular totales si cambia el total de la comunidad.'), j.estado === 'ok' ? 'ok' : 'err');
           ok();
-        }).catch(mal);
+        }).catch(function (e) { P.job = null; mal(e); });
       })();
     });
   }
+
+  // Sincronizacion con Datadis: la diaria automatica y a mano, de los socios seleccionados (o de
+  // todos si no hay seleccion); progreso en la barra y registro en Actividad
+  function fechaHora(s) {
+    if (!s) return '–';
+    var d = new Date(s), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.toLocaleDateString('es-ES') + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function syncEstado() {
+    return api('GET', '/estado').then(function (s) {
+      q('al-sync-estado').innerHTML = '<b>Sincronización con Datadis</b>: automática cada día a las <b>' + esc(s.sync_hora) + '</b> ' +
+        (s.datadis_api ? '(cuenta ' + esc(s.datadis_user) + ')'
+                       : '<b>— sin cuenta de Datadis</b> (ponla en la pestaña <i>Suministros autorizados</i>; mientras, solo se cargan los socios simulados)') +
+        ' · próxima: ' + fechaHora(s.proxima_sync) +
+        (s.ultima_sync ? ' · última: ' + fechaHora(s.ultima_sync.fin || s.ultima_sync.inicio || s.ultima_sync.creado) : '');
+      var m = s.meses_por_defecto || [];
+      if (m[0] && !q('al-sydesde').value) { q('al-sydesde').value = m[0].replace('/', '-'); q('al-syhasta').value = m[1].replace('/', '-'); }
+      var u = s.ultima_sync;
+      if (u && (u.estado === 'pendiente' || u.estado === 'en_curso') && !P.job) {
+        msg('Hay una sincronización en curso: se sigue aquí.');
+        tarea(seguir(u.id, { nombre: 'la sincronización en curso' }));
+      }
+    }).catch(function (e) { q('al-sync-estado').textContent = 'No se pudo consultar la sincronización: ' + e.message; });
+  }
+  function aQuien() {
+    var n = seleccionados().length;
+    return n ? n + (n === 1 ? ' socio seleccionado' : ' socios seleccionados') : 'todos los socios';
+  }
+  function sincronizar(cuerpo, texto) {
+    var s = seleccionados(), quien = aQuien();
+    if (s.length) cuerpo.socios = s.map(function (f) { return f.id; });
+    msg(texto + ' (' + quien + ')…');
+    tarea(api('POST', '/sync', cuerpo).catch(function (e) {
+      if (e.detail && e.detail.job_id) { apunta('Ya hay una sincronización en curso: se sigue esa.'); return e.detail; }
+      throw e;
+    }).then(function (j) { return seguir(j.job_id, { nombre: quien }); }));
+  }
+  q('al-sya').onclick = function () { sincronizar({ origen: 'auto' }, 'Sincronizando con Datadis'); };
+  q('al-syrango').onclick = function () {
+    var d = q('al-sydesde').value, h = q('al-syhasta').value;
+    if (!d || !h || d > h) { msg('Elige un rango de meses válido.', 'err'); return; }
+    sincronizar({ origen: 'datadis', desde: d.replace('-', '/'), hasta: h.replace('-', '/'), forzar: q('al-syforzar').checked },
+                'Recargando de Datadis de ' + d + ' a ' + h);
+  };
+  q('al-syparar').onclick = function () {
+    if (!P.job || !confirm('¿Detener la sincronización en curso? Se para al terminar el paso que está haciendo; lo ya cargado se conserva.')) return;
+    q('al-syparar').disabled = true;
+    api('POST', '/sync/' + P.job + '/detener').then(function () { apunta('Deteniendo: se para al terminar el paso en curso.'); })
+      .catch(function (e) { q('al-syparar').disabled = false; msg(e.message, 'err'); });
+  };
 
   // Acciones en bloque sobre los socios seleccionados
   function seleccionados() { return P.filas.filter(function (f) { return P.sel[f.id]; }); }
@@ -9973,6 +10062,7 @@ self.onInit = function () {
   form(null);
   lista();
   leerPendiente();
+  syncEstado();
   // Si el widget de administracion de datos (pestaña Suministros autorizados) carga datos, se recarga la tabla
   self.recarga = function () { lista(); };
   window.addEventListener('vatiaco-datos', self.recarga);
@@ -10093,9 +10183,9 @@ def w_ficha(alias, x, y, w, h):
     return _w("tenant.VatiaCo.ficha_socio", cfg, "latest", x, y, w, h)
 
 
-def w_participantes(x, y, w, h):
+def w_participantes(x, y, w, h):   # pestaña Socios: socios y sincronizacion con Datadis
     # panel: titulo del panel de la comunidad (al pulsar una fila se abre en el el socio)
-    cfg = {"datasources": [], "showTitle": True, "title": "Socios de la comunidad", "settings": {"panel": CEC},
+    cfg = {"datasources": [], "showTitle": True, "title": "Sincronización con Datadis", "settings": {"panel": CEC},
            "backgroundColor": "#fff", "color": "rgba(0,0,0,0.87)", "padding": "8px", "dropShadow": True,
            "enableFullscreen": True, "mobileHeight": 24}
     return _w("tenant.VatiaCo.participantes", cfg, "static", x, y, w, h)
@@ -11675,7 +11765,7 @@ function archivo() {
 # ninguna (gobernanza, tecnica, reparto, economica, tramites, participacion, rgpd): sus datos
 # siguen en la base (el libro de socios lo rellena la ficha de cada socio)
 AREAS_GESTION = []
-GESTION_DASH_VERSION = 11         # sube este numero para regenerar los paneles de gestion
+GESTION_DASH_VERSION = 12         # sube este numero para regenerar los paneles de gestion
 
 
 def nav_gestion():
@@ -11729,9 +11819,8 @@ def gestion_paneles():
     los socios, sincronizacion de la comunidad con Datadis y datos cargados), Informes, Base
     de datos (copias) y un panel por area de gestion. Borra los paneles de gestion que ya no
     tienen pestaña."""
-    panel_admin("Gestión · Socios", "Socios de la comunidad, su sincronización con Datadis y los datos cargados",
-                [w_nav("participantes", 0, 0, 24, 1), w_participantes(0, 1, 24, 16),
-                 w_admin(0, 17, 24, 14, "datos", "Sincronización con Datadis")], False, "participantes")
+    panel_admin("Gestión · Socios", "Socios de la comunidad y su sincronización con Datadis",
+                [w_nav("participantes", 0, 0, 24, 1), w_participantes(0, 1, 24, 16)], False, "participantes")
     panel_admin("Gestión · Gestor", "Perfil del gestor y sus comunidades",
                 [w_nav("gestor", 0, 0, 24, 1), w_admin(0, 1, 24, 14, "gestor", "Gestor")], False, "gestor")
     panel_admin("Gestión · Suministros autorizados",
@@ -12060,41 +12149,31 @@ curl -skf -X POST -H "X-Api-Key: $FASTAPI_API_KEY" https://localhost/cec-api/pla
   && echo "    PostgreSQL: superusuario $SUPER_EMAIL registrado" \
   || echo "    AVISO: no se pudo registrar el superusuario en PostgreSQL"
 
-# Comunidades de ejemplo (COMUNIDADES_EJEMPLO): se crean como lo haria el superusuario, con
-# sus socios simulados de ejemplos/, y se cargan sus datos. EJEMPLOS_INFO: su gestor y usuario.
+# Comunidades de ejemplo (EJEMPLO_*): la principal del gestor como la crearia el superusuario y
+# las demas como las crearia el gestor; sus socios simulados y la carga de sus datos.
+# EJEMPLOS_INFO: comunidades|usuario|contraseña de su gestor.
 EJEMPLOS_INFO=""
-if [ -n "$COMUNIDADES_EJEMPLO" ] && [ ! -f "$EJEMPLOS_DIR/gestores_comunidades.csv" ]; then
-  echo "    AVISO: no se crean las comunidades de ejemplo ($COMUNIDADES_EJEMPLO): falta $EJEMPLOS_DIR/gestores_comunidades.csv" >&2
-elif [ -n "$COMUNIDADES_EJEMPLO" ]; then
-  echo "==> Creando las comunidades de ejemplo ($COMUNIDADES_EJEMPLO; unos minutos)..."
-  EJEMPLOS_INFO=$(API_KEY="$FASTAPI_API_KEY" IDS="$COMUNIDADES_EJEMPLO" DIR="$EJEMPLOS_DIR" python3 - <<'PY'
-import csv, json, os, re, ssl, sys, urllib.error, urllib.request
+if [ -n "$EJEMPLO_COMUNIDADES" ]; then
+  echo "==> Creando las comunidades de ejemplo (unos minutos)..."
+  EJEMPLOS_INFO=$(API_KEY="$FASTAPI_API_KEY" E_GNOMBRE="$EJEMPLO_GESTOR_NOMBRE" E_GEMAIL="$EJEMPLO_GESTOR_EMAIL" \
+    E_GTEL="$EJEMPLO_GESTOR_TELEFONO" E_GPW="$EJEMPLO_GESTOR_PASSWORD" E_COMS="$EJEMPLO_COMUNIDADES" \
+    E_SOCIOS="$EJEMPLO_SOCIOS" python3 - <<'PY'
+import csv, io, json, os, ssl, sys, urllib.error, urllib.request
 
-API, CTX = "https://localhost/cec-api", ssl._create_unverified_context()
-
-
-def leer(fichero):
-    with open(os.path.join(os.environ["DIR"], fichero), encoding="utf-8-sig", newline="") as f:
-        return list(csv.DictReader(f, delimiter=";"))
+API, CTX, E = "https://localhost/cec-api", ssl._create_unverified_context(), os.environ
 
 
-def num(v):   # como Excel en espanol: coma decimal y punto de miles ("36,7155", "2.800")
+def num(v):
     v = (v or "").strip()
-    if not v:
-        return None
-    if "," in v:
-        v = v.replace(".", "").replace(",", ".")
-    elif re.fullmatch(r"\d{1,3}(\.\d{3})+", v):
-        v = v.replace(".", "")
-    return float(v)
+    return float(v) if v else None
 
 
-def si(v):
-    return (v or "").strip().lower() in ("sí", "si", "true", "1", "x", "yes")
+def filas(texto):
+    return list(csv.DictReader(io.StringIO(texto), delimiter=";"))
 
 
 def post(ruta, cuerpo, comunidad=None):
-    cab = {"X-Api-Key": os.environ["API_KEY"], "Content-Type": "application/json"}
+    cab = {"X-Api-Key": E["API_KEY"], "Content-Type": "application/json"}
     if comunidad:
         cab["X-Comunidad"] = comunidad
     pet = urllib.request.Request(API + ruta, json.dumps(cuerpo).encode(), cab, method="POST")
@@ -12105,41 +12184,39 @@ def post(ruta, cuerpo, comunidad=None):
         raise RuntimeError(f"{e.code} {e.read().decode(errors='replace')[:300]}")
 
 
-gestores = {g["id"]: g for g in leer("gestores_comunidades.csv")}
-for cid in os.environ["IDS"].split():
-    g = gestores.get(cid)
-    if not g:
-        print(f"    AVISO: {cid} no esta en ejemplos/gestores_comunidades.csv", file=sys.stderr)
-        continue
+principal, creadas = None, []
+for co in filas(E["E_COMS"]):
+    cid, nombre = co["id"], co["nombre"]
+    datos = {"id": cid, "nombre": nombre, "lat": num(co["lat"]), "lon": num(co["lon"])}
     try:
-        post("/plataforma/comunidades", {
-            "id": cid, "nombre": g["nombre"], "lat": num(g["lat"]), "lon": num(g["lon"]),
-            "gestor_nombre": g["gestor_nombre"], "gestor_email": g["gestor_email"], "gestor_telefono": g["gestor_telefono"],
-            "gestor_password": g["gestor_password"], "datadis_user": g.get("datadis_user") or "",
-            "datadis_pass": g.get("datadis_pass") or ""})
+        if principal is None:   # su principal: gestor nuevo
+            post("/plataforma/comunidades", dict(datos, gestor_nombre=E["E_GNOMBRE"], gestor_email=E["E_GEMAIL"],
+                                                 gestor_telefono=E["E_GTEL"], gestor_password=E["E_GPW"]))
+            principal = cid
+        else:                   # otra comunidad del mismo gestor
+            post("/gestor/comunidades", datos, principal)
     except RuntimeError as e:
-        print(f"    AVISO: no se pudo crear {g['nombre']}: {e}", file=sys.stderr)
+        print(f"    AVISO: no se pudo crear {nombre}: {e}", file=sys.stderr)
         continue
     n = 0
-    try:
-        socios = leer(f"participantes_{cid}.csv")
-    except FileNotFoundError:
-        socios = []
-    for so in socios:
+    for so in filas(E["E_SOCIOS"]):
+        if so["comunidad"] != cid:
+            continue
         try:
             post("/socios", {"nombre": so["nombre"], "email": so["email"], "password": so["password"],
-                             "telefono": so["telefono"], "cups": so["cups"], "nif": so["nif"],
-                             "lat": num(so["lat"]), "lon": num(so["lon"]), "simulado": si(so["simulado"]),
+                             "telefono": so["telefono"], "lat": num(so["lat"]), "lon": num(so["lon"]), "simulado": True,
                              "sim_tipo": so["sim_tipo"] or "residencial", "sim_kwh_mes": num(so["sim_kwh_mes"])}, cid)
             n += 1
         except RuntimeError as e:
-            print(f"    AVISO: {g['nombre']}: no se pudo dar de alta a {so['nombre']}: {e}", file=sys.stderr)
+            print(f"    AVISO: {nombre}: no se pudo dar de alta a {so['nombre']}: {e}", file=sys.stderr)
     try:
         post("/sync", {"origen": "auto"}, cid)
     except RuntimeError as e:
-        print(f"    AVISO: {g['nombre']}: no se pudo lanzar la carga de datos: {e}", file=sys.stderr)
-    print(f"    {g['nombre']}: {n} socios simulados (sus datos se cargan en segundo plano)", file=sys.stderr)
-    print(f"{g['nombre']}|{g['gestor_email']}|{g['gestor_password']}")
+        print(f"    AVISO: {nombre}: no se pudo lanzar la carga de datos: {e}", file=sys.stderr)
+    print(f"    {nombre}: {n} socios simulados (sus datos se cargan en segundo plano)", file=sys.stderr)
+    creadas.append(nombre)
+if creadas:
+    print(f"{' y '.join(creadas)}|{E['E_GEMAIL']}|{E['E_GPW']}")
 PY
   ) || true
 fi
