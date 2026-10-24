@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coeficientes de reparto del autoconsumo colectivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:var(--cyan);}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+  code, .mono{font-family:var(--font-mono);}
+  code.inline{background:var(--panel2); border:1px solid var(--line); padding:1px 5px; font-size:12px; color:var(--amber);}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+
+  section{display:none; padding:72px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:860px;}
+  section .lede{color:var(--text-dim); max-width:780px; font-size:15px; margin-bottom:32px;}
+  section .lede b{color:var(--text);}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:14px; margin-bottom:8px;}
+  .comp-card p, .comp-card li{font-size:12.5px; color:var(--text-dim);}
+  .comp-card ul{padding-left:18px;}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:26px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .note{font-size:11.5px; color:var(--text-dimmer); margin-top:10px; border-left:2px solid var(--line); padding-left:10px; max-width:880px;}
+  .callout{max-width:880px; margin:18px 0; padding:14px 18px; border:1px dashed var(--amber); background:rgba(255,176,32,0.05); font-size:13px; color:var(--text-dim);}
+  .callout b{color:var(--amber);}
+
+  /* ---------- formula ---------- */
+  .formula{font-family:var(--font-display); font-size:clamp(26px,4vw,42px); text-align:center; padding:28px 16px; border:1px solid var(--line); background:var(--panel2); margin:8px 0 18px;}
+  .formula sub{font-size:.5em;} .formula .b{color:var(--amber);} .formula .g{color:var(--cyan);}
+  .leyenda{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  @media(max-width:900px){.leyenda{grid-template-columns:1fr;}}
+  .leyenda div{font-size:12.5px; color:var(--text-dim); padding:12px 14px; border:1px solid var(--line-soft); background:var(--panel);}
+  .leyenda b{font-family:var(--font-mono); color:var(--text);}
+
+  /* ---------- controles ---------- */
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:8px 9px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px;}
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  input[type=range]{width:100%; accent-color:var(--amber);}
+  .btn{font-family:var(--font-mono); font-size:12px; padding:9px 16px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s;}
+  .btn:hover{background:var(--amber); color:#0A121C;}
+  .btn.primary{background:var(--amber); color:#0A121C;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);} .btn.ghost:hover{border-color:var(--text-dim); color:var(--text); background:transparent;}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  .seg button{font-family:var(--font-mono); font-size:11.5px; padding:7px 12px; border:0; background:transparent; color:var(--text-dim); cursor:pointer;}
+  .seg button.on{background:var(--amber); color:#0A121C;}
+
+  /* ---------- reparto (diagrama) ---------- */
+  .reparto{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:20px; align-items:start;}
+  @media(max-width:1000px){.reparto{grid-template-columns:1fr;}}
+  .diagrama svg{width:100%; height:auto; display:block;}
+  .socio-row{display:grid; grid-template-columns:28px 1fr 64px 74px; gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:12.5px;}
+  .socio-row .dot{width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:#0A121C;}
+  .socio-row .pc{font-family:var(--font-mono); color:var(--amber); text-align:right;}
+  .socio-row .kwh{font-family:var(--font-mono); color:var(--text-dim); text-align:right;}
+  .suma{font-family:var(--font-mono); font-size:12px; margin-top:10px;}
+  .suma.ok{color:var(--green);} .suma.mal{color:var(--red);}
+
+  /* ---------- simulador ---------- */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:14px 0;}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--panel2); border:1px solid var(--line); padding:14px; text-align:center;}
+  .kpi .v{font-family:var(--font-mono); font-size:19px; color:var(--amber);}
+  .kpi .l{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .kpi.good{border-color:var(--green);} .kpi.good .v{color:var(--green);}
+  .chart{width:100%; background:var(--panel2); border:1px solid var(--line); padding:8px 6px 4px;}
+  .chart svg{width:100%; height:auto; display:block;}
+  .chart-tit{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; margin:0 0 6px 4px;}
+  .chart-leg{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11.5px; color:var(--text-dim); margin:8px 4px 2px;}
+  .chart-leg i{display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px;}
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 8px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:7px 8px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table td.n{text-align:right; font-family:var(--font-mono);}
+  table.data-table input, table.data-table select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:6px 7px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; width:100%;}
+  table.data-table input.mal{border-color:var(--red);}
+  .tabla-scroll{overflow-x:auto;}
+
+  /* ---------- fichero ---------- */
+  pre.fichero{background:#05090F; border:1px solid var(--line); padding:14px 16px; font-family:var(--font-mono); font-size:12px; color:#CFE3F5; max-height:340px; overflow:auto; white-space:pre;}
+  .estado-ok{font-family:var(--font-mono); font-size:12px; color:var(--green);}
+  .estado-mal{font-family:var(--font-mono); font-size:12px; color:var(--red);}
+
+  details.detalle{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px; max-width:880px;}
+  details.detalle summary{cursor:pointer; padding:12px 16px; font-size:13.5px; list-style:none; color:var(--text);}
+  details.detalle summary::-webkit-details-marker{display:none;}
+  details.detalle summary::before{content:'▸'; color:var(--amber); margin-right:8px;}
+  details.detalle[open] summary::before{content:'▾';}
+  details.detalle .d-body{padding:0 16px 14px 34px; font-size:13px; color:var(--text-dim);}
+
+  footer{padding:44px 56px; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; opacity:0; transition:all .25s ease; z-index:200; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:44px 16px;}
+    .card{padding:16px;}
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap">
+    <div class="tabbar-brand">COEFICIENTES DE REPARTO</div>
+    <nav class="tabbar" id="sidenav">
+      <a href="#concepto" data-sec="concepto"><span class="tag">00</span>Concepto</a>
+      <a href="#fijos" data-sec="fijos"><span class="tag">01</span>Coeficientes fijos</a>
+      <a href="#dinamicos" data-sec="dinamicos"><span class="tag">02</span>Coeficientes dinámicos</a>
+      <a href="#comparar" data-sec="comparar"><span class="tag">03</span>Fijos frente a dinámicos</a>
+      <a href="#fichero" data-sec="fichero"><span class="tag">04</span>Fichero para la distribuidora</a>
+      <a href="#faq" data-sec="faq"><span class="tag">05</span>Preguntas frecuentes</a>
+    </nav>
+  </div>
+
+  <main>
+
+    <!-- 00 · CONCEPTO -->
+    <section id="concepto">
+      <div class="eyebrow kicker">00 · Concepto</div>
+      <h2>Cada socio recibe una parte de la energía que se genera: su coeficiente de reparto.</h2>
+      <p class="lede">Un consumidor participa en un <b>autoconsumo colectivo</b> cuando pertenece a un grupo de varios consumidores que se alimentan, de forma acordada, de la energía de instalaciones de producción <b>próximas</b> a las de consumo y asociadas a ellas. Cómo se reparte esa energía entre los socios lo fijan los <b>coeficientes de reparto</b>.</p>
+
+      <div class="formula">ENG<sub>h,i</sub> = <span class="b">β<sub>h,i</sub></span> · <span class="g">ENG<sub>h</sub></span></div>
+      <div class="leyenda">
+        <div><b>ENG<sub>h,i</sub></b><br>Energía que le corresponde al consumidor <i>i</i> en la hora <i>h</i>.</div>
+        <div><b style="color:var(--amber)">β<sub>h,i</sub></b><br>Coeficiente de reparto del consumidor <i>i</i> en la hora <i>h</i>. Los de todos los consumidores suman <b>1</b> (100 %) cada hora.</div>
+        <div><b style="color:var(--cyan)">ENG<sub>h</sub></b><br>Energía neta horaria total producida por el generador o los generadores.</div>
+      </div>
+
+      <div class="fieldset-title">Requisitos</div>
+      <div class="grid2">
+        <div class="comp-card"><h4>Misma modalidad</h4><p>Todos los consumidores deben pertenecer a la misma modalidad de autoconsumo (por ejemplo, con excedentes acogidos a compensación).</p></div>
+        <div class="comp-card"><h4>Acuerdo de reparto</h4><p>Se presenta a la distribuidora (normalmente a través de la comercializadora) un acuerdo firmado con los coeficientes, fijos o variables, cada año o antes de que empiecen a aplicarse.</p></div>
+      </div>
+
+      <div class="fieldset-title">Dos formas de repartir</div>
+      <div class="grid2">
+        <div class="comp-card"><h4>01 · Coeficientes fijos</h4><p>Un mismo porcentaje para cada socio en todas las horas del año. Sencillo de acordar, pero en las horas en que un socio no consume, su parte se vierte a la red como excedente.</p></div>
+        <div class="comp-card"><h4>02 · Coeficientes dinámicos (horarios)</h4><p>Un porcentaje distinto para cada socio en cada una de las 8760 horas del año. Permite dar la energía a quien la consume en cada momento y aprovecharla mejor.</p></div>
+      </div>
+      <p class="note">Marco normativo: Real Decreto 244/2019 (autoconsumo), cuyo anexo I recoge el reparto entre consumidores asociados; la Orden TED/1247/2021 permitió los coeficientes variables por hora. Esta guía es divulgativa: confirma los detalles con tu distribuidora.</p>
+    </section>
+
+    <!-- 01 · FIJOS -->
+    <section id="fijos">
+      <div class="eyebrow kicker">01 · Coeficientes fijos</div>
+      <h2>El mismo porcentaje para cada socio, todas las horas del año.</h2>
+      <p class="lede">Mueve los porcentajes: los demás se ajustan para que la suma sea siempre el 100 %. Con una producción de <b>10 kWh</b> y un reparto 50 / 20 / 20 / 10 %, la vivienda A recibe 5 kWh, B y C 2 kWh y D 1 kWh, consuman o no en esa hora.</p>
+      <div class="reparto">
+        <div class="card diagrama"><div id="diagFijo"></div></div>
+        <div class="card">
+          <div class="field"><label>Producción en la hora (kWh): <b id="prodFijoV" class="mono" style="color:var(--amber)"></b></label>
+            <input type="range" id="prodFijo" min="0" max="50" step="0.5" value="10"></div>
+          <div id="filasFijo"></div>
+          <div class="suma ok" id="sumaFijo"></div>
+          <div class="btn-row" style="margin-top:14px;">
+            <button class="btn ghost" type="button" id="btnMenos">− Vivienda</button>
+            <button class="btn ghost" type="button" id="btnMas">+ Vivienda</button>
+            <button class="btn ghost" type="button" id="btnIguales">A partes iguales</button>
+            <button class="btn ghost" type="button" id="btnEjemplo">Ejemplo 50/20/20/10</button>
+          </div>
+        </div>
+      </div>
+      <div class="callout"><b>¿Cómo se eligen?</b> Lo habitual es repartir según lo que aporta cada socio a la inversión, su consumo anual o su potencia contratada. En la sección 03 puedes calcular los fijos que más energía aprovechan con unos perfiles de consumo.</div>
+    </section>
+
+    <!-- 02 · DINAMICOS -->
+    <section id="dinamicos">
+      <div class="eyebrow kicker">02 · Coeficientes dinámicos</div>
+      <h2>Un reparto distinto para cada una de las 8760 horas del año.</h2>
+      <p class="lede">Con coeficientes dinámicos cada hora tiene su propio reparto. En la <b>hora nº 2338</b> la vivienda A puede recibir el 60 % porque está consumiendo, y siete horas después, en la <b>nº 2345</b>, solo el 40 %. Abajo, el reparto que da más autoconsumo en cada hora del día simulado en la sección 03: la energía se reparte en proporción a lo que consume cada vivienda.</p>
+      <div class="reparto">
+        <div class="card diagrama"><div id="diagDin"></div></div>
+        <div class="card">
+          <div class="field"><label>Hora del día: <b id="horaDinV" class="mono" style="color:var(--amber)"></b></label>
+            <input type="range" id="horaDin" min="0" max="23" step="1" value="12"></div>
+          <div id="filasDin"></div>
+          <p class="note">Producción y consumos de esa hora según el día simulado (sección 03). Cambia allí la instalación y los perfiles de las viviendas.</p>
+        </div>
+      </div>
+
+      <div class="fieldset-title">¿Qué hora del año es?</div>
+      <p class="lede" style="margin-bottom:16px;">En el fichero de coeficientes dinámicos las horas se numeran del <b>1</b> (1 de enero, de 0:00 a 1:00) al <b>8760</b> (8784 en año bisiesto).</p>
+      <div class="grid2">
+        <div class="card">
+          <div class="grid2">
+            <div class="field"><label>Fecha</label><input type="date" id="nhFecha" value="2026-04-08"></div>
+            <div class="field"><label>Hora (inicio)</label><select id="nhHora"></select></div>
+          </div>
+          <div class="kpi"><div class="v" id="nhRes">–</div><div class="l">número de hora del año</div></div>
+        </div>
+        <div class="card">
+          <div class="grid2">
+            <div class="field"><label>Año</label><input type="number" id="hnAnio" value="2026" min="2000" max="2100"></div>
+            <div class="field"><label>Nº de hora</label><input type="number" id="hnNum" value="2338" min="1" max="8784"></div>
+          </div>
+          <div class="kpi"><div class="v" id="hnRes" style="font-size:16px;">–</div><div class="l">fecha y franja horaria</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 · COMPARAR -->
+    <section id="comparar">
+      <div class="eyebrow kicker">03 · Fijos frente a dinámicos</div>
+      <h2>Lo que no consume un socio en su hora se vierte a la red: el reparto importa.</h2>
+      <p class="lede">Simula un día: elige la instalación y el perfil de consumo de cada vivienda. Las barras muestran la energía que recibe cada vivienda cada hora; la parte <b>clara</b> es lo que no consume (excedente) y la línea, el consumo total. Compara los coeficientes fijos de la sección 01 con los dinámicos.</p>
+      <div class="card">
+        <div class="grid4">
+          <div class="field"><label>Potencia de la instalación (kWp)</label><input type="number" id="kwp" value="10" min="0.5" step="0.5"></div>
+          <div class="field"><label>Época del año</label><select id="epoca"><option value="verano">Verano</option><option value="primavera" selected>Primavera / otoño</option><option value="invierno">Invierno</option></select></div>
+          <div class="field"><label>Coeficientes fijos</label><select id="fijosOrigen"><option value="manual">Los de la sección 01</option><option value="consumo">Proporcionales al consumo</option><option value="optimo">Los fijos óptimos</option></select></div>
+          <div class="field" style="display:flex; align-items:flex-end;"><button class="btn" type="button" id="btnAplicarOptimo" style="width:100%;">Llevar los óptimos a la sección 01</button></div>
+        </div>
+        <div class="tabla-scroll">
+          <table class="data-table" id="tablaPerfiles"></table>
+        </div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div><div class="chart-tit">Coeficientes fijos</div><div class="chart" id="chartFijo"></div></div>
+        <div><div class="chart-tit">Coeficientes dinámicos</div><div class="chart" id="chartDin"></div></div>
+      </div>
+      <div class="chart-leg" id="leyenda"></div>
+      <p class="note">Simplificación de un día tipo con perfiles orientativos. Los fijos óptimos son los que más energía autoconsumen ese día; los dinámicos reparten cada hora en proporción al consumo, que es el máximo posible. En la plataforma VatiaCo el cálculo se hace con los datos reales de Datadis de los últimos 12 meses (pestaña Socios: <i>Proponer → Optimizado</i> y <i>Optimizar reparto horario</i>).</p>
+    </section>
+
+    <!-- 04 · FICHERO -->
+    <section id="fichero">
+      <div class="eyebrow kicker">04 · Fichero para la distribuidora</div>
+      <h2>Un fichero de texto: una línea por suministro (y por hora, si es dinámico).</h2>
+      <p class="lede">El acuerdo de reparto se acompaña de un fichero <b>.txt</b>. Con coeficientes fijos, cada línea es <code class="inline">CUPS;coeficiente</code>. Con coeficientes dinámicos, <code class="inline">CUPS;hora;coeficiente</code> para cada suministro y cada hora del año. El separador es el punto y coma y el decimal, la coma.</p>
+      <div class="grid2">
+        <div class="comp-card"><h4>Reparto fijo anual</h4><pre class="fichero" style="max-height:none; margin-top:8px;">ES0021XXXXXXXXXXXXXXXX;0,460347
+ES0021XXXXXXXXXXXXXXXY;0,025637
+ES0021XXXXXXXXXXXXXXXZ;0,513562
+ES0021XXXXXXXXXXXXXXXA;0,000454</pre></div>
+        <div class="comp-card"><h4>Reparto dinámico</h4><pre class="fichero" style="max-height:none; margin-top:8px;">CUPS_1;1;0,185673277661795
+CUPS_2;1;0,024660751565762
+CUPS_3;1;0,274269311064718
+…
+CUPS_1;2;0,18258545505697
+CUPS_2;2;0,0243353495568997
+…</pre></div>
+      </div>
+
+      <div class="fieldset-title">Reglas del fichero dinámico</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>Nombre</h4><p>El código de autoconsumo (CAU), un guion bajo y el año de aplicación: <code class="inline">ES0031405000000099GH1FA001_2027.txt</code>.</p></div>
+        <div class="comp-card"><h4>Campos</h4><ul><li>CUPS de 22 caracteres.</li><li>Hora: entero de 1 a 8760 (8784 en bisiesto); la guía la escribe con 4 dígitos (<code class="inline">0001</code>).</li><li>Coeficiente: 0 o 1, coma decimal y 6 decimales.</li></ul></div>
+        <div class="comp-card"><h4>Formato y orden</h4><ul><li>Sin cabecera, sin espacios, en UTF-8.</li><li>Cada CUPS con todas sus horas seguidas (0001 a 8760) y después el siguiente.</li><li>Cada hora, los coeficientes de todos los CUPS suman exactamente 1.</li></ul></div>
+      </div>
+      <p class="note">Reglas de la guía de validación del fichero TXT de e-distribución, basada en la Orden TED/1247/2021. Cada distribuidora tiene su guía y hay pequeñas diferencias (el ejemplo de la guía de Zaragoza ordena por horas): confirma el formato con la tuya.</p>
+
+      <div class="fieldset-title">Ficheros de ejemplo</div>
+      <div class="card">
+        <p class="lede" style="margin-bottom:14px; font-size:13.5px;">Un autoconsumo colectivo ficticio de tres participantes (dos viviendas y un local) en 2027. En el dinámico, la energía se da al local en su horario comercial y a las viviendas el resto del tiempo:</p>
+        <div class="tabla-scroll"><table class="data-table" style="max-width:760px;">
+          <tr><th>Franja</th><th>Vivienda 1</th><th>Local</th><th>Vivienda 2</th></tr>
+          <tr><td>Laborables 9–20 h (horario del local)</td><td class="n">0,25</td><td class="n">0,50</td><td class="n">0,25</td></tr>
+          <tr><td>Fin de semana 9–20 h</td><td class="n">0,45</td><td class="n">0,10</td><td class="n">0,45</td></tr>
+          <tr><td>Resto de horas</td><td class="n">0,40</td><td class="n">0,20</td><td class="n">0,40</td></tr>
+        </table></div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn primary" type="button" data-ejemplo="dinamico">&#8681; Dinámico 2027 (26.280 líneas)</button>
+          <button class="btn" type="button" data-ejemplo="dinamico_hora">&#8681; Dinámico ordenado por horas</button>
+          <button class="btn" type="button" data-ejemplo="fijo">&#8681; Fijo anual</button>
+        </div>
+        <pre class="fichero" id="vistaEjemplo" style="margin-top:14px;">ES0031405000000001AB1F;0001;0,400000
+ES0031405000000001AB1F;0002;0,400000
+…
+ES0031405000000001AB1F;0010;0,250000
+…
+ES0031405000000001AB1F;8760;0,400000
+ES0031405000000002CD1F;0001;0,200000
+…
+ES0031405000000003EF1F;8760;0,400000</pre>
+        <p class="note">La hora 1 es de 00:00 a 01:00 del 1 de enero de 2027 (viernes; el ejemplo solo distingue laborables y fines de semana, no festivos). El fichero fijo reparte 0,350000 / 0,300000 / 0,350000. Son ejemplos de formato: los CUPS y el CAU son ficticios.</p>
+      </div>
+
+      <div class="fieldset-title">Genera tu fichero</div>
+      <div class="card">
+        <div class="grid4">
+          <div class="field"><label>Comunidad</label><input type="text" id="p_dest_nombre" placeholder="Nombre de la comunidad energética"></div>
+          <div class="field"><label>CAU de la instalación (nombre del fichero)</label><input type="text" id="cau" placeholder="ES0031405000000099GH1FA001"></div>
+          <div class="field"><label>Tipo de reparto</label><select id="tipoFich"><option value="fijo">Fijo anual</option><option value="dinamico">Dinámico (8760 horas)</option></select></div>
+          <div class="field"><label>Año de aplicación</label><input type="number" id="anioFich" value="2027" min="2000" max="2100"></div>
+          <div class="field"><label>Orden de las líneas (dinámico)</label><select id="ordenFich"><option value="cups">Por CUPS: todas sus horas seguidas</option><option value="hora">Por horas: todos los CUPS de cada hora</option></select></div>
+          <div class="field"><label>Hora (dinámico)</label><select id="horaFich"><option value="4">Con 4 dígitos (0001)</option><option value="1">Sin ceros (1)</option></select></div>
+        </div>
+        <div class="tabla-scroll"><table class="data-table" id="tablaCups"></table></div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn primary" type="button" id="btnGenerar">Generar fichero</button>
+          <button class="btn" type="button" id="btnDescargar" disabled>&#8681; Descargar .txt</button>
+          <span id="estadoFich"></span>
+        </div>
+        <pre class="fichero" id="vistaFich" style="margin-top:14px;">Pulsa "Generar fichero".</pre>
+        <p class="note">Fijo: los coeficientes de la sección 01 con 6 decimales; se redondean para que sumen exactamente 1. Dinámico: los de la sección 03 para todas las horas del año, repitiendo el día simulado (en la realidad cada hora es distinta: la plataforma VatiaCo lo genera con los consumos reales). Cada hora suma 1.</p>
+      </div>
+      <div class="callout"><b>Comprueba el formato</b> antes de presentarlo: algunas distribuidoras tienen un validador en línea, como el de UFD (Naturgy): <a href="https://sctd.gasnaturalfenosa.com/sctd/elco/herramientas/validaFicheroCoefRepartos.do" target="_blank" rel="noopener">validaFicheroCoefRepartos</a>.</div>
+    </section>
+
+    <!-- 05 · FAQ -->
+    <section id="faq">
+      <div class="eyebrow kicker">05 · Preguntas frecuentes</div>
+      <h2>Lo que suele preguntarse.</h2>
+      <details class="detalle"><summary>¿Qué pasa con la energía que un socio recibe y no consume?</summary><div class="d-body">Se vierte a la red como excedente de ese socio. Según la modalidad, se compensa en su factura o se vende, pero vale menos que la energía autoconsumida, que evita comprarla a la comercializadora. Por eso conviene repartir según cuándo consume cada uno.</div></details>
+      <details class="detalle"><summary>¿Cuánto tienen que sumar los coeficientes?</summary><div class="d-body">Exactamente 1 (el 100 %): en el reparto fijo, la suma de todos; en el dinámico, la de cada hora. Si un socio no recibe nada en una hora, su coeficiente es 0.</div></details>
+      <details class="detalle"><summary>¿Cada cuánto se pueden cambiar?</summary><div class="d-body">El acuerdo se presenta a la distribuidora con antelación y suele renovarse una vez al año. Con coeficientes dinámicos el fichero ya trae un reparto distinto para cada hora del año, así que no hace falta cambiarlo durante el año.</div></details>
+      <details class="detalle"><summary>¿Los dinámicos siempre son mejores?</summary><div class="d-body">Aprovechan más la energía porque la dan a quien la consume en cada hora, pero son una previsión hecha con consumos pasados y requieren que todos los socios y la distribuidora trabajen con ficheros horarios. Con socios de perfiles muy parecidos, la diferencia con unos buenos fijos es pequeña.</div></details>
+      <details class="detalle"><summary>¿Quién debe firmar el acuerdo de reparto?</summary><div class="d-body">Todos los consumidores asociados a la instalación. Se entrega a la distribuidora, directamente o a través de la comercializadora de cada socio.</div></details>
+      <details class="detalle"><summary>¿Cómo lo calcula la plataforma VatiaCo?</summary><div class="d-body">En la pestaña <i>Socios</i>: <i>Proponer → Optimizado</i> busca los fijos que más autoconsumo dan con los consumos y la generación hora a hora de los últimos 12 meses, y <i>Optimizar reparto horario</i> calcula los dinámicos para el año siguiente, con su gráfico y el fichero .txt para la distribuidora.</div></details>
+    </section>
+
+    <footer>
+      Coeficientes de reparto del autoconsumo colectivo: concepto, fijos, dinámicos y fichero para la distribuidora. Basado en la presentación de la Oficina Municipal de Transformación Comunitaria de Zaragoza.
+    </footer>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAVEGACION =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = 'concepto';
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+navLinks.forEach(l=>l.addEventListener('click', e=>{ e.preventDefault(); history.replaceState(null,'',l.getAttribute('href')); activarSeccion(l.dataset.sec); }));
+window.addEventListener('hashchange', ()=>activarSeccion(location.hash.replace('#','')));
+activarSeccion(location.hash.replace('#',''));
+
+function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2200); }
+const $ = id => document.getElementById(id);
+const fmt = (v,d=1) => (+v).toLocaleString('es-ES',{minimumFractionDigits:d, maximumFractionDigits:d});
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
+
+// ===================== ESTADO =====================
+const COLORES = ['#FFB020','#37CFFF','#16A34A','#E05AA6','#9B7BFF','#FF7A45','#5ED6B5','#C9D46B'];
+const PERFILES = {
+  familia:   {n:'Familia (mañana y noche)', f:h=> .25 + (h>=7&&h<9?.6:0) + (h>=13&&h<15?.35:0) + (h>=19&&h<23?.9:0)},
+  teletrabajo:{n:'Teletrabajo (de día)',    f:h=> .25 + (h>=8&&h<19?.75:0) + (h>=20&&h<23?.4:0)},
+  comercio:  {n:'Comercio (horario laboral)', f:h=> .15 + ((h>=9&&h<14)||(h>=17&&h<21)?1.6:0)},
+  nocturno:  {n:'Coche eléctrico de noche',  f:h=> .2 + (h<6?1.6:0) + (h>=19&&h<23?.6:0)},
+  jubilados: {n:'Jubilados (repartido)',     f:h=> .35 + (h>=10&&h<15?.55:0) + (h>=19&&h<22?.45:0)},
+  bombeo:    {n:'Riego o bombeo (mediodía)', f:h=> .05 + (h>=11&&h<17?2.2:0)}
+};
+const PERF_DEF = ['familia','teletrabajo','comercio','nocturno','jubilados','bombeo','familia','teletrabajo'];
+const KWH_DEF = [10,9,14,12,8,15,10,9];
+const ST = { pc:[50,20,20,10], perf:PERF_DEF.slice(0,4), kwh:KWH_DEF.slice(0,4), cups:[] };
+const letra = i => String.fromCharCode(65+i);
+
+// ===================== REPARTO: DIAGRAMA SVG =====================
+// Paneles arriba, viviendas abajo, flechas con grosor segun el porcentaje
+function diagrama(cont, pcs, prod, sub){
+  const n = pcs.length, W = 640, H = 340, x0 = 60, x1 = W-60;
+  const xs = pcs.map((_,i)=> n===1 ? W/2 : x0 + (x1-x0)*i/(n-1));
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reparto de la producción entre viviendas">`;
+  // sol y panel
+  s += `<g transform="translate(${W/2},44)" stroke="#FFB020" fill="none" stroke-width="2">
+    <circle cx="0" cy="-12" r="9"/>${[0,45,90,135,180,225,270,315].map(a=>{const r=a*Math.PI/180;return `<line x1="${Math.cos(r)*13}" y1="${-12+Math.sin(r)*13}" x2="${Math.cos(r)*18}" y2="${-12+Math.sin(r)*18}"/>`;}).join('')}
+    <path d="M-30 10 h60 l8 26 h-76 z" stroke="#E7ECF2"/><line x1="-34" y1="23" x2="34" y2="23" stroke="#E7ECF2"/>
+    <line x1="-10" y1="10" x2="-13" y2="36" stroke="#E7ECF2"/><line x1="10" y1="10" x2="13" y2="36" stroke="#E7ECF2"/>
+    <line x1="0" y1="36" x2="0" y2="46" stroke="#E7ECF2"/></g>`;
+  s += `<text x="${W/2+60}" y="70" fill="#8FA3B8" font-family="IBM Plex Mono" font-size="13">${esc(sub||'')}${fmt(prod,1)} kWh</text>`;
+  pcs.forEach((p,i)=>{
+    const x = xs[i], y = 250, w = Math.max(1.2, p/100*16);
+    s += `<path d="M${W/2} 92 C ${W/2} 170, ${x} 150, ${x} ${y-14}" fill="none" stroke="${COLORES[i]}" stroke-width="${w}" stroke-opacity="${p>0?.9:.15}"/>`;
+    s += `<path d="M${x-6} ${y-20} L${x} ${y-10} L${x+6} ${y-20}" fill="none" stroke="${COLORES[i]}" stroke-width="2"/>`;
+    const lx = (W/2 + x)/2 + (x<W/2?-14:x>W/2?14:18), ly = 160;
+    s += `<text x="${lx}" y="${ly}" text-anchor="middle" fill="#E7ECF2" font-family="IBM Plex Mono" font-size="13">${fmt(p,p%1?1:0)}%</text>`;
+    s += `<g transform="translate(${x},${y})" fill="none" stroke="#E7ECF2" stroke-width="1.6"><path d="M-22 8 L0 -10 L22 8"/><path d="M-16 4 V34 H16 V4"/></g>`;
+    s += `<text x="${x}" y="${y+30}" text-anchor="middle" fill="${COLORES[i]}" font-family="Space Grotesk" font-weight="600" font-size="17">${letra(i)}</text>`;
+    s += `<text x="${x}" y="${y+64}" text-anchor="middle" fill="#8FA3B8" font-family="IBM Plex Mono" font-size="12">${fmt(prod*p/100,2)} kWh</text>`;
+  });
+  cont.innerHTML = s + '</svg>';
+}
+
+// ===================== 01 · FIJOS =====================
+function ajustar(i, v){
+  // Fija el porcentaje i y reparte el resto entre los demas en proporcion a lo que tenian
+  v = Math.max(0, Math.min(100, v));
+  const otros = ST.pc.reduce((t,p,j)=> j===i?t:t+p, 0), resto = 100 - v;
+  ST.pc = ST.pc.map((p,j)=> j===i ? v : (otros>0 ? p*resto/otros : resto/(ST.pc.length-1)));
+}
+function pintarFijos(){
+  const prod = +$('prodFijo').value;
+  $('prodFijoV').textContent = fmt(prod,1)+' kWh';
+  diagrama($('diagFijo'), ST.pc, prod, 'Producción: ');
+  $('filasFijo').innerHTML = ST.pc.map((p,i)=>`<div class="socio-row"><span class="dot" style="background:${COLORES[i]}">${letra(i)}</span>
+    <input type="range" min="0" max="100" step="0.5" value="${p}" data-i="${i}" aria-label="Vivienda ${letra(i)}">
+    <span class="pc">${fmt(p,1)} %</span><span class="kwh">${fmt(prod*p/100,2)} kWh</span></div>`).join('');
+  const suma = ST.pc.reduce((a,b)=>a+b,0);
+  $('sumaFijo').textContent = 'Suma: '+fmt(suma,1)+' % · cada vivienda recibe su porcentaje de la producción, consuma o no';
+  $('sumaFijo').className = 'suma ' + (Math.abs(suma-100)<0.01?'ok':'mal');
+  $('filasFijo').querySelectorAll('input').forEach(inp=> inp.addEventListener('input', ()=>{
+    ajustar(+inp.dataset.i, +inp.value); pintarTodo(); }));
+}
+function numViviendas(n){
+  n = Math.max(2, Math.min(8, n));
+  while(ST.pc.length < n){ const i=ST.pc.length; ST.pc.push(0); ST.perf.push(PERF_DEF[i]); ST.kwh.push(KWH_DEF[i]); }
+  while(ST.pc.length > n){ ST.pc.pop(); ST.perf.pop(); ST.kwh.pop(); }
+  const s = ST.pc.reduce((a,b)=>a+b,0);
+  ST.pc = s>0 ? ST.pc.map(p=>p*100/s) : ST.pc.map(()=>100/n);
+  pintarTodo();
+}
+$('prodFijo').addEventListener('input', pintarFijos);
+$('btnMas').onclick = ()=>numViviendas(ST.pc.length+1);
+$('btnMenos').onclick = ()=>numViviendas(ST.pc.length-1);
+$('btnIguales').onclick = ()=>{ ST.pc = ST.pc.map(()=>100/ST.pc.length); pintarTodo(); };
+$('btnEjemplo').onclick = ()=>{ numViviendas(4); ST.pc=[50,20,20,10]; $('prodFijo').value=10; pintarTodo(); };
+
+// ===================== 03 · SIMULACION DE UN DIA =====================
+function generacion(){
+  const kwp = Math.max(0, +$('kwp').value || 0), e = $('epoca').value;
+  const [ini, fin, pico] = e==='verano' ? [6.5, 21, .78] : e==='invierno' ? [8.5, 17.5, .52] : [7.3, 19.5, .68];
+  return Array.from({length:24}, (_,h)=>{
+    const t = h + .5; return t<=ini||t>=fin ? 0 : kwp*pico*Math.pow(Math.sin(Math.PI*(t-ini)/(fin-ini)),1.3);
+  });
+}
+function demanda(){
+  return ST.perf.map((p,i)=>{
+    const f = Array.from({length:24}, (_,h)=>PERFILES[p].f(h)), s = f.reduce((a,b)=>a+b,0);
+    return f.map(x=> x*ST.kwh[i]/s);
+  });
+}
+function autoconsumo(b, G, D){
+  // b: [i][h] coeficientes; devuelve por vivienda y hora lo autoconsumido y lo asignado
+  return D.map((d,i)=> d.map((x,h)=>{ const a = b[i][h]*G[h]; return {asig:a, auto:Math.min(a,x)}; }));
+}
+function fijosOptimos(G, D){
+  // Tramos de pendiente decreciente de cada vivienda: el 1 se reparte de mayor a menor pendiente
+  const tramos = [];
+  D.forEach((d,i)=>{
+    const r = G.map((g,h)=>g>0?[d[h]/g,g]:null).filter(Boolean).sort((a,b)=>a[0]-b[0]);
+    let resto = r.reduce((t,x)=>t+x[1],0), prev = 0;
+    r.forEach(([q,g])=>{ if(q>prev){ tramos.push([resto,q-prev,i]); prev=q; } resto -= g; });
+  });
+  tramos.sort((a,b)=>b[0]-a[0]);
+  const beta = D.map(()=>0); let libre = 1;
+  for(const [,l,i] of tramos){ if(libre<=0) break; const x=Math.min(l,libre); beta[i]+=x; libre-=x; }
+  if(libre>1e-12){ const tot=D.map(d=>d.reduce((a,b)=>a+b,0)), T=tot.reduce((a,b)=>a+b,0); beta.forEach((_,i)=>beta[i]+=libre*(T?tot[i]/T:1/D.length)); }
+  return beta;
+}
+function calcular(){
+  const G = generacion(), D = demanda(), n = D.length;
+  let fijos;
+  const org = $('fijosOrigen').value;
+  if(org==='manual') fijos = ST.pc.map(p=>p/100);
+  else if(org==='consumo'){ const t=ST.kwh.reduce((a,b)=>a+b,0); fijos = ST.kwh.map(k=>t?k/t:1/n); }
+  else fijos = fijosOptimos(G, D);
+  const bF = D.map((_,i)=>G.map(()=>fijos[i]));
+  const bD = D.map((d,i)=>G.map((_,h)=>{ const t=D.reduce((s,x)=>s+x[h],0); return t>0 ? d[h]/t : fijos[i]; }));
+  return {G, D, fijos, bF, bD, rF:autoconsumo(bF,G,D), rD:autoconsumo(bD,G,D)};
+}
+function suma(r){ let a=0; r.forEach(v=>v.forEach(x=>a+=x.auto)); return a; }
+
+function grafico(cont, C, r){
+  const W=520, H=260, L=38, R=8, T=10, B=26, n=r.length;
+  const dem = C.G.map((_,h)=>C.D.reduce((s,d)=>s+d[h],0));
+  const max = Math.max(1, ...C.G, ...dem)*1.1, bw=(W-L-R)/24, y=v=>T+(H-T-B)*(1-v/max);
+  let s = `<svg viewBox="0 0 ${W} ${H}">`;
+  const paso = max>20?5:max>8?2:1;
+  for(let v=0; v<=max; v+=paso){ s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-5}" y="${y(v)+3}" fill="#5B7086" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${v}</text>`; }
+  for(let h=0; h<24; h++){
+    let acc=0; const x=L+h*bw+1;
+    for(let i=0;i<n;i++){
+      const {asig,auto}=r[i][h], exc=asig-auto;
+      if(auto>0){ s+=`<rect x="${x}" width="${bw-2}" y="${y(acc+auto)}" height="${y(acc)-y(acc+auto)}" fill="${COLORES[i]}"><title>${letra(i)} · ${h}h: ${fmt(auto,2)} kWh autoconsumidos</title></rect>`; acc+=auto; }
+      if(exc>0.0005){ s+=`<rect x="${x}" width="${bw-2}" y="${y(acc+exc)}" height="${y(acc)-y(acc+exc)}" fill="${COLORES[i]}" fill-opacity=".25"><title>${letra(i)} · ${h}h: ${fmt(exc,2)} kWh de excedente</title></rect>`; acc+=exc; }
+    }
+    if(h%3===0) s+=`<text x="${x+bw/2}" y="${H-10}" fill="#5B7086" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${h}h</text>`;
+  }
+  s += `<polyline fill="none" stroke="#E7ECF2" stroke-width="1.5" stroke-dasharray="4 3" points="${dem.map((v,h)=>`${L+h*bw+bw/2},${y(v)}`).join(' ')}"/>`;
+  s += `<text x="${L}" y="${T+8}" fill="#5B7086" font-size="9" font-family="IBM Plex Mono">kWh</text>`;
+  cont.innerHTML = s+'</svg>';
+}
+
+function pintarComparar(){
+  const C = calcular(), g = C.G.reduce((a,b)=>a+b,0), aF = suma(C.rF), aD = suma(C.rD);
+  const dT = C.D.reduce((t,d)=>t+d.reduce((a,b)=>a+b,0),0);
+  $('kpis').innerHTML = `
+    <div class="kpi"><div class="v">${fmt(g,1)} kWh</div><div class="l">generados en el día</div></div>
+    <div class="kpi"><div class="v">${fmt(dT,1)} kWh</div><div class="l">consumo de las viviendas</div></div>
+    <div class="kpi"><div class="v">${g?fmt(100*aF/g,1):'–'} %</div><div class="l">aprovechado con fijos (${fmt(aF,1)} kWh)</div></div>
+    <div class="kpi good"><div class="v">${g?fmt(100*aD/g,1):'–'} %</div><div class="l">aprovechado con dinámicos (${fmt(aD,1)} kWh)</div></div>`;
+  grafico($('chartFijo'), C, C.rF);
+  grafico($('chartDin'), C, C.rD);
+  $('leyenda').innerHTML = ST.pc.map((_,i)=>`<span><i style="background:${COLORES[i]}"></i>${letra(i)} autoconsumo</span>`).join('') +
+    `<span><i style="background:#8FA3B8; opacity:.35"></i>excedente (parte clara)</span><span><i style="background:none; border-top:2px dashed #E7ECF2; height:0; width:14px;"></i>consumo total</span>`;
+  // tabla de perfiles con los resultados de cada vivienda
+  $('tablaPerfiles').innerHTML = `<tr><th>Vivienda</th><th>Perfil de consumo</th><th>Consumo diario (kWh)</th><th>Coef. fijo</th><th>Autoconsumo fijos</th><th>Autoconsumo dinámicos</th></tr>` +
+    ST.perf.map((p,i)=>{
+      const af = C.rF[i].reduce((t,x)=>t+x.auto,0), ad = C.rD[i].reduce((t,x)=>t+x.auto,0);
+      return `<tr><td><span class="socio-row" style="border:0; padding:0; display:inline"><span class="dot" style="background:${COLORES[i]}; display:inline-flex">${letra(i)}</span></span></td>
+        <td><select data-perf="${i}">${Object.entries(PERFILES).map(([k,v])=>`<option value="${k}"${k===p?' selected':''}>${v.n}</option>`).join('')}</select></td>
+        <td><input type="number" min="0.5" step="0.5" value="${ST.kwh[i]}" data-kwh="${i}" style="max-width:110px"></td>
+        <td class="n">${fmt(100*C.fijos[i],1)} %</td><td class="n">${fmt(af,2)} kWh</td><td class="n">${fmt(ad,2)} kWh</td></tr>`;
+    }).join('');
+  $('tablaPerfiles').querySelectorAll('[data-perf]').forEach(el=>el.onchange=()=>{ ST.perf[+el.dataset.perf]=el.value; pintarTodo(); });
+  $('tablaPerfiles').querySelectorAll('[data-kwh]').forEach(el=>el.onchange=()=>{ ST.kwh[+el.dataset.kwh]=Math.max(.1,+el.value||0); pintarTodo(); });
+  return C;
+}
+['kwp','epoca','fijosOrigen'].forEach(id=>$(id).addEventListener('change', pintarTodo));
+$('btnAplicarOptimo').onclick = ()=>{ const C=calcular(); ST.pc = fijosOptimos(C.G,C.D).map(b=>b*100); $('fijosOrigen').value='manual'; pintarTodo(); toast('Coeficientes óptimos llevados a la sección 01'); };
+
+// ===================== 02 · DINAMICOS =====================
+function pintarDinamicos(C){
+  const h = +$('horaDin').value, b = C.bD.map(x=>x[h]*100), g = C.G[h];
+  $('horaDinV').textContent = `${String(h).padStart(2,'0')}:00 – ${String(h+1).padStart(2,'0')}:00`;
+  diagrama($('diagDin'), b, g, `Hora ${h}-${h+1} h · `);
+  $('filasDin').innerHTML = b.map((p,i)=>`<div class="socio-row"><span class="dot" style="background:${COLORES[i]}">${letra(i)}</span>
+    <span style="color:var(--text-dim)">consume ${fmt(C.D[i][h],2)} kWh</span><span class="pc">${fmt(p,1)} %</span><span class="kwh">${fmt(g*p/100,2)} kWh</span></div>`).join('');
+}
+$('horaDin').addEventListener('input', ()=>pintarDinamicos(calcular()));
+
+// numero de hora del año (horas de reloj: 24 por dia)
+$('nhHora').innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}"${h===9?' selected':''}>${String(h).padStart(2,'0')}:00 – ${String(h+1).padStart(2,'0')}:00</option>`).join('');
+function nHora(){
+  const v = $('nhFecha').value; if(!v){ $('nhRes').textContent='–'; return; }
+  const [y,m,d] = v.split('-').map(Number), dia = Math.round((Date.UTC(y,m-1,d)-Date.UTC(y,0,1))/864e5);
+  $('nhRes').textContent = 'Hora nº ' + (dia*24 + +$('nhHora').value + 1);
+}
+function horaN(){
+  const y = +$('hnAnio').value, n = +$('hnNum').value, tot = ((y%4===0&&y%100!==0)||y%400===0) ? 8784 : 8760;
+  if(!y || n<1 || n>tot){ $('hnRes').textContent = `Entre 1 y ${tot}`; return; }
+  const d = new Date(Date.UTC(y,0,1) + Math.floor((n-1)/24)*864e5), h = (n-1)%24;
+  $('hnRes').textContent = d.toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}) + `, ${String(h).padStart(2,'0')}:00 – ${String(h+1).padStart(2,'0')}:00`;
+}
+['nhFecha','nhHora'].forEach(id=>$(id).addEventListener('input', nHora));
+['hnAnio','hnNum'].forEach(id=>$(id).addEventListener('input', horaN));
+nHora(); horaN();
+
+// ===================== 04 · FICHERO =====================
+const CUPS_RE = /^ES[0-9]{16}[A-Z]{2}([0-9][A-Z])?$/;
+function redondear6(pesos){
+  // 6 decimales que suman exactamente 1 (metodo del mayor resto)
+  const tot = pesos.reduce((a,b)=>a+b,0) || 1, base = pesos.map(p=>Math.floor(p/tot*1e6));
+  let resto = 1e6 - base.reduce((a,b)=>a+b,0);
+  pesos.map((p,i)=>[p/tot*1e6-base[i], i]).sort((a,b)=>b[0]-a[0]).slice(0,resto).forEach(([,i])=>base[i]++);
+  return base;
+}
+const coma6 = m => (m/1e6).toFixed(6).replace('.',',');
+function pintarCups(){
+  while(ST.cups.length < ST.pc.length) ST.cups.push('');
+  $('tablaCups').innerHTML = `<tr><th>Vivienda</th><th>CUPS</th><th>Coef. fijo (sección 01)</th></tr>` + ST.pc.map((p,i)=>
+    `<tr><td><span class="dot" style="background:${COLORES[i]}; display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center; justify-content:center; color:#0A121C; font-family:var(--font-mono); font-size:11px; font-weight:600;">${letra(i)}</span></td>
+     <td><input type="text" data-cups="${i}" value="${esc(ST.cups[i])}" placeholder="ES0021000000000001AA" maxlength="22"></td>
+     <td class="n">${coma6(redondear6(ST.pc)[i])}</td></tr>`).join('');
+  $('tablaCups').querySelectorAll('[data-cups]').forEach(el=>el.addEventListener('input', ()=>{
+    el.value = el.value.toUpperCase().replace(/\s/g,''); ST.cups[+el.dataset.cups] = el.value;
+    el.classList.toggle('mal', !!el.value && !CUPS_RE.test(el.value)); guardar(); }));
+}
+let FICH = null;
+$('btnGenerar').onclick = ()=>{
+  const n = ST.pc.length, cups = ST.cups.slice(0,n).map((c,i)=> c || `CUPS_${i+1}`);
+  const malos = ST.cups.slice(0,n).filter(c=>c && !CUPS_RE.test(c)).length;
+  let lineas = [], nombre;
+  const base = ($('cau').value.trim() || 'coeficientes').replace(/[^\w.-]+/g,'_');
+  if($('tipoFich').value==='fijo'){
+    const m = redondear6(ST.pc);
+    lineas = cups.map((c,i)=>`${c};${coma6(m[i])}`);
+    nombre = `${base}_${$('anioFich').value}.txt`;
+  } else {
+    const y = +$('anioFich').value, tot = ((y%4===0&&y%100!==0)||y%400===0) ? 8784 : 8760, C = calcular();
+    const dia = C.G.map((_,h)=>redondear6(C.bD.map(b=>b[h])));
+    lineas = lineasDinamico(cups, tot, k=>dia[k%24], $('ordenFich').value, +$('horaFich').value);
+    nombre = `${base}_${y}.txt`;
+  }
+  FICH = {texto: lineas.join('\r\n')+'\r\n', nombre};
+  const vista = lineas.length>40 ? lineas.slice(0,40).join('\n')+`\n… (${lineas.length.toLocaleString('es-ES')} líneas)` : lineas.join('\n');
+  $('vistaFich').textContent = vista;
+  $('btnDescargar').disabled = false;
+  $('estadoFich').innerHTML = (malos ? `<span class="estado-mal">${malos} CUPS con formato incorrecto</span>` :
+    ST.cups.slice(0,n).some(c=>!c) ? '<span class="estado-mal">Faltan CUPS: se usan CUPS_1, CUPS_2…</span>' : '<span class="estado-ok">✓ Formato correcto · los coeficientes suman 1</span>');
+};
+// Lineas del fichero dinamico: coef(k) da los coeficientes (millonesimas) de la hora k (0..tot-1);
+// orden "cups": cada CUPS con todas sus horas; "hora": todos los CUPS de cada hora
+function lineasDinamico(cups, tot, coef, orden, digitos){
+  const hora = k => String(k+1).padStart(digitos,'0'), out = [];
+  if(orden==='hora'){ for(let k=0;k<tot;k++){ const m=coef(k); cups.forEach((c,i)=>out.push(`${c};${hora(k)};${coma6(m[i])}`)); } }
+  else { const ms = Array.from({length:tot},(_,k)=>coef(k)); cups.forEach((c,i)=>{ for(let k=0;k<tot;k++) out.push(`${c};${hora(k)};${coma6(ms[k][i])}`); }); }
+  return out;
+}
+function descargarTxt(texto, nombre){
+  const a = document.createElement('a'), url = URL.createObjectURL(new Blob([texto],{type:'text/plain;charset=utf-8'}));
+  a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  toast('Descargado ' + nombre);
+}
+$('btnDescargar').onclick = ()=>{ if(FICH) descargarTxt(FICH.texto, FICH.nombre); };
+
+// Ejemplos: tres participantes ficticios en 2027 (vivienda 1, local, vivienda 2)
+const EJ_CUPS = ['ES0031405000000001AB1F','ES0031405000000002CD1F','ES0031405000000003EF1F'], EJ_CAU = 'ES0031405000000099GH1FA001';
+function coefEjemplo(k){
+  // hora k (0 = 1 de enero de 2027 de 00:00 a 01:00), en horas de reloj: 24 por dia
+  const d = new Date(Date.UTC(2027,0,1) + Math.floor(k/24)*864e5), h = k%24, finde = d.getUTCDay()===0 || d.getUTCDay()===6;
+  if(h>=9 && h<20) return finde ? [450000,100000,450000] : [250000,500000,250000];
+  return [400000,200000,400000];
+}
+document.querySelectorAll('[data-ejemplo]').forEach(b=>b.onclick = ()=>{
+  const t = b.dataset.ejemplo; let lineas, nombre;
+  if(t==='fijo'){ lineas = EJ_CUPS.map((c,i)=>`${c};${coma6([350000,300000,350000][i])}`); nombre = `${EJ_CAU}_2027_fijo.txt`; }
+  else { lineas = lineasDinamico(EJ_CUPS, 8760, coefEjemplo, t==='dinamico_hora'?'hora':'cups', 4); nombre = t==='dinamico_hora' ? `${EJ_CAU}_2027_por_horas.txt` : `${EJ_CAU}_2027.txt`; }
+  $('vistaEjemplo').textContent = lineas.length>40 ? lineas.slice(0,24).join('\n')+'\n…\n'+lineas.slice(-6).join('\n')+`\n(${lineas.length.toLocaleString('es-ES')} líneas)` : lineas.join('\n');
+  descargarTxt(lineas.join('\r\n')+'\r\n', nombre);
+});
+
+// ===================== PINTAR Y GUARDAR =====================
+function pintarTodo(){
+  pintarFijos();
+  const C = pintarComparar();
+  pintarDinamicos(C);
+  pintarCups();
+  guardar();
+}
+function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem('VatiaCo')||'{}'); }catch(e){ return {}; } }
+function guardarVatiaco(v){ try{ localStorage.setItem('VatiaCo', JSON.stringify(v)); }catch(e){} }
+function guardar(){
+  const v = leerVatiaco();
+  v.coeficientes = {pc:ST.pc, perf:ST.perf, kwh:ST.kwh, cups:ST.cups, kwp:$('kwp').value, epoca:$('epoca').value, cau:$('cau').value};
+  guardarVatiaco(v);
+}
+(function cargar(){
+  const c = leerVatiaco().coeficientes;
+  if(c && Array.isArray(c.pc) && c.pc.length>=2 && c.pc.length<=8){
+    ST.pc = c.pc.map(Number); ST.perf = (c.perf||[]).map((p,i)=>PERFILES[p]?p:PERF_DEF[i]); ST.kwh = (c.kwh||[]).map(Number);
+    while(ST.perf.length<ST.pc.length) ST.perf.push(PERF_DEF[ST.perf.length]);
+    while(ST.kwh.length<ST.pc.length) ST.kwh.push(KWH_DEF[ST.kwh.length]);
+    ST.cups = c.cups || []; if(c.kwp) $('kwp').value = c.kwp; if(c.epoca) $('epoca').value = c.epoca; if(c.cau) $('cau').value = c.cau;
+  }
+})();
+$('cau').addEventListener('input', guardar);
+pintarTodo();
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se comparte entre todos los
+     documentos del blog a traves de localStorage, igual que en las demas calculadoras. El
+     estado de esta guia se guarda en VatiaCo["coeficientes"]. -->
+<script>
+(function(){
+  var LS_KEY = 'VatiaCo';
+  function leer(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function escribir(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+  document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]').forEach(function(el){
+    var p = leer().proyecto || {};
+    if(p[el.id]) el.value = p[el.id];
+    el.addEventListener('input', function(){ var v = leer(); v.proyecto = v.proyecto || {}; v.proyecto[el.id] = el.value; escribir(v); });
+  });
+})();
+</script>
+</body>
+</html>
