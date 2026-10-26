@@ -69,7 +69,7 @@ HOMEPAGE_PORT="3000"    # Homepage (portada de servicios con credenciales), LAN
 # (hay que redirigir 80 y 443 TCP en el router). Vacio = solo HTTPS en la LAN.
 TB_DOMAIN="VatiaCo.duckdns.org"
 DUCKDNS_TOKEN=""        # si se rellena, se arranca un actualizador de DuckDNS
-ACME_EMAIL=""
+ACME_EMAIL=""           # con un email, Caddy usa tambien ZeroSSL si Let's Encrypt no da el certificado
 
 # Credenciales de los servicios
 IOT_USER="pk"
@@ -150,15 +150,18 @@ docker compose version >/dev/null 2>&1 || { echo "ERROR: falta docker compose" >
 
 # Reset: cada ejecucion empieza de cero. Se paran los contenedores del stack y se borran sus
 # datos (pertenecen a los usuarios de los contenedores: se borran con un contenedor) y su
-# configuracion. backups/ se conserva.
-echo "==> Borrando la instalacion anterior (se conserva $INSTALL_DIR/backups)..."
+# configuracion. Se conservan backups/ y data/caddy/: los certificados de Let's Encrypt y su
+# cuenta ACME (si se borraran, cada instalacion pediria uno nuevo y Let's Encrypt solo da 5
+# por semana para el mismo dominio: a la sexta, HTTPS publico sin certificado durante dias).
+echo "==> Borrando la instalacion anterior (se conservan $INSTALL_DIR/backups y los certificados de Caddy)..."
 if [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
   (cd "$INSTALL_DIR" && docker compose --profile duckdns --profile tools down -v --remove-orphans) || true
 fi
 for c_ in $(docker ps -aq --filter label=com.docker.compose.project=iot-tb); do docker rm -f "$c_" >/dev/null; done
 if [ -d "$INSTALL_DIR" ]; then
   docker run --rm -v "$INSTALL_DIR:/stack" alpine sh -c \
-    'cd /stack && find . -mindepth 1 -maxdepth 1 ! -name backups -exec rm -rf {} +'
+    'cd /stack && find . -mindepth 1 -maxdepth 1 ! -name backups ! -name data -exec rm -rf {} + &&
+     if [ -d data ]; then find data -mindepth 1 -maxdepth 1 ! -name caddy -exec rm -rf {} +; fi'
 fi
 
 # La IP de servicio tiene que existir en esta maquina
@@ -2172,6 +2175,12 @@ def _ejecutar(j):
     if detenida:
         db.terminar(jid, "detenida")
         return
+    try:   # sin reparto elegido, los coeficientes fijos optimos (los del fichero para la distribuidora)
+        from . import gestion
+        if gestion.reparto_por_defecto():
+            nota("Reparto de la comunidad: coeficientes fijos óptimos (por defecto)")
+    except Exception as e:
+        log.warning("reparto por defecto: %s", e)
     nota("Terminada" + (f" con {errores} errores" if errores else ""))
     db.terminar(jid, "con_errores" if errores else "ok")
 __FASTAPI_EOF__
@@ -3256,7 +3265,7 @@ def coeficientes_pdf(anio=None):
     with db.conectar() as cx:
         act, part, gen_ids, Gh, Dh = gestion._perfiles(cx, d0.isoformat(), d1.isoformat())
         fij = gestion.optimizar_coeficientes(cx, d0.isoformat(), d1.isoformat())
-        modo = gestion._ajuste(cx, "reparto_modo") or "manual"
+        modo = gestion._ajuste(cx, "reparto_modo") or gestion.MODO_DEFECTO
         manual = gestion._manual(cx, part)
         # En solitario: las curvas de Datadis de cada socio (compra a la red y vertido)
         sol = {(r["cups"], r["h"]): (float(r["red"]), float(r["vert"])) for r in cx.execute(
@@ -4187,6 +4196,7 @@ def coeficientes_horarios(cx, d0, d1, anio, generadores=None, generacion_anual=N
 
 # ---------------- pestaña Coeficientes de reparto ----------------
 MODOS_REPARTO = ("manual", "optimo", "dinamico")
+MODO_DEFECTO = "optimo"   # mientras la comunidad no elige otro: los coeficientes fijos optimos
 
 
 def _ajuste(cx, clave, defecto=None):
@@ -4223,17 +4233,35 @@ def _manual(cx, part):
     return _redondear_6(base if sum(base.values()) > 0 else {i: 1.0 for i in ids})
 
 
+def reparto_por_defecto():
+    """Si la comunidad aun no ha elegido reparto, pone en vigor el de por defecto (fijos optimos,
+    calculados con los ultimos 12 meses) y lo guarda. Sin datos de generacion, nada."""
+    d0, d1 = _base_12()
+    with db.conectar() as cx:
+        if _ajuste(cx, "reparto_modo"):
+            return False
+        try:
+            opt = optimizar_coeficientes(cx, d0, d1)["socios"]
+        except ValueError:
+            return False
+        _aplicar_coeficientes(cx, {x["id"]: x["coeficiente"] for x in opt})
+        _poner_ajuste(cx, "reparto_modo", MODO_DEFECTO)
+    log.info("reparto por defecto: coeficientes fijos óptimos de %s socios", len(opt))
+    return True
+
+
 def reparto():
     """Pestaña Coeficientes de reparto: generacion y consumo de cada socio hora a hora de los
     ultimos 12 meses completos (los graficos y las cifras de cada reparto se calculan en el
     navegador), sus coeficientes manuales, los fijos optimos y los que estan en vigor, y el
     reparto elegido por la comunidad (modo)."""
     d0, d1 = _base_12()
+    reparto_por_defecto()
     with db.conectar() as cx:
         act, part, gen_ids, G, D = _perfiles(cx, d0, d1)
         opt = {x["id"]: x["coeficiente"] for x in optimizar_coeficientes(cx, d0, d1)["socios"]}
         manual = _manual(cx, part)
-        modo = _ajuste(cx, "reparto_modo") or "manual"
+        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
     t, fin = datetime.fromisoformat(d0).replace(tzinfo=TZL), datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
     horas = []
     while t < fin:
@@ -4279,7 +4307,7 @@ def reparto_socio(socio_id, desde=None, hasta=None):
         ids = [so["id"] for so, _ in part]
         if socio_id not in ids:
             raise ValueError("Este suministro no participa del reparto de la comunidad (sin datos, deshabilitado o generador)")
-        modo = _ajuste(cx, "reparto_modo") or "manual"
+        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
         co = _coeficientes_fijos(cx, part, modo)
         fijo = co[socio_id] if co else None
         cups = next(s["cups"] for so, s in part if so["id"] == socio_id)
@@ -4321,7 +4349,7 @@ def reparto_comunidad(desde=None, hasta=None):
     d0, d1 = _ventana(desde, hasta)
     with db.conectar() as cx:
         act, part, gen_ids, G, D = _perfiles(cx, d0, d1, exigir_gen=False)
-        modo = _ajuste(cx, "reparto_modo") or "manual"
+        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
         co = _coeficientes_fijos(cx, part, modo)
     ids = [so["id"] for so, _ in part]
     t0, t1 = datetime.fromisoformat(d0).replace(tzinfo=TZL), datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
@@ -4342,14 +4370,22 @@ def reparto_comunidad(desde=None, hasta=None):
 # Precios de la energia de la comunidad (Consumos -> Costes de la energia e informe de justificacion): precio fijo
 # por periodos del mercado libre, EUR/kWh con peajes y cargos y sin impuestos, y compensacion de
 # excedentes. Por defecto, unos aproximados; el gestor los cambia (ajuste "precios").
-# Potencia: termino de potencia por periodo (EUR/kW y año, con peajes y cargos) y "tep" de los
-# excesos de potencia (EUR/kW; en 2.0TD no hay: el limitador corta).
+# Potencia: termino de potencia por periodo (EUR/kW y año, con peajes, cargos y margen) y
+# terminos de exceso de potencia de la Resolucion de peajes de 2026 de la CNMC (BOE-A-2025-26348,
+# anexo II; Circular 3/2020 art. 9.4 modificada por la Circular 1/2025): tep45, EUR/kW y dia, para
+# los puntos de medida tipo 4 y 5 (potencias <= 50 kW, maximetro mensual); tep123, EUR/kW, para
+# los tipo 1, 2 y 3 (alguna potencia > 50 kW, cuartohorario). En 2.0TD no hay excesos (el ICP corta).
 PRECIOS_DEFECTO = {"2.0TD": {"p": {"1": 0.20, "2": 0.14, "3": 0.09}, "comp": 0.06,
-                             "pot": {"1": 30.0, "2": 3.0}, "tep": 0.0},
+                             "pot": {"1": 30.0, "2": 3.0},
+                             "tep45": {"1": 0.279426, "2": 0.005316}, "tep123": {"1": 2.968850, "2": 0.056473}},
                    "3.0TD": {"p": {"1": 0.19, "2": 0.16, "3": 0.13, "4": 0.12, "5": 0.10, "6": 0.09}, "comp": 0.06,
-                             "pot": {"1": 20.0, "2": 11.0, "3": 5.0, "4": 4.3, "5": 2.8, "6": 1.6}, "tep": 1.41},
+                             "pot": {"1": 20.0, "2": 11.0, "3": 5.0, "4": 4.3, "5": 2.8, "6": 1.6},
+                             "tep45": {"1": 0.171373, "2": 0.090584, "3": 0.028721, "4": 0.021891, "5": 0.006142, "6": 0.006142},
+                             "tep123": {"1": 3.325715, "2": 1.757877, "3": 0.557353, "4": 0.424794, "5": 0.119179, "6": 0.119179}},
                    "6.1TD": {"p": {"1": 0.16, "2": 0.14, "3": 0.12, "4": 0.11, "5": 0.09, "6": 0.08}, "comp": 0.05,
-                             "pot": {"1": 30.0, "2": 15.5, "3": 7.0, "4": 5.5, "5": 1.6, "6": 0.9}, "tep": 1.41}}
+                             "pot": {"1": 30.0, "2": 15.5, "3": 7.0, "4": 5.5, "5": 1.6, "6": 0.9},
+                             "tep45": {"1": 0.275735, "2": 0.146094, "3": 0.054668, "4": 0.038455, "5": 0.000817, "6": 0.000722},
+                             "tep123": {"1": 3.431797, "2": 1.818277, "3": 0.680379, "4": 0.478581, "5": 0.010172, "6": 0.008984}}}
 
 
 # Resto de la factura: alquiler del contador por peaje (EUR/mes), impuesto electrico e IVA (%) y
@@ -4367,9 +4403,9 @@ def precios():
     out["otros"] = {**OTROS_DEFECTO, **{k: float(y) for k, y in (v.get("otros") or {}).items() if k in OTROS_DEFECTO}}
     for t, x in v.items():
         if t in out and t != "otros":
-            for campo in ("p", "pot"):
+            for campo in ("p", "pot", "tep45", "tep123"):
                 out[t][campo].update({k: float(y) for k, y in (x.get(campo) or {}).items() if k in out[t][campo]})
-            for campo in ("comp", "tep", "alquiler"):
+            for campo in ("comp", "alquiler"):
                 if x.get(campo) is not None:
                     out[t][campo] = float(x[campo])
     return {**out, "defecto": not v}
@@ -4387,17 +4423,18 @@ def guardar_precios(d):
         if t not in PRECIOS_DEFECTO:
             continue
         ps = {k: float(v) for k, v in (x.get("p") or {}).items() if k in PRECIOS_DEFECTO[t]["p"] and v is not None}
-        pot = {k: float(v) for k, v in (x.get("pot") or {}).items() if k in PRECIOS_DEFECTO[t]["pot"] and v is not None}
-        comp, tep = x.get("comp"), x.get("tep")
+        pot, tep45, tep123 = ({k: float(v) for k, v in (x.get(c) or {}).items() if k in PRECIOS_DEFECTO[t][c] and v is not None}
+                              for c in ("pot", "tep45", "tep123"))
+        comp = x.get("comp")
         if any(not 0 <= v <= 2 for v in ps.values()) or (comp is not None and not 0 <= float(comp) <= 2):
             raise ValueError("Los precios de la energía van de 0 a 2 €/kWh")
-        if any(not 0 <= v <= 500 for v in pot.values()) or (tep is not None and not 0 <= float(tep) <= 50):
-            raise ValueError("El término de potencia va de 0 a 500 €/kW y año y el de excesos, de 0 a 50 €/kW")
+        if any(not 0 <= v <= 500 for v in pot.values()) or any(not 0 <= v <= 50 for v in list(tep45.values()) + list(tep123.values())):
+            raise ValueError("El término de potencia va de 0 a 500 €/kW y año y los de exceso, de 0 a 50")
         alq = x.get("alquiler")
         if alq is not None and not 0 <= float(alq) <= 500:
             raise ValueError("El alquiler del contador va de 0 a 500 €/mes")
-        limpio[t] = {"p": ps, "pot": pot, **({"comp": float(comp)} if comp is not None else {}),
-                     **({"tep": float(tep)} if tep is not None else {}), **({"alquiler": float(alq)} if alq is not None else {})}
+        limpio[t] = {"p": ps, "pot": pot, "tep45": tep45, "tep123": tep123, **({"comp": float(comp)} if comp is not None else {}),
+                     **({"alquiler": float(alq)} if alq is not None else {})}
     with db.conectar() as cx:
         if limpio:
             _poner_ajuste(cx, "precios", limpio)
@@ -4416,7 +4453,7 @@ def reparto_manual(coeficientes):
             raise ValueError("Coeficientes no válidos")
         co = _redondear_6({i: co.get(i, 0.0) for i in ids})
         _poner_ajuste(cx, "reparto_manual", co)
-        modo = _ajuste(cx, "reparto_modo") or "manual"
+        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
         if modo == "manual":
             _aplicar_coeficientes(cx, co)
     return {"manual": co, "modo": modo}
@@ -9984,15 +10021,24 @@ var REPARTOS = { manual: 'coeficientes fijos', optimo: 'coeficientes fijos ópti
 // Pestaña Costes (settings.costes): precio fijo por periodos del mercado libre. Precios aproximados
 // del termino de energia (EUR/kWh, con peajes y cargos, sin impuestos) por periodo del peaje y
 // compensacion de los excedentes; se multiplican por los kWh de cada hora agrupados por periodo
-// Pestaña Potencias (settings.potencias): termino de potencia (EUR/kW y año) por periodo y "tep" de
-// los excesos de potencia (EUR/kW; en 2.0TD no hay excesos, el limitador corta). Kp: coeficientes
-// de los excesos por periodo de la normativa de peajes
-var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, pot: { 1: 30.0, 2: 3.0 }, tep: 0 },
+// Potencia: termino de potencia (EUR/kW y año) por periodo y terminos de exceso de potencia de la
+// Resolucion de peajes de 2026 (anexo II): tep45 (EUR/kW y dia, puntos de medida tipo 4 y 5:
+// potencias <= 50 kW) y tep123 (EUR/kW, tipo 1, 2 y 3: alguna potencia > 50 kW)
+var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, pot: { 1: 30.0, 2: 3.0 },
+                           tep45: { 1: 0.279426, 2: 0.005316 }, tep123: { 1: 2.968850, 2: 0.056473 } },
                 '3.0TD': { p: { 1: 0.19, 2: 0.16, 3: 0.13, 4: 0.12, 5: 0.10, 6: 0.09 }, comp: 0.06,
-                           pot: { 1: 20.0, 2: 11.0, 3: 5.0, 4: 4.3, 5: 2.8, 6: 1.6 }, tep: 1.41 },
+                           pot: { 1: 20.0, 2: 11.0, 3: 5.0, 4: 4.3, 5: 2.8, 6: 1.6 },
+                           tep45: { 1: 0.171373, 2: 0.090584, 3: 0.028721, 4: 0.021891, 5: 0.006142, 6: 0.006142 },
+                           tep123: { 1: 3.325715, 2: 1.757877, 3: 0.557353, 4: 0.424794, 5: 0.119179, 6: 0.119179 } },
                 '6.1TD': { p: { 1: 0.16, 2: 0.14, 3: 0.12, 4: 0.11, 5: 0.09, 6: 0.08 }, comp: 0.05,
-                           pot: { 1: 30.0, 2: 15.5, 3: 7.0, 4: 5.5, 5: 1.6, 6: 0.9 }, tep: 1.41 } };
-var KP = { 1: 1, 2: 0.5, 3: 0.37, 4: 0.37, 5: 0.37, 6: 0.17 };
+                           pot: { 1: 30.0, 2: 15.5, 3: 7.0, 4: 5.5, 5: 1.6, 6: 0.9 },
+                           tep45: { 1: 0.275735, 2: 0.146094, 3: 0.054668, 4: 0.038455, 5: 0.000817, 6: 0.000722 },
+                           tep123: { 1: 3.431797, 2: 1.818277, 3: 0.680379, 4: 0.478581, 5: 0.010172, 6: 0.008984 } } };
+// Normativa de la facturacion de peajes (enlaces en los titulos de las subpestañas de costes)
+var NORMA = '<a href="https://www.boe.es/buscar/act.php?id=BOE-A-2020-1066" target="_blank" rel="noopener">Circular 3/2020</a>, ' +
+  '<a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-2044" target="_blank" rel="noopener">Circular 1/2025</a> y ' +
+  '<a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26348" target="_blank" rel="noopener">Resolución de peajes de 2026</a> de la CNMC ' +
+  '(<a href="https://www.cnmc.es/sites/default/files/3417242_0.pdf" target="_blank" rel="noopener">criterios de aplicación</a>)';
 function tarifa() { var p = String(S.peaje || ''); return pj() === '2.0TD' ? '2.0TD' : /^6/.test(p) ? '6.1TD' : '3.0TD'; }
 // Precios de la comunidad (/precios: los edita el gestor en esta pestaña); hasta cargarlos, los aproximados
 function precio() { var t = tarifa(); return (S.prec && S.prec[t]) || PRECIOS[t]; }
@@ -10046,8 +10092,9 @@ function todosPrecios() {
   var P = S.prec || PRECIOS, out = { otros: otros() };
   ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
     var x = P[t] || PRECIOS[t];
-    out[t] = { p: JSON.parse(JSON.stringify(x.p)), comp: x.comp, pot: JSON.parse(JSON.stringify(x.pot || PRECIOS[t].pot)),
-               tep: x.tep != null ? x.tep : PRECIOS[t].tep, alquiler: x.alquiler != null ? x.alquiler : { '2.0TD': 0.81, '3.0TD': 9, '6.1TD': 25 }[t] };
+    var c = function (k) { return JSON.parse(JSON.stringify(x[k] || PRECIOS[t][k])); };
+    out[t] = { p: c('p'), comp: x.comp, pot: c('pot'), tep45: c('tep45'), tep123: c('tep123'),
+               alquiler: x.alquiler != null ? x.alquiler : { '2.0TD': 0.81, '3.0TD': 9, '6.1TD': 25 }[t] };
   });
   return out;
 }
@@ -10089,17 +10136,21 @@ function editorOtros() {
 // Precios de la potencia (subpestaña Costes de la potencia): termino de potencia y excesos
 function editorPotencias() {
   var pn = q('.dd-prec2'), gestor = (S.ctx.currentUser || {}).authority === 'TENANT_ADMIN', P = todosPrecios();
-  var v = function (x) { return x == null ? '' : String(+(+x).toFixed(4)); }, dis = gestor ? '' : ' disabled';
-  pn.innerHTML = '<table><tr><th>Peaje</th>' + [1, 2, 3, 4, 5, 6].map(function (p) { return '<th>P' + p + '</th>'; }).join('') +
-    '<th>Excesos (tep)</th></tr>' + ['2.0TD', '3.0TD', '6.1TD'].map(function (t) {
-      return '<tr><td><b>' + t + '</b></td>' + [1, 2, 3, 4, 5, 6].map(function (p) {
-        return '<td>' + (P[t].pot[p] == null ? '–' : '<input type="number" min="0" max="500" step="0.01" data-t="' + t + '" data-p="' + p +
-          '" value="' + v(P[t].pot[p]) + '"' + dis + '>') + '</td>';
-      }).join('') + '<td>' + (t === '2.0TD' ? '–' : '<input type="number" min="0" max="50" step="0.0001" data-t="' + t +
-        '" data-p="tep" value="' + v(P[t].tep) + '"' + dis + '>') + '</td></tr>';
-    }).join('') + '</table>' +
-    '<div class="dd-prec-pie">Término de potencia en €/kW y año por periodo (con peajes y cargos, sin impuestos) y término de los ' +
-    'excesos de potencia en €/kW (3.0TD y 6.1TD; en 2.0TD el limitador corta). Precios de la comunidad, aproximados por defecto.' +
+  var v = function (x) { return x == null ? '' : String(+(+x).toFixed(6)); }, dis = gestor ? '' : ' disabled';
+  var tabla = function (campo, titulo, peajes, st) {
+    return '<table><tr><th style="text-align:left">' + titulo + '</th>' + [1, 2, 3, 4, 5, 6].map(function (p) { return '<th>P' + p + '</th>'; }).join('') +
+      '</tr>' + peajes.map(function (t) {
+        return '<tr><td><b>' + t + '</b></td>' + [1, 2, 3, 4, 5, 6].map(function (p) {
+          return '<td>' + (P[t][campo][p] == null ? '–' : '<input type="number" min="0" step="' + st + '" data-c="' + campo + '" data-t="' + t +
+            '" data-p="' + p + '" value="' + v(P[t][campo][p]) + '"' + dis + '>') + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</table>';
+  };
+  pn.innerHTML = tabla('pot', 'Término de potencia (€/kW y año)', ['2.0TD', '3.0TD', '6.1TD'], '0.01') +
+    tabla('tep45', 'Exceso, medida tipo 4-5: todas ≤ 50 kW (€/kW y día)', ['3.0TD', '6.1TD'], '0.000001') +
+    tabla('tep123', 'Exceso, medida tipo 1-3: alguna > 50 kW (€/kW)', ['3.0TD', '6.1TD'], '0.000001') +
+    '<div class="dd-prec-pie">Término de potencia con peajes, cargos y margen, sin impuestos. Términos de exceso de la Resolución de peajes de ' +
+    '2026 (anexo II); en 2.0TD no hay excesos (el limitador corta). Normativa: ' + NORMA + '.' +
     (gestor ? ' <button type="button" class="dd-bprec dd-pg2">Guardar</button> <button type="button" class="dd-bprec dd-pd2">Valores por defecto</button>' : '') +
     ' <span class="dd-pmsg2"></span></div>';
   if (!gestor) return;
@@ -10111,14 +10162,11 @@ function editorPotencias() {
   };
   q('.dd-pg2').onclick = function () {
     var out = todosPrecios();
-    qa('.dd-prec2 input').forEach(function (i) {
-      var x = out[i.dataset.t], val = i.value === '' ? null : +i.value;
-      if (i.dataset.p === 'tep') x.tep = val; else x.pot[i.dataset.p] = val;
-    });
+    qa('.dd-prec2 input').forEach(function (i) { out[i.dataset.t][i.dataset.c][i.dataset.p] = i.value === '' ? null : +i.value; });
     guardar(out);
   };
   q('.dd-pd2').onclick = function () { var out = todosPrecios(); ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
-    out[t].pot = JSON.parse(JSON.stringify(PRECIOS[t].pot)); out[t].tep = PRECIOS[t].tep; }); guardar(out); };
+    ['pot', 'tep45', 'tep123'].forEach(function (c) { out[t][c] = JSON.parse(JSON.stringify(PRECIOS[t][c])); }); }); guardar(out); };
 }
 var MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 var MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre',
@@ -10371,6 +10419,9 @@ function cargar() {
     // Claves de cada subpestaña anual: maximetro, reactiva (con la activa por periodo) y factura (todo)
     var kp = [], per = cats(false), cl = S.metrica;
     if (cl === 'potcostes' || cl === 'factura') S.pers.forEach(function (p) { kp.push('pmax_p' + p + '_kw'); });
+    // Excesos cuartohorarios (alguna potencia > 50 kW): con la curva de carga del año
+    var maxPc = 0; Object.keys(S.pcon || {}).forEach(function (k) { if (+S.pcon[k] > maxPc) maxPc = +S.pcon[k]; });
+    if ((cl === 'potcostes' || cl === 'factura') && maxPc > 50 && tarifa() !== '2.0TD') kp.push('consumo_kwh');
     if (cl !== 'potcostes') S.reacs.forEach(function (p) { kp.push('reac_p' + p + '_kvarh'); });
     if (cl !== 'potcostes') per.forEach(function (c) { kp.push(c.d); });
     if (cl === 'factura') cats(S.hayGen).forEach(function (c) { if (kp.indexOf(c.d) < 0) kp.push(c.d); });
@@ -10400,23 +10451,21 @@ function cargar() {
         var rc = cd ? curvasCom(cd, t0, t1) : {};
         S.datos = agrupar(rc, C, t0, true);
         // Generacion de la comunidad que le corresponde (coeficiente x generacion), por casilla
-        S.datos.gen = S.datos.et.map(function () { return null; });
-        (rc.generada_kwh || []).forEach(function (p) {
-          var i = indice(p.ts, t0);
-          if (i >= 0 && i < S.datos.gen.length) S.datos.gen[i] = (S.datos.gen[i] || 0) + p.value;
-        });
+        S.datos.gen = porCasilla(rc.generada_kwh, t0, S.datos.et.length);
         S.vecinos = vecinos([].concat.apply([], mk.map(function (k) { return rm[k] || []; })));
         pintar();
       });
     });
     return;
   }
-  var keys = [];
+  var keys = [], kgen = dia ? 'generada_kwh' : 'd_generada_kwh';
   C.forEach(function (c) { var k = dia ? c.curva : c.d; if (keys.indexOf(k) < 0) keys.push(k); });
+  if (S.hayGen) keys.push(kgen);   // energiaGenerada_kWh (linea del grafico)
   pedir(keys, t0, t1, function (r) {
     pedir(mk, mover(S.ref, S.modo, -3).getTime(), mover(S.ref, S.modo, 4).getTime(), function (rm) {
       if (n !== S.pedido) return;
       S.datos = agrupar(r, C, t0);
+      if (S.hayGen) S.datos.gen = porCasilla(r[kgen], t0, S.datos.et.length);
       S.vecinos = vecinos([].concat.apply([], mk.map(function (k) { return rm[k] || []; })));
       pintar();
     });
@@ -10502,6 +10551,13 @@ function pintarCostes() {
     ' €/kWh. Beneficio = coste en solitario (Datadis) − coste en comunidad.</small>';
   q('.dd-vacio').textContent = 'Sin datos en este periodo';
   q('.dd-vacio').style.display = hay ? 'none' : 'block';
+}
+
+// Suma de una serie [{ts, value}] en cada casilla (hora, dia o mes) del grafico
+function porCasilla(pts, t0, n) {
+  var out = []; for (var k = 0; k < n; k++) out.push(null);
+  (pts || []).forEach(function (p) { if (p.value == null) return; var i = indice(p.ts, t0); if (i >= 0 && i < n) out[i] = (out[i] || 0) + (+p.value); });
+  return out;
 }
 
 // Valores de cada casilla (hora, dia o mes) y serie
@@ -10633,29 +10689,69 @@ function pintar() {
     yAxis: { type: 'value', show: false },
     series: mser
   }, true);
-  // Grafico principal: apilado (positivos hacia arriba, excedentes hacia abajo) o agrupado
-  var apila = S.apilado || S.modo === 'dia';
+  // Grafico principal con los terminos de la descarga CSV de Datadis: en cada casilla, una barra con
+  // energiaAutoconsumida_kWh y encima energiaVertida_kWh (juntas, energiaGenerada_kWh: la linea) y
+  // al lado consumo_kWh (de la red, todos los periodos); en el dia, los periodos del peaje de fondo
+  var apila = S.apilado || S.modo === 'dia', np = pj() === '2.0TD' ? 3 : 6;
+  var cons = D.V.map(function (v, i) { if (!D.hay[i]) return null; var t = 0; for (var p = 1; p <= np; p++) t += v['p' + p] || 0; return r3(t); });
+  var auto = D.V.map(function (v, i) { return D.hay[i] && v.auto != null ? r3(v.auto) : null; });
+  var vert = D.V.map(function (v, i) { return D.hay[i] && v.vert != null ? r3(Math.abs(v.vert)) : null; });   // en positivo
+  var gen = D.gen ? D.gen.map(function (v) { return v == null ? null : r3(v); }) : null;
+  var suma = function (a) { var t = 0; (a || []).forEach(function (x) { t += x || 0; }); return t; };
+  var TOT = { 'energiaAutoconsumida_kWh': suma(auto), 'consumo_kWh': suma(cons), 'energiaVertida_kWh': suma(vert), 'energiaGenerada_kWh': suma(gen) };
+  var hayG = S.hayGen || S.enCom;
+  var series = [];
+  if (hayG) series.push({ type: 'bar', name: 'energiaAutoconsumida_kWh', stack: apila ? 'gen' : null, barMaxWidth: 28, itemStyle: { color: '#1fab76' }, data: auto });
+  if (hayG) series.push({ type: 'bar', name: 'energiaVertida_kWh', stack: apila ? 'gen' : null, barMaxWidth: 28, itemStyle: { color: '#ee6430' }, data: vert });
+  series.push({ type: 'bar', name: 'consumo_kWh', stack: apila ? 'red' : null, barMaxWidth: 28, itemStyle: { color: '#2b78d8' }, data: cons });
+  if (gen) series.push({ type: 'line', name: 'energiaGenerada_kWh', smooth: true, symbol: 'none', z: 5,
+                        lineStyle: { width: 2, type: 'dashed', color: '#8159d4' }, itemStyle: { color: '#8159d4' }, data: gen });
+  // Periodos del peaje (vista diaria): bandas de fondo con su nombre y leyenda
+  var PER = np === 3 ? { 1: ['Punta P1', '#fde3e7', 'Punta'], 2: ['Llano P2', '#fff0d6', 'Llano'], 3: ['Valle P3', '#e3f1df', 'Valle'] }
+    : { 1: ['P1', '#fde3e7', 'P1'], 2: ['P2', '#fde9dc', 'P2'], 3: ['P3', '#fff0d6', 'P3'], 4: ['P4', '#fbf5d6', 'P4'], 5: ['P5', '#eef6e4', 'P5'], 6: ['P6', '#e3f1df', 'P6'] };
+  var leyP = [];
+  if (S.modo === 'dia') {
+    // Bandas: una barra de fondo por hora (eje oculto de 0 a 1, todo el ancho de la hora) del color
+    // de su periodo, con el nombre del periodo en la primera hora de cada tramo
+    var d0 = inicio(S.ref, 'dia'), pa = null;
+    var fondo = D.et.map(function (_, h) {
+      var ph = PERIODO(d0, Math.min(h, 23), pj()), x = { value: 1, itemStyle: { color: PER[ph][1] } };
+      if (ph !== pa) x.label = { show: true, position: 'insideTop', formatter: PER[ph][2], color: '#888', fontSize: 11 };
+      if (leyP.indexOf(ph) < 0) leyP.push(ph);
+      pa = ph;
+      return x;
+    });
+    series.unshift({ type: 'bar', name: '_bandas', xAxisIndex: 1, yAxisIndex: 1, data: fondo, barWidth: '100%', silent: true, z: 0,
+                     tooltip: { show: false } });
+    // Solo leyenda (series de linea sin datos: no ocupan hueco entre las barras)
+    leyP.sort().forEach(function (p) { series.push({ type: 'line', name: PER[p][0], data: [], symbol: 'rect', itemStyle: { color: PER[p][1], borderColor: '#d8b4b4', borderWidth: 1 } }); });
+  }
+  var nombres = series.map(function (x) { return x.name; }).filter(function (x) { return x !== '_bandas'; });
   S.g.setOption({
-    animation: false, grid: { left: 70, right: 12, top: 20, bottom: 46 },
+    animation: false, grid: { left: 70, right: 12, top: 50, bottom: 52 },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-               valueFormatter: function (v) { return v == null ? '–' : VL.num(v, 2) + ' kWh'; } },
-    legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
-    xAxis: { type: 'category', data: D.et, axisTick: { show: false }, axisLabel: { fontSize: 10, color: '#555' } },
-    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#eee' } },
-             axisLabel: { fontSize: 10, color: '#555', formatter: function (v) { return VL.num(v, 1) + ' kWh'; } } },
-    series: C.map(function (c) {
-      return { type: 'bar', name: c.n, stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: c.c },
-               data: D.V.map(function (v) { return v[c.k] == null ? null : r3(v[c.k]); }) };
-    }).concat(D.gen ? [{ type: 'line', name: 'Generación de la comunidad (su coeficiente)', step: S.modo === 'dia' ? 'middle' : false,
-      symbol: 'circle', symbolSize: 4, lineStyle: { width: 2, color: '#c07a12' }, itemStyle: { color: '#c07a12' }, z: 5,
-      data: D.gen.map(function (v) { return v == null ? null : r3(v); }) }] : [])
+               formatter: function (ps) {
+                 var out = ps.length ? ps[0].axisValueLabel : '';
+                 ps.forEach(function (x) { if (x.value != null && TOT[x.seriesName] != null && x.seriesName !== '_bandas')
+                   out += '<br/>' + x.marker + x.seriesName + ': ' + VL.num(x.value, 3) + ' kWh'; });
+                 return out;
+               } },
+    legend: { top: 0, left: 0, icon: 'rect', itemWidth: 12, itemHeight: 10, textStyle: { fontSize: 11 }, data: nombres,
+              formatter: function (nm) { return TOT[nm] != null ? nm + ' ' + VL.num(TOT[nm], 3) : nm; } },
+    xAxis: [{ type: 'category', data: D.et, name: S.modo === 'dia' ? 'hora' : '', nameLocation: 'middle', nameGap: 32,
+              axisTick: { show: false }, axisLabel: { fontSize: 10, color: '#555', rotate: S.modo === 'dia' ? 45 : 0 } },
+            { type: 'category', data: D.et, show: false }],   // eje propio de las bandas de los periodos
+    yAxis: [{ type: 'value', name: 'kWh (generación: autoconsumida + vertida · consumo de red)', nameLocation: 'middle', nameGap: 48,
+              nameTextStyle: { fontSize: 11, color: '#777' }, splitLine: { lineStyle: { color: '#eee' } },
+              axisLabel: { fontSize: 10, color: '#555', formatter: function (v) { return VL.num(v, 1); } } },
+            { type: 'value', show: false, min: 0, max: 1 }],
+    series: series
   }, true);
-  var gt = 0; (D.gen || []).forEach(function (v) { gt += v || 0; });
-  q('.dd-l3').textContent = 'Excedentes vertidos a la red (kWh)' + (D.gen ? ' · generación de la comunidad que le corresponde: ' + VL.num(gt, 2) + ' kWh' : '');
+  var gt = suma(gen);
+  q('.dd-l3').textContent = 'Excedentes vertidos a la red (kWh)' + (D.gen && S.enCom ? ' · generación de la comunidad que le corresponde: ' + VL.num(gt, 2) + ' kWh' : '');
   q('.dd-titulo').textContent = 'Consumo ' + { dia: 'horario', semana: 'diario', mes: 'diario', anio: 'mensual' }[S.modo] + ' (kWh)' +
-    (S.enCom ? ' — en comunidad: su consumo, con el autoconsumo de la generación comunitaria que le corresponde por su ' +
-               'coeficiente (línea), excedentes en negativo'
-             : S.hayGen ? ' — autoconsumo sumado al consumo, excedentes en negativo' : '');
+    (S.enCom ? ' — en comunidad: energiaGenerada_kWh es la que le corresponde por su coeficiente de reparto' : '') +
+    ' — términos de la descarga CSV de Datadis';
   q('.dd-vacio').textContent = 'Sin datos en este periodo';
   q('.dd-vacio').style.display = n ? 'none' : 'block';
 }
@@ -10710,6 +10806,7 @@ function gruposPot() {
 // creciente de P1 a P6, como exige la norma)
 function calcPot(r, t0) {
   var P = precio(), t = tarifa(), et = casillas(t0), y = new Date(t0).getFullYear(), G = gruposPot();
+  var diasAnio = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 366 : 365;
   var hayM = et.map(function () { return false; }), M = {}, rec = {}, prev = 0;
   G.forEach(function (x) {
     M[x.g] = et.map(function () { return null; });
@@ -10723,25 +10820,48 @@ function calcPot(r, t0) {
     rec[x.g] = Math.ceil(mx * 10 - 1e-9) / 10;
     if (t !== '2.0TD') { rec[x.g] = Math.max(rec[x.g], prev); prev = rec[x.g]; }
   });
-  var term = {}, exc = et.map(function () { return 0; }), aj = et.map(function () { return 0; }), pc = {};
+  var pc = {}, maxPc = 0;
+  G.forEach(function (x) { var c = S.pcon[x.ps[0]] != null ? +S.pcon[x.ps[0]] : null; pc[x.g] = c; if (c > maxPc) maxPc = c; });
+  // Modo de los excesos (art. 9.4 de la Circular 3/2020, modificado por la Circular 1/2025): en 2.0TD
+  // ninguno (ICP); con alguna potencia > 50 kW (medida tipo 1, 2 o 3), cuartohorario; si no (tipo 4 o 5), mensual
+  var modo = t === '2.0TD' ? 'icp' : maxPc > 50 ? 'q' : 'm';
+  // Cuartohorario: suma de (Pd_j - Pc_p)^2 de los cuartos de hora de cada mes y periodo que superan la
+  // contratada; sin registro cuartohorario (curva horaria), la potencia de la hora en sus cuatro cuartos
+  var Q = {};
+  if (modo === 'q') {
+    var cv = r.consumo_kwh || [], paso = cv.length > 1 ? Math.round((cv[1].ts - cv[0].ts) / 60000) || 60 : 60;
+    cv.forEach(function (v) {
+      if (v.value == null) return;
+      var d = new Date(v.ts), m = d.getMonth(), p = PERIODO(d, d.getHours(), '6P'), c = pc[p];
+      var kw = (+v.value) * 60 / paso, cuartos = paso >= 60 ? 4 : 1;
+      if (c == null || kw <= c) return;
+      var k = m + '_' + p; Q[k] = (Q[k] || 0) + cuartos * (kw - c) * (kw - c);
+    });
+  }
+  var term = {}, exc = et.map(function () { return 0; }), aj = et.map(function () { return 0; });
   G.forEach(function (x) {
-    var c = S.pcon[x.ps[0]] != null ? +S.pcon[x.ps[0]] : null, pr = P.pot && P.pot[x.g] != null ? +P.pot[x.g] : 0;
-    pc[x.g] = c;
+    var c = pc[x.g], pr = P.pot && P.pot[x.g] != null ? +P.pot[x.g] : 0;
+    var t45 = P.tep45 && P.tep45[x.g] != null ? +P.tep45[x.g] : 0, t123 = P.tep123 && P.tep123[x.g] != null ? +P.tep123[x.g] : 0;
     term[x.g] = et.map(function (_, m) {
       if (!hayM[m]) return null;
-      var f = new Date(y, m + 1, 0).getDate() / 365;
+      var dias = new Date(y, m + 1, 0).getDate(), f = dias / diasAnio;   // prorrateo por los dias del año
       aj[m] += rec[x.g] * pr * f;
-      if (t !== '2.0TD' && c != null && M[x.g][m] != null && M[x.g][m] > c) exc[m] += KP[x.g] * (P.tep || 0) * (M[x.g][m] - c);
+      if (modo === 'm' && c != null && M[x.g][m] != null && M[x.g][m] > c) exc[m] += t45 * (M[x.g][m] - c) * dias;
+      if (modo === 'q' && Q[m + '_' + x.g]) exc[m] += t123 * Math.sqrt(Q[m + '_' + x.g]);
       return c == null ? null : c * pr * f;
     });
   });
   var total = et.map(function (_, m) { var v = exc[m]; G.forEach(function (x) { v += term[x.g][m] || 0; }); return hayM[m] ? v : null; });
-  return { et: et, G: G, hayM: hayM, M: M, rec: rec, pc: pc, term: term, exc: exc, aj: aj, total: total };
+  return { et: et, G: G, hayM: hayM, M: M, rec: rec, pc: pc, term: term, exc: exc, aj: aj, total: total, modo: modo };
 }
 // Reactiva: exceso sobre el 33 % de la activa de cada periodo (cos fi 0,95) de cada mes, salvo en
 // el periodo valle (P3 en 2.0TD, P6 en el resto), a reac1 (cos fi de 0,80 a 0,95) o reac2 (menor)
 function calcReac(r, t0) {
-  var O = otros(), et = casillas(t0), valle = pj() === '2.0TD' ? 3 : 6;
+  // Circular 3/2020 (criterios de la CNMC) y anexo III de la Resolucion de peajes de 2026: solo baja
+  // tension con mas de 15 kW (3.0TD) y alta tension (6.xTD), no la 2.0TD; periodos 1 a 5; cada mes
+  // y periodo, si la reactiva supera el 33 % de la activa se factura ese exceso segun el cos fi
+  // (dos decimales): >= 0,95 nada; de 0,80 a 0,95, reac1; < 0,80, reac2. La capacitiva del P6, a 0 €
+  var O = otros(), et = casillas(t0), exenta = tarifa() === '2.0TD';
   var A = agrupar(r, cats(false), t0), hayM = et.map(function () { return false; }), K = {}, C = {}, cos = [];
   S.reacs.forEach(function (p) {
     K[p] = et.map(function () { return null; }); C[p] = et.map(function () { return null; });
@@ -10753,15 +10873,13 @@ function calcReac(r, t0) {
       var R = K[p][m], a = (A.V[m] || {})['p' + p] || 0;
       if (R == null) return;
       ta += a; tr += R;
-      var ex = R - 0.33 * a;
-      if (p === valle || ex <= 0) { C[p][m] = 0; return; }
-      var cf = a / Math.sqrt(a * a + R * R);
-      C[p][m] = ex * (cf < 0.80 ? O.reac2 : O.reac1);
+      var ex = R - 0.33 * a, cf = a || R ? Math.round(100 * a / Math.sqrt(a * a + R * R)) / 100 : 1;
+      C[p][m] = exenta || p === 6 || ex <= 0 || cf >= 0.95 ? 0 : ex * (cf < 0.80 ? O.reac2 : O.reac1);
     });
     cos.push(hayM[m] && (ta || tr) ? ta / Math.sqrt(ta * ta + tr * tr) : null);
   });
   var total = et.map(function (_, m) { if (!hayM[m]) return null; var v = 0; S.reacs.forEach(function (p) { v += C[p][m] || 0; }); return v; });
-  return { et: et, hayM: hayM, K: K, C: C, cos: cos, A: A, total: total };
+  return { et: et, hayM: hayM, K: K, C: C, cos: cos, A: A, total: total, exenta: exenta };
 }
 function otros() { var o = (S.prec && S.prec.otros) || {}; return { iee: o.iee != null ? o.iee : 5.11269632, iva: o.iva != null ? o.iva : 21,
   reac1: o.reac1 != null ? o.reac1 : 0.041554, reac2: o.reac2 != null ? o.reac2 : 0.062332 }; }
@@ -10808,15 +10926,17 @@ function pintarPotCostes(r, t0) {
     return { type: 'bar', name: 'P' + x.g + ' (' + (X.pc[x.g] != null ? VL.num(X.pc[x.g], 2) + ' kW' : 'sin contratada') + ')',
              stack: S.apilado ? 'a' : null, barMaxWidth: 48, itemStyle: { color: colP(x.g) }, data: X.term[x.g].map(r2) };
   });
-  if (totE) series.push({ type: 'bar', name: 'Excesos de potencia (estimación)', stack: S.apilado ? 'a' : null, barMaxWidth: 48,
+  if (totE) series.push({ type: 'bar', name: 'Excesos de potencia', stack: S.apilado ? 'a' : null, barMaxWidth: 48,
                           itemStyle: { color: '#e0541f' }, data: X.exc.map(function (v, m) { return X.hayM[m] && v ? r2(v) : null; }) });
   series.push({ type: 'line', name: 'Con la potencia ajustada', symbol: 'circle', symbolSize: 4, lineStyle: { width: 2, type: 'dashed', color: '#555' },
                 itemStyle: { color: '#555' }, data: X.aj.map(function (v, m) { return X.hayM[m] ? r2(v) : null; }) });
   grafAnual(series, '€', 2);
   q('.dd-titulo').innerHTML = 'Coste mensual de la potencia contratada (€), ' + t + '<br><small style="color:#777;font-weight:400">' +
-    'Término de potencia de cada periodo por los días del mes' + (t === '2.0TD' ? ' (P1: punta y llano; P2: valle)' :
-    '; excesos estimados con el maxímetro mensual (Kp × tep × exceso; el real se calcula cuarto a cuarto de hora y puede ser mayor)') +
-    '. Línea: con la potencia ajustada a la máxima demandada del año.</small>';
+    'Término de potencia: Σ Tp<sub>p</sub> × Pc<sub>p</sub>, prorrateado por los días del mes' + (t === '2.0TD' ? ' (P1: punta y llano; P2: valle). ' +
+    'Sin excesos: el limitador (ICP) corta.' : X.modo === 'm' ? '. Excesos (medida tipo 4-5, potencias ≤ 50 kW): Σ tep<sub>p</sub> × (Pd<sub>p</sub> − Pc<sub>p</sub>) × días, ' +
+    'con el maxímetro de cada mes.' : '. Excesos (medida tipo 1-3, alguna potencia > 50 kW): Σ tep<sub>p</sub> × √Σ(Pd<sub>j</sub> − Pc<sub>p</sub>)² de los ' +
+    'cuartos de hora de cada mes; con la curva horaria, la potencia de la hora en sus cuatro cuartos.') +
+    ' Línea: con la potencia ajustada a la máxima demandada del año. Normativa: ' + NORMA + '.</small>';
   vacioAnual(n, 'Sin datos del maxímetro en este año');
 }
 
@@ -10832,15 +10952,16 @@ function pintarReac(r, t0) {
   q('.dd-k3').textContent = n ? String(meses) : '–';
   q('.dd-l3').textContent = 'Meses con exceso de reactiva (por encima del 33 % de la activa)';
   donaAnual(S.reacs.map(function (p) { return { name: 'P' + p, value: +sumaA(X.K[p]).toFixed(1), itemStyle: { color: colP(p) } }; }), 'kVArh');
-  var lim = X.et.map(function (_, m) { if (!X.hayM[m]) return null; var a = 0; S.reacs.forEach(function (p) { if (p !== (pj() === '2.0TD' ? 3 : 6)) a += (X.A.V[m] || {})['p' + p] || 0; }); return r2(0.33 * a); });
+  var lim = X.et.map(function (_, m) { if (!X.hayM[m]) return null; var a = 0; S.reacs.forEach(function (p) { if (p !== 6) a += (X.A.V[m] || {})['p' + p] || 0; }); return r2(0.33 * a); });
   var series = S.reacs.map(function (p) {
     return { type: 'bar', name: 'P' + p, stack: S.apilado ? 'a' : null, barMaxWidth: 48, itemStyle: { color: colP(p) }, data: X.K[p].map(r2) };
   });
-  series.push({ type: 'line', name: '33 % de la activa (sin valle): sin recargo por debajo', symbol: 'circle', symbolSize: 4,
+  series.push({ type: 'line', name: '33 % de la activa de P1 a P5: sin recargo por debajo', symbol: 'circle', symbolSize: 4,
                 lineStyle: { width: 2, type: 'dashed', color: '#555' }, itemStyle: { color: '#555' }, data: lim });
   grafAnual(series, 'kVArh', 1);
   q('.dd-titulo').innerHTML = 'Energía reactiva de cada mes (kVArh)<br><small style="color:#777;font-weight:400">Lecturas de Datadis por ' +
-    'periodo. Se factura la reactiva que supera el 33 % de la activa de su periodo (cos φ menor de 0,95), salvo en el valle.</small>';
+    'periodo. ' + (X.exenta ? 'En 2.0TD (hasta 15 kW en baja tensión) no se factura la reactiva.' : 'Se factura la reactiva de P1 a P5 que supera el ' +
+    '33 % de la activa del periodo (cos φ menor de 0,95).') + ' Normativa: ' + NORMA + '.</small>';
   vacioAnual(n, 'Sin datos de reactiva en este año');
 }
 
@@ -10848,7 +10969,7 @@ function pintarReacCostes(r, t0) {
   var X = calcReac(r, t0), n = X.hayM.filter(Boolean).length, O = otros(), tot = sumaA(X.total), ex = 0;
   S.datos = { reacc: true, r: r, t0: t0, et: X.et, X: X };
   S.reacs.forEach(function (p) { X.et.forEach(function (_, m) { var R = X.K[p][m], a = (X.A.V[m] || {})['p' + p] || 0;
-    if (R != null && p !== (pj() === '2.0TD' ? 3 : 6) && R > 0.33 * a) ex += R - 0.33 * a; }); });
+    if (!X.exenta && R != null && p !== 6 && X.C[p][m] > 0) ex += R - 0.33 * a; }); });
   q('.dd-k1').textContent = n ? eur(tot) : '–';
   q('.dd-l1').textContent = 'Coste de la reactiva del año (€)';
   q('.dd-k2').textContent = n ? VL.num(ex, 0) : '–';
@@ -10860,9 +10981,10 @@ function pintarReacCostes(r, t0) {
   grafAnual(S.reacs.map(function (p) {
     return { type: 'bar', name: 'P' + p, stack: S.apilado ? 'a' : null, barMaxWidth: 48, itemStyle: { color: colP(p) }, data: X.C[p].map(r2) };
   }), '€', 2);
-  q('.dd-titulo').innerHTML = 'Coste de la energía reactiva de cada mes (€)<br><small style="color:#777;font-weight:400">Exceso sobre el 33 % ' +
-    'de la activa de cada periodo, salvo el valle, a ' + VL.num(O.reac1, 6) + ' €/kVArh (cos φ de 0,80 a 0,95) o ' + VL.num(O.reac2, 6) +
-    ' €/kVArh (menor de 0,80).</small>';
+  q('.dd-titulo').innerHTML = 'Coste de la energía reactiva de cada mes (€)<br><small style="color:#777;font-weight:400">' +
+    (X.exenta ? 'En 2.0TD (hasta 15 kW en baja tensión) no se factura la reactiva. ' : 'Cada mes y periodo de P1 a P5, el exceso de reactiva sobre ' +
+    'el 33 % de la activa, según el cos φ redondeado a dos decimales: desde 0,95 nada; de 0,80 a 0,95, ' + VL.num(O.reac1, 6) +
+    ' €/kVArh; por debajo de 0,80, ' + VL.num(O.reac2, 6) + ' €/kVArh (la capacitiva del P6, a 0 € en 2026). ') + 'Normativa: ' + NORMA + '.</small>';
   vacioAnual(n, 'Sin datos de reactiva en este año');
 }
 
@@ -10901,8 +11023,8 @@ function pintarFactura(r, t0, cd) {
   grafAnual(series, '€', 2);
   q('.dd-titulo').innerHTML = 'Factura de cada mes (€)' + (com ? ' — en comunidad' : ' — en solitario') + '<br><small style="color:#777;font-weight:400">' +
     'Energía (precio fijo por periodos; la compensación de excedentes no supera la energía del mes), potencia (término y excesos), ' +
-    'reactiva, impuesto eléctrico (' + VL.num(O.iee, 2) + ' %), alquiler del contador (' + VL.num(alq, 2) + ' €/mes) e IVA (' + VL.num(O.iva, 0) +
-    ' %). Estimación con los precios de la comunidad.</small>';
+    'reactiva, impuesto eléctrico (' + VL.num(O.iee, 2) + ' % de energía, potencia, excesos y reactiva), alquiler del contador (' + VL.num(alq, 2) +
+    ' €/mes) e IVA (' + VL.num(O.iva, 0) + ' %). Estimación con los precios de la comunidad. Normativa de peajes: ' + NORMA + '.</small>';
   vacioAnual(n, 'Sin datos en este año');
 }
 
@@ -11950,6 +12072,11 @@ PART_HTML = """<div class="al">
 
 PART_JS = ALTA_JS + r"""
 var P = { edita: null, filas: [], sel: {} };
+// Icono de la pestaña Consumos (contador electrico, VL_SVG.contador de la barra de navegacion)
+var ICO_CONTADOR = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">' +
+  '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<rect x="7.5" y="5.5" width="9" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+  '<path d="M12.8 11.6l-3 4.4h2.1l-.7 3.4 3-4.6h-2.1z" fill="currentColor"/></svg>';
 var SIMT = { residencial: 'Residencial', residencial_fv: 'Residencial con FV', comercial: 'Comercial', industrial: 'Industrial', cargador_ve: 'Cargador VE',
              cargador_ve_lento: 'Cargador VE lento', generador_fv: 'FV de la comunidad' };
 var SIMKWH = { residencial: 300, residencial_fv: 300, comercial: 2500, industrial: 60000, cargador_ve: 4000, cargador_ve_lento: 1500, generador_fv: 3000 };
@@ -11994,13 +12121,15 @@ self.onInit = function () {
                      f.municipio].filter(Boolean).map(esc).join(' · ');
           // Un botoncito por cada fichero de la descarga de Datadis (como su dialogo): consumos,
           // potencias maximas, reactiva y datos contractuales; tambien en los simulados (pasan a reales)
-          var cargar = '<span class="al-csvs">' + [['curva', 'bolt', 'Datos de consumos (en kWh)', 'Consumo'],
+          // Los mismos iconos que las pestañas donde se ven esos datos: Consumos (contador), Potencias
+          // (velocimetro), Reactiva (onda) y, el contrato, Socios
+          var cargar = '<span class="al-csvs">' + [['curva', ICO_CONTADOR, 'Datos de consumos (en kWh)', 'Consumo'],
               ['maximetro', 'speed', 'Datos de potencias máximas demandadas por mes (en kW)', 'Potencias'],
-              ['reactiva', 'electrical_services', 'Datos de energía reactiva por mes (en kVArh)', 'Energía'],
-              ['contrato', 'description', 'Datos contractuales', 'Contrato']].map(function (t) {
+              ['reactiva', 'waves', 'Datos de energía reactiva por mes (en kVArh)', 'Energía'],
+              ['contrato', 'manage_accounts', 'Datos contractuales', 'Contrato']].map(function (t) {
                 return '<button class="al-csvb" data-csv="' + t[0] + '" data-socio="' + esc(f.id) + '" title="' + t[2] + ': fichero ' + t[3] +
                   '_<desde>_<hasta>.csv de la descarga de datadis.es' + (f.simulado ? ' (el socio deja de ser simulado)' : '') +
-                  '"><i class="material-icons">' + t[1] + '</i></button>';
+                  '">' + (t[1].charAt(0) === '<' ? t[1] : '<i class="material-icons">' + t[1] + '</i>') + '</button>';
               }).join('') + '</span>';
           return '<tr class="fila' + (f.deshabilitado ? ' off' : '') + '" data-f="' + esc(f.id) + '"' +
             (f.deshabilitado ? ' title="Fuera de los totales de la comunidad"' : '') + '>' +
@@ -12559,7 +12688,8 @@ AYUDA = {
     "No se borra nada: al actualizar, el suministro queda <i>sin vigencia</i> (V = No) y deja de descargar datos nuevos. "
     "Los que ya estaban cargados se conservan."],
    ["¿Cómo elijo los coeficientes de reparto?",
-    "En la pestaña <i>Coeficientes de reparto</i>. Los checks de la cabecera eligen el reparto de la comunidad: "
+    "En la pestaña <i>Coeficientes de reparto</i>. Mientras no eliges otro, la comunidad usa los <i>Fijos óptimos</i>, que "
+    "se ponen en vigor solos en cuanto hay datos de generación. Los checks de la cabecera eligen el reparto de la comunidad: "
     "<i>Fijos manuales</i> (los pones con un deslizador por socio; al mover uno, los demás se reajustan para que sumen el "
     "100 %, y se guardan con <i>Guardar los manuales</i>), <i>Fijos óptimos</i> (los que más energía autoconsumen con los "
     "consumos y la generación hora a hora de los últimos 12 meses) o <i>Dinámicos</i> (uno por socio y hora del año, en "
@@ -12608,9 +12738,10 @@ AYUDA = {
    ["¿Qué hay en Potencias, Reactiva y Factura?",
     "Tres pestañas como <i>Consumos</i>, con el mismo selector de socio y vista anual (los datos de Datadis son mensuales). "
     "<b>Potencias</b>: <i>Máximas demandadas</i> (el maxímetro frente a la contratada) y <i>Costes de la potencia</i> (término "
-    "de potencia, excesos estimados en 3.0TD y 6.1TD y lo que costaría con la potencia ajustada a la máxima demandada: el "
+    "de potencia, excesos según la Circular 3/2020 modificada por la Circular 1/2025 (hasta 50 kW, con el maxímetro "
+    "mensual; con más de 50 kW, cuartohorarios; en 2.0TD no hay) y lo que costaría con la potencia ajustada a la máxima demandada: el "
     "ahorro posible). <b>Reactiva</b>: <i>Consumo de reactiva</i> (kVArh por periodo y factor de potencia) y <i>Coste de la "
-    "reactiva</i> (el exceso sobre el 33 % de la activa, salvo en el valle). <b>Factura</b>: <i>Coste mensual</i>, la suma de "
+    "reactiva</i> (de P1 a P5, el exceso sobre el 33 % de la activa según el cos φ; la 2.0TD está exenta). <b>Factura</b>: <i>Coste mensual</i>, la suma de "
     "energía, potencia y reactiva más el impuesto eléctrico, el alquiler del contador y el IVA; con <i>En comunidad</i>, "
     "el ahorro en la factura. Todos los precios se editan en tablas siempre desplegadas en cada subpestaña."],
    ["¿Qué muestra Costes de la energía?",
@@ -12674,7 +12805,7 @@ AYUDA = {
     "potencia ajustada a tu máxima demandada. Si nunca te acercas a la contratada, quizá puedas bajarla."],
    ["¿Qué son las pestañas Reactiva y Factura?",
     "<i>Reactiva</i>: la energía reactiva de cada mes y su coste, si supera el 33 % de la activa (factor de potencia menor "
-    "de 0,95). <i>Factura</i>: tu coste de cada mes sumando energía, potencia, reactiva, impuesto eléctrico, alquiler del "
+    "de 0,95; no se cobra en 2.0TD ni en P6). <i>Factura</i>: tu coste de cada mes sumando energía, potencia, reactiva, impuesto eléctrico, alquiler del "
     "contador e IVA, en solitario o en comunidad. Son estimaciones con los precios de la comunidad, no tu factura real."],
    ["¿Qué es el check En comunidad?",
     "Junto a tu nombre, en <i>Consumos</i>: cambia tus curvas de Datadis por las de la comunidad, en las que tu generación "
@@ -14481,7 +14612,7 @@ self.onInit = function () {
 function cargar() {
   msg('Cargando los consumos de los últimos 12 meses…');
   api('GET', '/reparto').then(function (d) {
-    R.d = d; R.t0 = Date.parse(d.inicio); R.ver = d.modo || 'manual';
+    R.d = d; R.t0 = Date.parse(d.inicio); R.ver = d.modo || 'optimo';
     R.man = d.socios.map(function (s) { return s.manual; });
     R.dem = ceros(d.n); R.gen = 0; R.cons = 0;
     var tot = d.socios.map(function (s) { var t = 0; s.consumo.forEach(function (x) { t += x; }); return t; }), T = 0;
