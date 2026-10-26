@@ -1,0 +1,2 @@
+cups;distribuidora;comercializadora;tarifaAcceso;tensionConexion;potenciaContratadakW;modoControlPotencia;discriminacionHoraria;fechaInicioVigencia;fechaFinVigencia;provincia;municipio;codigoPostal;potenciaTotalGenerada;tipoAutoconsumo;seccion;subseccion;coeficienteReparto;cau;potenciaMaximaInstalacion
+"ES0031103147547001SW0F";EDISTRIBUCIÓN;"-";"BAJA TENSION y POTENCIA <= 15 kW";"Baja tensión";"1,2;1,2";ICP;"TARIFA DE TRES PERIODOS";"2021/06/01";;Granada;ALQUIFE;"18518";;;;;;;"6.0"

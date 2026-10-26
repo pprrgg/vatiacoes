@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presupuesto Detallado · Instalaciones Fotovoltaicas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --amber-dim:#8A6220; --cyan:#37CFFF; --cyan-dim:#1B6E86;
+    --green:#57D9A3; --red:#FF6B6B;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  /* Barra de pestanas horizontal (sustituye al antiguo sidebar vertical): igual en
+     pantallas grandes y pequenas. En pequenas, si las pestanas no caben, la fila hace
+     scroll horizontal y aparecen flechas para desplazarla; las flechas se muestran u
+     ocultan por JS segun haya o no contenido oculto a cada lado. */
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px; border-bottom:1px solid var(--line-soft);}
+  section.tab-active{display:block;}
+  #teoria{padding-top:0;}
+  #teoria > .hero{margin:0 -56px 48px;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:760px;}
+  section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
+  .hero h1{font-size:clamp(30px,4vw,50px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .hero-meta{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer); display:flex; flex-direction:column; gap:6px; text-align:right; padding-top:6px;}
+  .hero-meta span{color:var(--text-dim);}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
+  .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:18px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+
+  .theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:900px){.theory-grid{grid-template-columns:1fr;}}
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--amber);}
+  .formula-box .f small{font-size:10px; color:var(--text-dimmer); display:block; margin-top:4px; font-family:var(--font-mono);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dimmer); padding:9px 11px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:10px 11px; border-bottom:1px solid var(--line-soft);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  .cellnum{font-family:var(--font-mono); color:var(--amber);}
+  .table-wrap{overflow-x:auto; margin:10px 0 18px;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=email], .field input[type=tel], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .checkline{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:var(--text-dim);}
+  .checkline input{accent-color:var(--amber);}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc24d;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+  .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
+  .pill.mat{background:rgba(55,207,255,0.12); color:var(--cyan); border:1px solid rgba(55,207,255,0.35);}
+  .pill.mo{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
+  .pill.proyecto{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
+  .pill.tramitacion{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
+  .pill.otros{background:rgba(143,163,184,0.12); color:var(--text-dim); border:1px solid rgba(143,163,184,0.35);}
+
+  table.budget-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.budget-table th{text-align:left; font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:7px 8px; border-bottom:1px solid var(--line);}
+  table.budget-table th.num, table.budget-table td.num{text-align:right;}
+  table.budget-table td{padding:6px 8px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+  table.budget-table td.desc{color:var(--text);}
+  table.budget-table input{width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:5px 7px; border-radius:2px; font-family:var(--font-mono); font-size:12px; text-align:right;}
+  table.budget-table input.desc-input{text-align:left; font-family:var(--font-body);}
+  table.budget-table tr.chapter-row td{background:var(--panel2); font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim); padding-top:12px; padding-bottom:6px; border-bottom:1px solid var(--line);}
+  table.budget-table tr.subtotal-row td{font-family:var(--font-mono); font-weight:600; color:var(--text); border-top:1px solid var(--line); border-bottom:1px solid var(--line-soft);}
+  .remove-btn{font-family:var(--font-mono); font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:4px 8px;}
+  .remove-btn:hover{text-decoration:underline;}
+  table.data-table tr.catalog-inactive td{opacity:.4;}
+  table.data-table tr.catalog-inactive td.desc-cell{text-decoration:line-through;}
+  .cat-activo-toggle{width:15px; height:15px; cursor:pointer; accent-color:var(--amber);}
+  .cat-auto-badge{font-family:var(--font-mono); font-size:8.5px; color:var(--text-dimmer); display:block; margin-top:2px;}
+  .empty-state{text-align:center; padding:36px 20px; color:var(--text-dimmer); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--radius);}
+
+  .stat-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 18px; flex:1; min-width:140px;}
+  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--amber);}
+  .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
+
+  .summary-box{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px; max-width:420px; margin-left:auto;}
+  .summary-box .row{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line-soft); font-size:13px;}
+  .summary-box .row:last-child{border-bottom:none;}
+  .summary-box .row .k{color:var(--text-dim);}
+  .summary-box .row .v{font-family:var(--font-mono); color:var(--text);}
+  .summary-box .row.total{margin-top:6px; padding-top:14px; border-top:1px solid var(--line);}
+  .summary-box .row.total .k{color:var(--text); font-weight:600; font-size:14px;}
+  .summary-box .row.total .v{color:var(--amber); font-size:20px; font-weight:700;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--amber); text-decoration:none;}
+
+  .chart-svg-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:14px 0; overflow-x:auto;}
+  .chart-svg-wrap svg{display:block; margin:0 auto;}
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:18px 0 6px;}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    #teoria > .hero{margin:0 -24px 32px;}
+    .hero-top{flex-direction:column;}
+    .hero-meta{text-align:left;}
+    .summary-box{max-width:100%;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+  <div class="tabbar-brand">PRESUPUESTO FV</div>
+  <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <nav class="tabbar" id="sidenav">
+    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento</a>
+    <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
+    <a href="#config" data-sec="config"><span class="tag">02</span>Configuración</a>
+    <a href="#catalogo" data-sec="catalogo"><span class="tag">03</span>Catálogo de precios</a>
+    <a href="#comercial" data-sec="comercial"><span class="tag">04</span>Parámetros comerciales</a>
+    <a href="#partidas" data-sec="partidas"><span class="tag">05</span>Partidas del presupuesto</a>
+    <a href="#informe" data-sec="informe"><span class="tag">06</span>Resumen y oferta</a>
+  </nav>
+  <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+</div>
+<script>
+(function(){
+  var wrap = document.getElementById('tabbarWrap');
+  var bar = document.getElementById('sidenav');
+  var btnL = document.getElementById('tabScrollLeft');
+  var btnR = document.getElementById('tabScrollRight');
+  function update(){
+    var maxScroll = bar.scrollWidth - bar.clientWidth;
+    wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+    wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+  }
+  btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+  btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+  bar.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+  setTimeout(update, 0);
+})();
+</script>
+
+  <main>
+
+    <!-- 00 TEORIA -->
+    <section id="teoria">
+      <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Presupuestos · Instalaciones fotovoltaicas de autoconsumo</div>
+          <h1>Un presupuesto por partidas,<br>no una <em>cifra a ojo</em>.</h1>
+          <p class="sub">Calculadora y generador de ofertas comerciales para instalaciones fotovoltaicas, con el presupuesto desglosado por capítulos — proyecto, materiales, mano de obra y tramitación — y precios unitarios ligados a la potencia (€/kWp, €/kW de inversor) o a la energía (€/kWh de batería) de tu instalación. Configura el sistema, ajusta el catálogo de precios, y genera la oferta comercial en PDF lista para enviar al cliente.</p>
+        </div>
+        <div class="hero-meta">
+          <span>Estructura</span>
+          <span style="color:var(--amber)">PROYECTO · MAT · MO · TRAMITACIÓN</span>
+          <span>Precios unitarios por kWp / kW / kWh</span>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="v">Importe = Precio unitario × Cantidad</div><div class="l">cantidad ligada a kWp, kW inversor o kWh batería</div></div>
+        <div class="stat"><div class="v">TOTAL = Base imponible + IVA</div><div class="l">tras aplicar el descuento comercial</div></div>
+        <div class="stat"><div class="v">4 capítulos</div><div class="l">proyecto · materiales · mano de obra · tramitación</div></div>
+      </div>
+    </header>
+
+      <div class="eyebrow kicker">00 · Fundamento</div>
+      <h2>Un presupuesto serio se construye por partidas.</h2>
+      <p class="lede">Cotizar "a bulto" por precio total instalado es la forma más fácil de perder dinero o de que el cliente no confíe en la oferta. Cada partida debe tener una cantidad y un precio unitario trazables — y en fotovoltaica, casi todos escalan con la potencia o la energía del sistema, no son importes fijos.</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Los cuatro capítulos</h3>
+          <ul>
+            <li><b>PROYECTO:</b> memoria técnica, dirección de obra — Blog de un ingeniero jubilado previa a la instalación</li>
+            <li><b>MAT:</b> paneles, inversor, estructura, cableado, batería — el material que se instala</li>
+            <li><b>MO:</b> instalación eléctrica, montaje, puesta en marcha — el trabajo de campo</li>
+            <li><b>TRAMITACIÓN:</b> boletín, legalización, inscripción de autoconsumo, alta con la distribuidora</li>
+          </ul>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Importe de cada partida</h3>
+          <div class="formula-box">
+            <div class="f">Importe = Precio unitario × Cantidad</div>
+            <small>la cantidad depende de la base de precio de la partida</small>
+          </div>
+          <p style="margin-top:8px;">La mayoría de partidas de MAT y MO se cotizan en <b style="color:var(--text)">€/kWp</b> (potencia pico de la instalación) o <b style="color:var(--text)">€/kW</b> (potencia del inversor); la batería en <b style="color:var(--text)">€/kWh</b>; y algunas partidas de tramitación llevan un importe fijo por trámite.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Bases de precio unitario</h3>
+          <ul>
+            <li><b>€/kWp:</b> escala con la potencia pico de los paneles instalados</li>
+            <li><b>€/kW inversor:</b> escala con la potencia nominal del inversor</li>
+            <li><b>€/kWh batería:</b> escala con la capacidad de almacenamiento</li>
+            <li><b>€/ud, €/h, €/m, €/m²:</b> cantidad manual, para partidas puntuales</li>
+            <li><b>Importe fijo:</b> no depende de ninguna cantidad — trámites, tasas, puesta en marcha</li>
+          </ul>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · De la base imponible al total</h3>
+          <div class="formula-box">
+            <div class="f">Total = (Subtotal − Descuento) × (1 + IVA)</div>
+            <small>el descuento comercial se aplica antes de calcular el IVA</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>5 · Qué debe incluir la oferta</h3>
+          <p>Además del importe, una oferta comercial seria fija por escrito: la validez de la oferta, la forma de pago, el plazo de ejecución estimado, y las garantías de cada componente (paneles, inversor, instalación) — todo lo que evita conflictos si algo cambia entre la firma y la puesta en marcha.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>6 · Cómo usar esta herramienta</h3>
+          <p>Configura la instalación (02), revisa o ajusta el catálogo de precios unitarios (03), carga esas partidas al presupuesto con un clic (05) y edítalas o añade partidas propias. Fija los parámetros comerciales (04) y genera la oferta en PDF (06).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 01 DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">01 · Datos del proyecto</div>
+      <h2>¿Para quién es esta oferta?</h2>
+      <p class="lede">Estos datos aparecen en la portada y en los encabezados de la oferta en PDF.</p>
+      <div class="card">
+        <div class="fieldset-title">Proyecto</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Instalación fotovoltaica de autoconsumo"></div>
+          <div class="field"><label>Fecha de la oferta</label><input type="date" id="p_fecha"></div>
+        </div>
+        <div class="fieldset-title">Autor / comercial</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro / colegiado</label><input type="text" id="p_registro" value="N.12345"></div>
+        </div>
+        <div class="fieldset-title">Instalador / empresa</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
+        </div>
+        <div class="fieldset-title">Cliente</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del cliente"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección de la instalación</label><input type="text" id="p_dest_dir" placeholder="Dirección donde se instala el sistema"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 CONFIGURACION -->
+    <section id="config">
+      <div class="eyebrow kicker">02 · Configuración de la instalación</div>
+      <h2>El tamaño del sistema, en cifras.</h2>
+      <p class="lede">Estos valores son la "cantidad" de la que dependen la mayoría de partidas del presupuesto: potencia pico, potencia del inversor y, si aplica, capacidad de batería.</p>
+      <div class="card">
+        <div class="fieldset-title">Generador fotovoltaico</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia pico, kWp</label><input type="number" id="c_kwp" value="5.5" min="0" step="0.1"></div>
+          <div class="field"><label>Potencia por panel, Wp</label><input type="number" id="c_wp_panel" value="450" min="0" step="5"></div>
+          <div class="field"><label>Nº de paneles (calculado)</label><input type="text" id="c_num_paneles" value="" readonly style="opacity:.75;"></div>
+        </div>
+        <div class="fieldset-title">Inversor</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia del inversor, kW</label><input type="number" id="c_kw_inversor" value="5" min="0" step="0.1"><div class="hint">Se estima al cambiar la potencia pico (ratio DC/AC ≈ 1,1); edítalo si tu inversor es distinto.</div></div>
+          <div class="field">
+            <label>Tipo de instalación</label>
+            <select id="c_tipo">
+              <option value="sin_excedentes">Autoconsumo sin excedentes</option>
+              <option value="con_excedentes" selected>Autoconsumo con excedentes (compensación)</option>
+              <option value="con_excedentes_sin_comp">Autoconsumo con excedentes (sin compensación)</option>
+              <option value="colectivo">Autoconsumo colectivo</option>
+            </select>
+          </div>
+          <div class="field"><label>Ubicación (municipio / provincia)</label><input type="text" id="c_ubicacion" placeholder="Ej: Torremolinos, Málaga"></div>
+        </div>
+        <div class="fieldset-title">Emplazamiento y conexión</div>
+        <div class="grid3">
+          <div class="field"><label>Superficie disponible, m² (opcional)</label><input type="number" id="c_superficie" min="0" step="1"></div>
+          <div class="checkline" style="margin-top:26px;"><input type="checkbox" id="c_suelo"> <label for="c_suelo" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Instalación en suelo (no en cubierta)</label></div>
+          <div class="checkline" style="margin-top:26px;"><input type="checkbox" id="c_at"> <label for="c_at" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Conexión en Alta Tensión (AT)</label></div>
+        </div>
+        <p style="font-size:11px; color:var(--text-dimmer); margin:-4px 0 14px;">Determinan qué trámites se marcan como aplicables por defecto en el catálogo (03): licencia urbanística vs. declaración responsable, EICI vs. autorización de explotación.</p>
+        <div class="fieldset-title">Almacenamiento (opcional)</div>
+        <div class="checkline"><input type="checkbox" id="c_bateria"> <label for="c_bateria" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Incluir batería de almacenamiento en el presupuesto</label></div>
+        <div class="grid3">
+          <div class="field"><label>Capacidad de la batería, kWh</label><input type="number" id="c_kwh_bateria" value="5" min="0" step="0.5" disabled></div>
+        </div>
+      </div>
+
+      <div class="subsection-title" style="margin-top:28px;">Diagrama de la instalación</div>
+      <p class="lede" style="margin-bottom:14px;">Se redibuja al momento con cada cambio de arriba — los tramos atenuados no aplican a esta configuración, y son justo los que marcan qué partidas del catálogo (03) quedan activas por defecto.</p>
+      <div class="chart-svg-wrap" id="instalacionFlowWrap"></div>
+    </section>
+
+    <!-- 03 CATALOGO -->
+    <section id="catalogo">
+      <div class="eyebrow kicker">03 · Catálogo de precios unitarios</div>
+      <h2>El catálogo completo, con la selección de trámites según tu instalación.</h2>
+      <p class="lede">Incluye todas las partidas posibles — proyecto, materiales, mano de obra y los distintos trámites según potencia, modalidad y emplazamiento (ver <a href="../A04_Instalaciones/B01_IDAE/C01_Autoconsumo_Tramitacion.html" style="color:var(--amber);">Autoconsumo: tramitación</a>). La columna "Activa" se marca sola según la configuración (02), y puedes cambiarla a mano si tu caso es distinto. Solo las partidas activas se cargan al presupuesto (05).</p>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table" id="tablaCatalogo"></table>
+      </div>
+      <p style="font-size:11.5px; color:var(--text-dimmer); margin-top:12px;">Precios orientativos de mercado (España, 2024-2025). Ajústalos a tus costes reales de aprovisionamiento y mano de obra antes de generar ofertas.</p>
+    </section>
+
+    <!-- 04 PARAMETROS COMERCIALES -->
+    <section id="comercial">
+      <div class="eyebrow kicker">04 · Parámetros comerciales</div>
+      <h2>IVA, descuento y condiciones de la oferta.</h2>
+      <p class="lede">Se aplican al conjunto del presupuesto y se incluyen en las condiciones de la oferta en PDF.</p>
+      <div class="card">
+        <div class="fieldset-title">Impuestos y descuento</div>
+        <div class="grid3">
+          <div class="field"><label>IVA (%)</label><input type="number" id="e_iva" value="21" min="0" step="0.5"></div>
+          <div class="field"><label>Descuento comercial (%)</label><input type="number" id="e_descuento" value="0" min="0" max="100" step="0.5"></div>
+          <div class="field"><label>Validez de la oferta (días)</label><input type="number" id="e_validez" value="30" min="1" step="1"></div>
+        </div>
+        <div class="fieldset-title">Condiciones</div>
+        <div class="grid2">
+          <div class="field" style="grid-column:1/-1;"><label>Forma de pago</label><input type="text" id="e_forma_pago" value="30% a la firma, 40% al inicio de la instalación, 30% a la puesta en marcha"></div>
+          <div class="field"><label>Plazo de ejecución estimado</label><input type="text" id="e_plazo" value="4-6 semanas desde la firma del contrato"></div>
+          <div class="field"><label>Garantía de los paneles (años)</label><input type="number" id="e_garantia_paneles" value="25" min="0" step="1"></div>
+          <div class="field"><label>Garantía del inversor (años)</label><input type="number" id="e_garantia_inversor" value="10" min="0" step="1"></div>
+          <div class="field"><label>Garantía de la instalación (años)</label><input type="number" id="e_garantia_instalacion" value="5" min="0" step="1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 PARTIDAS -->
+    <section id="partidas">
+      <div class="eyebrow kicker">05 · Partidas del presupuesto</div>
+      <h2>El desglose real, capítulo a capítulo.</h2>
+      <p class="lede">Carga el catálogo con un clic para partir de un presupuesto completo, y luego edita cantidades y precios o añade partidas propias.</p>
+
+      <div class="btn-row" style="margin-bottom:24px;">
+        <button class="btn primary" id="btnCargarCatalogo">↺ Cargar partidas del catálogo</button>
+        <button class="btn ghost" id="btnVaciarPartidas">Vaciar todas las partidas</button>
+      </div>
+
+      <div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir partida manual</div>
+        <div class="grid4">
+          <div class="field">
+            <label>Capítulo</label>
+            <select id="i_capitulo">
+              <option value="PROYECTO">Proyecto</option>
+              <option value="MAT" selected>Materiales</option>
+              <option value="MO">Mano de obra</option>
+              <option value="TRAMITACION">Tramitación</option>
+              <option value="OTROS">Otros</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:span 2;"><label>Descripción</label><input type="text" id="i_descripcion" placeholder="Ej: Refuerzo de estructura de cubierta"></div>
+          <div class="field">
+            <label>Base de precio</label>
+            <select id="i_base">
+              <option value="kWp">€ / kWp</option>
+              <option value="kWinv">€ / kW inversor</option>
+              <option value="kWhBat">€ / kWh batería</option>
+              <option value="ud" selected>€ / unidad</option>
+              <option value="h">€ / hora</option>
+              <option value="m">€ / metro</option>
+              <option value="m2">€ / m²</option>
+              <option value="fijo">Importe fijo</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Precio unitario (€)</label><input type="number" id="i_precio" value="0" min="0" step="0.01"></div>
+          <div class="field"><label>Cantidad (si no es kWp/kW/kWh/fijo)</label><input type="number" id="i_cantidad" value="1" min="0" step="0.01"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btnAddPartida">+ Añadir partida</button>
+        </div>
+      </div>
+
+      <div id="partidasWrap">
+        <div class="empty-state">Todavía no hay partidas en el presupuesto. Carga el catálogo o añade una partida manual.</div>
+      </div>
+    </section>
+
+    <!-- 06 RESUMEN E INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">06 · Resumen y oferta</div>
+      <h2>El total, y la oferta lista para enviar.</h2>
+      <p class="lede">Revisa el resumen económico y la distribución por capítulos antes de generar el PDF.</p>
+
+      <div id="statsRow" class="stat-row" style="gap:14px; margin-bottom:28px; flex-wrap:wrap; border-top:none;"></div>
+
+      <div class="subsection-title">Distribución por capítulo</div>
+      <div class="chart-svg-wrap" id="propChartWrap"></div>
+
+      <div class="subsection-title" style="margin-top:28px;">Resumen económico</div>
+      <div class="summary-box" id="summaryBox"></div>
+
+      <div class="btn-row" style="margin-top:32px;">
+        <button class="btn primary" id="btnPdf" disabled>&#8681; Generar oferta en PDF</button>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta no oficial de apoyo a la elaboración de presupuestos y ofertas comerciales para instalaciones fotovoltaicas de autoconsumo. Los precios del catálogo son orientativos: verifica siempre tus costes reales de aprovisionamiento, mano de obra y tramitación antes de enviar una oferta vinculante a un cliente.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV ACTIVE STATE =====================
+// ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'teoria';
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+document.getElementById('p_fecha').valueAsDate = new Date();
+
+function fmtNum(n,d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function fmtEur(n,d=0){ return n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d})+' €'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'...' : (s||''); }
+
+const BASE_LABEL = {kWp:'€/kWp', kWinv:'€/kW inv.', kWhBat:'€/kWh bat.', ud:'€/ud', h:'€/h', m:'€/m', m2:'€/m²', fijo:'Fijo'};
+const CAP_LABEL = {PROYECTO:'Proyecto', MAT:'Materiales', MO:'Mano de obra', TRAMITACION:'Tramitación', OTROS:'Otros'};
+const CAP_ORDER = ['PROYECTO','MAT','MO','TRAMITACION','OTROS'];
+
+// ===================== CATALOGO DE PRECIOS =====================
+// "regla" decide si la partida se marca activa por defecto según la configuración (02);
+// el usuario puede sobrescribirla a mano con el check de la tabla (03).
+const CATALOGO = [
+  {id:'proy_memoria', capitulo:'PROYECTO', descripcion:'Memoria técnica y diseño de la instalación', base:'kWp', precio:25,
+    nota:'P≤10kW', regla:cfg=>cfg.kwp<=10},
+  {id:'proy_proyecto', capitulo:'PROYECTO', descripcion:'Proyecto técnico y diseño de la instalación', base:'kWp', precio:35,
+    nota:'P>10kW', regla:cfg=>cfg.kwp>10},
+  {id:'proy_direccion', capitulo:'PROYECTO', descripcion:'Dirección de obra y coordinación de seguridad', base:'kWp', precio:10,
+    nota:'siempre', regla:cfg=>true},
+  {id:'mat_paneles', capitulo:'MAT', descripcion:'Módulos fotovoltaicos', base:'kWp', precio:180,
+    nota:'siempre', regla:cfg=>true},
+  {id:'mat_inversor', capitulo:'MAT', descripcion:'Inversor(es)', base:'kWinv', precio:120,
+    nota:'siempre', regla:cfg=>true},
+  {id:'mat_estructura', capitulo:'MAT', descripcion:'Estructura de sujeción (cubierta/suelo)', base:'kWp', precio:60,
+    nota:'siempre', regla:cfg=>true},
+  {id:'mat_cableado', capitulo:'MAT', descripcion:'Cableado CC/CA, protecciones y cuadros', base:'kWp', precio:45,
+    nota:'siempre', regla:cfg=>true},
+  {id:'mat_monitor', capitulo:'MAT', descripcion:'Sistema de monitorización y comunicaciones', base:'fijo', precio:250,
+    nota:'siempre', regla:cfg=>true},
+  {id:'mat_bateria', capitulo:'MAT', descripcion:'Batería de almacenamiento', base:'kWhBat', precio:450,
+    nota:'si hay batería', regla:cfg=>cfg.bateria},
+  {id:'mo_instalacion', capitulo:'MO', descripcion:'Instalación eléctrica y montaje', base:'kWp', precio:90,
+    nota:'siempre', regla:cfg=>true},
+  {id:'mo_puesta', capitulo:'MO', descripcion:'Puesta en marcha, pruebas y CEM', base:'fijo', precio:200,
+    nota:'siempre', regla:cfg=>true},
+  {id:'tram_boletin', capitulo:'TRAMITACION', descripcion:'Boletín eléctrico / certificado de instalación (CIE)', base:'fijo', precio:180,
+    nota:'siempre', regla:cfg=>true},
+  {id:'tram_cau', capitulo:'TRAMITACION', descripcion:'Gestión de alta y CAU con la distribuidora', base:'fijo', precio:150,
+    nota:'siempre', regla:cfg=>true},
+  {id:'tram_inscripcion', capitulo:'TRAMITACION', descripcion:'Inscripción de oficio en el Registro de Autoconsumo', base:'fijo', precio:90,
+    nota:'siempre', regla:cfg=>true},
+  {id:'tram_raipre', capitulo:'TRAMITACION', descripcion:'Inscripción en el RAIPRE', base:'fijo', precio:70,
+    nota:'con excedentes, P≤100kW', regla:cfg=>cfg.tipo!=='sin_excedentes' && cfg.kwp<=100},
+  {id:'tram_eici', capitulo:'TRAMITACION', descripcion:'Registro mediante Entidad de Inspección y Control (EICI)', base:'fijo', precio:150,
+    nota:'P≤100kW en BT', regla:cfg=>cfg.kwp<=100 && !cfg.at},
+  {id:'tram_autorizacion_explotacion', capitulo:'TRAMITACION', descripcion:'Autorización de explotación / acta de puesta en servicio', base:'fijo', precio:400,
+    nota:'P>100kW o AT', regla:cfg=>cfg.kwp>100 || cfg.at},
+  {id:'tram_autorizacion_previa', capitulo:'TRAMITACION', descripcion:'Autorización administrativa previa y de construcción', base:'fijo', precio:900,
+    nota:'P>500kW', regla:cfg=>cfg.kwp>500},
+  {id:'tram_aval', capitulo:'TRAMITACION', descripcion:'Aval / garantía económica de acceso y conexión', base:'kWp', precio:40,
+    nota:'con excedentes, P>100kW', regla:cfg=>cfg.tipo!=='sin_excedentes' && cfg.kwp>100},
+  {id:'tram_permiso_acceso', capitulo:'TRAMITACION', descripcion:'Permiso de acceso y conexión a la distribuidora', base:'fijo', precio:180,
+    nota:'con excedentes, P>15kW', regla:cfg=>cfg.tipo!=='sin_excedentes' && cfg.kwp>15},
+  {id:'tram_notif_operacionales', capitulo:'TRAMITACION', descripcion:'Notificaciones operacionales EON / ION / FON', base:'fijo', precio:250,
+    nota:'P>100kW', regla:cfg=>cfg.kwp>100},
+  {id:'tram_municipal_declaracion', capitulo:'TRAMITACION', descripcion:'Declaración responsable municipal', base:'fijo', precio:60,
+    nota:'instalación en cubierta', regla:cfg=>!cfg.suelo},
+  {id:'tram_municipal_licencia', capitulo:'TRAMITACION', descripcion:'Licencia urbanística municipal', base:'fijo', precio:300,
+    nota:'instalación en suelo', regla:cfg=>cfg.suelo},
+  {id:'tram_oca', capitulo:'TRAMITACION', descripcion:'Inspección OCA (local húmedo o periódica)', base:'fijo', precio:200,
+    nota:'según caso — revisar', regla:cfg=>false},
+  {id:'tram_acuerdo_reparto', capitulo:'TRAMITACION', descripcion:'Acuerdo de reparto de coeficientes (autoconsumo colectivo)', base:'fijo', precio:120,
+    nota:'autoconsumo colectivo', regla:cfg=>cfg.tipo==='colectivo'},
+  {id:'tram_acuerdo_propietarios', capitulo:'TRAMITACION', descripcion:'Gestión del acuerdo de la comunidad de propietarios', base:'fijo', precio:150,
+    nota:'autoconsumo colectivo', regla:cfg=>cfg.tipo==='colectivo'},
+];
+const catalogOverrides = {}; // id -> true/false cuando el usuario cambia el check a mano
+
+function catalogActivo(item, cfg){
+  return catalogOverrides.hasOwnProperty(item.id) ? catalogOverrides[item.id] : !!item.regla(cfg);
+}
+
+function renderTablaCatalogo(){
+  const wrap = document.getElementById('tablaCatalogo');
+  const cfg = getConfig();
+  let html = '<thead><tr><th>Capítulo</th><th>Descripción</th><th>Base</th><th style="text-align:right;">Precio unitario</th><th style="text-align:right;">Activa</th></tr></thead><tbody>';
+  CATALOGO.forEach(item=>{
+    const activo = catalogActivo(item, cfg);
+    html += '<tr data-cat-row="'+item.id+'"'+(activo?'':' class="catalog-inactive"')+'>'+
+      '<td><span class="pill '+item.capitulo.toLowerCase()+'">'+CAP_LABEL[item.capitulo]+'</span></td>'+
+      '<td class="desc-cell">'+esc(item.descripcion)+'<span class="cat-auto-badge">'+esc(item.nota)+'</span></td>'+
+      '<td class="cellnum">'+BASE_LABEL[item.base]+'</td>'+
+      '<td style="text-align:right;"><input type="number" id="cat_'+item.id+'" value="'+item.precio+'" min="0" step="0.01" style="width:110px; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:6px 8px; border-radius:2px; font-family:var(--font-mono); font-size:12.5px; text-align:right;"></td>'+
+      '<td style="text-align:right;"><input type="checkbox" class="cat-activo-toggle" data-cat-toggle="'+item.id+'" '+(activo?'checked':'')+' title="Incluir esta partida al cargar el catálogo (05)"></td>'+
+    '</tr>';
+  });
+  html += '</tbody>';
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('input[data-cat-toggle]').forEach(chk=>{
+    chk.addEventListener('change', ()=>{
+      catalogOverrides[chk.dataset.catToggle] = chk.checked;
+      chk.closest('tr').classList.toggle('catalog-inactive', !chk.checked);
+    });
+  });
+}
+renderTablaCatalogo();
+renderInstalacionFlow();
+
+// recalcula qué partidas del catálogo se marcan activas por defecto (sin tocar las que el usuario ya decidió a mano)
+function actualizarEstadoCatalogo(){
+  const wrap = document.getElementById('tablaCatalogo');
+  if(!wrap) return;
+  const cfg = getConfig();
+  CATALOGO.forEach(item=>{
+    if(catalogOverrides.hasOwnProperty(item.id)) return;
+    const activo = !!item.regla(cfg);
+    const row = wrap.querySelector('tr[data-cat-row="'+item.id+'"]');
+    const chk = wrap.querySelector('input[data-cat-toggle="'+item.id+'"]');
+    if(row) row.classList.toggle('catalog-inactive', !activo);
+    if(chk) chk.checked = activo;
+  });
+}
+function actualizarConfigDependientes(){
+  actualizarEstadoCatalogo();
+  renderInstalacionFlow();
+}
+['c_kwp','c_kw_inversor','c_tipo','c_bateria','c_kwh_bateria','c_suelo','c_at'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', actualizarConfigDependientes);
+  document.getElementById(id).addEventListener('change', actualizarConfigDependientes);
+});
+
+// ===================== CONFIGURACION DE LA INSTALACION =====================
+function getConfig(){
+  const kwp = parseFloat(document.getElementById('c_kwp').value)||0;
+  const wpPanel = parseFloat(document.getElementById('c_wp_panel').value)||1;
+  const kwInversor = parseFloat(document.getElementById('c_kw_inversor').value)||0;
+  const bateria = document.getElementById('c_bateria').checked;
+  const kwhBateria = bateria ? (parseFloat(document.getElementById('c_kwh_bateria').value)||0) : 0;
+  return { kwp, wpPanel, kwInversor, bateria, kwhBateria, tipo: document.getElementById('c_tipo').value, ubicacion: document.getElementById('c_ubicacion').value.trim(), superficie: parseFloat(document.getElementById('c_superficie').value)||0, suelo: document.getElementById('c_suelo').checked, at: document.getElementById('c_at').checked };
+}
+function actualizarNumPaneles(){
+  const cfg = getConfig();
+  const n = cfg.wpPanel>0 ? Math.ceil(cfg.kwp*1000/cfg.wpPanel) : 0;
+  document.getElementById('c_num_paneles').value = n+' paneles ('+fmtNum(n*cfg.wpPanel/1000,2)+' kWp instalados)';
+}
+['c_kwp','c_wp_panel'].forEach(id=>document.getElementById(id).addEventListener('input', actualizarNumPaneles));
+actualizarNumPaneles();
+
+// estima la potencia del inversor a partir del ratio DC/AC habitual (~1,1) al cambiar la potencia pico
+function estimarKwInversor(){
+  const kwp = parseFloat(document.getElementById('c_kwp').value)||0;
+  document.getElementById('c_kw_inversor').value = Math.round((kwp/1.1)*10)/10;
+}
+document.getElementById('c_kwp').addEventListener('input', estimarKwInversor);
+
+document.getElementById('c_bateria').addEventListener('change', (e)=>{
+  document.getElementById('c_kwh_bateria').disabled = !e.target.checked;
+});
+
+function getPreciosComerciales(){
+  return {
+    iva: parseFloat(document.getElementById('e_iva').value)||0,
+    descuento: parseFloat(document.getElementById('e_descuento').value)||0,
+    validez: parseInt(document.getElementById('e_validez').value)||30,
+    formaPago: document.getElementById('e_forma_pago').value.trim(),
+    plazo: document.getElementById('e_plazo').value.trim(),
+    garantiaPaneles: parseInt(document.getElementById('e_garantia_paneles').value)||0,
+    garantiaInversor: parseInt(document.getElementById('e_garantia_inversor').value)||0,
+    garantiaInstalacion: parseInt(document.getElementById('e_garantia_instalacion').value)||0,
+  };
+}
+
+// ===================== PARTIDAS DEL PRESUPUESTO =====================
+let lineItems = [];
+let itemNextId = 1;
+
+function baseQty(base, cfg){
+  switch(base){
+    case 'kWp': return cfg.kwp;
+    case 'kWinv': return cfg.kwInversor;
+    case 'kWhBat': return cfg.kwhBateria;
+    case 'fijo': return 1;
+    default: return null; // manual: ud, h, m, m2
+  }
+}
+
+document.getElementById('btnCargarCatalogo').addEventListener('click', ()=>{
+  if(lineItems.length>0 && !confirm('Esto sustituye las partidas actuales por las del catálogo (con las cantidades de la configuración actual). ¿Continuar?')) return;
+  const cfg = getConfig();
+  const nuevas = [];
+  CATALOGO.forEach(item=>{
+    if(!catalogActivo(item, cfg)) return; // omitir las partidas marcadas como no aplicables
+    const precio = parseFloat(document.getElementById('cat_'+item.id).value)||0;
+    const cantidad = baseQty(item.base, cfg);
+    nuevas.push({
+      id: itemNextId++, capitulo: item.capitulo, descripcion: item.descripcion, base: item.base,
+      precioUnitario: precio, cantidad: cantidad,
+    });
+  });
+  lineItems = nuevas;
+  renderPartidas();
+  showToast('Catálogo cargado: '+nuevas.length+' partidas activas.');
+});
+
+document.getElementById('btnVaciarPartidas').addEventListener('click', ()=>{
+  if(lineItems.length===0) return;
+  if(confirm('¿Vaciar todas las partidas del presupuesto?')){ lineItems=[]; renderPartidas(); }
+});
+
+document.getElementById('btnAddPartida').addEventListener('click', ()=>{
+  const capitulo = document.getElementById('i_capitulo').value;
+  const descripcion = document.getElementById('i_descripcion').value.trim();
+  const base = document.getElementById('i_base').value;
+  const precio = parseFloat(document.getElementById('i_precio').value)||0;
+  if(!descripcion){ showToast('Escribe una descripción para la partida.'); return; }
+  const cfg = getConfig();
+  let cantidad = baseQty(base, cfg);
+  if(cantidad===null){ cantidad = parseFloat(document.getElementById('i_cantidad').value)||0; }
+  lineItems.push({ id: itemNextId++, capitulo, descripcion, base, precioUnitario: precio, cantidad });
+  renderPartidas();
+  showToast('Partida añadida: '+descripcion);
+  document.getElementById('i_descripcion').value='';
+  document.getElementById('i_precio').value='0';
+  document.getElementById('i_cantidad').value='1';
+});
+
+function recalcCantidadesLigadas(){
+  // cuando cambia la configuracion, actualiza las cantidades de partidas ligadas a kWp/kWinv/kWhBat/fijo
+  const cfg = getConfig();
+  lineItems.forEach(it=>{
+    const q = baseQty(it.base, cfg);
+    if(q!==null) it.cantidad = q;
+  });
+}
+
+function getTotals(){
+  const cfg = getConfig();
+  const prec = getPreciosComerciales();
+  const porCapitulo = {};
+  CAP_ORDER.forEach(c=>porCapitulo[c]=0);
+  let subtotal = 0;
+  lineItems.forEach(it=>{
+    const importe = it.precioUnitario*it.cantidad;
+    porCapitulo[it.capitulo] = (porCapitulo[it.capitulo]||0)+importe;
+    subtotal += importe;
+  });
+  const descuentoImporte = subtotal*prec.descuento/100;
+  const baseImponible = subtotal-descuentoImporte;
+  const ivaImporte = baseImponible*prec.iva/100;
+  const total = baseImponible+ivaImporte;
+  const eurPorKwp = cfg.kwp>0 ? total/cfg.kwp : 0;
+  return {cfg, prec, porCapitulo, subtotal, descuentoImporte, baseImponible, ivaImporte, total, eurPorKwp};
+}
+
+// Diagrama de nodos de la instalación (mismo lenguaje visual en cruz que el diagrama de
+// flujo energético de la calculadora de autoconsumo con batería): FV -> Inversor -> Vivienda,
+// con Batería y Red conectadas al nudo central. Aquí no hay curvas horarias que sumar; los
+// tramos se atenúan o resaltan según si la configuración (02) los hace aplicables o no —
+// la misma lógica que decide qué partidas del catálogo (03) quedan activas por defecto.
+function buildInstalacionFlowSVG(cfg){
+  const N = {
+    pv:  {x:390, y:90,  rx:62, ry:27, label:'Paneles FV'},
+    bat: {x:150, y:250, rx:60, ry:27, label:'Batería'},
+    bus: {x:390, y:250, rx:66, ry:29, label:'Inversor'},
+    dem: {x:390, y:420, rx:60, ry:27, label:'Vivienda'},
+    red: {x:660, y:250, rx:52, ry:24, label:'Red'},
+  };
+  const C = {amber:'#FFB020', cyan:'#37CFFF', violet:'#6366F1', teal:'#A3E635', crimson:'#FF3B30', green:'#22D46B', dim:'#3A4756'};
+  const dimBat = !cfg.bateria;
+  const dimExport = cfg.tipo==='sin_excedentes';
+  const colectivo = cfg.tipo==='colectivo';
+
+  function edgePoint(a,b){
+    const ang = Math.atan2(b.y-a.y, b.x-a.x);
+    return {x:a.x+a.rx*Math.cos(ang), y:a.y+a.ry*Math.sin(ang)};
+  }
+  function offsetLine(a,b,off,trim){
+    trim = trim||4;
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    const ux=dx/len, uy=dy/len, nx=-uy*off, ny=ux*off;
+    const p1=edgePoint(a,b), p2=edgePoint(b,a);
+    return {x1:p1.x+nx+ux*trim, y1:p1.y+ny+uy*trim, x2:p2.x+nx-ux*trim, y2:p2.y+ny-uy*trim};
+  }
+  function midOffset(a,b,off){
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    return {x:(a.x+b.x)/2 - dy/len*off, y:(a.y+b.y)/2 + dx/len*off};
+  }
+  function labelTag(x,y,text,ck,dim){
+    const w = text.length*7.2+10;
+    return '<g opacity="'+(dim?0.4:1)+'"><rect x="'+(x-w/2)+'" y="'+(y-11)+'" width="'+w+'" height="17" rx="2" fill="#0A121C" stroke="#182739" stroke-width="0.6"/>'+
+      '<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-weight="700" font-size="12" fill="'+C[dim?'dim':ck]+'">'+text+'</text></g>';
+  }
+  function nodeEl(n, dim, sub){
+    return '<g opacity="'+(dim?0.35:1)+'">'+
+      '<ellipse cx="'+n.x+'" cy="'+n.y+'" rx="'+n.rx+'" ry="'+n.ry+'" fill="#0E1826" stroke="#37CFFF" stroke-width="1.4"/>'+
+      '<text x="'+n.x+'" y="'+(sub?n.y+1:n.y+4.5)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" font-weight="600" fill="#E7ECF2">'+n.label+'</text>'+
+      (sub?'<text x="'+n.x+'" y="'+(n.y+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8FA3B8">'+sub+'</text>':'')+
+    '</g>';
+  }
+  function oneWay(a,b,ck,text,labelOff,dim){
+    const p1=edgePoint(a,b), p2=edgePoint(b,a);
+    let s = '<g opacity="'+(dim?0.3:1)+'"><line x1="'+p1.x+'" y1="'+p1.y+'" x2="'+p2.x+'" y2="'+p2.y+'" stroke="'+C[dim?'dim':ck]+'" stroke-width="2.2" marker-end="url(#arrow-'+(dim?'dim':ck)+')"/></g>';
+    if(text){ const lp = midOffset(a,b, labelOff||14); s += labelTag(lp.x, lp.y, text, ck, dim); }
+    return s;
+  }
+  function twoWay(a,b, fwdKey,fwdText,fwdDim, bckKey,bckText,bckDim){
+    const off=9;
+    const L1 = offsetLine(a,b, off);
+    const L2 = offsetLine(a,b, -off);
+    let s = '<g opacity="'+(fwdDim?0.3:1)+'"><line x1="'+L1.x1+'" y1="'+L1.y1+'" x2="'+L1.x2+'" y2="'+L1.y2+'" stroke="'+C[fwdDim?'dim':fwdKey]+'" stroke-width="2.2" marker-end="url(#arrow-'+(fwdDim?'dim':fwdKey)+')"/></g>';
+    s += '<g opacity="'+(bckDim?0.3:1)+'"><line x1="'+L2.x2+'" y1="'+L2.y2+'" x2="'+L2.x1+'" y2="'+L2.y1+'" stroke="'+C[bckDim?'dim':bckKey]+'" stroke-width="2.2" marker-end="url(#arrow-'+(bckDim?'dim':bckKey)+')"/></g>';
+    const lp1 = midOffset(a,b, off+22);
+    const lp2 = midOffset(a,b, -(off+22));
+    s += labelTag(lp1.x, lp1.y, fwdText, fwdKey, fwdDim);
+    s += labelTag(lp2.x, lp2.y, bckText, bckKey, bckDim);
+    return s;
+  }
+
+  let defs = '<defs>';
+  Object.keys(C).forEach(k=>{
+    defs += '<marker id="arrow-'+k+'" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">'+
+      '<path d="M0,0 L10,5 L0,10 z" fill="'+C[k]+'"/></marker>';
+  });
+  defs += '</defs>';
+
+  let s = defs;
+  s += oneWay(N.pv, N.bus, 'amber', fmtNum(cfg.kwp,1)+' kWp', 12);
+  s += oneWay(N.bus, N.dem, 'cyan', 'Autoconsumo', 34);
+  s += twoWay(N.bus, N.bat, 'violet','Carga',dimBat, 'teal','Descarga',dimBat);
+  s += twoWay(N.bus, N.red, 'green','Exportación',dimExport, 'crimson','Importación',false);
+
+  s += nodeEl(N.pv);
+  s += nodeEl(N.bus, false, fmtNum(cfg.kwInversor,1)+' kW');
+  s += nodeEl(N.dem, false, colectivo?'reparto β':null);
+  s += nodeEl(N.bat, dimBat, dimBat?null:fmtNum(cfg.kwhBateria,1)+' kWh');
+  s += nodeEl(N.red);
+  if(dimBat){ s += '<text x="'+N.bat.x+'" y="'+(N.bat.y+N.bat.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">(sin batería)</text>'; }
+  if(dimExport){
+    const mid = midOffset(N.bus, N.red, 0);
+    s += '<text x="'+mid.x+'" y="'+(mid.y-42)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#5B7086">⛔ dispositivo antivertido</text>';
+  }
+
+  s += '<text x="10" y="14" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
+    '<tspan fill="#FFB020">━</tspan> generación FV &nbsp; <tspan fill="#37CFFF">━</tspan> autoconsumo &nbsp; <tspan fill="#6366F1">━</tspan> carga batería &nbsp; <tspan fill="#A3E635">━</tspan> descarga batería</text>';
+  s += '<text x="10" y="30" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
+    '<tspan fill="#22D46B">━</tspan> exportación a red &nbsp; <tspan fill="#FF3B30">━</tspan> importación de red &nbsp; <tspan fill="#5B7086">━</tspan> no aplica a esta configuración</text>';
+
+  return '<svg viewBox="0 0 780 485" width="100%" style="max-width:740px;">'+s+'</svg>';
+}
+function renderInstalacionFlow(){
+  const wrap = document.getElementById('instalacionFlowWrap');
+  if(!wrap) return;
+  wrap.innerHTML = buildInstalacionFlowSVG(getConfig());
+}
+
+function buildProportionBarSVG(porCapitulo, total){
+  const W=760, H=70, barY=24, barH=22;
+  const colors = {PROYECTO:'#FFB020', MAT:'#37CFFF', MO:'#57D9A3', TRAMITACION:'#FF6B6B', OTROS:'#8FA3B8'};
+  const t = total||1;
+  let x=10, s='';
+  CAP_ORDER.forEach(c=>{
+    const v = porCapitulo[c]||0;
+    if(v<=0) return;
+    const w = (W-20)*v/t;
+    s += '<rect x="'+x+'" y="'+barY+'" width="'+w+'" height="'+barH+'" fill="'+colors[c]+'" opacity="0.85"/>';
+    x += w;
+  });
+  let lx=10, labels='';
+  CAP_ORDER.forEach(c=>{
+    const v = porCapitulo[c]||0;
+    if(v<=0) return;
+    const pct = (100*v/t).toFixed(1);
+    labels += '<text x="'+lx+'" y="'+(barY+barH+16)+'" font-family="IBM Plex Mono" font-size="9.5" fill="'+colors[c]+'">'+CAP_LABEL[c]+' '+pct+'%</text>';
+    lx += 160;
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:760px;">'+s+labels+'</svg>';
+}
+
+function renderPartidas(){
+  const wrap = document.getElementById('partidasWrap');
+  const btnPdf = document.getElementById('btnPdf');
+  if(lineItems.length===0){
+    wrap.innerHTML = '<div class="empty-state">Todavía no hay partidas en el presupuesto. Carga el catálogo o añade una partida manual.</div>';
+    btnPdf.disabled = true;
+  } else {
+    btnPdf.disabled = false;
+    let html = '<div class="table-wrap"><table class="budget-table"><thead><tr><th>Descripción</th><th>Base</th><th class="num">Cantidad</th><th class="num">Precio unitario</th><th class="num">Importe</th><th></th></tr></thead><tbody>';
+    CAP_ORDER.forEach(cap=>{
+      const items = lineItems.filter(it=>it.capitulo===cap);
+      if(items.length===0) return;
+      html += '<tr class="chapter-row"><td colspan="6">'+CAP_LABEL[cap]+'</td></tr>';
+      let subtotalCap = 0;
+      items.forEach(it=>{
+        const importe = it.precioUnitario*it.cantidad;
+        subtotalCap += importe;
+        const cantidadLigada = (it.base==='kWp'||it.base==='kWinv'||it.base==='kWhBat'||it.base==='fijo');
+        html += '<tr>'+
+          '<td class="desc"><input class="desc-input" type="text" value="'+esc(it.descripcion)+'" data-id="'+it.id+'" data-field="descripcion"></td>'+
+          '<td class="cellnum" style="font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer);">'+BASE_LABEL[it.base]+'</td>'+
+          '<td class="num"><input type="number" value="'+fmtRaw(it.cantidad)+'" step="0.01" min="0" data-id="'+it.id+'" data-field="cantidad" '+(cantidadLigada?'title="Ligada a la configuración de la instalación"':'')+'></td>'+
+          '<td class="num"><input type="number" value="'+fmtRaw(it.precioUnitario)+'" step="0.01" min="0" data-id="'+it.id+'" data-field="precioUnitario"></td>'+
+          '<td class="num" style="font-family:var(--font-mono); color:var(--text);">'+fmtEur(importe,2)+'</td>'+
+          '<td><button class="remove-btn" data-remove="'+it.id+'">eliminar</button></td>'+
+        '</tr>';
+      });
+      html += '<tr class="subtotal-row"><td colspan="4">Subtotal '+CAP_LABEL[cap]+'</td><td class="num">'+fmtEur(subtotalCap,2)+'</td><td></td></tr>';
+    });
+    html += '</tbody></table></div>';
+    wrap.innerHTML = html;
+
+    wrap.querySelectorAll('input[data-field]').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const id = parseInt(inp.dataset.id);
+        const field = inp.dataset.field;
+        const item = lineItems.find(it=>it.id===id);
+        if(!item) return;
+        if(field==='descripcion'){ item.descripcion = inp.value.trim()||item.descripcion; }
+        else { item[field] = parseFloat(inp.value)||0; }
+        renderPartidas();
+        renderResumen();
+      });
+    });
+    wrap.querySelectorAll('button[data-remove]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = parseInt(btn.dataset.remove);
+        lineItems = lineItems.filter(it=>it.id!==id);
+        renderPartidas();
+        renderResumen();
+      });
+    });
+  }
+  renderResumen();
+}
+function fmtRaw(n){ return Math.round(n*100)/100; }
+
+function renderResumen(){
+  const t = getTotals();
+  const statsRow = document.getElementById('statsRow');
+  statsRow.innerHTML =
+    '<div class="stat-chip"><div class="v">'+lineItems.length+'</div><div class="l">partidas</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtEur(t.subtotal,0)+'</div><div class="l">subtotal (sin IVA)</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtEur(t.total,0)+'</div><div class="l">total de la oferta</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtEur(t.eurPorKwp,0)+'</div><div class="l">€/kWp instalado</div></div>';
+
+  document.getElementById('propChartWrap').innerHTML = lineItems.length>0 ? buildProportionBarSVG(t.porCapitulo, t.subtotal) : '<p style="font-size:12.5px;color:var(--text-dimmer);">Añade partidas para ver la distribución.</p>';
+
+  const box = document.getElementById('summaryBox');
+  box.innerHTML =
+    '<div class="row"><span class="k">Subtotal</span><span class="v">'+fmtEur(t.subtotal,2)+'</span></div>'+
+    '<div class="row"><span class="k">Descuento ('+fmtNum(t.prec.descuento,1)+'%)</span><span class="v">−'+fmtEur(t.descuentoImporte,2)+'</span></div>'+
+    '<div class="row"><span class="k">Base imponible</span><span class="v">'+fmtEur(t.baseImponible,2)+'</span></div>'+
+    '<div class="row"><span class="k">IVA ('+fmtNum(t.prec.iva,1)+'%)</span><span class="v">'+fmtEur(t.ivaImporte,2)+'</span></div>'+
+    '<div class="row total"><span class="k">TOTAL</span><span class="v">'+fmtEur(t.total,2)+'</span></div>';
+}
+
+// recalcular cantidades ligadas cuando cambia la configuracion tecnica
+['c_kwp','c_wp_panel','c_kw_inversor','c_kwh_bateria'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{ recalcCantidadesLigadas(); renderPartidas(); });
+});
+document.getElementById('c_bateria').addEventListener('change', ()=>{ recalcCantidadesLigadas(); renderPartidas(); });
+['e_iva','e_descuento'].forEach(id=>document.getElementById(id).addEventListener('input', renderResumen));
+
+renderPartidas();
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ===================== GENERAR OFERTA PDF =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(lineItems.length===0) return;
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Instalacion fotovoltaica de autoconsumo';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const orgDir = document.getElementById('p_org_dir').value || '-';
+  const orgTel = document.getElementById('p_org_tel').value || '-';
+  const orgCorreo = document.getElementById('p_org_correo').value || '-';
+  const destNombre = document.getElementById('p_dest_nombre').value || '-';
+  const destCif = document.getElementById('p_dest_cif').value || '-';
+  const destDir = document.getElementById('p_dest_dir').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+  const t = getTotals();
+  const cfg = t.cfg, prec = t.prec;
+
+  const TIPO_LABEL = {sin_excedentes:'Autoconsumo sin excedentes', con_excedentes:'Autoconsumo con excedentes (con compensación)', con_excedentes_sin_comp:'Autoconsumo con excedentes (sin compensación)', colectivo:'Autoconsumo colectivo'};
+
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+
+  function checkPage(yy, needed=12){
+    if(yy > bottomY-needed){ doc.addPage(); return topY; }
+    return yy;
+  }
+  function sectionTitle(yy, numText, text){
+    yy = checkPage(yy, 18);
+    doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+    doc.text(numText+'  '+text, marginX, yy);
+    doc.setDrawColor(230,150,20); doc.setLineWidth(0.6);
+    doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+    doc.setLineWidth(0.2);
+    return yy+11;
+  }
+  function kv(yy, k, v, indent=0){
+    yy = checkPage(yy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+    doc.text(k, marginX+indent, yy);
+    doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+    const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+70));
+    doc.text(vLines[0], marginX+indent+70, yy);
+    let extra = 0;
+    for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+70, yy+extra); }
+    return yy+5.6+extra;
+  }
+  function paragraph(yy, text, opts={}){
+    const size = opts.size || 9;
+    const width = opts.width || (pageW-2*marginX);
+    doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+    const linesArr = doc.splitTextToSize(text, width);
+    linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+    return yy+3;
+  }
+  function chapterTable(yy, capitulo, items){
+    const colX = [marginX, marginX+90, marginX+108];
+    const precioX = pageW-marginX-20;
+    const importeX = pageW-marginX;
+    yy = checkPage(yy, 16);
+    doc.setFillColor(245,245,247);
+    doc.rect(marginX, yy-4.5, pageW-2*marginX, 6.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(60,66,76);
+    doc.text(CAP_LABEL[capitulo].toUpperCase(), marginX+2, yy);
+    yy += 7;
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(100,108,120);
+    doc.text('Descripción', colX[0], yy);
+    doc.text('Cantidad', colX[1], yy);
+    doc.text('Base', colX[2], yy);
+    doc.text('Precio ud.', precioX, yy, {align:'right'});
+    doc.text('Importe', importeX, yy, {align:'right'});
+    yy+=2; doc.setDrawColor(210,210,215); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5;
+    let subtotal = 0;
+    doc.setFont('helvetica','normal');
+    items.forEach(it=>{
+      yy = checkPage(yy,6);
+      const importe = it.precioUnitario*it.cantidad;
+      subtotal += importe;
+      doc.setFontSize(7.6); doc.setTextColor(30,35,45);
+      const descLines = doc.splitTextToSize(it.descripcion, 86);
+      doc.text(descLines[0], colX[0], yy);
+      doc.text(fmtNum(it.cantidad,2), colX[1], yy);
+      doc.setTextColor(100,108,120);
+      doc.text(BASE_LABEL[it.base], colX[2], yy);
+      doc.setTextColor(30,35,45);
+      doc.text(fmtEur(it.precioUnitario,2), precioX, yy, {align:'right'});
+      doc.setFont('helvetica','bold');
+      doc.text(fmtEur(importe,2), importeX, yy, {align:'right'});
+      doc.setFont('helvetica','normal');
+      yy += 6;
+      if(descLines.length>1){ doc.setFontSize(7); doc.setTextColor(120,126,136); doc.text(descLines.slice(1).join(' '), colX[0], yy-1.5); }
+    });
+    yy = checkPage(yy, 8);
+    doc.setDrawColor(210,210,215); doc.line(marginX,yy-3,pageW-marginX,yy-3);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(20,24,32);
+    doc.text('Subtotal '+CAP_LABEL[capitulo], colX[2], yy);
+    doc.text(fmtEur(subtotal,2), importeX, yy, {align:'right'});
+    doc.setFont('helvetica','normal');
+    return yy+9;
+  }
+
+  // ===================== PORTADA =====================
+  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(230,150,20);
+  doc.text('OFERTA COMERCIAL', marginX, 42);
+  doc.setDrawColor(230,150,20); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 66;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  cy += 4;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Instalación fotovoltaica de '+fmtNum(cfg.kwp,2)+' kWp — '+TIPO_LABEL[cfg.tipo], marginX, cy); cy+=14;
+
+  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 62, 1.5, 1.5, 'S');
+  let by = cy+9;
+  doc.setFontSize(9.5);
+  [['Instalador', orgNombre+' — '+orgCif],['Dirección', orgDir],['Contacto', orgTel+' / '+orgCorreo],
+   ['Cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],['Dirección de instalación', destDir],
+   ['Autor de la oferta', autor+' ('+registro+')'],['Fecha', fecha],['Validez de la oferta', prec.validez+' días naturales desde la fecha indicada']]
+   .forEach(([k,v])=>{
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
+    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-60);
+    doc.text(vLines[0], marginX+58, by);
+    by += 6.6;
+  });
+
+  cy += 74;
+  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 22, 1.5, 1.5, 'F');
+  doc.setFont('times','bold'); doc.setFontSize(10); doc.setTextColor(10,18,28);
+  doc.text('IMPORTE TOTAL DE LA OFERTA (IVA incluido)', marginX+8, cy+9);
+  doc.setFontSize(16);
+  doc.text(fmtEur(t.total,2), marginX+8, cy+17.5);
+
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Presupuesto detallado por capítulos: proyecto, materiales, mano de obra y tramitación — ver páginas siguientes', marginX, 274);
+
+  // ===================== CUERPO =====================
+  doc.addPage();
+  let y = topY;
+
+  y = sectionTitle(y, '1.', 'Presentación');
+  y = paragraph(y, 'Estimado/a '+(destNombre&&destNombre!=='-'?destNombre:'cliente')+', le presentamos la oferta comercial para la instalación fotovoltaica de autoconsumo de '+fmtNum(cfg.kwp,2)+' kWp de potencia pico'+(cfg.ubicacion?' en '+cfg.ubicacion:'')+', bajo la modalidad de '+TIPO_LABEL[cfg.tipo].toLowerCase()+'.');
+  y = paragraph(y, 'El presupuesto incluye el suministro de materiales, la mano de obra de instalación, la redacción del proyecto técnico y la tramitación administrativa necesaria para la legalización y puesta en marcha de la instalación.');
+
+  y = sectionTitle(y, '2.', 'Descripción técnica de la instalación');
+  y = kv(y, 'Potencia pico del generador', fmtNum(cfg.kwp,2)+' kWp');
+  y = kv(y, 'Número de paneles', Math.ceil(cfg.kwp*1000/cfg.wpPanel)+' de '+cfg.wpPanel+' Wp');
+  y = kv(y, 'Potencia del inversor', fmtNum(cfg.kwInversor,2)+' kW');
+  y = kv(y, 'Modalidad de autoconsumo', TIPO_LABEL[cfg.tipo]);
+  if(cfg.bateria) y = kv(y, 'Batería de almacenamiento', fmtNum(cfg.kwhBateria,2)+' kWh');
+  if(cfg.ubicacion) y = kv(y, 'Ubicación', cfg.ubicacion);
+  if(cfg.superficie>0) y = kv(y, 'Superficie disponible', fmtNum(cfg.superficie,0)+' m²');
+
+  y = sectionTitle(y, '3.', 'Presupuesto detallado');
+  y = paragraph(y, 'Desglose de las partidas del presupuesto por capítulo. Los importes no incluyen IVA; el resumen económico con impuestos se muestra en el apartado siguiente.');
+  CAP_ORDER.forEach(cap=>{
+    const items = lineItems.filter(it=>it.capitulo===cap);
+    if(items.length===0) return;
+    y = checkPage(y, 20);
+    y = chapterTable(y, cap, items);
+  });
+
+  y = sectionTitle(y, '4.', 'Resumen económico');
+  y = checkPage(y, 46);
+  const boxW = pageW-2*marginX, boxX = marginX;
+  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(boxX, y, boxW, 48, 1.5, 1.5, 'S');
+  let ry = y+9;
+  const rows = [
+    ['Subtotal', fmtEur(t.subtotal,2), false],
+    ['Descuento ('+fmtNum(prec.descuento,1)+'%)', '-'+fmtEur(t.descuentoImporte,2), false],
+    ['Base imponible', fmtEur(t.baseImponible,2), false],
+    ['IVA ('+fmtNum(prec.iva,1)+'%)', fmtEur(t.ivaImporte,2), false],
+  ];
+  rows.forEach(([k,v])=>{
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90,96,106);
+    doc.text(k, boxX+8, ry);
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
+    doc.text(v, boxX+boxW-8, ry, {align:'right'});
+    ry += 7;
+  });
+  doc.setDrawColor(230,150,20); doc.setLineWidth(0.4); doc.line(boxX+8, ry-2, boxX+boxW-8, ry-2);
+  doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+  doc.text('TOTAL (IVA incluido)', boxX+8, ry+6);
+  doc.setFontSize(15); doc.setTextColor(200,130,10);
+  doc.text(fmtEur(t.total,2), boxX+boxW-8, ry+6, {align:'right'});
+  y = y+48+10;
+  y = paragraph(y, 'Ratio de la oferta: '+fmtEur(t.eurPorKwp,0)+' / kWp instalado (IVA incluido).', {size:8.5});
+
+  y = sectionTitle(y, '5.', 'Condiciones de la oferta y garantías');
+  y = kv(y, 'Validez de la oferta', prec.validez+' días naturales desde la fecha de emisión');
+  y = kv(y, 'Forma de pago', prec.formaPago||'A convenir');
+  y = kv(y, 'Plazo de ejecución estimado', prec.plazo||'A convenir');
+  y = kv(y, 'Garantía de los paneles', prec.garantiaPaneles+' años');
+  y = kv(y, 'Garantía del inversor', prec.garantiaInversor+' años');
+  y = kv(y, 'Garantía de la instalación (mano de obra)', prec.garantiaInstalacion+' años');
+  y = paragraph(y, 'Esta oferta no incluye: refuerzos estructurales no previstos, ampliación de cuadros eléctricos existentes por causas ajenas al diseño inicial, ni tasas municipales o autonómicas no contempladas explícitamente en las partidas de tramitación. Cualquier trabajo adicional se presupuestará por separado antes de su ejecución.', {size:8});
+
+  y = sectionTitle(y, '6.', 'Aceptación de la oferta');
+  y = paragraph(y, 'La firma de esta oferta implica la aceptación de las condiciones económicas y técnicas descritas en este documento.');
+  y = checkPage(y, 40);
+  y += 10;
+  doc.setDrawColor(180,185,192); doc.setLineWidth(0.3);
+  doc.line(marginX, y+20, marginX+70, y+20);
+  doc.line(pageW-marginX-70, y+20, pageW-marginX, y+20);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Por el instalador — '+orgNombre, marginX, y+25);
+  doc.text('Por el cliente — '+(destNombre&&destNombre!=='-'?destNombre:''), pageW-marginX-70, y+25);
+  doc.text('Fecha:', marginX, y+34);
+  doc.text('Fecha:', pageW-marginX-70, y+34);
+
+  // ===================== CABECERA / PIE =====================
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('oferta-fotovoltaica-'+safeName+'.pdf');
+  showToast('Oferta en PDF generada y descargada.');
+});
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
+     compartida entre todos los documentos de esta familia a través de localStorage. -->
+<script>
+(function(){
+  var DOC_KEY = 'presupuesto_fv_detallado';
+  var LS_KEY = 'VatiaCo';
+
+  function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function guardarVatiaco(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+
+  function valorCampo(el){ return el.type==='checkbox' ? el.checked : el.value; }
+  function fijarCampo(el, val){ if(el.type==='checkbox') el.checked = !!val; else el.value = val; }
+
+  var TIPOS_IGNORADOS = {file:1, button:1, submit:1, reset:1, image:1};
+
+  function sincronizarCampos(campos, leerContenedor, obtenerContenedorParaGuardar){
+    campos.forEach(function(el){
+      if(!el.id || TIPOS_IGNORADOS[el.type]) return;
+      var guardado = leerContenedor(leerVatiaco());
+      if(guardado && guardado[el.id]!==undefined && guardado[el.id]!==null && guardado[el.id]!==''){
+        fijarCampo(el, guardado[el.id]);
+      } else {
+        var v0 = leerVatiaco();
+        var c0 = obtenerContenedorParaGuardar(v0);
+        c0[el.id] = valorCampo(el);
+        guardarVatiaco(v0);
+      }
+      var evento = (el.tagName==='SELECT' || el.type==='checkbox' || el.type==='radio') ? 'change' : 'input';
+      el.addEventListener(evento, function(){
+        var v = leerVatiaco();
+        var c = obtenerContenedorParaGuardar(v);
+        c[el.id] = valorCampo(el);
+        guardarVatiaco(v);
+      });
+    });
+  }
+
+  function registrarSalida(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    v[DOC_KEY].outputs.ultimaGeneracionPdf = new Date().toISOString();
+    guardarVatiaco(v);
+  }
+
+  function instalarBotonesExportarImportar(){
+    var barra = document.createElement('div');
+    barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
+    function crearBoton(texto){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = texto;
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      return b;
+    }
+    var btnExp = crearBoton('⬇');
+    btnExp.addEventListener('click', function(){
+      var blob = new Blob([JSON.stringify(leerVatiaco(), null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'VatiaCo.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    var btnImp = crearBoton('⬆');
+    var inputFile = document.createElement('input');
+    inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
+    inputFile.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          var v = JSON.parse(ev.target.result);
+          guardarVatiaco(v);
+          location.reload();
+        }catch(err){
+          alert('El archivo no es un JSON valido.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    btnImp.addEventListener('click', function(){ inputFile.click(); });
+
+    barra.appendChild(btnExp);
+    barra.appendChild(btnImp);
+    barra.appendChild(inputFile);
+    document.body.appendChild(barra);
+  }
+
+  function inicializarVatiaco(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].inputs = v[DOC_KEY].inputs || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    guardarVatiaco(v);
+
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]')),
+      function(vv){ return vv.proyecto; },
+      function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
+    );
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input:not([id^="p_"]), select:not([id^="p_"]), textarea:not([id^="p_"])')),
+      function(vv){ return vv[DOC_KEY] && vv[DOC_KEY].inputs; },
+      function(vv){ vv[DOC_KEY] = vv[DOC_KEY] || {}; vv[DOC_KEY].inputs = vv[DOC_KEY].inputs || {}; return vv[DOC_KEY].inputs; }
+    );
+
+    var btnPdf = document.getElementById('btnPdf');
+    if(btnPdf) btnPdf.addEventListener('click', registrarSalida);
+
+    instalarBotonesExportarImportar();
+  }
+
+  setTimeout(inicializarVatiaco, 0);
+})();
+</script>
+</body>
+</html>

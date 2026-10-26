@@ -1,0 +1,204 @@
+---
+import TopNav from '../components/TopNav.astro';
+import PieSitio from '../components/PieSitio.astro';
+import '../styles/sitio.css';
+// Pagina principal de VatiaCo: la plataforma para comunidades energeticas.
+// El blog (visor de public/docs) esta en /blog/; los enlaces antiguos /?doc=... se
+// reenvian alli (script del <head>) para no romper QR ni enlaces compartidos.
+// Plataforma de socios: los enlaces con data-plataforma la abren en el visor comun
+// (/js/plataforma.js, cargado por TopNav), con el mismo inicio de sesion que el mapa
+const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
+const doc = (ruta: string) => `/blog/?doc=${encodeURIComponent(ruta)}`;
+const CE = '/docs/A00_Blog_Interactivo/A02_Comunidades Energéticas/';
+const MAPA = '/comunidades/';
+
+const pilares = [
+  {
+    id: 'gestion', num: '01', icono: 'gestion',
+    titulo: 'Gestión de comunidades',
+    lema: 'Socios, instalaciones, documentación y administración.',
+    puntos: [
+      'Alta de cada socio con su usuario de acceso y sus puntos de medida.',
+      'Instalaciones por socio: red, fotovoltaica, eólica, batería, consumo y recarga de vehículo, situadas en un mapa.',
+      'Documentación de referencia para constituir la comunidad y tramitar el autoconsumo.',
+      'Panel de administración con todos los socios y acceso al detalle de cada uno.',
+    ],
+  },
+  {
+    id: 'reparto', num: '02', icono: 'reparto',
+    titulo: 'Reparto energético',
+    lema: 'Coeficientes, generación y consumo, según las capacidades reales del software.',
+    puntos: [
+      'Generación y consumo de cada socio medidos en continuo y agregados por hora y por día.',
+      'Neto de cada socio y de la comunidad: cuánto aporta y cuánto recibe en cada hora.',
+      'Datos horarios por socio como base para fijar y revisar los coeficientes de reparto del autoconsumo colectivo.',
+      'Histórico consultable por días y horas para contrastar el reparto con lo medido.',
+    ],
+  },
+  {
+    id: 'seguimiento', num: '03', icono: 'seguimiento',
+    titulo: 'Seguimiento',
+    lema: 'Energía compartida, ahorro estimado e indicadores de funcionamiento.',
+    puntos: [
+      'Energía horaria del día y potencia instantánea de cada hora, con navegación por días y horas.',
+      'Intercambio con la red y balance de la comunidad para conocer la energía compartida.',
+      'Valores diarios entre fechas para estimar el ahorro frente a comprar toda la energía a la red.',
+      'Indicadores por punto: energía que entra y sale, estado de carga de baterías y vehículos, lecturas de cada medidor.',
+    ],
+  },
+  {
+    id: 'portal', num: '04', icono: 'portal',
+    titulo: 'Portal de socios',
+    lema: 'Acceso a información, consumos y actividad de la comunidad.',
+    puntos: [
+      'Cada socio entra con su usuario y ve solo sus datos y su posición en el mapa.',
+      'Curvas de energía y potencia, y tabla con sus puntos de medida al momento.',
+      'Panel a pantalla completa, sin menús, en el ordenador o en el móvil.',
+      'Impresión y PDF del panel en un clic.',
+    ],
+  },
+];
+
+const cadena = [
+  { t: 'Medidor por punto', d: 'Monofásico o trifásico, con transformadores de intensidad cuando hace falta' },
+  { t: 'Pasarela del socio', d: 'Recoge las lecturas de sus medidores' },
+  { t: 'Internet del socio', d: 'Envío cifrado de cada lectura' },
+  { t: 'Plataforma en la nube', d: 'Histórico, sumas por socio y comunidad' },
+  { t: 'Paneles', d: 'Uno por socio y uno para la comunidad' },
+];
+
+const recursos = [
+  { t: 'Mapa de comunidades energéticas', d: 'Las comunidades registradas en el IDAE en toda España.', href: MAPA },
+  { t: 'Presupuesto de puntos de medida', d: 'Sensores, instalación y cuota anual por socio.', href: doc(CE + 'C02_Presupuesto_Puntos_de_Medida.html') },
+  { t: 'Constitución de comunidades energéticas', d: 'Forma jurídica, estatutos y pasos para crear la comunidad.', href: doc(CE + 'C01_Comunidades_Energeticas.html') },
+  { t: 'Tramitación del autoconsumo', d: 'Trámites de una instalación de autoconsumo, paso a paso.', href: doc(CE + 'C01_Autoconsumo_Tramitacion.html') },
+];
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VatiaCo · Plataforma para comunidades energéticas</title>
+    <meta name="description" content="Gestión de comunidades energéticas, reparto de la energía, seguimiento y portal de socios con datos medidos hora a hora." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <script is:inline>
+      // Enlaces antiguos al blog (/?doc=...): al blog, con el mismo documento
+      if (new URLSearchParams(location.search).has('doc')) location.replace('/blog/' + location.search + location.hash);
+    </script>
+  </head>
+  <body>
+    <TopNav />
+
+    <main>
+      <div class="hero">
+        <div class="wrap">
+          <div class="etiqueta">Plataforma para comunidades energéticas</div>
+          <h1>Tu comunidad energética, <em>con datos medidos hora a hora</em>.</h1>
+          <p>Socios, instalaciones y medidas de cada punto en una sola plataforma: generación, consumo y energía compartida en cada hora, un panel para cada socio y otro para la gestión de la comunidad.</p>
+          <div class="acciones">
+            <a class="btn principal" href={PORTAL_URL} data-plataforma="Acceso socios">Acceso socios</a>
+            <a class="btn" href="/servicios/">Nuestros servicios</a>
+            <a class="btn" href={MAPA}>Ver comunidades en el mapa</a>
+            <a class="btn" href="/blog/">Leer el blog</a>
+          </div>
+        </div>
+      </div>
+
+      <section id="soluciones">
+        <div class="wrap">
+          <div class="etiqueta">Soluciones</div>
+          <h2>Cuatro piezas para llevar una comunidad energética.</h2>
+          <p class="intro">Desde el alta de los socios hasta el panel que cada uno consulta en su móvil, con las capacidades que la plataforma ofrece hoy.</p>
+          <div class="pilares">
+            {pilares.map((p) => (
+              <article class="pilar" id={p.id}>
+                <header>
+                  <div class="ico" aria-hidden="true">
+                    {p.icono === 'gestion' && (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.2M18 14.5c1.8.8 3 2.7 3 4.9"/></svg>
+                    )}
+                    {p.icono === 'reparto' && (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/><path d="M12 12 5 16.5"/></svg>
+                    )}
+                    {p.icono === 'seguimiento' && (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></svg>
+                    )}
+                    {p.icono === 'portal' && (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m11 7.5-2 3.5h3l-2 3.5"/></svg>
+                    )}
+                  </div>
+                  <div>
+                    <div class="num">{p.num}</div>
+                    <h3>{p.titulo}</h3>
+                  </div>
+                </header>
+                <p class="lema">{p.lema}</p>
+                <ul>{p.puntos.map((t) => <li>{t}</li>)}</ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="como-funciona" style="background: rgba(35, 38, 47, 0.35);">
+        <div class="wrap">
+          <div class="etiqueta">Cómo funciona</div>
+          <h2>Del medidor en el cuadro al panel de la comunidad.</h2>
+          <p class="intro">Cada punto de medida envía sus lecturas por la conexión a Internet del socio. En la nube se guardan, se suman por socio y por comunidad y se muestran en los paneles.</p>
+          <div class="cadena">
+            {cadena.map((c) => (
+              <div class="paso"><h4>{c.t}</h4><p>{c.d}</p></div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="recursos">
+        <div class="wrap">
+          <div class="etiqueta">Recursos</div>
+          <h2>Herramientas y guías para empezar.</h2>
+          <p class="intro">Calculadoras y documentación del blog para preparar y poner en marcha una comunidad energética.</p>
+          <div class="recursos">
+            {recursos.map((r) => (
+              <a class="recurso" href={r.href}><h4>{r.t}</h4><p>{r.d}</p><span>Abrir →</span></a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="blog" style="padding-top: 0;">
+        <div class="wrap">
+          <div class="blog">
+            <div>
+              <div class="etiqueta">Blog de un ingeniero</div>
+              <h2>Control de la energía, explicado y calculado.</h2>
+              <p>Fotovoltaica, comunidades energéticas, contratos de electricidad, vehículo eléctrico, auditorías y más: guías interactivas con calculadoras, informes y presupuestos.</p>
+            </div>
+            <a class="btn principal" href="/blog/">Entrar al blog →</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="contacto" style="padding-top: 0;">
+        <div class="wrap">
+          <div class="etiqueta">Contacto</div>
+          <h2>¿Montamos tu comunidad?</h2>
+          <p class="intro" style="margin-bottom: 0;">Cuéntanos cuántos socios y puntos de medida tiene tu comunidad y te preparamos una propuesta.</p>
+          <div class="contacto">
+            <a class="btn" href="tel:+34951733491">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V21a1 1 0 0 1-1 1C10.61 22 2 13.39 2 3a1 1 0 0 1 1-1h4.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.24 1.01l-2.21 2.21Z"/></svg>
+              951 733 491
+            </a>
+            <a class="btn" href="mailto:info@vatiaco.es">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z"/></svg>
+              info@vatiaco.es
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <PieSitio />
+  </body>
+</html>

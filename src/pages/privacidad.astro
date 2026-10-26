@@ -1,0 +1,68 @@
+---
+import PaginaLegal from '../components/PaginaLegal.astro';
+import { TITULAR as T } from '../data/titular';
+---
+<PaginaLegal titulo="Política de privacidad" descripcion="Cómo trata VatiaCo los datos personales de la web, del alta y de la plataforma.">
+  <p>Esta política explica qué datos personales trata {T.marca}, para qué y con qué derechos, conforme al Reglamento (UE)
+    2016/679 (RGPD) y a la Ley Orgánica 3/2018 (LOPDGDD).</p>
+
+  <h2>Responsable</h2>
+  <div class="ficha">
+    <p><strong>{T.nombre}</strong> ({T.marca}) · NIF {T.nif}</p>
+    <p>{T.domicilio}</p>
+    <p><a href={'mailto:' + T.email}>{T.email}</a> · {T.telefono}</p>
+  </div>
+
+  <h2>Qué datos tratamos y para qué</h2>
+  <table>
+    <thead><tr><th>Datos</th><th>Finalidad</th><th>Base legal</th><th>Conservación</th></tr></thead>
+    <tbody>
+      <tr><td>Gestor de la comunidad: nombre, email, teléfono y contraseña (guardada cifrada)</td>
+        <td>Dar de alta la comunidad, crear su usuario y prestar el servicio</td>
+        <td>Ejecución del contrato (art. 6.1.b RGPD)</td>
+        <td>Mientras dure el servicio y, después, el plazo de las responsabilidades legales</td></tr>
+      <tr><td>Datos de facturación y pago (los recoge Stripe)</td>
+        <td>Cobrar la cuota y emitir las facturas</td>
+        <td>Contrato y obligación legal (art. 6.1.b y c)</td>
+        <td>6 años (Código de Comercio) y 4 años a efectos fiscales</td></tr>
+      <tr><td>Quien escribe o llama: nombre, email, teléfono y mensaje</td>
+        <td>Responder a la consulta</td>
+        <td>Consentimiento e interés legítimo (art. 6.1.a y f)</td>
+        <td>Hasta resolverla y, como máximo, un año</td></tr>
+      <tr><td>Datos públicos de las comunidades energéticas (nombre, municipio, socios, web) publicados por el IDAE</td>
+        <td>Mostrar el mapa y, por correo postal, presentar el servicio a las comunidades</td>
+        <td>Interés legítimo (art. 6.1.f)</td>
+        <td>Mientras la comunidad figure en los datos del IDAE o hasta que se oponga</td></tr>
+    </tbody>
+  </table>
+  <p>No enviamos publicidad por correo electrónico a quien no la haya pedido o autorizado, ni tomamos decisiones automatizadas
+    con efectos jurídicos.</p>
+
+  <h2>Datos de los socios dentro de la plataforma</h2>
+  <p>Los datos que cada comunidad guarda en su plataforma (socios, suministros, lecturas de Datadis, documentos) son
+    <strong>responsabilidad de la comunidad</strong>. {T.marca} los trata solo por su cuenta y siguiendo sus instrucciones, como
+    <strong>encargado del tratamiento</strong> (art. 28 RGPD), en los términos del apartado de protección de datos de las
+    <a href="/condiciones/#encargo">condiciones del servicio</a>. Los socios ejercen sus derechos ante su comunidad.</p>
+
+  <h2>Quién más accede a los datos</h2>
+  <ul>
+    <li><strong>Stripe Payments Europe, Ltd.</strong> (Irlanda): pagos con tarjeta o domiciliación SEPA. Puede transferir datos a
+      Estados Unidos con las garantías del Marco de Privacidad de Datos UE-EE. UU. y cláusulas contractuales tipo.</li>
+    <li><strong>GitHub, Inc.</strong> (Estados Unidos): alojamiento de esta web informativa, con los mismos mecanismos de garantía.</li>
+    <li><strong>Datadis</strong>: la plataforma descarga las lecturas con la cuenta y la autorización de cada comunidad.</li>
+    <li>La plataforma y sus bases de datos funcionan en un servidor propio situado en España.</li>
+    <li>Administraciones y juzgados, cuando una ley lo exija.</li>
+  </ul>
+  <p>El mapa carga las teselas de OpenStreetMap y algunas librerías desde cdnjs (Cloudflare): esos servidores reciben, como en
+    cualquier web, la dirección IP de tu navegador.</p>
+
+  <h2>Tus derechos</h2>
+  <p>Puedes pedir acceso, rectificación, supresión, oposición, limitación del tratamiento y portabilidad de tus datos, y retirar
+    tu consentimiento, escribiendo a <a href={'mailto:' + T.email}>{T.email}</a>. Si crees que no hemos atendido bien tu
+    solicitud, puedes reclamar ante la <a href="https://www.aepd.es/" target="_blank" rel="noopener">Agencia Española de
+    Protección de Datos</a>.</p>
+
+  <h2>Seguridad</h2>
+  <p>Las conexiones van cifradas (HTTPS), las contraseñas se guardan cifradas con bcrypt, cada comunidad tiene su propia base de
+    datos y se hacen copias de seguridad diarias.</p>
+</PaginaLegal>
