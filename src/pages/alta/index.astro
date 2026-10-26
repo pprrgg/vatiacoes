@@ -109,7 +109,7 @@ const lista = IDAE.comunidades
       <div class="hero">
         <div class="wrap">
           <div class="etiqueta" id="sello">Alta de comunidad</div>
-          <h1>Prueba la plataforma <em>un mes gratis</em>.</h1>
+          <h1>Plataforma <em>por menos de 1 € por socio</em>.</h1>
           <p>Rellena los datos y la plataforma de tu comunidad se crea al momento: paneles, base de datos y tu usuario de gestor para
             dar de alta a los socios. Sin permanencia: si no te convence, te das de baja antes de que termine el mes y no pagas nada.</p>
         </div>
@@ -120,9 +120,8 @@ const lista = IDAE.comunidades
           <div class="aviso info" id="cancelado" hidden>Has salido del pago sin completarlo. Tus datos siguen aquí por si quieres continuar.</div>
           <div class="demo" role="note">
             <div class="demo-texto">
-              <strong class="demo-titulo">Plataforma en fase de pruebas</strong>
-              <p>Mientras la mejoramos puede tener cortes y cambios. Antes de dar de alta tu comunidad, entra en la demo como gestor y
-                pruébala con una comunidad de ejemplo:</p>
+              <strong class="demo-titulo">Pruébala con una comunidad de ejemplo</strong>
+            
               <dl class="demo-cred">
                 <div><dt>Usuario</dt><dd><code>demo@vatiaco.es</code></dd></div>
                 <div><dt>Contraseña</dt><dd><code>demo</code></dd></div>
@@ -130,10 +129,7 @@ const lista = IDAE.comunidades
             </div>
             <a class="btn principal demo-btn" href={PORTAL_URL} data-plataforma="Demo de VatiaCo">Entrar en la demo</a>
           </div>
-          <div class="aviso mal" id="inactiva" hidden>El alta online no está disponible en este momento. Llámanos al 951 733 491 o escríbenos a
-            <a href="mailto:info@vatiaco.es">info@vatiaco.es</a> .</div>
-
-          <div class="alta-rejilla">
+         <div class="alta-rejilla">
             <form class="alta-caja alta-form" id="formulario" novalidate>
               <fieldset>
                 <legend>La comunidad</legend>
@@ -203,7 +199,7 @@ const lista = IDAE.comunidades
                   <div class="campo ancho" data-campo="periodo">
                     <span class="lbl">Forma de pago</span>
                     <div class="selector" role="radiogroup" aria-label="Forma de pago">
-                      <label><input type="radio" name="periodo" value="anual" checked /><strong>Anual</strong><span class="ahorro">2 meses gratis</span></label>
+                      <label><input type="radio" name="periodo" value="anual" checked /><strong>Anual</strong><span class="ahorro">1 mes gratis</span></label>
                       <label><input type="radio" name="periodo" value="mensual" /><strong>Mensual</strong><span>Sin compromiso</span></label>
                     </div>
                     <div class="err"></div>
