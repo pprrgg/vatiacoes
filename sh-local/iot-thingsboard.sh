@@ -164,10 +164,17 @@ if [ -d "$INSTALL_DIR" ]; then
      if [ -d data ]; then find data -mindepth 1 -maxdepth 1 ! -name caddy -exec rm -rf {} +; fi'
 fi
 
-# La IP de servicio tiene que existir en esta maquina
+# La IP de servicio tiene que existir en esta maquina. Si no la tiene (p. ej. el equipo de
+# desarrollo), el router no le manda el trafico de Internet: no se usa el dominio publico, porque
+# sus peticiones de certificado fallarian y gastarian el cupo de Let's Encrypt del dominio (5
+# certificados por semana) que necesita el servidor. FORZAR_DOMINIO=1 lo usa igualmente.
 if ! ip -4 -o addr show 2>/dev/null | grep -q " $SERVE_IP/"; then
   echo "AVISO: $SERVE_IP no esta configurada en este equipo; el router no llegara a Caddy." >&2
   echo "       IPs actuales: $(ip -4 -o addr show | awk '$2!="lo"{print $4}' | grep -v '^172\.' | tr '\n' ' ')" >&2
+  if [ -n "$TB_DOMAIN" ] && [ "${FORZAR_DOMINIO:-0}" != "1" ]; then
+    echo "       Sin dominio publico ($TB_DOMAIN) en este equipo: solo HTTPS en la LAN (FORZAR_DOMINIO=1 para usarlo)." >&2
+    TB_DOMAIN=""
+  fi
 fi
 
 # --------------------------------------------
@@ -2380,9 +2387,11 @@ El PDF lleva los mismos graficos que el widget de consumo del panel (graficos.py
 del periodo, reparto por periodos del peaje (anillo), periodos anteriores, consumo apilado
 por periodos con autoconsumo y excedentes, potencias maximas frente a la contratada y los
 datos del contrato. Una seccion para la comunidad y otra por socio."""
+import calendar
 import csv
 import io
 import json
+import math
 import re
 import tempfile
 import unicodedata
@@ -3104,7 +3113,7 @@ def generar(socio_id, desde, hasta, formato, agregado=False):
 # resultados con los consumos y la generacion horarios de los ultimos 12 meses completos.
 # Mismo formato que el informe de energia: portada, preliminares y cuerpo (PLANTILLA hasta el
 # cuerpo) con capitulos de bloques: p texto, m texto con marcado de Typst, f formula, l lista,
-# h apartado, fig figura SVG y tab tabla.
+# h apartado, fig figura SVG, tab tabla y r referencias bibliograficas numeradas (ISO 690).
 CUERPO_COEF = r"""
 // ---------------- Cuerpo (numeracion arabiga) ----------------
 #set page(numbering: "1", footer: context [#set text(7.5pt, fill: gris); #d.periodo #h(1fr)
@@ -3121,6 +3130,11 @@ CUERPO_COEF = r"""
     else if b.t == "f" { math.equation(block: true, numbering: "(1)", eval(b.x, mode: "math")) }
     else if b.t == "fig" [#figure(image(b.svg, width: 100%), caption: b.cap) #text(8pt, fill: gris)[#b.nota] #parbreak()]
     else if b.t == "tab" { ftabla(b.tabla, b.cap, size: eval(b.size)) }
+    else if b.t == "r" {
+      set text(8.5pt)
+      set par(justify: false)
+      enum(numbering: "[1]", spacing: 0.8em, ..b.x.map(i => [#i.t#if i.u != "" [ Disponible en: #link(i.u)]]))
+    }
   }
 ]
 """
@@ -3251,9 +3265,11 @@ def _figuras_economia(raiz, E):
     }
 
 
-def coeficientes_pdf(anio=None):
+def coeficientes_pdf(anio=None, propio=None):
     """PDF de justificacion de los coeficientes de reparto de la comunidad en curso: fijos
-    optimos y variables por hora (para el año anio; por defecto, el siguiente). -> (bytes, nombre)."""
+    optimos y variables por hora (para el año anio; por defecto, el siguiente). propio (panel
+    de un socio): ese socio y el resto de la comunidad sumado, sin datos de ningun otro.
+    -> (bytes, nombre)."""
     import typst
     from . import gestion
 
@@ -3283,6 +3299,15 @@ def coeficientes_pdf(anio=None):
     tot_cons = sum(consumo.values())
     fallback = {i: (consumo[i] / tot_cons if tot_cons else 1 / len(ids)) for i in ids}
     generadores = [so["nombre"] for so, _ in act if so["id"] in gen_ids]
+    if propio and propio not in ids:
+        raise ValueError("Este suministro no participa del reparto de la comunidad (sin datos, deshabilitado o generador)")
+    if propio:
+        generadores = ["instalación de la comunidad"] if generadores else []
+    # Participantes que se muestran: todos o, para un socio, él y el resto de la comunidad sumado
+    otros = [i for i in ids if i != propio]
+    vis = ([(nom[i], cups[i], [i]) for i in ids] if not propio else
+           [(nom[propio], cups[propio], [propio])] + ([(f"Resto de la comunidad ({len(otros)})", "", otros)] if otros else []))
+    sv = lambda d, g: sum(d[i] or 0 for i in g)
 
     # Hora a hora del periodo base: autoconsumo con los fijos optimos y con los variables
     # (beta_h,i = D_h,i / suma D_h), por participante, por mes y por hora del dia
@@ -3321,17 +3346,18 @@ def coeficientes_pdf(anio=None):
     cob = lambda a: 100 * a / tot_cons if tot_cons else 0.0
 
     with tempfile.TemporaryDirectory() as raiz:
-        grupos = _agrupar(ids, nom, consumo)
+        grupos = (_agrupar(ids, nom, consumo) if not propio else
+                  [(_corto(n_), g, PALETA[0] if k == 0 else "#bdbdbd") for k, (n_, _, g) in enumerate(vis)])
         # Figuras
         f1 = _svg_fichero(raiz, "coef_fijos.svg", G.barras(
-            [_corto(nom[i], 12) for i in ids],
-            [{"n": "Coeficiente fijo óptimo", "c": PALETA[0], "v": [100 * beta[i] for i in ids]}], unidad="%",
+            [_corto(n_, 12) for n_, _, _ in vis],
+            [{"n": "Coeficiente fijo óptimo", "c": PALETA[0], "v": [100 * sv(beta, g) for _, _, g in vis]}], unidad="%",
             linea={"n": "Coeficiente actual", "c": "#f5b942",
-                   "v": [100 * actual[i] if actual[i] is not None else None for i in ids]}))
+                   "v": [100 * sv(actual, g) if all(actual[i] is not None for i in g) else None for _, _, g in vis]}))
         f2 = _svg_fichero(raiz, "energia_fijos.svg", G.barras(
-            [_corto(nom[i], 12) for i in ids],
-            [{"n": "Autoconsumo", "c": G.AUTO[2], "v": [af[i] for i in ids]},
-             {"n": "Excedente", "c": G.VERT[2], "v": [asig_f[i] - af[i] for i in ids]}]))
+            [_corto(n_, 12) for n_, _, _ in vis],
+            [{"n": "Autoconsumo", "c": G.AUTO[2], "v": [sv(af, g) for _, _, g in vis]},
+             {"n": "Excedente", "c": G.VERT[2], "v": [sv(asig_f, g) - sv(af, g) for _, _, g in vis]}]))
         f3 = _svg_fichero(raiz, "perfil_variables.svg", G.barras(
             [f"{h}h" for h in range(24)],
             [{"n": n, "c": c, "v": [100 * sum((hd_e[i][h] / hd_g[h]) if hd_g[h] > 0 else (hd_b[i][h] / hd_n[h] if hd_n[h] else 0)
@@ -3358,10 +3384,12 @@ def coeficientes_pdf(anio=None):
         cv = ECO["coste"]
         t_eco_soc = {"cabecera": ["Participante", "Peaje", "Coste en solitario (€)", "Coste en comunidad (€)", "Beneficio (€)", "Ahorro (%)"],
                      "texto": 2, "total": True,
-                     "filas": [[{"t": nom[i], "sub": cups[i]}, peaje[i], _es(cv["solitario"][i]), _es(cv[ECO["modo"]][i]),
-                                _es(cv["solitario"][i] - cv[ECO["modo"]][i]),
-                                _es(100 * (cv["solitario"][i] - cv[ECO["modo"]][i]) / cv["solitario"][i], 1) if cv["solitario"][i] else "–"]
-                               for i in ids] +
+                     "filas": [[{"t": n_, "sub": c_} if c_ else n_, peaje[g[0]] if len(g) == 1 else "",
+                                _es(sv(cv["solitario"], g)), _es(sv(cv[ECO["modo"]], g)),
+                                _es(sv(cv["solitario"], g) - sv(cv[ECO["modo"]], g)),
+                                _es(100 * (sv(cv["solitario"], g) - sv(cv[ECO["modo"]], g)) / sv(cv["solitario"], g), 1)
+                                if sv(cv["solitario"], g) else "–"]
+                               for n_, c_, g in vis] +
                               [["Total", "", _es(T["solitario"]), _es(T[ECO["modo"]]), _es(T["solitario"] - T[ECO["modo"]]),
                                 _es(100 * (T["solitario"] - T[ECO["modo"]]) / T["solitario"], 1) if T["solitario"] else "–"]]}
         t_precios = {"cabecera": ["Peaje"] + [f"P{p} (€/kWh)" for p in range(1, 7)] + ["Excedentes (€/kWh)"], "texto": 1, "total": False,
@@ -3380,10 +3408,11 @@ def coeficientes_pdf(anio=None):
         t_soc = {"cabecera": ["Participante", "Consumo (kWh)", "β actual", "β fijo óptimo", "Autocons. fijos (kWh)",
                               "Excedente fijos (kWh)", "Autocons. variables (kWh)", "Cobertura variables (%)"],
                  "texto": 1, "total": True,
-                 "filas": [[{"t": nom[i], "sub": cups[i]}, _es(consumo[i]),
-                            _es(actual[i], 6) if actual[i] is not None else "–", _es(beta[i], 6), _es(af[i]),
-                            _es(asig_f[i] - af[i]), _es(ad[i]), _es(100 * ad[i] / consumo[i], 1) if consumo[i] else "–"]
-                           for i in ids] +
+                 "filas": [[{"t": n_, "sub": c_} if c_ else n_, _es(sv(consumo, g)),
+                            _es(sv(actual, g), 6) if all(actual[i] is not None for i in g) else "–", _es(sv(beta, g), 6),
+                            _es(sv(af, g)), _es(sv(asig_f, g) - sv(af, g)), _es(sv(ad, g)),
+                            _es(100 * sv(ad, g) / sv(consumo, g), 1) if sv(consumo, g) else "–"]
+                           for n_, c_, g in vis] +
                           [["Total", _es(tot_cons), _es(sum(v or 0 for v in actual.values()), 6), _es(sum(beta.values()), 6),
                             _es(AF), _es(total_g - AF), _es(AD), _es(cob(AD), 1)]]}
         t_mes = {"cabecera": ["Mes", "Generación (kWh)", "Autocons. fijos (kWh)", "Autocons. variables (kWh)",
@@ -3408,6 +3437,7 @@ def coeficientes_pdf(anio=None):
         L = lambda *x: {"t": "l", "x": list(x)}
         Fig = lambda svg, cap, nota="": {"t": "fig", "svg": svg, "cap": cap, "nota": nota}
         Tab = lambda t, cap, size="7.5pt": {"t": "tab", "tabla": t, "cap": cap, "size": size}
+        n, refs = _citas(["rd244", "ted1247", "ley24", "datadis", "c3_2020", "peajes2026", "rd148"] + PRESENTACION)
         capitulos = [
             {"titulo": "Objeto y alcance", "bloques": [
                 P(f"Este documento justifica los coeficientes de reparto de la energía del autoconsumo colectivo de "
@@ -3541,6 +3571,10 @@ def coeficientes_pdf(anio=None):
                 H("Beneficio de cada participante"),
                 Tab(t_eco_soc, f"Coste de la energía de cada participante en solitario y con el reparto en vigor ({en_vigor})", "7pt")]},
             {"titulo": "Conclusiones", "bloques": [
+                P(f"Normativa: Real Decreto 244/2019 {n['rd244']} (anexo I, coeficientes fijos), Orden TED/1247/2021 "
+                  f"{n['ted1247']} (coeficientes variables) y Ley 24/2013 del Sector Eléctrico {n['ley24']}; curvas de carga de "
+                  f"Datadis {n['datadis']}; periodos y peajes de la Circular 3/2020 {n['c3_2020']}, la Resolución de peajes de "
+                  f"2026 {n['peajes2026']} y el Real Decreto 148/2021 {n['rd148']}."),
                 P(f"Los coeficientes fijos óptimos aprovechan el {_es(pct(AF), 1)} % de la generación y cubren el "
                   f"{_es(cob(AF), 1)} % del consumo de los participantes; los variables, el {_es(pct(AD), 1)} % y el "
                   f"{_es(cob(AD), 1)} %."),
@@ -3553,6 +3587,9 @@ def coeficientes_pdf(anio=None):
                   "la distribuidora en plazo."),
                 P("Los resultados son una previsión basada en el periodo base: conviene revisarlos cada año, y siempre que haya "
                   "altas o bajas de participantes o cambios en la instalación.")]},
+            {"titulo": "Referencias bibliográficas", "bloques": [
+                P("Referencias citadas en el texto entre corchetes, según la norma ISO 690. La presentación del documento sigue "
+                  "las normas ISO 7144 (estructura) e ISO 2145 (numeración de los apartados)."), refs]},
         ]
         ahora = datetime.now(TZL)
         codigo = f"JUS-COEF-{re.sub(r'[^A-Za-z0-9]+', '-', unicodedata.normalize('NFD', cfg['id']).encode('ascii', 'ignore').decode()).upper()[:20]}-{anio}"
@@ -3576,10 +3613,813 @@ def coeficientes_pdf(anio=None):
                            f"en solitario y {_es(T[ECO['modo']])} € con el reparto en vigor ({en_vigor}): un beneficio de "
                            f"{_es(beneficio)} €."],
                "cifras_resumen": t_crit, "glosario": GLOSARIO_COEF, "capitulos": capitulos}
+        if propio:
+            doc["subtitulo"] += f" · {nom[propio]}"
+            doc["ficha"].insert(5, ["Socio", f"{nom[propio]} (CUPS {cups[propio]}); el resto de la comunidad, sumado"])
         Path(raiz, "informe.typ").write_text(PLANTILLA_COEF, encoding="utf-8")
         Path(raiz, "datos.json").write_text(json.dumps(doc, ensure_ascii=False, default=str), encoding="utf-8")
         pdf = typst.compile(str(Path(raiz, "informe.typ")), root=raiz, font_paths=["/usr/share/fonts"])
     return pdf, f"Justificacion_coeficientes_{codigo[9:]}.pdf"
+
+
+# ======================= referencias bibliograficas (ISO 690) =======================
+# Normativa y documentos en que se basan los calculos de los informes; cada informe numera las
+# que cita en su capitulo "Referencias bibliograficas" ([n] en el texto)
+REFERENCIAS = {
+    "ley24": ("ESPAÑA. Ley 24/2013, de 26 de diciembre, del Sector Eléctrico. Boletín Oficial del Estado, 27 de diciembre "
+              "de 2013. BOE-A-2013-13645.", "https://www.boe.es/eli/es/l/2013/12/26/24"),
+    "rd244": ("ESPAÑA. Real Decreto 244/2019, de 5 de abril, por el que se regulan las condiciones administrativas, técnicas "
+              "y económicas del autoconsumo de energía eléctrica. Boletín Oficial del Estado, 6 de abril de 2019. "
+              "BOE-A-2019-5089.", "https://www.boe.es/eli/es/rd/2019/04/05/244"),
+    "ted1247": ("ESPAÑA. Orden TED/1247/2021, de 15 de noviembre, por la que se modifica, para la implementación de "
+                "coeficientes de reparto variables en autoconsumo colectivo, el anexo I del Real Decreto 244/2019, de 5 de "
+                "abril. Boletín Oficial del Estado, 2021.", "https://www.boe.es/eli/es/o/2021/11/15/ted1247"),
+    "c3_2020": ("COMISIÓN NACIONAL DE LOS MERCADOS Y LA COMPETENCIA. Circular 3/2020, de 15 de enero, por la que se "
+                "establece la metodología para el cálculo de los peajes de transporte y distribución de electricidad. "
+                "Boletín Oficial del Estado, 24 de enero de 2020. BOE-A-2020-1066.",
+                "https://www.boe.es/buscar/act.php?id=BOE-A-2020-1066"),
+    "c1_2025": ("COMISIÓN NACIONAL DE LOS MERCADOS Y LA COMPETENCIA. Circular 1/2025, por la que se modifica la Circular "
+                "3/2020, de 15 de enero, por la que se establece la metodología para el cálculo de los peajes de transporte "
+                "y distribución de electricidad. Boletín Oficial del Estado, 2025. BOE-A-2025-2044.",
+                "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-2044"),
+    "peajes2026": ("COMISIÓN NACIONAL DE LOS MERCADOS Y LA COMPETENCIA. Resolución por la que se establecen los valores de "
+                   "los peajes de acceso a las redes de transporte y distribución de electricidad de aplicación a partir del "
+                   "1 de enero de 2026. Boletín Oficial del Estado, 2025. BOE-A-2025-26348.",
+                   "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26348"),
+    "cnmc_crit": ("COMISIÓN NACIONAL DE LOS MERCADOS Y LA COMPETENCIA. Criterios de aplicación de la metodología de peajes "
+                  "de transporte y distribución de electricidad [en línea]. Madrid: CNMC.",
+                  "https://www.cnmc.es/sites/default/files/3417242_0.pdf"),
+    "rd148": ("ESPAÑA. Real Decreto 148/2021, de 9 de marzo, por el que se establece la metodología de cálculo de los cargos "
+              "del sistema eléctrico. Boletín Oficial del Estado, 2021.", "https://www.boe.es/eli/es/rd/2021/03/09/148"),
+    "rd1110": ("ESPAÑA. Real Decreto 1110/2007, de 24 de agosto, por el que se aprueba el Reglamento unificado de puntos de "
+               "medida del sistema eléctrico. Boletín Oficial del Estado, 2007.", "https://www.boe.es/eli/es/rd/2007/08/24/1110"),
+    "itc3860": ("ESPAÑA. Orden ITC/3860/2007, de 28 de diciembre, por la que se revisan las tarifas eléctricas a partir del "
+                "1 de enero de 2008 (precios del alquiler de los equipos de medida). Boletín Oficial del Estado, 2007.",
+                "https://www.boe.es/eli/es/o/2007/12/28/itc3860"),
+    "ley38": ("ESPAÑA. Ley 38/1992, de 28 de diciembre, de Impuestos Especiales. Título III: Impuesto Especial sobre la "
+              "Electricidad. Boletín Oficial del Estado, 29 de diciembre de 1992.", "https://www.boe.es/eli/es/l/1992/12/28/38"),
+    "ley37": ("ESPAÑA. Ley 37/1992, de 28 de diciembre, del Impuesto sobre el Valor Añadido. Boletín Oficial del Estado, 29 "
+              "de diciembre de 1992.", "https://www.boe.es/eli/es/l/1992/12/28/37"),
+    "datadis": ("DATADIS. Datadis: plataforma de acceso a los datos de consumo eléctrico de las distribuidoras [en línea].",
+                "https://datadis.es"),
+    "iso690": ("INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. ISO 690:2021. Information and documentation — Guidelines "
+               "for bibliographic references and citations to information resources. Ginebra: ISO, 2021.", ""),
+    "iso7144": ("INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. ISO 7144:1986. Documentation — Presentation of theses and "
+                "similar documents. Ginebra: ISO, 1986.", ""),
+    "iso2145": ("INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. ISO 2145:1978. Documentation — Numbering of divisions and "
+                "subdivisions in written documents. Ginebra: ISO, 1978.", ""),
+}
+PRESENTACION = ["iso7144", "iso2145", "iso690"]
+
+
+def _citas(claves):
+    """Numeracion de las referencias de un informe: ({clave: "[n]"}, bloque del capitulo)."""
+    hoy = f"{date.today():%d/%m/%Y}"
+    num = {k: f"[{i}]" for i, k in enumerate(claves, 1)}
+    return num, {"t": "r", "x": [{"t": REFERENCIAS[k][0] + (f" [consulta: {hoy}]." if REFERENCIAS[k][1] else ""),
+                                  "u": REFERENCIAS[k][1]} for k in claves]}
+
+
+# ======================= resumenes mensuales por socio =======================
+# Cinco informes con la estructura de los anteriores (PLANTILLA_COEF: ISO 7144 e ISO 2145) y
+# referencias bibliograficas (ISO 690): energia en solitario, energia en comunidad, potencia,
+# reactiva y factura de cada mes y socio, con los mismos calculos que las pestañas del panel
+# (VatiaCo.consumo: euros, comunidad, calcPot, calcReac y pintarFactura) y los precios de la
+# comunidad (gestion.precios). propio (panel del socio): solo la comunidad (totales) y ese socio.
+TIPOS_RESUMEN = {
+    "energia": ("Consumos, excedentes y costes en solitario", "RES-ENE"),
+    "comunidad": ("Consumos, excedentes y costes en comunidad", "RES-COM"),
+    "potencia": ("Potencias contratadas, máximas demandadas y sus costes", "RES-POT"),
+    "reactiva": ("Energía reactiva y sus costes", "RES-REA"),
+    "factura": ("Factura de electricidad con impuestos y alquiler del contador", "RES-FAC"),
+}
+GLOSARIO_RES = GLOSARIO + [
+    ("cos φ", "Factor de potencia: E_activa / √(E_activa² + E_reactiva²). Sin recargo por reactiva desde 0,95."),
+    ("Energía reactiva", "Energía (kVArh) que intercambian los receptores inductivos con la red sin producir trabajo útil."),
+    ("Exceso de potencia", "Potencia demandada por encima de la contratada en un periodo, que se factura con el término de exceso."),
+    ("IEE", "Impuesto Especial sobre la Electricidad (5,11269632 % por defecto)."),
+    ("IVA", "Impuesto sobre el Valor Añadido."),
+    ("Término de potencia", "Parte fija de la factura: potencia contratada de cada periodo por su precio, prorrateada por días."),
+    ("Término de energía", "Parte variable: energía comprada a la red en cada periodo por su precio, menos la compensación de excedentes."),
+]
+
+
+def _pj6(pj):
+    """Peaje para los periodos de energia: 2.0TD (3 periodos) o seis periodos."""
+    return "2.0TD" if _tarifa(pj) == "2.0TD" else "3.0TD"
+
+
+def _lista_meses(desde, hasta):
+    out, m = [], date(desde.year, desde.month, 1)
+    while m <= hasta:
+        out.append((m.year, m.month))
+        m = _mas_meses(m, 1)
+    return out
+
+
+def _dias_mes(k):
+    return (_mas_meses(date(k[0], k[1], 1), 1) - date(k[0], k[1], 1)).days
+
+
+def _et(k):
+    return f"{MESES[k[1] - 1]} {k[0] % 100:02d}"
+
+
+def _et_l(k):
+    return f"{MESES_L[k[1] - 1]} {k[0]}"
+
+
+def _vacio_e():
+    return {"p": {}, "red": 0.0, "vert": 0.0, "auto": 0.0, "gen": 0.0}
+
+
+def _energia_mensual(cx, cups, pj, d0, d1):
+    """Energia de cada mes de las lecturas de Datadis de un CUPS: consumo de red por periodo
+    del peaje, vertido, autoconsumo y generacion (kWh). -> {(año, mes): {...}}"""
+    out = {}
+    for ts, v in cec.lecturas(cx, [cups], d0, d1):
+        lt = datetime.fromtimestamp(ts / 1000, TZL)
+        x = out.setdefault((lt.year, lt.month), _vacio_e())
+        c = v.get("consumo_kwh") or 0.0
+        p = cec.periodo(lt, pj)
+        x["p"][p] = x["p"].get(p, 0.0) + c
+        x["red"] += c
+        x["vert"] += v.get("vertida_kwh") or 0.0
+        x["auto"] += v.get("autoconsumo_kwh") or 0.0
+        x["gen"] += v.get("generada_kwh") or 0.0
+    return out
+
+
+def _energia_en_comunidad(part, G, D, co):
+    """Energia de cada mes de cada socio con el reparto de la comunidad (como comunidad() del
+    panel): le corresponde beta x generacion; autoconsume lo menor entre eso y su consumo, el
+    resto de su consumo lo compra a la red y lo que no consume son sus excedentes. co: fijos
+    {socio: beta}; None, dinamicos (en proporcion al consumo de cada hora)."""
+    ids = [so["id"] for so, _ in part]
+    pj = {so["id"]: _pj6(s.get("peaje")) for so, s in part}
+    tot = {i: sum(D[i].values()) for i in ids}
+    T = sum(tot.values())
+    out = {i: {} for i in ids}
+    for h in sorted(set(G) | {h for d in D.values() for h in d}):
+        g = G.get(h, 0.0)
+        dem = {i: D[i].get(h, 0.0) for i in ids}
+        td = sum(dem.values())
+        lt = h.astimezone(TZL)
+        k = (lt.year, lt.month)
+        for i in ids:
+            b = co.get(i, 0.0) if co else (dem[i] / td if td > 0 else (tot[i] / T if T else 1 / len(ids)))
+            asig = b * g
+            a = min(asig, dem[i])
+            x = out[i].setdefault(k, _vacio_e())
+            p = cec.periodo(lt, pj[i])
+            x["p"][p] = x["p"].get(p, 0.0) + dem[i] - a
+            x["red"] += dem[i] - a
+            x["vert"] += asig - a
+            x["auto"] += a
+            x["gen"] += asig
+    return out
+
+
+def _coste_energia(x, pr):
+    """Termino de energia de un mes (EUR): compra a la red por periodos al precio fijo de cada
+    uno y compensacion de excedentes al precio de compensacion. -> (compra, compensacion, neto)"""
+    compra = sum(e * float(pr["p"].get(str(p)) or 0) for p, e in x["p"].items())
+    comp = x["vert"] * float(pr["comp"] or 0)
+    return compra, comp, compra - comp
+
+
+def _potencia_mensual(cx, cups, c, pj, meses, pr, d0, d1, paso):
+    """Termino de potencia y excesos de cada mes (como calcPot del panel). Termino: potencia
+    contratada x precio, prorrateado por los dias del mes. Excesos (art. 9.4 de la Circular
+    3/2020, modificado por la Circular 1/2025): 2.0TD ninguno (ICP); medida tipo 4-5 (todas las
+    potencias <= 50 kW) tep45 x (Pd - Pc) x dias con el maximetro; tipo 1-3 (alguna > 50 kW)
+    tep123 x raiz(suma (Pd_j - Pc)^2) de los cuartos de hora (la potencia de la hora en sus cuatro
+    cuartos con curva horaria). Y el termino con la potencia ajustada a la maxima demandada."""
+    t = _tarifa(pj)
+    pot = [x for x in (cec._num(v) for v in (c.get("potenciaContratadakW") or "").split(";")) if x is not None]
+    if t == "2.0TD":
+        grupos = {1: [1, 2], 2: [3]}
+        pc = {1: pot[0], 2: pot[1] if len(pot) > 1 else pot[0]} if pot else {}
+    else:
+        grupos = {p: [p] for p in range(1, 7)}
+        pc = {p: pot[min(p, len(pot)) - 1] for p in range(1, 7)} if pot else {}
+    gp = {p: g for g, ps in grupos.items() for p in ps}
+    M = {}
+    for f in cx.execute("SELECT mes, periodo, kw FROM maximetro WHERE cups = %s AND mes >= %s AND mes <= %s",
+                        (cups, date(*meses[0], 1), date(*meses[-1], 1))).fetchall():
+        g = gp.get(f["periodo"])
+        if g is not None and f["kw"] is not None:
+            k = (f["mes"].year, f["mes"].month)
+            M[(k, g)] = max(M.get((k, g), 0.0), float(f["kw"]))
+    modo = "icp" if t == "2.0TD" else "q" if pc and max(pc.values()) > 50 else "m"
+    Q = {}
+    if modo == "q":
+        for ts, v in cec.lecturas(cx, [cups], d0, d1):
+            if v.get("consumo_kwh") is None:
+                continue
+            lt = datetime.fromtimestamp(ts / 1000, TZL)
+            p = cec.periodo(lt, "3.0TD")
+            kw, cp = v["consumo_kwh"] * 60 / paso, pc.get(p)
+            if cp is None or kw <= cp:
+                continue
+            Q[((lt.year, lt.month), p)] = Q.get(((lt.year, lt.month), p), 0.0) + (4 if paso >= 60 else 1) * (kw - cp) ** 2
+    rec, prev = {}, 0.0
+    for g in sorted(grupos):
+        mx = max((M[(k, g)] for k in meses if (k, g) in M), default=0.0)
+        rec[g] = math.ceil(mx * 10 - 1e-9) / 10
+        if t != "2.0TD":   # 3.0TD y 6.1TD: potencias crecientes de P1 a P6
+            rec[g] = prev = max(rec[g], prev)
+    precio = lambda campo, g: float((pr.get(campo) or {}).get(str(g)) or 0)
+    out = {}
+    for k in meses:
+        dias = _dias_mes(k)
+        f = dias / (366 if calendar.isleap(k[0]) else 365)
+        term = {g: pc[g] * precio("pot", g) * f for g in grupos if g in pc}
+        exc = 0.0
+        for g in grupos:
+            cp, x = pc.get(g), M.get((k, g))
+            if modo == "m" and cp is not None and x is not None and x > cp:
+                exc += precio("tep45", g) * (x - cp) * dias
+            if modo == "q" and Q.get((k, g)):
+                exc += precio("tep123", g) * math.sqrt(Q[(k, g)])
+        out[k] = {"max": {g: M.get((k, g)) for g in grupos}, "term": term, "exc": exc,
+                  "aj": sum(rec[g] * precio("pot", g) * f for g in grupos), "total": sum(term.values()) + exc}
+    return {"grupos": sorted(grupos), "pc": pc, "rec": rec, "modo": modo, "mes": out}
+
+
+def _reactiva_mensual(cx, cups, pj, meses, E, O):
+    """Reactiva de cada mes (como calcReac del panel; Circular 3/2020 y anexo III de la
+    Resolucion de peajes): solo fuera de la 2.0TD y de P1 a P5; si la reactiva de un periodo
+    supera el 33 % de su activa, ese exceso se paga segun el cos phi (dos decimales): desde 0,95
+    nada; de 0,80 a 0,95, reac1; por debajo de 0,80, reac2."""
+    exenta = _tarifa(pj) == "2.0TD"
+    out = {}
+    for f in cx.execute('SELECT * FROM energia WHERE "cups" = %s AND "fecha" >= %s AND "fecha" <= %s',
+                        (cups, date(*meses[0], 1), date(*meses[-1], 1))).fetchall():
+        k = (f["fecha"].year, f["fecha"].month)
+        ap = (E.get(k) or {}).get("p", {})
+        R, A, C, fact = {}, {}, {}, 0.0
+        for p in range(1, 7):
+            if f[f"energiaP{p}"] is None:
+                continue
+            r, a = float(f[f"energiaP{p}"]), ap.get(p, 0.0)
+            R[p], A[p] = r, a
+            ex = r - 0.33 * a
+            cf = round(a / math.hypot(a, r), 2) if (a or r) else 1.0
+            C[p] = 0.0 if exenta or p == 6 or ex <= 0 or cf >= 0.95 else ex * (O["reac2"] if cf < 0.80 else O["reac1"])
+            if C[p] > 0:
+                fact += ex
+        ta, tr = sum(A.values()), sum(R.values())
+        out[k] = {"R": R, "A": A, "C": C, "fact": fact, "total": sum(C.values()),
+                  "lim": 0.33 * sum(a for p, a in A.items() if p != 6),
+                  "cos": ta / math.hypot(ta, tr) if (ta or tr) else None}
+    return {"exenta": exenta, "mes": out}
+
+
+def _factura(e, p, r, alq, O):
+    """Factura de un mes (como pintarFactura del panel): energia (la compensacion no pasa de la
+    energia comprada), potencia y excesos, reactiva, impuesto electrico sobre las tres,
+    alquiler del contador e IVA sobre todo."""
+    e = max(0.0, e)
+    iee = (e + p + r) * O["iee"] / 100
+    iva = (e + p + r + iee + alq) * O["iva"] / 100
+    return {"e": e, "p": p, "r": r, "iee": iee, "alq": alq, "iva": iva, "tot": e + p + r + iee + alq + iva}
+
+
+def _datos_resumen(cx, desde, hasta, propio=None):
+    """Calculos de los resumenes mensuales de los socios habilitados con datos (con propio,
+    se calcula todo, pero solo se muestran la comunidad y ese socio)."""
+    from . import gestion
+
+    cfg = config()
+    PRE = gestion.precios()
+    O = PRE["otros"]
+    meses = _lista_meses(desde, hasta)
+    d0, d1 = _local(desde), _local(hasta, 1)
+    com, modo, gen_ids = {}, None, set()
+    try:
+        _, part, gen_ids, Gh, Dh = gestion._perfiles(cx, desde.isoformat(), hasta.isoformat(), exigir_gen=False)
+        modo = gestion._ajuste(cx, "reparto_modo") or gestion.MODO_DEFECTO
+        com = _energia_en_comunidad(part, Gh, Dh, gestion._coeficientes_fijos(cx, part, modo))
+    except ValueError:
+        pass
+    socios = []
+    for so, s in gestion._cups_activos(cx):
+        pj = s.get("peaje") or "2.0TD"
+        t = _tarifa(pj)
+        pr, c = PRE[t], s.get("contrato") or {}
+        E = _energia_mensual(cx, s["cups"], _pj6(pj), d0, d1)
+        Pt = _potencia_mensual(cx, s["cups"], c, pj, meses, pr, d0, d1, s.get("paso_min") or 60)
+        Rc = _reactiva_mensual(cx, s["cups"], pj, meses, E, O)
+        hay = {k for k in meses if k in E or any(v is not None for v in Pt["mes"][k]["max"].values()) or k in Rc["mes"]}
+        Ec = com.get(so["id"])
+        F, Fc = {}, {}
+        for k in meses:
+            if k not in hay:
+                continue
+            pot, rea = Pt["mes"][k]["total"], (Rc["mes"].get(k) or {}).get("total", 0.0)
+            F[k] = _factura(_coste_energia(E.get(k) or _vacio_e(), pr)[2], pot, rea, float(pr.get("alquiler") or 0), O)
+            if Ec is not None:
+                Fc[k] = _factura(_coste_energia(Ec.get(k) or _vacio_e(), pr)[2], pot, rea, float(pr.get("alquiler") or 0), O)
+        socios.append({"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "peaje": pj, "tarifa": t, "pr": pr,
+                       "contrato": c, "E": E, "Ec": Ec, "P": Pt, "R": Rc, "F": F, "Fc": Fc if Ec is not None else None,
+                       "hay": hay, "generador": so["id"] in gen_ids})
+    if propio and propio not in [x["id"] for x in socios]:
+        raise ValueError("Este suministro no tiene datos o no está habilitado en la comunidad")
+    return {"cfg": cfg, "PRE": PRE, "O": O, "meses": meses, "modo": modo, "socios": socios, "propio": propio,
+            "desde": desde, "hasta": hasta}
+
+
+def _fig(raiz, nombre, ks, f, cap, nota=""):
+    """Bloque de figura (SVG de f()) o nada si no hay meses con datos."""
+    return [{"t": "fig", "svg": _svg_fichero(raiz, nombre, f()), "cap": cap, "nota": nota}] if ks else []
+
+
+def _t(cab, filas, texto=1, total=True):
+    return {"cabecera": cab, "texto": texto, "total": total and bool(filas), "filas": filas}
+
+
+def _sumas(filas, desde=1):
+    """Fila de totales de una tabla de numeros (las columnas de texto, vacias)."""
+    n = len(filas[0]) if filas else 0
+    return ["Total"] + [""] * (desde - 1) + [sum(f[j] for f in filas if isinstance(f[j], (int, float)))
+                                             for j in range(desde, n)]
+
+
+def _fmt(filas, dec):
+    """Numeros de las filas con formato español: dec decimales por columna (None = texto)."""
+    return [[c if not isinstance(c, (int, float)) or d is None else _es(c, d) for c, d in zip(f, dec)] for f in filas]
+
+
+def _cap_energia(R, raiz, com):
+    """Capitulos de resultados del resumen de energia, en solitario (com=False: lecturas de
+    Datadis) o en comunidad (com=True: con el reparto de la comunidad)."""
+    meses, out = R["meses"], []
+    soc = [x for x in R["socios"] if (x["Ec"] is not None if com else True)]
+    if com and not soc:
+        raise ValueError("No hay socios que participen del reparto de la comunidad en el periodo")
+    clave = "Ec" if com else "E"
+    # Comunidad: suma de los socios (los costes con el precio del peaje de cada uno)
+    filas = []
+    for k in meses:
+        xs = [(x[clave].get(k), x) for x in soc if x[clave].get(k)]
+        if not xs:
+            continue
+        cost = [_coste_energia(e, x["pr"]) for e, x in xs]
+        f = [_et_l(k), sum(e["red"] for e, _ in xs), sum(e["auto"] for e, _ in xs), sum(e["vert"] for e, _ in xs),
+             sum(e["gen"] for e, _ in xs), sum(c[0] for c in cost), sum(c[1] for c in cost), sum(c[2] for c in cost)]
+        if com:
+            sol = sum(_coste_energia(x["E"].get(k) or _vacio_e(), x["pr"])[2] for _, x in xs)
+            f += [sol, sol - f[7]]
+        filas.append(f)
+    cab = (["Mes", "Red (kWh)", "Autoconsumo (kWh)", "Excedentes (kWh)", "Generación" + (" asignada" if com else "") + " (kWh)",
+            "Compra (€)", "Compensación (€)", "Coste neto (€)"] + (["En solitario (€)", "Beneficio (€)"] if com else []))
+    dec = [None, 1, 1, 1, 1, 2, 2, 2, 2, 2]
+    tc = _t(cab, _fmt(filas + ([_sumas(filas)] if filas else []), dec))
+    ks_c = [k for k in meses if any(x[clave].get(k) for x in soc)]
+    fig = _fig(raiz, f"res_com_{clave}.svg", ks_c, lambda: G.barras(
+        [_et(k) for k in ks_c],
+        [{"n": "Compra a la red", "c": "#fda38a", "v": [f[5] for f in filas]},
+         {"n": "Compensación de excedentes", "c": G.VERT[2], "v": [-f[6] for f in filas]}],
+        unidad="€", linea={"n": "Coste en solitario" if com else "Coste neto", "c": "#555",
+                           "v": [f[8] if com else f[7] for f in filas]}),
+        "Coste de la energía de cada mes de la comunidad",
+        "Barras: compra a la red y compensación de excedentes (negativa); línea: " +
+        ("coste de la misma energía en solitario." if com else "coste neto."))
+    out.append({"titulo": "Resultados de la comunidad", "bloques": [
+        {"t": "p", "x": f"Suma de los {len(soc)} socios" + (" que participan del reparto" if com else "") +
+         ". Cada socio se valora con los precios de su peaje; el consumo de red por periodos se detalla en el apartado de cada socio."},
+        {"t": "tab", "tabla": tc, "cap": "Energía y coste de cada mes de la comunidad", "size": "7pt"}] + fig})
+    # Resumen del periodo por socio (con propio, solo el socio y la comunidad)
+    vis = [x for x in soc if not R["propio"] or x["id"] == R["propio"]]
+    fil = []
+    for x in vis:
+        e = [x[clave].get(k) or _vacio_e() for k in meses]
+        cost = [_coste_energia(y, x["pr"]) for y in e]
+        f = [{"t": x["nombre"], "sub": x["cups"]}, x["peaje"], sum(y["red"] for y in e), sum(y["auto"] for y in e),
+             sum(y["vert"] for y in e), sum(c[2] for c in cost)]
+        if com:
+            sol = sum(_coste_energia(x["E"].get(k) or _vacio_e(), x["pr"])[2] for k in meses)
+            f += [sol, sol - f[5]]
+        fil.append(f)
+    if filas:
+        tot = _sumas(filas)
+        fil.append(["Comunidad", "", tot[1], tot[2], tot[3], tot[7]] + ([tot[8], tot[9]] if com else []))
+    fil = _fmt(fil, [None, None, 1, 1, 1, 2, 2, 2])
+    t_soc = _t(["Socio", "Peaje", "Red (kWh)", "Autoconsumo (kWh)", "Excedentes (kWh)", "Coste neto (€)"] +
+               (["En solitario (€)", "Beneficio (€)"] if com else []), fil, texto=2)
+    bl = [{"t": "tab", "tabla": t_soc, "cap": "Energía y coste del periodo" + (" del socio y de la comunidad" if R["propio"] else " por socio"),
+           "size": "7pt"}]
+    for i, x in enumerate(vis):
+        np_ = 3 if x["tarifa"] == "2.0TD" else 6
+        nomp = (lambda p: G.NOM3[p]) if np_ == 3 else (lambda p: f"P{p}")
+        fx, ks = [], [k for k in meses if x[clave].get(k)]
+        for k in ks:
+            e = x[clave][k]
+            c = _coste_energia(e, x["pr"])
+            fx.append([_et_l(k)] + [e["p"].get(p, 0.0) for p in range(1, np_ + 1)] + [e["auto"], e["vert"], c[0], c[1], c[2]])
+        cab = ["Mes"] + [f"{nomp(p)} (kWh)" for p in range(1, np_ + 1)] + ["Autoc. (kWh)", "Exced. (kWh)", "Compra (€)",
+                                                                          "Comp. (€)", "Neto (€)"]
+        dec = [None] + [1] * np_ + [1, 1, 2, 2, 2]
+        col = G.COL3 if np_ == 3 else G.COL6
+        svg = _fig(raiz, f"res_{clave}_{i}.svg", ks, lambda: G.barras(
+            [_et(k) for k in ks],
+            [{"n": nomp(p), "c": col[p], "v": [x[clave][k]["p"].get(p, 0.0) for k in ks]} for p in range(np_, 0, -1)] +
+            [{"n": "Autoconsumo", "c": G.AUTO[2], "v": [x[clave][k]["auto"] for k in ks]},
+             {"n": "Excedentes", "c": G.VERT[2], "v": [-x[clave][k]["vert"] for k in ks]}], ancho=620, alto=260),
+            f"Energía de cada mes por periodos — {x['nombre']}",
+            "Consumo de red apilado por periodos (valle abajo), autoconsumo encima y excedentes en negativo.")
+        pr = x["pr"]
+        precios = ", ".join(f"{nomp(p)} {_es(float(pr['p'][str(p)]), 3)}" for p in range(1, np_ + 1) if str(p) in pr["p"])
+        bl += [{"t": "h", "x": x["nombre"]},
+               {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · precios {precios} €/kWh; compensación de excedentes "
+                               f"{_es(float(pr['comp']), 3)} €/kWh." + (" Socio generador: no recibe reparto." if x["generador"] else "")},
+               {"t": "tab", "tabla": _t(cab, _fmt(fx + ([_sumas(fx)] if fx else []), dec)),
+                "cap": f"Energía y coste de cada mes — {x['nombre']}", "size": "6.5pt"}] + svg
+    out.append({"titulo": "Resultados por socio" if not R["propio"] else "Resultados del socio", "bloques": bl})
+    return out, fil
+
+
+def _cap_potencia(R, raiz):
+    meses, out = R["meses"], []
+    soc = R["socios"]
+    filas = []
+    for k in meses:
+        xs = [x for x in soc if k in x["hay"]]
+        if xs:
+            m = [x["P"]["mes"][k] for x in xs]
+            filas.append([_et_l(k), sum(sum(y["term"].values()) for y in m), sum(y["exc"] for y in m),
+                          sum(y["total"] for y in m), sum(y["aj"] for y in m), sum(y["total"] - y["aj"] for y in m)])
+    cab = ["Mes", "Término de potencia (€)", "Excesos (€)", "Total (€)", "Con potencia ajustada (€)", "Ahorro posible (€)"]
+    dec = [None, 2, 2, 2, 2, 2]
+    ks_c = [k for k in meses if any(k in x["hay"] for x in soc)]
+    fig = _fig(raiz, "res_pot_com.svg", ks_c, lambda: G.barras(
+        [_et(k) for k in ks_c],
+        [{"n": "Término de potencia", "c": "#f5b942", "v": [f[1] for f in filas]},
+         {"n": "Excesos", "c": "#e0541f", "v": [f[2] for f in filas]}], unidad="€",
+        linea={"n": "Con la potencia ajustada", "c": "#555", "v": [f[4] for f in filas]}),
+        "Coste de la potencia de cada mes de la comunidad",
+        "Barras: término de potencia y excesos; línea: con la potencia de cada socio ajustada a su máxima demandada.")
+    out.append({"titulo": "Resultados de la comunidad", "bloques": [
+        {"t": "tab", "tabla": _t(cab, _fmt(filas + ([_sumas(filas)] if filas else []), dec)),
+         "cap": "Coste de la potencia de cada mes de la comunidad", "size": "7.5pt"}] + fig})
+    vis = [x for x in soc if not R["propio"] or x["id"] == R["propio"]]
+    nomg = lambda x, g: ("P1 (punta y llano)" if g == 1 else "P2 (valle)") if x["tarifa"] == "2.0TD" else f"P{g}"
+    fil = []
+    for x in vis:
+        P = x["P"]
+        mx = {g: max((P["mes"][k]["max"][g] for k in meses if P["mes"][k]["max"][g] is not None), default=None) for g in P["grupos"]}
+        tot = sum(P["mes"][k]["total"] for k in x["hay"])
+        aj = sum(P["mes"][k]["aj"] for k in x["hay"])
+        fil.append([{"t": x["nombre"], "sub": x["cups"]}, x["peaje"],
+                    " / ".join(_es(P["pc"][g], 2) for g in P["grupos"] if g in P["pc"]) or "–",
+                    " / ".join(_es(mx[g], 2) if mx[g] is not None else "–" for g in P["grupos"]),
+                    " / ".join(_es(P["rec"][g], 1) for g in P["grupos"]),
+                    sum(P["mes"][k]["exc"] for k in x["hay"]), tot, tot - aj])
+    if filas:
+        s = _sumas(filas)
+        fil.append(["Comunidad", "", "", "", "", s[2], s[3], s[5]])
+    fil = _fmt(fil, [None] * 5 + [2, 2, 2])
+    bl = [{"t": "tab", "tabla": _t(["Socio", "Peaje", "Contratada (kW)", "Máxima demandada (kW)", "Ajustada (kW)", "Excesos (€)",
+                                    "Coste (€)", "Ahorro posible (€)"], fil, texto=5),
+           "cap": "Potencias y coste del periodo" + (" del socio y de la comunidad" if R["propio"] else " por socio"), "size": "6.5pt"}]
+    for i, x in enumerate(vis):
+        P, ks = x["P"], [k for k in meses if k in x["hay"]]
+        G_ = P["grupos"]
+        fx = [[_et_l(k)] + [P["mes"][k]["max"][g] if P["mes"][k]["max"][g] is not None else "–" for g in G_] +
+              [sum(P["mes"][k]["term"].values()), P["mes"][k]["exc"], P["mes"][k]["total"], P["mes"][k]["aj"]] for k in ks]
+        cab = ["Mes"] + [f"Máx. {nomg(x, g)} (kW)" for g in G_] + ["Término (€)", "Excesos (€)", "Total (€)", "Ajustada (€)"]
+        dec = [None] + [2] * len(G_) + [2, 2, 2, 2]
+        tot = (["Total"] + [""] * len(G_) + [sum(f[j] for f in fx) for j in range(1 + len(G_), len(cab))]) if fx else None
+        col = G.COL3 if x["tarifa"] == "2.0TD" else G.COL6
+        svg = _fig(raiz, f"res_pot_{i}.svg", ks, lambda: G.barras(
+            [_et(k) for k in ks],
+            [{"n": nomg(x, g), "c": col[g], "v": [P["mes"][k]["term"].get(g, 0.0) for k in ks]} for g in G_ if g in P["pc"]] +
+            [{"n": "Excesos", "c": "#e0541f", "v": [P["mes"][k]["exc"] for k in ks]}], unidad="€", ancho=620, alto=240,
+            linea={"n": "Con la potencia ajustada", "c": "#555", "v": [P["mes"][k]["aj"] for k in ks]}),
+            f"Coste de la potencia de cada mes — {x['nombre']}",
+            "Barras: término de potencia de cada periodo y excesos; línea: con la potencia ajustada.")
+        modo = {"icp": "sin excesos (2.0TD: el limitador corta)", "m": "excesos de medida tipo 4-5 (maxímetro mensual)",
+                "q": "excesos de medida tipo 1-3 (cuartohorarios)"}[P["modo"]]
+        bl += [{"t": "h", "x": x["nombre"]},
+               {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · potencias contratadas " +
+                               (" / ".join(f"{nomg(x, g)} {_es(P['pc'][g], 2)} kW" for g in G_ if g in P["pc"]) or "sin datos") +
+                               f" · {modo}. Potencia ajustada a la máxima demandada del periodo: " +
+                               " / ".join(f"{nomg(x, g)} {_es(P['rec'][g], 1)} kW" for g in G_) + "."},
+               {"t": "tab", "tabla": _t(cab, _fmt(fx + ([tot] if tot else []), dec)),
+                "cap": f"Potencia máxima demandada y coste de la potencia de cada mes — {x['nombre']}", "size": "6.5pt"}] + svg
+    out.append({"titulo": "Resultados por socio" if not R["propio"] else "Resultados del socio", "bloques": bl})
+    return out, fil
+
+
+def _cap_reactiva(R, raiz):
+    meses, out = R["meses"], []
+    soc = R["socios"]
+    filas = []
+    for k in meses:
+        m = [x["R"]["mes"][k] for x in soc if k in x["R"]["mes"]]
+        if m:
+            ta, tr = sum(sum(y["A"].values()) for y in m), sum(sum(y["R"].values()) for y in m)
+            filas.append([_et_l(k), ta, tr, ta / math.hypot(ta, tr) if (ta or tr) else "–", sum(y["fact"] for y in m),
+                          sum(y["total"] for y in m)])
+    cab = ["Mes", "Activa (kWh)", "Reactiva (kVArh)", "cos φ", "Reactiva facturable (kVArh)", "Coste (€)"]
+    dec = [None, 1, 1, 3, 1, 2]
+    tot = None
+    if filas:
+        tot = _sumas(filas)
+        tot[3] = tot[1] / math.hypot(tot[1], tot[2]) if (tot[1] or tot[2]) else "–"
+    ks_c = [k for k in meses if any(k in x["R"]["mes"] for x in soc)]
+    fig = _fig(raiz, "res_rea_com.svg", ks_c, lambda: G.barras(
+        [_et(k) for k in ks_c], [{"n": "Reactiva", "c": "#c07a12", "v": [f[2] for f in filas]}], unidad="kVArh",
+        linea={"n": "33 % de la activa", "c": "#555", "v": [0.33 * f[1] for f in filas]}),
+        "Energía reactiva de cada mes de la comunidad",
+        "Barras: reactiva de todos los socios; línea: 33 % de su activa (por debajo no hay recargo).")
+    out.append({"titulo": "Resultados de la comunidad", "bloques": [
+        {"t": "tab", "tabla": _t(cab, _fmt(filas + ([tot] if tot else []), dec)),
+         "cap": "Energía reactiva y su coste de cada mes de la comunidad", "size": "7.5pt"}] + fig})
+    vis = [x for x in soc if not R["propio"] or x["id"] == R["propio"]]
+    fil = []
+    for x in vis:
+        m = list(x["R"]["mes"].values())
+        ta, tr = sum(sum(y["A"].values()) for y in m), sum(sum(y["R"].values()) for y in m)
+        cs = [y["cos"] for y in m if y["cos"] is not None]
+        fil.append([{"t": x["nombre"], "sub": x["cups"]}, x["peaje"], tr, ta / math.hypot(ta, tr) if (ta or tr) else "–",
+                    min(cs) if cs else "–", sum(y["fact"] for y in m), sum(y["total"] for y in m)])
+    if tot:
+        fil.append(["Comunidad", "", tot[2], tot[3], "", tot[4], tot[5]])
+    fil = _fmt(fil, [None, None, 1, 3, 3, 1, 2])
+    bl = [{"t": "tab", "tabla": _t(["Socio", "Peaje", "Reactiva (kVArh)", "cos φ medio", "Peor cos φ mensual",
+                                    "Facturable (kVArh)", "Coste (€)"], fil, texto=2),
+           "cap": "Energía reactiva y coste del periodo" + (" del socio y de la comunidad" if R["propio"] else " por socio"),
+           "size": "7pt"}]
+    for i, x in enumerate(vis):
+        Rm, ks = x["R"]["mes"], [k for k in meses if k in x["R"]["mes"]]
+        ps = sorted({p for k in ks for p in Rm[k]["R"]})
+        fx = [[_et_l(k)] + [Rm[k]["R"].get(p, 0.0) for p in ps] +
+              [Rm[k]["cos"] if Rm[k]["cos"] is not None else "–", Rm[k]["fact"], Rm[k]["total"]] for k in ks]
+        cab = ["Mes"] + [f"P{p} (kVArh)" for p in ps] + ["cos φ", "Facturable (kVArh)", "Coste (€)"]
+        dec = [None] + [1] * len(ps) + [3, 1, 2]
+        tt = (["Total"] + [sum(f[j] for f in fx) for j in range(1, 1 + len(ps))] + ["", sum(f[-2] for f in fx),
+                                                                                    sum(f[-1] for f in fx)]) if fx else None
+        svg = _fig(raiz, f"res_rea_{i}.svg", ks, lambda: G.barras(
+            [_et(k) for k in ks], [{"n": f"P{p}", "c": G.COL6[p], "v": [Rm[k]["R"].get(p, 0.0) for k in ks]} for p in ps],
+            unidad="kVArh", ancho=620, alto=240,
+            linea={"n": "33 % de la activa de P1 a P5", "c": "#555", "v": [Rm[k]["lim"] for k in ks]}),
+            f"Energía reactiva de cada mes — {x['nombre']}",
+            "Barras: reactiva por periodos; línea: 33 % de la activa de P1 a P5 (sin recargo por debajo).")
+        bl += [{"t": "h", "x": x["nombre"]},
+               {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']}" +
+                               (" · en 2.0TD no se factura la reactiva." if x["R"]["exenta"] else
+                                f" · precios {_es(R['O']['reac1'], 6)} €/kVArh (cos φ de 0,80 a 0,95) y {_es(R['O']['reac2'], 6)} "
+                                "€/kVArh (cos φ menor de 0,80).") + ("" if ks else " Sin datos de reactiva en el periodo.")},
+               {"t": "tab", "tabla": _t(cab, _fmt(fx + ([tt] if tt else []), dec)),
+                "cap": f"Energía reactiva por periodos y su coste de cada mes — {x['nombre']}", "size": "6.5pt"}] + svg
+    out.append({"titulo": "Resultados por socio" if not R["propio"] else "Resultados del socio", "bloques": bl})
+    return out, fil
+
+
+def _cap_factura(R, raiz):
+    meses, out = R["meses"], []
+    soc = R["socios"]
+    K = ("e", "p", "r", "iee", "alq", "iva", "tot")
+    filas = []
+    for k in meses:
+        xs = [x for x in soc if k in x["F"]]
+        if xs:
+            f = [_et_l(k)] + [sum(x["F"][k][c] for x in xs) for c in K]
+            con = [x for x in xs if x["Fc"] is not None]
+            if con:
+                tc = sum(x["Fc"][k]["tot"] for x in con) + sum(x["F"][k]["tot"] for x in xs if x["Fc"] is None)
+                f += [tc, f[7] - tc]
+            else:
+                f += ["–", "–"]
+            filas.append(f)
+    cab = ["Mes", "Energía (€)", "Potencia (€)", "Reactiva (€)", "Imp. eléctrico (€)", "Alquiler (€)", "IVA (€)",
+           "Total (€)", "En comunidad (€)", "Ahorro (€)"]
+    dec = [None] + [2] * 9
+    C = [("e", "Energía", "#fda38a"), ("p", "Potencia", "#f5b942"), ("r", "Reactiva", "#c07a12"),
+         ("iee", "Impuesto eléctrico", "#9e9e9e"), ("alq", "Alquiler del contador", "#bdbdbd"), ("iva", "IVA", "#7b2fa8")]
+    ks_c = [k for k in meses if any(k in x["F"] for x in soc)]
+    fig = _fig(raiz, "res_fac_com.svg", ks_c, lambda: G.barras(
+        [_et(k) for k in ks_c], [{"n": n, "c": c, "v": [f[1 + K.index(cl)] for f in filas]} for cl, n, c in C], unidad="€",
+        linea={"n": "Total en comunidad", "c": "#555", "v": [f[8] if isinstance(f[8], float) else None for f in filas]}),
+        "Factura estimada de cada mes de la comunidad por componentes",
+        "Barras: componentes de la factura en solitario; línea: total con la energía en comunidad.")
+    out.append({"titulo": "Resultados de la comunidad", "bloques": [
+        {"t": "p", "x": "Suma de las facturas estimadas de todos los socios, en solitario (con sus lecturas de Datadis) y "
+                        "con la energía en comunidad (con el reparto de la comunidad; los socios que no participan, en solitario)."},
+        {"t": "tab", "tabla": _t(cab, _fmt(filas + ([_sumas(filas)] if filas else []), dec)),
+         "cap": "Factura estimada de cada mes de la comunidad", "size": "6.5pt"}] + fig})
+    vis = [x for x in soc if not R["propio"] or x["id"] == R["propio"]]
+    fil = []
+    for x in vis:
+        f = [{"t": x["nombre"], "sub": x["cups"]}, x["peaje"]] + [sum(m[c] for m in x["F"].values()) for c in K]
+        fc = sum(m["tot"] for m in x["Fc"].values()) if x["Fc"] is not None else None
+        fil.append(f + ([fc, f[-1] - fc] if fc is not None else ["–", "–"]))
+    if filas:
+        s = _sumas(filas)
+        fil.append(["Comunidad", ""] + s[1:])
+    fil = _fmt(fil, [None, None] + [2] * 9)
+    bl = [{"t": "tab", "tabla": _t(["Socio", "Peaje"] + cab[1:], fil, texto=2),
+           "cap": "Factura estimada del periodo" + (" del socio y de la comunidad" if R["propio"] else " por socio"),
+           "size": "6pt"}]
+    for i, x in enumerate(vis):
+        ks = [k for k in meses if k in x["F"]]
+        fx = [[_et_l(k)] + [x["F"][k][c] for c in K] +
+              ([x["Fc"][k]["tot"], x["F"][k]["tot"] - x["Fc"][k]["tot"]] if x["Fc"] is not None else ["–", "–"]) for k in ks]
+        svg = _fig(raiz, f"res_fac_{i}.svg", ks, lambda: G.barras(
+            [_et(k) for k in ks], [{"n": n, "c": c, "v": [x["F"][k][cl] for k in ks]} for cl, n, c in C], unidad="€",
+            ancho=620, alto=240, linea={"n": "Total en comunidad", "c": "#555",
+                                        "v": [x["Fc"][k]["tot"] for k in ks] if x["Fc"] is not None else [None] * len(ks)}),
+            f"Factura estimada de cada mes por componentes — {x['nombre']}",
+            "Barras: componentes de la factura en solitario; línea: total con la energía en comunidad.")
+        pr = x["pr"]
+        bl += [{"t": "h", "x": x["nombre"]},
+               {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · alquiler del contador {_es(float(pr.get('alquiler') or 0), 2)} "
+                               f"€/mes · impuesto eléctrico {_es(R['O']['iee'], 8)} % · IVA {_es(R['O']['iva'], 0)} %." +
+                               ("" if x["Fc"] is not None else " No participa del reparto: sin columna en comunidad.")},
+               {"t": "tab", "tabla": _t(cab, _fmt(fx + ([_sumas(fx)] if fx else []), dec)),
+                "cap": f"Factura estimada de cada mes — {x['nombre']}", "size": "6.5pt"}] + svg
+    out.append({"titulo": "Resultados por socio" if not R["propio"] else "Resultados del socio", "bloques": bl})
+    return out, fil
+
+
+def _metodo_resumen(tipo, R, n):
+    """Capitulo de normativa y metodo de calculo del resumen tipo, con las citas n (solo las de ese tipo)."""
+    P_ = lambda x: {"t": "p", "x": x}
+    Mk = lambda x: {"t": "m", "x": x}
+    Fm = lambda x: {"t": "f", "x": x}
+    H = lambda x: {"t": "h", "x": x}
+    L = lambda *x: {"t": "l", "x": list(x)}
+    periodos = [H("Periodos horarios"),
+                P_(f"Los periodos de energía son los de la Circular 3/2020 de la CNMC {n['c3_2020']}: en 2.0TD, punta (P1) de 10 a "
+                   "14 h y de 18 a 22 h, llano (P2) de 8 a 10 h, de 14 a 18 h y de 22 a 24 h y valle (P3) de 0 a 8 h y todo el "
+                   "día en fines de semana y festivos nacionales; en 3.0TD y 6.1TD, seis periodos, con P6 en fines de semana, "
+                   "festivos y de 0 a 8 h, y el resto del día repartido en dos periodos según la temporada eléctrica del mes.")]
+    datos = [H("Datos de partida"),
+             P_(f"Curvas de carga, maxímetro, energía reactiva y contratos publicados por las distribuidoras en Datadis "
+                f"{n['datadis']} y guardados en la base de datos de la comunidad, en hora local peninsular. Precios: los de la "
+                "comunidad (Consumos → Costes en el panel; por defecto, unos aproximados), sin impuestos salvo en la factura. "
+                "Los últimos días pueden estar incompletos por el retraso con que publican las distribuidoras.")]
+    energia = lambda: [H("Término de energía"),
+               Mk("Con precio fijo por periodos (la mayoría de los contratos del mercado libre), el coste de la energía de cada "
+                  "mes es la energía comprada a la red en cada periodo $p$ por su precio $pi_p$ (con peajes y cargos), menos los "
+                  "excedentes por el precio de compensación $pi_c$ (compensación simplificada del RD 244/2019):"),
+               Fm('C_E = sum_p E_p dot pi_p - E_"exc" dot pi_c'),
+               P_(f"Peajes y cargos según la Circular 3/2020 {n['c3_2020']}, la Resolución de peajes de 2026 {n['peajes2026']} "
+                  f"y el Real Decreto 148/2021 {n['rd148']}; compensación de excedentes según el Real Decreto 244/2019 {n['rd244']}.")]
+    out = {"energia": lambda: datos + periodos + energia() + [
+               P_("En solitario, la energía es la de las lecturas de Datadis de cada socio: consumo de red por periodos, "
+                  "vertido y autoconsumo con los coeficientes que tenga comunicados la distribuidora.")],
+           "comunidad": lambda: datos + periodos + [
+               H("Energía en comunidad"),
+               Mk(f"El reparto de la generación entre los socios sigue el anexo I del Real Decreto 244/2019 {n['rd244']} y la "
+                  f"Orden TED/1247/2021 {n['ted1247']}: en cada hora $h$ el socio $i$ recibe la parte de la generación $G_h$ que "
+                  "le da su coeficiente $beta_(h,i)$; autoconsume lo menor entre lo que recibe y su consumo $D_(h,i)$ (de red más "
+                  "autoconsumo), compra a la red el resto de su consumo y vierte lo que no consume:"),
+               Fm('A_(h,i) = min(beta_(h,i) G_h, D_(h,i)), quad R_(h,i) = D_(h,i) - A_(h,i), quad X_(h,i) = beta_(h,i) G_h - A_(h,i)'),
+               P_("Coeficientes: los del reparto elegido por la comunidad (" + NOMBRE_REPARTO.get(R["modo"] or "", "sin reparto").lower() +
+                  "). Con los dinámicos, en cada hora en proporción al consumo de cada socio.")] + energia() + [
+               P_("El beneficio de cada mes es la diferencia entre el coste en solitario (lecturas de Datadis) y el coste con "
+                  "la energía en comunidad.")],
+           "potencia": lambda: datos + [
+               H("Término de potencia"),
+               Mk(f"Según la Circular 3/2020 {n['c3_2020']}, la potencia contratada de cada periodo $P_(c,p)$ se paga a su precio "
+                  "$\"Tp\"_p$ (€/kW y año, con peajes, cargos y margen), prorrateado por los $d$ días del mes en un año de $N$ "
+                  "días (365 o 366):"),
+               Fm('T_P = sum_p "Tp"_p dot P_(c,p) dot d / N'),
+               P_("En 2.0TD hay dos potencias: P1 (punta y llano) y P2 (valle)."),
+               H("Excesos de potencia"),
+               Mk(f"Artículo 9.4 de la Circular 3/2020, modificado por la Circular 1/2025 {n['c1_2025']}, con los términos de la "
+                  f"Resolución de peajes de 2026 {n['peajes2026']} y los criterios de la CNMC {n['cnmc_crit']}. Según el tipo de "
+                  f"punto de medida del Real Decreto 1110/2007 {n['rd1110']}:"),
+               L("2.0TD: no hay excesos; el interruptor de control de potencia corta el suministro.",
+                 "Puntos de medida tipo 4 y 5 (todas las potencias de hasta 50 kW): con la potencia máxima del mes de cada "
+                 "periodo (maxímetro), $F_\"EP\" = sum_p \"tep\"_p dot (P_(d,p) - P_(c,p)) dot d$, con $\"tep\"_p$ en €/kW y día.",
+                 "Puntos de medida tipo 1, 2 y 3 (alguna potencia de más de 50 kW): con la potencia de cada cuarto de hora "
+                 "$j$ del mes que supera la contratada, $F_\"EP\" = sum_p \"tep\"_p dot sqrt(sum_j (P_(d,j) - P_(c,p))^2)$; con "
+                 "curva horaria, la potencia de la hora se aplica a sus cuatro cuartos."),
+               P_("Potencia ajustada: la máxima demandada en el periodo del informe, redondeada a 0,1 kW por exceso (en 3.0TD y "
+                  "6.1TD, creciente de P1 a P6, como exige la norma); el ahorro posible es la diferencia del término de potencia.")],
+           "reactiva": lambda: datos + periodos + [
+               H("Término de energía reactiva"),
+               Mk(f"Según la Circular 3/2020 {n['c3_2020']} y el anexo III de la Resolución de peajes de 2026 {n['peajes2026']}, "
+                  "la reactiva se factura en los suministros de baja tensión de más de 15 kW (3.0TD) y en alta tensión (6.xTD), "
+                  "no en la 2.0TD, en los periodos P1 a P5. Cada mes y periodo, con la activa $E_a$ y la reactiva $E_r$:"),
+               Fm('cos phi = E_a / sqrt(E_a^2 + E_r^2)'),
+               Fm('F_R = sum_(p=1)^5 max(0, E_(r,p) - 0.33 dot E_(a,p)) dot pi_r (cos phi_p)'),
+               P_(f"Con el cos φ redondeado a dos decimales: desde 0,95, sin recargo; de 0,80 a 0,95, {_es(R['O']['reac1'], 6)} "
+                  f"€/kVArh; por debajo de 0,80, {_es(R['O']['reac2'], 6)} €/kVArh. La capacitiva del P6 no se factura en 2026.")],
+           "factura": lambda: datos + [
+               H("Componentes de la factura"),
+               Mk(f"La factura estimada de cada mes suma el término de energía $C_E$ (la compensación de excedentes no puede "
+                  f"superarlo, Real Decreto 244/2019 {n['rd244']}), el de potencia $T_P$ con los excesos $F_\"EP\"$ (Circular "
+                  f"3/2020 {n['c3_2020']} y Circular 1/2025 {n['c1_2025']}), el de reactiva $F_R$, el Impuesto Especial sobre la "
+                  f"Electricidad (Ley 38/1992 {n['ley38']}), el alquiler del contador $A_c$ (Orden ITC/3860/2007 {n['itc3860']}) "
+                  f"y el IVA (Ley 37/1992 {n['ley37']}):"),
+               Fm('"IEE" = (max(0, C_E) + T_P + F_"EP" + F_R) dot t_"IEE"'),
+               Fm('"IVA" = (max(0, C_E) + T_P + F_"EP" + F_R + "IEE" + A_c) dot t_"IVA"'),
+               Fm('F = max(0, C_E) + T_P + F_"EP" + F_R + "IEE" + A_c + "IVA"'),
+               P_(f"Tipos: impuesto eléctrico {_es(R['O']['iee'], 8)} % e IVA {_es(R['O']['iva'], 0)} %. Es una estimación: no "
+                  "incluye las cuotas mínimas del impuesto eléctrico, el bono social ni los servicios adicionales del contrato. "
+                  "En comunidad, la energía es la que corresponde a cada socio con el reparto de la comunidad.")]}
+    return out[tipo]()
+
+
+CLAVES_RES = {"energia": ["datadis", "c3_2020", "peajes2026", "rd148", "rd244", "ley24"],
+              "comunidad": ["datadis", "c3_2020", "rd244", "ted1247", "peajes2026", "rd148", "ley24"],
+              "potencia": ["datadis", "c3_2020", "c1_2025", "peajes2026", "cnmc_crit", "rd1110"],
+              "reactiva": ["datadis", "c3_2020", "peajes2026", "cnmc_crit"],
+              "factura": ["datadis", "c3_2020", "c1_2025", "peajes2026", "rd244", "ley38", "itc3860", "ley37", "cnmc_crit"]}
+
+
+def resumen_pdf(tipo, desde=None, hasta=None, propio=None):
+    """PDF del resumen mensual tipo (TIPOS_RESUMEN) entre desde y hasta (meses enteros; por
+    defecto, los ultimos 12 meses completos). propio: el del panel de un socio, solo con la
+    comunidad (totales) y ese socio. -> (bytes, nombre)"""
+    import typst
+
+    if tipo not in TIPOS_RESUMEN:
+        raise KeyError(tipo)
+    hoy = date.today()
+    fin = hoy.replace(day=1) - timedelta(days=1)
+    hasta = hasta or fin
+    desde = (desde or _mas_meses(date(hasta.year, hasta.month, 1), -11)).replace(day=1)
+    hasta = _mas_meses(date(hasta.year, hasta.month, 1), 1) - timedelta(days=1)
+    with db.conectar() as cx:
+        R = _datos_resumen(cx, desde, hasta, propio)
+    cfg = config()
+    if not R["socios"]:
+        raise ValueError("No hay socios habilitados con datos")
+    nombre_t, pref = TIPOS_RESUMEN[tipo]
+    n, refs = _citas(CLAVES_RES[tipo] + PRESENTACION)
+    periodo = f"{desde:%m/%Y} – {hasta:%m/%Y}"
+    yo = next((x for x in R["socios"] if x["id"] == propio), None)
+    with tempfile.TemporaryDirectory() as raiz:
+        cap, fil = {"energia": lambda: _cap_energia(R, raiz, False), "comunidad": lambda: _cap_energia(R, raiz, True),
+                    "potencia": lambda: _cap_potencia(R, raiz), "reactiva": lambda: _cap_reactiva(R, raiz),
+                    "factura": lambda: _cap_factura(R, raiz)}[tipo]()
+        ns = len(R["socios"])
+        alcance = (f"Comprende los {ns} socios habilitados con datos de {cfg['cec']}" if not propio else
+                   f"Comprende el suministro de {yo['nombre']} (CUPS {yo['cups']}) y, como referencia, los totales del conjunto "
+                   f"de los {ns} socios de {cfg['cec']}, sin los datos de ninguno de los demás")
+        capitulos = [
+            {"titulo": "Objeto y alcance", "bloques": [
+                {"t": "p", "x": f"Este informe resume, mes a mes, {nombre_t[0].lower() + nombre_t[1:]} "
+                                f"{'de los socios de ' + cfg['cec'] if not propio else 'del socio ' + yo['nombre'] + ' de ' + cfg['cec']} "
+                                f"entre {_et_l(R['meses'][0])} y {_et_l(R['meses'][-1])}, como apoyo a la gestión de la comunidad "
+                                "y a la revisión de las facturas y los contratos."},
+                {"t": "p", "x": alcance + ". Los importes son estimaciones con los precios de la comunidad: la factura real de "
+                                "cada socio depende de su contrato con la comercializadora."}]},
+            {"titulo": "Normativa y método de cálculo", "bloques": _metodo_resumen(tipo, R, n)},
+            *cap,
+            {"titulo": "Referencias bibliográficas", "bloques": [
+                {"t": "p", "x": "Referencias citadas en el texto entre corchetes, según la norma ISO 690. La presentación del "
+                                "informe sigue las normas ISO 7144 (estructura) e ISO 2145 (numeración de los apartados)."},
+                refs]},
+        ]
+        # Cifras del resumen: la fila de la comunidad (y la del socio en su panel)
+        cab_r = {"energia": ["Socio", "Peaje", "Red (kWh)", "Autoconsumo (kWh)", "Excedentes (kWh)", "Coste neto (€)"],
+                 "comunidad": ["Socio", "Peaje", "Red (kWh)", "Autoconsumo (kWh)", "Excedentes (kWh)", "Coste neto (€)",
+                               "En solitario (€)", "Beneficio (€)"],
+                 "potencia": ["Socio", "Peaje", "Contratada (kW)", "Máxima (kW)", "Ajustada (kW)", "Excesos (€)", "Coste (€)",
+                              "Ahorro posible (€)"],
+                 "reactiva": ["Socio", "Peaje", "Reactiva (kVArh)", "cos φ medio", "Peor cos φ", "Facturable (kVArh)", "Coste (€)"],
+                 "factura": ["Socio", "Peaje", "Energía (€)", "Potencia (€)", "Reactiva (€)", "Imp. eléctrico (€)", "Alquiler (€)",
+                             "IVA (€)", "Total (€)", "En comunidad (€)", "Ahorro (€)"]}[tipo]
+        # Solo las columnas principales (la tabla del resumen va a 8,5 pt en una pagina)
+        idx = {"energia": [0, 1, 2, 3, 4, 5], "comunidad": [0, 1, 3, 4, 5, 7], "potencia": [0, 1, 5, 6, 7],
+               "reactiva": [0, 1, 2, 3, 5, 6], "factura": [0, 1, 2, 3, 8, 9, 10]}[tipo]
+        cifras = {"cabecera": [cab_r[j] for j in idx], "texto": 2, "total": False,
+                  "filas": [[f[j] for j in idx] for f in fil if not isinstance(f[0], dict) or propio]}
+        resumen = [f"Resumen mensual de {nombre_t[0].lower() + nombre_t[1:]} de "
+                   f"{cfg['cec'] if not propio else yo['nombre'] + ' (' + cfg['cec'] + ')'} entre {_et_l(R['meses'][0])} y "
+                   f"{_et_l(R['meses'][-1])}, calculado con las lecturas de Datadis y los precios de la comunidad según la "
+                   f"normativa vigente (capítulo 2 y referencias bibliográficas).",
+                   "La tabla siguiente recoge las cifras del periodo" + (" del socio y del conjunto de la comunidad." if propio
+                                                                          else " del conjunto de la comunidad; el detalle mensual de "
+                                                                               "cada socio está en su apartado.")]
+        ahora = datetime.now(TZL)
+        ent = re.sub(r"[^A-Za-z0-9]+", "-", unicodedata.normalize("NFD", yo["nombre"] if yo else cfg["id"])
+                     .encode("ascii", "ignore").decode()).upper().strip("-")[:20]
+        codigo = f"{pref}-{ent}-{desde:%Y%m}-{hasta:%Y%m}"
+        doc = {"titulo": cfg["cec"] if not propio else yo["nombre"], "subtitulo": "Resumen mensual · " + nombre_t,
+               "periodo": periodo, "codigo": codigo, "autor": f"Administración de {cfg['cec']}",
+               "ficha": [["Código del informe", codigo], ["Versión", "1.0"], ["Fecha de emisión", f"{ahora:%d/%m/%Y}"],
+                         ["Periodo analizado", f"{_et_l(R['meses'][0])} – {_et_l(R['meses'][-1])}"],
+                         ["Ámbito", f"Comunidad completa ({ns} socios)" if not propio else
+                          f"{yo['nombre']} (CUPS {yo['cups']}) y totales de la comunidad"],
+                         ["Precios", "de la comunidad" + (" (aproximados por defecto)" if R["PRE"].get("defecto") else "")],
+                         ["Fuente de los datos", "Datadis (distribuidoras) · base de datos de la comunidad"],
+                         ["Normas de presentación", "ISO 7144 · ISO 2145 · ISO 690 (referencias)"],
+                         ["Elaborado por", f"Administración de {cfg['cec']}"]],
+               "nota": f"Documento generado automáticamente el {ahora:%d/%m/%Y} a las {ahora:%H:%M} con los datos disponibles en "
+                       "ese momento. Importes estimados con los precios de la comunidad, que pueden no coincidir con los del contrato de cada socio.",
+               "resumen": resumen, "cifras_resumen": cifras, "glosario": GLOSARIO_RES, "capitulos": capitulos}
+        Path(raiz, "informe.typ").write_text(PLANTILLA_COEF, encoding="utf-8")
+        Path(raiz, "datos.json").write_text(json.dumps(doc, ensure_ascii=False, default=str), encoding="utf-8")
+        pdf = typst.compile(str(Path(raiz, "informe.typ")), root=raiz, font_paths=["/usr/share/fonts"])
+    return pdf, f"Resumen_{tipo}_{ent}_{desde:%Y%m}-{hasta:%Y%m}.pdf"
 __FASTAPI_EOF__
 
 cat > config/fastapi/app/gestion.py <<'__FASTAPI_EOF__'
@@ -8100,6 +8940,49 @@ async def informe_coeficientes(anio: int | None = Query(None, ge=2000, le=2100),
     return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
+# Resumenes mensuales (PDF): energia en solitario y en comunidad, potencia, reactiva y factura de
+# cada socio y mes; por defecto, los ultimos 12 meses completos. Del gestor: todos los socios; del
+# panel de un socio: la comunidad (totales) y el propio socio
+TipoResumen = Literal["energia", "comunidad", "potencia", "reactiva", "factura"]
+
+
+async def _resumen(tipo, desde, hasta, propio=None):
+    if desde and hasta and hasta < desde:
+        raise HTTPException(422, "desde es posterior a hasta")
+    if desde and hasta and (hasta - desde).days > 3 * 366:
+        raise HTTPException(422, "Periodo demasiado largo (máximo 3 años)")
+    try:
+        pdf, nombre = await asyncio.to_thread(informes.resumen_pdf, tipo, desde, hasta, propio)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+@app.get("/informes/resumen/{tipo}",
+         summary="Resumen mensual por socio (PDF): energia (solitario), comunidad, potencia, reactiva o factura")
+async def informe_resumen(tipo: TipoResumen, desde: date | None = Query(None), hasta: date | None = Query(None),
+                          _: str = Depends(admin)):
+    return await _resumen(tipo, desde, hasta)
+
+
+@app.get("/informes/mio/{socio_id}/resumen/{tipo}",
+         summary="Resumen mensual para un socio (PDF): sus datos y los totales de la comunidad, sin los de los demás socios")
+async def informe_mio_resumen(socio_id: str, tipo: TipoResumen, desde: date | None = Query(None),
+                              hasta: date | None = Query(None), _: dict = Depends(socio_o_gestor)):
+    return await _resumen(tipo, desde, hasta, socio_id)
+
+
+@app.get("/informes/mio/{socio_id}/coeficientes",
+         summary="Justificación de los coeficientes de reparto para un socio (PDF): él y el resto de la comunidad sumado")
+async def informe_mio_coeficientes(socio_id: str, anio: int | None = Query(None, ge=2000, le=2100),
+                                   _: dict = Depends(socio_o_gestor)):
+    try:
+        pdf, nombre = await asyncio.to_thread(informes.coeficientes_pdf, anio, socio_id)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
 # Pestaña Informes de la vista de un socio: el propio socio (o su gestor) descarga el informe de
 # sus datos o el del conjunto de la comunidad (solo totales: sin datos de los demas socios)
 @app.get("/informes/mio/{socio_id}", summary="Informe de un socio para el propio socio o su gestor")
@@ -9683,7 +10566,7 @@ def usuario_cliente(cid, c, dash_id, fullscreen=False):
 import unicodedata
 
 CEC = E.get("CEC_NOMBRE", "")
-CEC_DASH_VERSION = 61           # sube este numero para regenerar el panel de la comunidad
+CEC_DASH_VERSION = 64           # sube este numero para regenerar el panel de la comunidad
 OCULTAR_PIE = "section.tb-powered-by-footer { display: none !important; }"
 # El CSS de impresion esta en config/branding/VatiaCo.css (global)
 CSS_PANEL = OCULTAR_PIE
@@ -9937,6 +10820,12 @@ CONSUMO_CSS = """
 .dd-gcab { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 4px 0; }
 .dd-bprec { border: 1px solid var(--ac); background: #fff; color: var(--ac); border-radius: 3px; padding: 4px 10px;
   font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
+.dd-bprec:disabled { opacity: .45; cursor: default; }
+.dd-pact { color: var(--ac); font-weight: 500; } .dd-pok { color: #2e7d32; } .dd-perr { color: #c62828; }
+.dd-spin { display: inline-block; width: 11px; height: 11px; margin: 0 5px -1px 2px; border: 2px solid currentColor;
+  border-right-color: transparent; border-radius: 50%; animation: dd-gira .7s linear infinite; }
+@keyframes dd-gira { to { transform: rotate(360deg); } }
+.dd-pg:not(:disabled), .dd-pg2:not(:disabled), .dd-pg3:not(:disabled) { background: var(--ac); color: #fff; }
 .dd-prec { flex: none; margin: 8px 4px 0; padding: 8px 10px; border: 1px solid #e6e6e6; border-radius: 4px; background: #fcfaff; overflow-x: auto; }
 .dd-prec table { border-collapse: collapse; font-size: 12px; }
 .dd-prec th, .dd-prec td { padding: 3px 6px; text-align: center; } .dd-prec th { color: #555; font-weight: 500; }
@@ -10053,7 +10942,7 @@ function apiJ(metodo, ruta, cuerpo) {
   });
 }
 function editorPrecios() {
-  var pn = q('.dd-prec'), gestor = (S.ctx.currentUser || {}).authority === 'TENANT_ADMIN', P = S.prec || PRECIOS;
+  var pn = q('.dd-prec1'), gestor = (S.ctx.currentUser || {}).authority === 'TENANT_ADMIN', P = S.prec || PRECIOS;
   var v = function (x) { return x == null ? '' : String(+(+x).toFixed(4)); };
   pn.innerHTML = '<table><tr><th>Peaje</th>' + [1, 2, 3, 4, 5, 6].map(function (p) { return '<th>P' + p + '</th>'; }).join('') +
     '<th>Excedentes</th></tr>' + ['2.0TD', '3.0TD', '6.1TD'].map(function (t) {
@@ -10066,18 +10955,14 @@ function editorPrecios() {
     '<div class="dd-prec-pie">€/kWh del término de energía (con peajes y cargos, sin impuestos) por periodo, y precio de compensación de ' +
     'los excedentes. Se usan en esta pestaña y en el informe de justificación de los coeficientes.' +
     (S.prec && S.prec.defecto ? ' Ahora: los aproximados por defecto.' : '') +
-    (gestor ? ' <button type="button" class="dd-bprec dd-pg">Guardar</button> <button type="button" class="dd-bprec dd-pd">Valores por defecto</button>' : '') +
+    (gestor ? ' <button type="button" class="dd-bprec dd-pg" disabled title="Guarda los precios cambiados y recalcula los costes">Recalcular</button> <button type="button" class="dd-bprec dd-pd">Valores por defecto</button>' : '') +
     ' <span class="dd-pmsg"></span></div>';
   if (!gestor) return;
-  var guardar = function (cuerpo) {
-    q('.dd-pmsg').textContent = 'Guardando…';
-    apiJ('PUT', '/precios', { precios: cuerpo }).then(function (r) {
-      S.prec = r; editorPrecios(); q('.dd-pmsg').textContent = 'Precios guardados.'; pintar();
-    }).catch(function (e) { q('.dd-pmsg').textContent = e.message; });
-  };
+  cambios('.dd-prec1', '.dd-pg', '.dd-pmsg');
+  var guardar = function (cuerpo) { guardarPrecios(cuerpo, '.dd-pg', '.dd-pmsg', editorPrecios); };
   q('.dd-pg').onclick = function () {
     var out = todosPrecios();
-    qa('.dd-prec input').forEach(function (i) {
+    qa('.dd-prec1 input').forEach(function (i) {
       var x = out[i.dataset.t], val = i.value === '' ? null : +i.value;
       if (i.dataset.p === 'comp') x.comp = val; else x.p[i.dataset.p] = val;
     });
@@ -10085,6 +10970,29 @@ function editorPrecios() {
   };
   q('.dd-pd').onclick = function () { var out = todosPrecios(); ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
     out[t].p = JSON.parse(JSON.stringify(PRECIOS[t].p)); out[t].comp = PRECIOS[t].comp; }); guardar(out); };
+}
+// Guarda los precios (PUT /precios) y vuelve a pintar los costes: mientras, el boton queda
+// deshabilitado y a su lado "Actualizando…" con un indicador que gira; si falla, el error y el
+// boton otra vez activo para reintentar
+function guardarPrecios(cuerpo, boton, aviso, editor) {
+  var b = q(boton), m = q(aviso);
+  b.disabled = true;
+  m.className = aviso.slice(1) + ' dd-pact'; m.innerHTML = '<span class="dd-spin"></span>Actualizando…';
+  apiJ('PUT', '/precios', { precios: cuerpo }).then(function (r) {
+    S.prec = r;
+    editor();
+    try { pintar(); } catch (e) { console.error(e); }
+    var m2 = q(aviso); m2.className = aviso.slice(1) + ' dd-pok'; m2.textContent = '✓ Precios guardados y costes recalculados.';
+  }).catch(function (e) {
+    b.disabled = false;
+    m.className = aviso.slice(1) + ' dd-perr'; m.textContent = 'No se pudo guardar: ' + e.message;
+  });
+}
+// Al cambiar un precio de una tabla se activa su boton Recalcular (guarda y vuelve a pintar)
+function cambios(tabla, boton, aviso) {
+  qa(tabla + ' input').forEach(function (i) { i.oninput = function () {
+    q(boton).disabled = false; q(aviso).textContent = 'Precios cambiados: pulsa Recalcular.';
+  }; });
 }
 // Copia de todos los precios (energia, potencia y resto de la factura) para guardar los de una
 // tabla sin perder los de las demas
@@ -10109,15 +11017,11 @@ function editorOtros() {
     '</td><td>' + inp('iva', O.iva, '0.1') + '</td>' + ['2.0TD', '3.0TD', '6.1TD'].map(function (t) { return '<td>' + inp('alq_' + t, P[t].alquiler, '0.01') + '</td>'; }).join('') +
     '</tr></table><div class="dd-prec-pie">Resto de componentes de la factura: término de energía reactiva, impuesto eléctrico (sobre ' +
     'energía, potencia y reactiva), IVA (sobre todo) y alquiler del contador. Precios de la comunidad, aproximados por defecto.' +
-    (gestor ? ' <button type="button" class="dd-bprec dd-pg3">Guardar</button> <button type="button" class="dd-bprec dd-pd3">Valores por defecto</button>' : '') +
+    (gestor ? ' <button type="button" class="dd-bprec dd-pg3" disabled title="Guarda los precios cambiados y recalcula los costes">Recalcular</button> <button type="button" class="dd-bprec dd-pd3">Valores por defecto</button>' : '') +
     ' <span class="dd-pmsg3"></span></div>';
   if (!gestor) return;
-  var guardar = function (cuerpo) {
-    q('.dd-pmsg3').textContent = 'Guardando…';
-    apiJ('PUT', '/precios', { precios: cuerpo }).then(function (r) {
-      S.prec = r; editorOtros(); q('.dd-pmsg3').textContent = 'Precios guardados.'; pintar();
-    }).catch(function (e) { q('.dd-pmsg3').textContent = e.message; });
-  };
+  cambios('.dd-prec3', '.dd-pg3', '.dd-pmsg3');
+  var guardar = function (cuerpo) { guardarPrecios(cuerpo, '.dd-pg3', '.dd-pmsg3', editorOtros); };
   q('.dd-pg3').onclick = function () {
     var out = todosPrecios();
     qa('.dd-prec3 input').forEach(function (i) {
@@ -10151,15 +11055,11 @@ function editorPotencias() {
     tabla('tep123', 'Exceso, medida tipo 1-3: alguna > 50 kW (€/kW)', ['3.0TD', '6.1TD'], '0.000001') +
     '<div class="dd-prec-pie">Término de potencia con peajes, cargos y margen, sin impuestos. Términos de exceso de la Resolución de peajes de ' +
     '2026 (anexo II); en 2.0TD no hay excesos (el limitador corta). Normativa: ' + NORMA + '.' +
-    (gestor ? ' <button type="button" class="dd-bprec dd-pg2">Guardar</button> <button type="button" class="dd-bprec dd-pd2">Valores por defecto</button>' : '') +
+    (gestor ? ' <button type="button" class="dd-bprec dd-pg2" disabled title="Guarda los precios cambiados y recalcula los costes">Recalcular</button> <button type="button" class="dd-bprec dd-pd2">Valores por defecto</button>' : '') +
     ' <span class="dd-pmsg2"></span></div>';
   if (!gestor) return;
-  var guardar = function (cuerpo) {
-    q('.dd-pmsg2').textContent = 'Guardando…';
-    apiJ('PUT', '/precios', { precios: cuerpo }).then(function (r) {
-      S.prec = r; editorPotencias(); q('.dd-pmsg2').textContent = 'Precios guardados.'; pintar();
-    }).catch(function (e) { q('.dd-pmsg2').textContent = e.message; });
-  };
+  cambios('.dd-prec2', '.dd-pg2', '.dd-pmsg2');
+  var guardar = function (cuerpo) { guardarPrecios(cuerpo, '.dd-pg2', '.dd-pmsg2', editorPotencias); };
   q('.dd-pg2').onclick = function () {
     var out = todosPrecios();
     qa('.dd-prec2 input').forEach(function (i) { out[i.dataset.t][i.dataset.c][i.dataset.p] = i.value === '' ? null : +i.value; });
@@ -10243,7 +11143,7 @@ self.onInit = function () {
   S.vista = (self.ctx.settings || {}).vista || 'consumos';
   S.metrica = SUBTABS[S.vista][0];
   if (S.vista === 'potencias') q('.dd-metricas [data-m="pot"]').textContent = 'Máximas demandadas';
-  ['dd-prec', 'dd-prec dd-prec2', 'dd-prec dd-prec3'].forEach(function (cl) {
+  ['dd-prec dd-prec1', 'dd-prec dd-prec2', 'dd-prec dd-prec3'].forEach(function (cl) {
     var d = document.createElement('div'); d.className = cl; q('.dd-graf').parentNode.insertBefore(d, q('.dd-graf'));
   });
   editorPrecios(); editorPotencias(); editorOtros();
@@ -10371,14 +11271,14 @@ function ui() {
   var costes = S.metrica === 'costes';
   q('.dd-kx').style.display = !pot && (S.hayGen || S.enCom || S.metrica !== 'consumo') ? '' : 'none';
   if (S.metrica !== 'consumo') q('.dd-mini').style.display = 'none';
-  q('.dd-prec').style.display = costes || S.metrica === 'factura' ? '' : 'none';
+  q('.dd-prec1').style.display = costes || S.metrica === 'factura' ? '' : 'none';
   q('.dd-prec2').style.display = potc || S.metrica === 'factura' ? '' : 'none';
   q('.dd-prec3').style.display = S.metrica === 'reaccostes' || S.metrica === 'factura' ? '' : 'none';
   q('.dd-pper').style.display = pot ? '' : 'none';
   q('.dd-pper').value = S.pper;
   qa('.dd-modo button').forEach(function (b) { b.classList.toggle('on', (b.dataset.a === '1') === S.apilado); });
   // En el dia cada hora es de un solo periodo: no hay nada que agrupar
-  q('.dd-modo').style.display = S.modo === 'dia' || pot ? 'none' : '';
+  q('.dd-modo').style.display = S.modo === 'dia' || pot || S.metrica === 'consumo' ? 'none' : '';   // consumo: siempre una barra apilada
   q('.dd-sel span').textContent = etiqueta(S.ref, S.modo, false);
   var inp = q('.dd-sel input');
   inp.value = VL.iso(S.ref);
@@ -10689,10 +11589,10 @@ function pintar() {
     yAxis: { type: 'value', show: false },
     series: mser
   }, true);
-  // Grafico principal con los terminos de la descarga CSV de Datadis: en cada casilla, una barra con
-  // energiaAutoconsumida_kWh y encima energiaVertida_kWh (juntas, energiaGenerada_kWh: la linea) y
-  // al lado consumo_kWh (de la red, todos los periodos); en el dia, los periodos del peaje de fondo
-  var apila = S.apilado || S.modo === 'dia', np = pj() === '2.0TD' ? 3 : 6;
+  // Grafico principal con los terminos de la descarga CSV de Datadis: una sola barra apilada por
+  // casilla, de abajo arriba energiaAutoconsumida_kWh y energiaVertida_kWh (juntas llegan a la linea
+  // de energiaGenerada_kWh) y encima consumo_kWh (de la red); en el dia, los periodos de fondo
+  var np = pj() === '2.0TD' ? 3 : 6;
   var cons = D.V.map(function (v, i) { if (!D.hay[i]) return null; var t = 0; for (var p = 1; p <= np; p++) t += v['p' + p] || 0; return r3(t); });
   var auto = D.V.map(function (v, i) { return D.hay[i] && v.auto != null ? r3(v.auto) : null; });
   var vert = D.V.map(function (v, i) { return D.hay[i] && v.vert != null ? r3(Math.abs(v.vert)) : null; });   // en positivo
@@ -10701,9 +11601,9 @@ function pintar() {
   var TOT = { 'energiaAutoconsumida_kWh': suma(auto), 'consumo_kWh': suma(cons), 'energiaVertida_kWh': suma(vert), 'energiaGenerada_kWh': suma(gen) };
   var hayG = S.hayGen || S.enCom;
   var series = [];
-  if (hayG) series.push({ type: 'bar', name: 'energiaAutoconsumida_kWh', stack: apila ? 'gen' : null, barMaxWidth: 28, itemStyle: { color: '#1fab76' }, data: auto });
-  if (hayG) series.push({ type: 'bar', name: 'energiaVertida_kWh', stack: apila ? 'gen' : null, barMaxWidth: 28, itemStyle: { color: '#ee6430' }, data: vert });
-  series.push({ type: 'bar', name: 'consumo_kWh', stack: apila ? 'red' : null, barMaxWidth: 28, itemStyle: { color: '#2b78d8' }, data: cons });
+  if (hayG) series.push({ type: 'bar', name: 'energiaAutoconsumida_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#1fab76' }, data: auto });
+  if (hayG) series.push({ type: 'bar', name: 'energiaVertida_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#ee6430' }, data: vert });
+  series.push({ type: 'bar', name: 'consumo_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#2b78d8' }, data: cons });
   if (gen) series.push({ type: 'line', name: 'energiaGenerada_kWh', smooth: true, symbol: 'none', z: 5,
                         lineStyle: { width: 2, type: 'dashed', color: '#8159d4' }, itemStyle: { color: '#8159d4' }, data: gen });
   // Periodos del peaje (vista diaria): bandas de fondo con su nombre y leyenda
@@ -11995,73 +12895,30 @@ function fecha(s) { if (!s) return '–'; var d = new Date(s); return isNaN(d) ?
 """ + CSV_JS
 
 # VatiaCo.participantes: pestaña "Socios" del gestor. Los socios salen de Datadis (CUPS con
-# autorizacion vigente a la cuenta del gestor: "Actualizar desde Datadis") o de un CSV; aqui se
-# editan (usuario, telefono, ubicacion...), se suspenden, se borran y se cargan sus datos.
+# autorizacion vigente a la cuenta del gestor, asignados en "Suministros autorizados"); aqui se
+# bloquean y se cargan sus datos: "Actualizar desde Datadis" (todos) o sus CSV de datadis.es.
 # Contrato, curva, maximetro y reactiva llegan de Datadis. "Datos simulados" (pruebas, por CSV o
 # al editar): tipo de consumidor y consumo mensual; dos años de datos inventados.
 PART_HTML = """<div class="al">
  <section class="al-caja">
   <h3>Socios</h3>
-  <div class="al-ctrl al-csv"><button class="al-b peq al-datadis">Actualizar desde Datadis</button>
-   <button class="al-b sec peq al-exp">Exportar CSV</button><button class="al-b sec peq al-imp">Importar CSV</button>
-   <small><b>Datadis</b>: pone al día las autorizaciones de tu cuenta (también cada día); las nuevas quedan pendientes de
-   asignar a una comunidad en la pestaña <i>Suministros autorizados</i>. <b>Importar</b>: crea los socios nuevos y actualiza los que ya existen (por <code>id</code> o, si no lo trae, por
-   <code>nombre</code>); con email nuevo hace falta <code>password</code>. Después se cargan sus datos.</small></div>
   <div class="al-sync">
    <div class="al-sync-estado">Cargando…</div>
    <div class="al-barra"><div></div></div>
-   <div class="al-ctrl"><button class="al-b peq al-sya">Actualizar ahora</button>
+   <div class="al-ctrl"><button class="al-b peq al-datadis">Actualizar desde Datadis</button>
+    <button class="al-b sec peq al-recalc" disabled title="Recalcula los totales de la comunidad con los socios habilitados (se habilita al actualizar)">Recalcular totales</button>
     <button class="al-b sec peq al-syparar" disabled title="Para la sincronización en curso al terminar el paso que está haciendo">Detener</button>
-    <label>Desde <input type="month" class="al-sydesde"></label><label>Hasta <input type="month" class="al-syhasta"></label>
-    <label title="Repite consultas de las últimas 24 h y recarga ThingsBoard entero"><input type="checkbox" class="al-syforzar"> Forzar</label>
-    <button class="al-b sec peq al-syrango">Recargar rango</button>
-    <small>Con socios seleccionados, solo esos; sin selección, todos. El progreso sale en <i>Actividad</i>.</small></div>
+    <small>Pone al día las autorizaciones de tu cuenta y descarga los datos de todos los socios, de cada tipo desde el último
+     día que hay en ThingsBoard (sin datos, desde el primero que guarda Datadis) hasta el último disponible en Datadis.
+     También se hace sola cada día. Después, <b>Recalcular totales</b>. El progreso sale en <i>Actividad</i>.</small></div>
   </div>
-  <div class="al-ctrl al-bloque"><span class="al-nsel">0 seleccionados</span>
-   <button class="al-b sec peq al-bcargar">Cargar datos</button><button class="al-b sec peq al-beditar">Editar</button>
-   <button class="al-b sec peq al-bquitar">Quitar selección</button>
-   <button class="al-b sec peq al-recalc" title="Recalcula los totales de la comunidad con los socios habilitados">Recalcular totales</button></div>
   <small>Los datos de cada socio llegan de la API de Datadis (con tu cuenta y la autorización del titular) o de los CSV que
    el titular descarga de datadis.es: en <i>Cargar CSV</i>, cada botoncito carga uno de ellos (<code>Consumo_…</code>,
    <code>Potencias_…</code>, <code>Energía_…</code> —la reactiva— y <code>Contrato_…</code>.csv); se comprueba que es de ese tipo y
    del CUPS del socio, y se publica en el panel. Un socio
-   simulado pasa a tener los datos reales de sus CSV. Para sacar a un socio de los totales de la comunidad (sale en gris),
-   selecciónalo, pulsa <i>Editar</i> y después <b>Recalcular totales</b>.</small>
+   simulado pasa a tener los datos reales de sus CSV. <b>B</b>: bloqueado, el socio no puede entrar en su panel (sus datos
+   siguen contando en la comunidad).</small>
   <div class="al-tabla">Cargando…</div>
- </section>
- <section class="al-caja al-bform al-oculto">
-  <h3 class="al-btitulo">Editar los socios seleccionados</h3>
-  <div class="al-campos">
-   <label>Totales de la comunidad<select class="b-desh"><option value="">Sin cambios</option><option value="no">Cuenta en los totales</option>
-    <option value="si">Fuera de los totales</option></select></label>
-  </div>
-  <p>Si cambian los totales, después se recalcula la comunidad. Bloquear el acceso de un socio a su panel se hace en la
-   pestaña <i>Suministros autorizados</i>.</p>
-  <div class="al-ctrl"><button class="al-b al-bguardar">Aplicar a los seleccionados</button><button class="al-b sec al-bcancelar">Cancelar</button></div>
- </section>
- <section class="al-caja al-form al-oculto">
-  <h3 class="al-titulo">Editar socio</h3>
-  <div class="al-campos">
-   <label><span class="req">Nombre</span><input class="f-nombre" maxlength="80" placeholder="Nombre y apellidos o entidad"></label>
-   <label>Email (usuario para ver su panel)<input class="f-email" type="email"></label>
-   <label>Contraseña<input class="f-password" type="text" autocomplete="new-password"></label>
-   <label>Teléfono<input class="f-telefono" maxlength="30"></label>
-   <label><span class="req">CUPS</span><input class="f-cups" placeholder="ES0031…" maxlength="24"></label>
-   <label>Latitud<input class="f-lat" placeholder="automática"></label>
-   <label>Longitud<input class="f-lon" placeholder="automática"></label>
-   <label class="ancho al-check"><input class="f-simulado" type="checkbox"> Datos simulados (pruebas): contrato, curva, maxímetro y reactiva de los dos últimos años inventados; sin CUPS se usa uno ficticio</label>
-   <label class="f-sim">Tipo de consumidor<select class="f-simtipo"><option value="residencial">Residencial (2.0TD, horaria, FV según el CUPS)</option>
-    <option value="residencial_fv">Residencial con autoconsumo FV y excedentes (2.0TD, horaria)</option>
-    <option value="comercial">Comercial (3.0TD, horaria)</option><option value="industrial">Industrial (6.1TD, cuartohoraria)</option>
-    <option value="cargador_ve">Cargador de vehículo eléctrico</option>
-    <option value="cargador_ve_lento">Cargador de vehículo eléctrico de carga lenta (horas de sol)</option>
-    <option value="generador_fv">Instalación fotovoltaica de la comunidad (kWh generados al mes)</option></select></label>
-   <label class="f-sim">Consumo mensual (kWh)<input class="f-simkwh" type="number" min="1" step="1"></label>
-  </div>
-  <p>El contrato (tarifa, potencias, autoconsumo…), la curva de carga, el maxímetro y la reactiva llegan de <b>Datadis</b>
-   con tu cuenta (el titular tiene que haberla autorizado). La ubicación no está en Datadis: sin ella, su rayo se coloca
-   cerca del centro de la comunidad. Con email y contraseña, el socio puede entrar a ver su panel.</p>
-  <div class="al-ctrl"><button class="al-b al-guardar">Guardar cambios</button><button class="al-b sec al-cancelar">Cancelar</button></div>
  </section>
  <section class="al-caja al-consola">
   <div class="al-con-cab"><h3>Actividad</h3><span class="al-chip al-con-estado">listo</span>
@@ -12071,7 +12928,7 @@ PART_HTML = """<div class="al">
 </div>"""
 
 PART_JS = ALTA_JS + r"""
-var P = { edita: null, filas: [], sel: {} };
+var P = { filas: [] };
 // Icono de la pestaña Consumos (contador electrico, VL_SVG.contador de la barra de navegacion)
 var ICO_CONTADOR = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">' +
   '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
@@ -12100,8 +12957,10 @@ self.onInit = function () {
   }
   function ocupado(si) {
     [].forEach.call(c.querySelectorAll('button'), function (b) { if (!b.classList.contains('al-con-limpiar')) b.disabled = si; });
+    P.ocupado = si;
     q('al-syparar').disabled = !(si && P.job);      // Detener: solo con una sincronizacion en marcha
-    if (si) estado('trabajando…', 'trab'); else contar();
+    q('al-recalc').disabled = si || !P.pend;        // Recalcular: despues de actualizar
+    if (si) estado('trabajando…', 'trab');
   }
   function log(lineas) { (lineas || '').split('\n').forEach(function (l) { apunta(l, 'err'); }); }
   q('al-con-limpiar').onclick = function () { q('al-con-lineas').innerHTML = ''; estado('listo'); };
@@ -12109,10 +12968,8 @@ self.onInit = function () {
   function lista() {
     return api('GET', '/socios').then(function (filas) {
       P.filas = filas;
-      var hay = {}; filas.forEach(function (f) { hay[f.id] = 1; });
-      Object.keys(P.sel).forEach(function (id) { if (!hay[id]) delete P.sel[id]; });
-      if (!filas.length) { q('al-tabla').innerHTML = '<p>Todavía no hay socios.</p>'; contar(); return; }
-      q('al-tabla').innerHTML = '<table><tr><th class="sel"><input type="checkbox" class="al-todos" title="Seleccionar todos"></th>' +
+      if (!filas.length) { q('al-tabla').innerHTML = '<p>Todavía no hay socios.</p>'; return; }
+      q('al-tabla').innerHTML = '<table><tr><th class="ck" title="Bloqueado: el socio no puede entrar en su panel">B</th>' +
         '<th>Socio</th><th>CUPS</th><th>Datos</th><th title="CSV descargados de datadis.es: consumos, potencias máximas, reactiva y contrato">Cargar CSV</th></tr>' +
         filas.map(function (f) {
           var datos = f.lecturas ? fecha(f.datos_desde) + ' – ' + fecha(f.datos_hasta) + '<br><small>' + f.lecturas.toLocaleString('es-ES') + ' lecturas</small>'
@@ -12133,24 +12990,24 @@ self.onInit = function () {
               }).join('') + '</span>';
           return '<tr class="fila' + (f.deshabilitado ? ' off' : '') + '" data-f="' + esc(f.id) + '"' +
             (f.deshabilitado ? ' title="Fuera de los totales de la comunidad"' : '') + '>' +
-            '<td class="sel"><input type="checkbox" data-sel="' + esc(f.id) + '"' + (P.sel[f.id] ? ' checked' : '') + '></td>' +
+            '<td class="ck"><input type="checkbox" data-bloq="' + esc(f.id) + '"' + (f.estado === 'suspendido' ? ' checked' : '') +
+              ' title="Bloqueado: no puede entrar en su panel"></td>' +
             '<td><b>' + esc(f.nombre) + '</b>' + (f.simulado ? ' <span class="al-chip sim" title="' + esc(SIMT[f.sim_tipo] || f.sim_tipo || '') +
               (f.sim_kwh_mes ? ' · ' + Number(f.sim_kwh_mes).toLocaleString('es-ES') + ' kWh/mes' : '') + '">simulado</span>' : '') +
               '<br><small>' + esc(f.id) + '</small></td>' +
             '<td>' + (f.cups ? esc(f.cups) : '–') + (sum ? '<br><small>' + sum + '</small>' : '') + '</td>' +
             '<td>' + datos + '</td><td>' + cargar + '</td></tr>';
         }).join('') + '</table>';
-      [].forEach.call(c.querySelectorAll('[data-sel]'), function (b) { b.onchange = function () {
-        if (b.checked) P.sel[b.dataset.sel] = 1; else delete P.sel[b.dataset.sel];
-        contar();
+      // Bloqueo del socio: no puede entrar en su panel (sus datos siguen contando en la comunidad)
+      [].forEach.call(c.querySelectorAll('[data-bloq]'), function (ck) { ck.onchange = function () {
+        var so = socio(ck.dataset.bloq), si = ck.checked;
+        if (!confirm(si ? '¿Bloquear a ' + so.nombre + '? No podrá entrar en su panel; sus datos siguen contando en la comunidad.'
+                        : '¿Desbloquear a ' + so.nombre + '? Podrá volver a entrar en su panel.')) { ck.checked = !si; return; }
+        ck.disabled = true;
+        api('PUT', '/socios/' + encodeURIComponent(so.id) + '/estado', { suspendido: si }).then(function () {
+          msg(so.nombre + (si ? ': bloqueado.' : ': desbloqueado.'), 'ok'); return lista();
+        }).catch(function (e) { ck.checked = !si; ck.disabled = false; msg(e.message, 'err'); });
       }; });
-      q('al-todos').onchange = function () {
-        var si = q('al-todos').checked;
-        P.filas.forEach(function (f) { if (si) P.sel[f.id] = 1; else delete P.sel[f.id]; });
-        [].forEach.call(c.querySelectorAll('[data-sel]'), function (b) { b.checked = si; });
-        contar();
-      };
-      contar();
       [].forEach.call(c.querySelectorAll('[data-csv]'), function (b) { b.onclick = function () { cargarCsv(socio(b.dataset.socio), b.dataset.csv); }; });
     }).catch(function (e) { msg('No se pudieron leer los socios: ' + e.message, 'err'); });
   }
@@ -12195,10 +13052,12 @@ self.onInit = function () {
   }
   function socio(id) { return P.filas.filter(function (f) { return f.id === id; })[0] || { id: id, nombre: id }; }
   // Totales de la comunidad: el boton se resalta si hay cambios sin recalcular
-  function pendiente(si) { q('al-recalc').classList.toggle('pend', !!si); }
+  // Se habilita tras actualizar datos (P.tras) o si la comunidad no suma lo que hay
+  function pendiente(si) { P.pend = !!si || !!P.tras; q('al-recalc').classList.toggle('pend', P.pend); q('al-recalc').disabled = !P.pend || !!P.ocupado; }
   function leerPendiente() { api('GET', '/comunidad/pendiente').then(function (j) { pendiente(j.pendiente); }, function () {}); }
   q('al-recalc').onclick = function () {
     msg('Recalculando los totales de la comunidad con los socios habilitados…');
+    P.pend = P.tras = false;
     tarea(api('POST', '/sync', { origen: 'comunidad' }).catch(function (e) {
       if (e.detail && e.detail.job_id) { apunta('Hay una sincronización en curso: sus totales incluirán los cambios. Esperando…'); return e.detail; }
       throw e;
@@ -12211,10 +13070,6 @@ self.onInit = function () {
 
   // Sincronizacion de un socio y su progreso: de Datadis, todo el historico la primera vez y
   // despues desde el ultimo dia guardado (o los dos ultimos años simulados)
-  function cargar(so) {
-    msg('Cargando los datos de ' + so.nombre + '…' + (so.lecturas ? '' : ' (primera carga: todo el histórico de Datadis, puede tardar varios minutos)'));
-    return api('POST', '/sync', { origen: 'auto', socios: [so.id] }).then(function (j) { return seguir(j.job_id, so); });
-  }
   function seguir(id, so) {
     var visto = 0;
     estado('trabajando…', 'trab');
@@ -12228,17 +13083,18 @@ self.onInit = function () {
           q('al-barra').firstChild.style.width = (j.total ? Math.round(100 * j.hechos / j.total) : (activo ? 5 : 100)) + '%';
           if (activo) return setTimeout(paso, 2000);
           P.job = null; q('al-syparar').disabled = true; syncEstado();
+          if (!/totales/.test(so.nombre)) P.pend = P.tras = true;
           if (j.estado !== 'error') setTimeout(function () { window.dispatchEvent(new CustomEvent('vatiaco-datos')); }, 0);
           msg('Terminada la carga de ' + so.nombre + ': ' + ({ ok: 'correcta', con_errores: 'con errores (mira los mensajes)', error: 'error' }[j.estado] || j.estado) +
-              (/totales/.test(so.nombre) ? '.' : '. Pulsa Recalcular totales si cambia el total de la comunidad.'), j.estado === 'ok' ? 'ok' : 'err');
+              (/totales/.test(so.nombre) ? '.' : '. Pulsa Recalcular totales para poner al día la comunidad.'), j.estado === 'ok' ? 'ok' : 'err');
           ok();
         }).catch(function (e) { P.job = null; mal(e); });
       })();
     });
   }
 
-  // Sincronizacion con Datadis: la diaria automatica y a mano, de los socios seleccionados (o de
-  // todos si no hay seleccion); progreso en la barra y registro en Actividad
+  // Sincronizacion con Datadis: la diaria automatica y a mano (Actualizar desde Datadis); progreso
+  // en la barra y registro en Actividad
   function fechaHora(s) {
     if (!s) return '–';
     var d = new Date(s), p = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -12251,8 +13107,6 @@ self.onInit = function () {
                        : '<b>— sin cuenta de Datadis</b> (ponla en la pestaña <i>Gestor</i>; mientras, solo se cargan los socios simulados)') +
         ' · próxima: ' + fechaHora(s.proxima_sync) +
         (s.ultima_sync ? ' · última: ' + fechaHora(s.ultima_sync.fin || s.ultima_sync.inicio || s.ultima_sync.creado) : '');
-      var m = s.meses_por_defecto || [];
-      if (m[0] && !q('al-sydesde').value) { q('al-sydesde').value = m[0].replace('/', '-'); q('al-syhasta').value = m[1].replace('/', '-'); }
       var u = s.ultima_sync;
       if (u && (u.estado === 'pendiente' || u.estado === 'en_curso') && !P.job) {
         msg('Hay una sincronización en curso: se sigue aquí.');
@@ -12260,195 +13114,30 @@ self.onInit = function () {
       }
     }).catch(function (e) { q('al-sync-estado').textContent = 'No se pudo consultar la sincronización: ' + e.message; });
   }
-  function aQuien() {
-    var n = seleccionados().length;
-    return n ? n + (n === 1 ? ' socio seleccionado' : ' socios seleccionados') : 'todos los socios';
-  }
-  function sincronizar(cuerpo, texto) {
-    var s = seleccionados(), quien = aQuien();
-    if (s.length) cuerpo.socios = s.map(function (f) { return f.id; });
-    msg(texto + ' (' + quien + ')…');
-    tarea(api('POST', '/sync', cuerpo).catch(function (e) {
-      if (e.detail && e.detail.job_id) { apunta('Ya hay una sincronización en curso: se sigue esa.'); return e.detail; }
-      throw e;
-    }).then(function (j) { return seguir(j.job_id, { nombre: quien }); }));
-  }
-  q('al-sya').onclick = function () { sincronizar({ origen: 'auto' }, 'Sincronizando con Datadis'); };
-  q('al-syrango').onclick = function () {
-    var d = q('al-sydesde').value, h = q('al-syhasta').value;
-    if (!d || !h || d > h) { msg('Elige un rango de meses válido.', 'err'); return; }
-    sincronizar({ origen: 'datadis', desde: d.replace('-', '/'), hasta: h.replace('-', '/'), forzar: q('al-syforzar').checked },
-                'Recargando de Datadis de ' + d + ' a ' + h);
-  };
   q('al-syparar').onclick = function () {
     if (!P.job || !confirm('¿Detener la sincronización en curso? Se para al terminar el paso que está haciendo; lo ya cargado se conserva.')) return;
     q('al-syparar').disabled = true;
     api('POST', '/sync/' + P.job + '/detener').then(function () { apunta('Deteniendo: se para al terminar el paso en curso.'); })
       .catch(function (e) { q('al-syparar').disabled = false; msg(e.message, 'err'); });
   };
-
-  // Acciones en bloque sobre los socios seleccionados
-  function seleccionados() { return P.filas.filter(function (f) { return P.sel[f.id]; }); }
-  function contar() {
-    var n = seleccionados().length;
-    q('al-nsel').textContent = n + (n === 1 ? ' seleccionado' : ' seleccionados');
-    ['al-bcargar', 'al-beditar', 'al-bquitar'].forEach(function (k) { q(k).disabled = !n; });
-    var t = q('al-todos'); if (t) { t.checked = n > 0 && n === P.filas.length; t.indeterminate = n > 0 && n < P.filas.length; }
-  }
-  function nombres(s) { return s.map(function (f) { return f.nombre; }).join(', '); }
-  // Uno detras de otro: cada socio su mensaje; un error no para el resto
-  function enSerie(s, que, f) {
-    var err = 0;
-    return s.reduce(function (p, so, i) {
-      return p.then(function () {
-        apunta(que + ' ' + (i + 1) + ' de ' + s.length + ': ' + so.nombre + '…');
-        return f(so).catch(function (e) { err++; apunta(so.nombre + ': ' + e.message, 'err'); });
-      });
-    }, Promise.resolve()).then(function () { return err; });
-  }
-  q('al-bquitar').onclick = function () { P.sel = {}; lista(); };
-  q('al-bcargar').onclick = function () {
-    var s = seleccionados(); if (!s.length) return;
-    var primeras = s.filter(function (f) { return !f.lecturas && !f.simulado; }).length;
-    msg('Cargando los datos de ' + s.length + ' socios: ' + nombres(s) +
-        (primeras ? ' (' + primeras + ' con primera carga: todo el histórico de Datadis, puede tardar varios minutos)' : ''));
-    tarea(api('POST', '/sync', { origen: 'auto', socios: s.map(function (f) { return f.id; }) })
-      .then(function (j) { return seguir(j.job_id, { nombre: s.length + ' socios' }); }));
-  };
-  function cerrarBloque() { q('al-bform').classList.add('al-oculto'); }
-  q('al-beditar').onclick = function () {
-    var s = seleccionados(); if (!s.length) return;
-    if (s.length === 1) { editar(s[0]); return; }   // uno: su ficha completa (nombre, usuario, CUPS...)
-    form(null);
-    q('b-desh').value = '';
-    q('al-btitulo').textContent = 'Editar ' + s.length + ' socios: ' + nombres(s);
-    q('al-bform').classList.remove('al-oculto');
-    q('al-bform').scrollIntoView({ behavior: 'smooth' });
-  };
-  q('al-bcancelar').onclick = cerrarBloque;
-  q('al-bguardar').onclick = function () {
-    var s = seleccionados(), des = q('b-desh').value, totales = false;
-    if (!s.length) return;
-    if (!des) { msg('Elige qué cambiar en los socios seleccionados.', 'err'); return; }
-    cerrarBloque();
-    msg('Editando ' + s.length + ' socios…');
-    tarea(enSerie(s, 'Editando', function (so) {
-      var pasos = Promise.resolve(), hecho = [];
-      if (des && !!so.deshabilitado !== (des === 'si')) {
-        totales = true;
-        pasos = pasos.then(function () { return api('PUT', '/socios/' + encodeURIComponent(so.id) + '/deshabilitado', { deshabilitado: des === 'si' }); });
-        hecho.push(des === 'si' ? 'fuera de los totales' : 'cuenta en los totales');
-      }
-      return pasos.then(function () { apunta(so.nombre + ': ' + (hecho.join(', ') || 'sin cambios'), hecho.length ? 'ok' : ''); });
-    }).then(function (err) {
-      msg('Edición terminada: ' + (s.length - err) + ' de ' + s.length + ' socios' + (err ? ', ' + err + ' con errores.' : '.'), err ? 'err' : 'ok');
-      if (!totales) return;
-      msg('Recalculando los totales de la comunidad…');
-      return api('POST', '/sync', { origen: 'comunidad' }).then(function (j) { return seguir(j.job_id, { nombre: 'los totales de la comunidad' }); });
-    }));
-  };
-
-  function form(f) {
-    P.edita = f || null;
-    q('al-form').classList.toggle('al-oculto', !f);
-    q('al-titulo').textContent = f ? 'Editar ' + f.nombre : 'Editar socio';
-    ['nombre', 'email', 'telefono', 'cups', 'lat', 'lon'].forEach(function (k) { q('f-' + k).value = f && f[k] != null ? f[k] : ''; });
-    q('f-password').value = ''; q('f-password').placeholder = f ? 'vacía = no cambia' : '';
-    q('f-simulado').checked = !!(f && f.simulado);
-    q('f-simtipo').value = (f && f.sim_tipo) || 'residencial';
-    q('f-simkwh').value = f && f.sim_kwh_mes ? f.sim_kwh_mes : SIMKWH[q('f-simtipo').value];
-    verSim();
-  }
-  // CSV de socios
-  var COLS = ['id', 'nombre', 'email', 'password', 'telefono', 'estado', 'deshabilitado', 'cups', 'nif', 'lat', 'lon',
-              'simulado', 'sim_tipo', 'sim_kwh_mes'];
-  q('al-exp').onclick = function () {
-    CSV.descargar('socios_' + CSV.hoy() + '.csv', CSV.generar(COLS, P.filas));
-    msg(P.filas.length + ' socios exportados (sin contraseñas).', 'ok');
-  };
-  q('al-imp').onclick = function () {
-    CSV.elegir().then(function (r) {
-      var filas = r.filas.filter(function (f) { return f.nombre || f.id; });
-      if (!filas.length) { msg(r.nombre + ': sin filas (la primera línea es la cabecera: ' + COLS.join(';') + ').', 'err'); return; }
-      var buscar = function (f) { return P.filas.filter(function (x) {
-        return f.id ? x.id === f.id : x.nombre.toLowerCase() === String(f.nombre).toLowerCase(); })[0]; };
-      var nuevos = filas.filter(function (f) { return !buscar(f); }).length;
-      if (!confirm(r.nombre + ': ' + nuevos + ' socios nuevos y ' + (filas.length - nuevos) + ' que se actualizan. ¿Continuar?')) return;
-      ocupado(true);
-      var tocados = [];
-      return CSV.procesar(filas, function (f) {
-        var x = buscar(f), sim = CSV.si(f.simulado);
-        var v = { nombre: f.nombre || (x && x.nombre), email: 'email' in f ? f.email : (x && x.email), password: f.password || '',
-                  telefono: 'telefono' in f ? f.telefono : (x && x.telefono), cups: 'cups' in f ? f.cups : (x && x.cups),
-                  nif: f.nif, lat: CSV.num(f.lat), lon: CSV.num(f.lon), simulado: 'simulado' in f ? sim : !!(x && x.simulado),
-                  sim_tipo: f.sim_tipo || (x && x.sim_tipo) || 'residencial', sim_kwh_mes: CSV.num(f.sim_kwh_mes) || (x && x.sim_kwh_mes) };
-        var p = x ? api('PUT', '/socios/' + encodeURIComponent(x.id), v) : api('POST', '/socios', v);
-        return p.then(function (n) {
-          tocados.push(n.id);
-          var q2 = Promise.resolve();
-          if (f.estado && ['activo', 'suspendido'].indexOf(f.estado) >= 0 && f.estado !== n.estado && n.email)
-            q2 = q2.then(function () { return api('PUT', '/socios/' + encodeURIComponent(n.id) + '/estado', { suspendido: f.estado === 'suspendido' }); });
-          if ('deshabilitado' in f && f.deshabilitado !== '' && CSV.si(f.deshabilitado) !== !!n.deshabilitado)
-            q2 = q2.then(function () { return api('PUT', '/socios/' + encodeURIComponent(n.id) + '/deshabilitado', { deshabilitado: CSV.si(f.deshabilitado) }); });
-          return q2;
-        });
-      }, function (i, n, f) { msg('Importando ' + i + ' de ' + n + ': ' + (f.nombre || f.id) + '… (actualizando ThingsBoard)'); }).then(function (res) {
-        ocupado(false);
-        log(res.errores.join('\n'));
-        msg(r.nombre + ': ' + res.ok + ' filas importadas' + (res.errores.length ? ', ' + res.errores.length + ' con errores (abajo).' : '.'),
-            res.errores.length ? 'err' : 'ok');
-        if (!tocados.length) return lista();
-        return lista().then(function () {
-          return api('POST', '/sync', { origen: 'auto', socios: tocados })
-            .then(function (j) { return seguir(j.job_id, { nombre: tocados.length + ' socios importados' }); });
-        }).then(lista);
-      });
-    }).catch(function (e) { ocupado(false); msg(e.message, 'err'); });
-  };
-
-  function verSim() { [].forEach.call(c.querySelectorAll('.f-sim'), function (l) { l.classList.toggle('al-oculto', !q('f-simulado').checked); }); }
-  q('f-simulado').onchange = verSim;
-  q('f-simtipo').onchange = function () { q('f-simkwh').value = SIMKWH[q('f-simtipo').value]; };
-  function editar(f) { cerrarBloque(); form(f); q('al-form').scrollIntoView({ behavior: 'smooth' }); }
-  q('al-cancelar').onclick = function () { form(null); };
-  q('al-guardar').onclick = function () {
-    var v = {}; ['nombre', 'email', 'password', 'telefono', 'cups', 'lat', 'lon'].forEach(function (k) { v[k] = q('f-' + k).value.trim(); });
-    v.simulado = q('f-simulado').checked;
-    if (v.simulado) { v.sim_tipo = q('f-simtipo').value; v.sim_kwh_mes = q('f-simkwh').value; }
-    if (!P.edita) return;
-    if (!v.cups && !v.simulado) { msg('Pon el CUPS del suministro (o marca Datos simulados).', 'err'); return; }
-    if (v.email && !v.password && (!P.edita || v.email.toLowerCase() !== (P.edita.email || ''))) {
-      msg('Con email nuevo (usuario para ver su panel) pon también su contraseña.', 'err'); return; }
-    var so = P.edita, cambia = (v.cups || '') !== (so.cups || '') || v.simulado !== !!so.simulado ||
-      (v.simulado && (v.sim_tipo !== so.sim_tipo || Number(v.sim_kwh_mes) !== Number(so.sim_kwh_mes)));
-    msg('Guardando ' + so.nombre + '…');
-    return tarea(api('PUT', '/socios/' + encodeURIComponent(so.id), v).then(function (n) {
-      form(null);
-      if (cambia) return cargar(n);
-      msg(so.nombre + ': cambios guardados.', 'ok');
-    }));
-  };
-  // Socios desde Datadis: CUPS con autorizacion vigente a la cuenta del gestor que aun no son
-  // socios; despues se cargan sus datos
+  // Actualizar desde Datadis: las autorizaciones de la cuenta del gestor y despues los datos de
+  // todos los socios, de cada tipo desde el ultimo dia en ThingsBoard (sin datos, desde el primero
+  // que guarda Datadis) hasta el ultimo disponible en Datadis
   q('al-datadis').onclick = function () {
     msg('Consultando las autorizaciones de Datadis… (puede tardar un par de minutos)');
-    ocupado(true);
-    api('POST', '/datadis/autorizaciones').then(function (d) {
-      ocupado(false);
+    tarea(api('POST', '/datadis/autorizaciones').then(function (d) {
       log(d.errores.join('\n'));
-      if (!d.nuevos.length) {
-        msg('Autorizaciones de Datadis al día' + (d.sin_asignar ? ': ' + d.sin_asignar + ' suministros pendientes de asignar a una comunidad ' +
-            '(pestaña Suministros autorizados, columna Comunidad).' : '.') + (d.sin_vigencia ? ' ' + d.sin_vigencia + ' han perdido la autorización.' : ''), 'ok');
-        return lista();
-      }
-      msg(d.nuevos.length + ' socios nuevos desde Datadis: cargando todo su histórico (puede tardar varios minutos)…', 'ok');
-      return lista().then(function () {
-        return api('POST', '/sync', { origen: 'auto', socios: d.nuevos })
-          .then(function (j) { return seguir(j.job_id, { nombre: d.nuevos.length + ' socios de Datadis' }); });
-      }).then(lista);
-    }).catch(function (e) { ocupado(false); msg(e.message, 'err'); });
+      apunta('Autorizaciones de Datadis al día' + (d.nuevos.length ? ': ' + d.nuevos.length + ' socios nuevos' : '') +
+             (d.sin_asignar ? '; ' + d.sin_asignar + ' suministros pendientes de asignar a una comunidad (pestaña Suministros autorizados)' : '') +
+             (d.sin_vigencia ? '; ' + d.sin_vigencia + ' han perdido la autorización' : '') + '.', 'ok');
+    }, function (e) { apunta('Autorizaciones de Datadis: ' + e.message, 'err'); }).then(function () {
+      msg('Descargando de Datadis los datos de todos los socios, desde el último día en ThingsBoard hasta el último disponible…');
+      return api('POST', '/sync', { origen: 'auto' }).catch(function (e) {
+        if (e.detail && e.detail.job_id) { apunta('Ya hay una sincronización en curso: se sigue esa.'); return e.detail; }
+        throw e;
+      });
+    }).then(function (j) { return seguir(j.job_id, { nombre: 'todos los socios' }); }));
   };
-  form(null);
   lista();
   leerPendiente();
   syncEstado();
@@ -12577,6 +13266,22 @@ INFS_HTML = """<div class="al"><section class="al-caja">
   <p class="i-msg">PDF con los mismos gráficos que el panel (reparto por periodos, periodos anteriores, consumo apilado,
    potencias máximas) y el contrato; Excel y CSV con los datos diarios. El de la comunidad solo lleva los totales del
    conjunto de sus socios, sin los datos de ninguno de ellos.</p>
+  <h3>Resúmenes mensuales</h3>
+  <div class="al-ctrl"><label>Resumen <select class="i-rtipo">
+     <option value="energia">Consumos, excedentes y costes en solitario</option>
+     <option value="comunidad">Consumos, excedentes y costes en comunidad</option>
+     <option value="potencia">Potencias contratadas, máximas demandadas y sus costes</option>
+     <option value="reactiva">Energía reactiva y sus costes</option>
+     <option value="factura">Factura de electricidad (con alquiler del contador e impuestos)</option></select></label></div>
+  <div class="al-ctrl"><label>Desde <input type="month" class="i-rdesde"></label><label>Hasta <input type="month" class="i-rhasta"></label>
+   <button class="al-b i-rdesc">Descargar PDF</button></div>
+  <p class="i-rmsg i-msg">Informe técnico de cada mes con tus datos y, como referencia, los totales de la comunidad (sin los datos de
+   ningún otro socio): tablas, gráficos, normativa, método de cálculo y referencias bibliográficas. Por defecto, los últimos 12 meses.</p>
+  <h3>Justificación de los coeficientes de reparto</h3>
+  <div class="al-ctrl"><label>Año de los coeficientes variables <input type="number" class="i-janio" min="2000" max="2100"></label>
+   <button class="al-b i-jdesc">Descargar PDF</button></div>
+  <p class="i-jmsg i-msg">Normativa, algoritmos y resultados de los coeficientes de reparto de la comunidad, con tu coeficiente y el
+   resto de la comunidad sumado (sin los datos de ningún otro socio).</p>
 </section></div>"""
 INFS_CSS = ALTA_CSS + """
 .al label { display: inline-flex; gap: 6px; align-items: center; color: #555; }
@@ -12595,7 +13300,37 @@ self.onInit = function () {
   var hoy = new Date(), fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);   // mes anterior
   q('i-desde').value = iso(new Date(fin.getFullYear(), fin.getMonth(), 1));
   q('i-hasta').value = iso(fin);
-  function msg(t, err) { var m = q('i-msg'); m.textContent = t; m.classList.toggle('err', !!err); }
+  function msg(t, err, cl) { var m = q(cl || 'i-msg'); m.textContent = t; m.classList.toggle('err', !!err); }
+  // Descarga de un PDF de la API con el nombre que da el servidor
+  function bajar(ruta, b, cl) {
+    b.disabled = true;
+    fetch(API + ruta, { headers: { 'X-Authorization': 'Bearer ' + (localStorage.getItem('jwt_token') || '') } }).then(function (r) {
+      if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(j.detail || 'HTTP ' + r.status); });
+      var n = (r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+      return r.blob().then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = n ? n[1] : 'informe.pdf';
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+        msg('Descargado ' + a.download, false, cl);
+      });
+    }).catch(function (e) { msg(e.message, true, cl); }).then(function () { b.disabled = false; });
+  }
+  var mes = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+  q('i-rhasta').value = mes(fin);
+  q('i-rdesde').value = mes(new Date(fin.getFullYear(), fin.getMonth() - 11, 1));
+  q('i-rdesc').onclick = function () {
+    var d = q('i-rdesde').value, h = q('i-rhasta').value;
+    if (!d || !h || d > h) { msg('Elige un rango de meses válido.', true, 'i-rmsg'); return; }
+    msg('Calculando y generando el resumen… (puede tardar un minuto)', false, 'i-rmsg');
+    bajar('/informes/mio/' + encodeURIComponent(sid) + '/resumen/' + q('i-rtipo').value + '?desde=' + d + '-01&hasta=' + h + '-01',
+          q('i-rdesc'), 'i-rmsg');
+  };
+  q('i-janio').value = new Date().getFullYear() + 1;
+  q('i-jdesc').onclick = function () {
+    msg('Calculando los coeficientes y generando el informe… (puede tardar un minuto)', false, 'i-jmsg');
+    bajar('/informes/mio/' + encodeURIComponent(sid) + '/coeficientes?anio=' + encodeURIComponent(q('i-janio').value), q('i-jdesc'), 'i-jmsg');
+  };
   q('i-desc').onclick = function () {
     var b = q('i-desc'), fmt = q('i-fmt').value;
     var ruta = '/informes/mio/' + encodeURIComponent(sid) + (q('i-ambito').value === 'comunidad' ? '/comunidad' : '') +
@@ -12709,24 +13444,23 @@ AYUDA = {
     "barra pasan a ser las de la seleccionada."]]],
   ["Socios y sincronización", "manage_accounts", [
    ["¿Cómo doy de alta o edito socios?",
-    "Lo normal es asignarlos desde <i>Suministros autorizados</i>. En <i>Socios</i> puedes además <i>Exportar CSV</i>, "
-    "cambiarlo e <i>Importar CSV</i>: crea los nuevos y actualiza los que ya existen (por <code>id</code> o por "
-    "<code>nombre</code>). Con email y contraseña, el socio puede entrar a ver su panel."],
+    "Se asignan desde <i>Suministros autorizados</i>: cada suministro que te autorizan en Datadis pasa a ser socio de la "
+    "comunidad que elijas. Su ficha (contacto, ubicación) se edita en <i>Datos del socio</i>, al entrar en su panel."],
    ["¿Cuándo se actualizan los datos?",
-    "Cada día se sincroniza con Datadis automáticamente. En <i>Socios</i>, <i>Actualizar ahora</i> lo hace al momento y "
-    "<i>Recargar rango</i> vuelve a descargar los meses elegidos (<i>Forzar</i> repite también las consultas de las "
-    "últimas 24 horas). Con socios seleccionados, solo esos. <i>Detener</i> para la sincronización en curso. El progreso "
-    "sale en <i>Actividad</i>."],
+    "Cada día se sincroniza con Datadis automáticamente. En <i>Socios</i>, <i>Actualizar desde Datadis</i> lo hace al "
+    "momento: pone al día las autorizaciones y descarga, de cada socio y tipo de dato, desde el último día que hay en "
+    "ThingsBoard (sin datos, desde el primero que guarda Datadis) hasta el último disponible en Datadis. Al terminar se "
+    "habilita <i>Recalcular totales</i>. <i>Detener</i> para la sincronización en curso. El progreso sale en <i>Actividad</i>."],
    ["¿Cómo saco a un socio de los totales de la comunidad?",
-    "Selecciónalo en <i>Socios</i>, pulsa <i>Editar</i> y elige <i>Fuera de los totales</i>; después pulsa <i>Recalcular "
-    "totales</i>. Se ve en gris en la tabla y en el mapa."],
+    "Un socio cuenta en los totales mientras está en la comunidad; para sacarlo, quítale la comunidad en "
+    "<i>Suministros autorizados</i> y pulsa <i>Recalcular totales</i> en <i>Socios</i>."],
    ["¿De dónde se cargan los datos de un socio?",
-    "De la API de Datadis, con tu cuenta, si el titular te ha autorizado (cada día y con <i>Actualizar ahora</i>), o de los "
+    "De la API de Datadis, con tu cuenta, si el titular te ha autorizado (cada día y con <i>Actualizar desde Datadis</i>), o de los "
     "CSV que el titular descarga de datadis.es: en <i>Socios</i>, columna <i>Cargar CSV</i>, cada socio tiene un botón por "
     "fichero (<i>Consumos</i>, <i>Potencias</i>, <i>Reactiva</i> y <i>Contrato</i>). Se cargan de uno en uno y en cualquier "
     "orden; se comprueba que cada fichero es de ese tipo y del CUPS del socio, y después se publica en el panel."],
    ["¿Cómo bloqueo el acceso de un socio a su panel?",
-    "Marca su casilla <b>B</b> en <i>Suministros autorizados</i>. Sus datos siguen contando en la comunidad."]]],
+    "Marca su casilla <b>B</b> en <i>Socios</i> (o en <i>Suministros autorizados</i>). Sus datos siguen contando en la comunidad."]]],
   ["Consumos y mapa", "show_chart", [
    ["¿Qué muestra el gráfico?",
     "Arriba eliges la comunidad o un socio. <i>Consumos y excedentes</i> muestra la energía por periodos tarifarios "
@@ -12771,6 +13505,12 @@ AYUDA = {
     "pulsa <i>Descargar PDF</i>. El informe recoge el marco normativo (coeficientes fijos del anexo I del RD 244/2019 y "
     "variables por hora de la Orden TED/1247/2021), los datos y los algoritmos de optimización utilizados, y compara con "
     "gráficos y tablas los coeficientes actuales, los fijos óptimos y los variables. Sirve de anexo al acuerdo de reparto."],
+   ["¿Qué son los resúmenes mensuales?",
+    "En <i>Informes</i> → <i>Resúmenes mensuales por socio</i> elige el resumen (consumos y costes en solitario o en "
+    "comunidad, potencias, reactiva o factura) y los meses. Es un informe técnico (ISO 7144) con la comunidad y cada socio "
+    "mes a mes, la normativa y el método de cálculo (los mismos que las pestañas del panel) y las referencias "
+    "bibliográficas (ISO 690). Usa los precios de la comunidad. Cada socio puede descargar los suyos en su panel, sin los "
+    "datos de los demás."],
    ["¿Cómo hago una copia de seguridad?",
     "En <i>Base de datos</i>, <i>Hacer copia</i>. Además, cada día a las 03:00 se hace una copia automática, que se "
     "guarda 7 días. Puedes descargar las copias y subirlas después."],
@@ -12838,7 +13578,12 @@ AYUDA = {
   ["Informes", "description", [
    ["¿Cómo descargo un informe?",
     "En <i>Informes</i> elige si es de tus datos o del conjunto de la comunidad, las fechas (por defecto, el mes "
-    "anterior) y el formato: PDF con los gráficos y el contrato, o Excel y CSV con los datos diarios."]]],
+    "anterior) y el formato: PDF con los gráficos y el contrato, o Excel y CSV con los datos diarios."],
+   ["¿Qué son los resúmenes mensuales y la justificación de los coeficientes?",
+    "En <i>Informes</i>, <i>Resúmenes mensuales</i> da, mes a mes, tus consumos y excedentes y sus costes (en solitario o "
+    "en comunidad), tus potencias, tu reactiva o tu factura estimada, con los totales de la comunidad como referencia, la "
+    "normativa y las referencias bibliográficas. <i>Justificación de los coeficientes de reparto</i> explica cómo se "
+    "calculan los coeficientes y muestra el tuyo frente al resto de la comunidad sumado. Nunca llevan datos de otros socios."]]],
   ["Mis datos", "badge", [
    ["¿Qué datos puedo cambiar?",
     "Tu contraseña, teléfono, NIF, dirección, tipo y la ubicación de tu suministro. El CUPS y el contrato vienen de "
@@ -13513,6 +14258,18 @@ ADMIN_HTML = """<div class="ad">
     <button class="ad-b ad-desc">Descargar</button>
    </div>
    <div class="ad-msg ad-imsg">PDF con los mismos gráficos que el panel (reparto por periodos, periodos anteriores, consumo apilado, potencias máximas) y contrato; Excel y CSV con los datos diarios.</div>
+   <h3 class="ad-h3b">Resúmenes mensuales por socio</h3>
+   <div class="ad-ctrl"><label>Resumen <select class="ad-rtipo">
+     <option value="energia">Consumos, excedentes y costes en solitario</option>
+     <option value="comunidad">Consumos, excedentes y costes en comunidad</option>
+     <option value="potencia">Potencias contratadas, máximas demandadas y sus costes</option>
+     <option value="reactiva">Energía reactiva y sus costes</option>
+     <option value="factura">Factura de electricidad (con alquiler del contador e impuestos)</option></select></label>
+    <label>Desde <input type="month" class="ad-rdesde"></label><label>Hasta <input type="month" class="ad-rhasta"></label>
+    <button class="ad-b ad-rdesc">Descargar PDF</button></div>
+   <div class="ad-msg ad-rmsg">Informe técnico (ISO 7144) de cada mes: la comunidad y cada socio, con tablas, gráficos, la normativa y el
+    método de cálculo (los mismos que las pestañas Consumos, Potencias, Reactiva y Factura) y las referencias bibliográficas (ISO 690).
+    Usa los precios de la comunidad. Por defecto, los últimos 12 meses completos.</div>
    <h3 class="ad-h3b">Justificación de los coeficientes de reparto</h3>
    <div class="ad-ctrl"><label>Año de los coeficientes variables <input type="number" class="ad-janio" min="2000" max="2100"></label>
     <button class="ad-b ad-jdesc">Descargar PDF</button></div>
@@ -13952,6 +14709,25 @@ self.onInit = function () {
         msg('ad-jmsg', 'Descargado ' + a.download);
       });
     }).catch(function (e) { msg('ad-jmsg', e.message, true); }).then(function () { b.disabled = false; });
+  };
+  // Resumenes mensuales (PDF): por defecto los ultimos 12 meses completos
+  var mes = function (d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); };
+  q('ad-rhasta').value = mes(fin);
+  q('ad-rdesde').value = mes(new Date(fin.getFullYear(), fin.getMonth() - 11, 1));
+  q('ad-rdesc').onclick = function () {
+    var b = q('ad-rdesc'), d = q('ad-rdesde').value, h = q('ad-rhasta').value;
+    if (!d || !h || d > h) { msg('ad-rmsg', 'Elige un rango de meses válido.', true); return; }
+    b.disabled = true; msg('ad-rmsg', 'Calculando y generando el resumen… (puede tardar un minuto)');
+    api('GET', '/informes/resumen/' + q('ad-rtipo').value + '?desde=' + d + '-01&hasta=' + h + '-01', null, true).then(function (r) {
+      var n = (r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+      return r.blob().then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = n ? n[1] : 'resumen.pdf';
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+        msg('ad-rmsg', 'Descargado ' + a.download);
+      });
+    }).catch(function (e) { msg('ad-rmsg', e.message, true); }).then(function () { b.disabled = false; });
   };
   q('ad-desc').onclick = function () {
     var amb = q('ad-ambito').value, fmt = q('ad-fmt').value, b = q('ad-desc');
@@ -14679,7 +15455,7 @@ function lista() {
   var d = R.d;
   q('.rp-lista').innerHTML = d.socios.map(function (s, j) {
     return '<div class="rp-fila"><i style="background:' + color(j) + '"></i><span class="n" title="' + esc(s.nombre + ' · ' + s.cups) + '">' +
-      esc(s.nombre) + '</span><span class="p" data-p="' + j + '"></span><input type="range" min="0" max="100" step="0.1" data-j="' + j + '"' +
+      esc(s.nombre) + '</span><span class="p" data-p="' + j + '"></span><input type="range" min="0" max="100" step="0.0001" data-j="' + j + '"' +
       (R.edita && R.ver === 'manual' ? '' : ' disabled') + '></div>';
   }).join('');
   sincronizar();
@@ -14699,11 +15475,14 @@ function sincronizar(activo) {
   v.forEach(function (x, j) {
     s += x;
     var inp = q('.rp-lista input[data-j="' + j + '"]');
-    if (inp && inp !== activo) inp.value = (100 * x).toFixed(1);
-    q('.rp-lista [data-p="' + j + '"]').textContent = pc(100 * x, 2);
+    // Precision de las distribuidoras: coeficiente con 6 decimales (0,142857) = 4 decimales en %
+    if (inp && inp !== activo) inp.value = (100 * x).toFixed(4);
+    var et = q('.rp-lista [data-p="' + j + '"]');
+    et.textContent = pc(100 * x, 4);
+    et.title = 'Coeficiente ' + x.toFixed(6).replace('.', ',');
   });
   var ok = Math.abs(s - 1) < 1e-6, e = q('.rp-suma');
-  e.textContent = 'Suma: ' + pc(100 * s, 2); e.className = 'rp-suma ' + (ok ? 'ok' : 'no');
+  e.textContent = 'Suma: ' + pc(100 * s, 4) + ' (' + s.toFixed(6).replace('.', ',') + ')'; e.className = 'rp-suma ' + (ok ? 'ok' : 'no');
 }
 function repintar() {   // una vez por fotograma mientras se arrastra
   if (R.pend) return;
@@ -14740,7 +15519,7 @@ function grafico1() {
   var d = R.d, din = R.ver === 'dinamico', nombres = d.socios.map(function (s) { return s.nombre; });
   if (!R.g1) R.g1 = echarts.init(q('.rp-g1'));
   q('.rp-t1').textContent = din ? 'Reparto medio de la generación por hora del día' : 'Coeficiente de cada socio';
-  var fmt = function (v) { return v == null ? '–' : (+v).toLocaleString('es-ES', { maximumFractionDigits: 2 }) + ' %'; };
+  var fmt = function (v) { return v == null ? '–' : (+v).toLocaleString('es-ES', { maximumFractionDigits: 4 }) + ' %'; };
   var op = { animation: false, grid: { left: 48, right: 12, top: 14, bottom: din ? 56 : 70 }, legend: { show: false },
              tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true, valueFormatter: fmt },
              yAxis: { type: 'value', max: din ? 100 : null, axisLabel: { formatter: '{value} %', fontSize: 11 } } };
@@ -14754,9 +15533,9 @@ function grafico1() {
     op.xAxis = { type: 'category', data: nombres, axisLabel: { fontSize: 11, interval: 0, rotate: nombres.length > 6 ? 30 : 0,
       formatter: function (v) { return v.length > 14 ? v.slice(0, 13) + '…' : v; } } };
     op.series = [{ name: R.ver === 'manual' ? 'Manual' : 'Óptimo', type: 'bar', barMaxWidth: 40,
-                   data: d.socios.map(function (s, j) { return { value: +(100 * beta(R.ver, j, 0)).toFixed(3), itemStyle: { color: color(j) } }; }) },
+                   data: d.socios.map(function (s, j) { return { value: +(100 * beta(R.ver, j, 0)).toFixed(4), itemStyle: { color: color(j) } }; }) },
                  { name: otro === 'manual' ? 'Manual' : 'Óptimo', type: 'scatter', symbol: 'rect', symbolSize: [26, 3],
-                   itemStyle: { color: '#333' }, data: d.socios.map(function (s, j) { return +(100 * beta(otro, j, 0)).toFixed(3); }) }];
+                   itemStyle: { color: '#333' }, data: d.socios.map(function (s, j) { return +(100 * beta(otro, j, 0)).toFixed(4); }) }];
   }
   R.g1.setOption(op, true);
 }
@@ -15366,7 +16145,7 @@ function archivo() {
 # ninguna (gobernanza, tecnica, reparto, economica, tramites, participacion, rgpd): sus datos
 # siguen en la base (el libro de socios lo rellena la ficha de cada socio)
 AREAS_GESTION = []
-GESTION_DASH_VERSION = 20         # sube este numero para regenerar los paneles de gestion
+GESTION_DASH_VERSION = 22         # sube este numero para regenerar los paneles de gestion
 
 
 def nav_gestion():
@@ -15434,7 +16213,7 @@ def gestion_paneles():
                 "Coeficientes de reparto: fijos manuales, fijos óptimos y dinámicos, con sus gráficos y ficheros",
                 [w_nav("coeficientes", 0, 0, 24, 1), w_reparto(True, 0, 1, 24, 20)], False, "coeficientes")
     panel_admin("Gestión · Informes", "Informes de la comunidad y de cada socio (PDF, Excel y CSV)",
-                [w_nav("informes", 0, 0, 24, 1), w_admin(0, 1, 24, 6, "informes", "Informes")], False, "informes")
+                [w_nav("informes", 0, 0, 24, 1), w_admin(0, 1, 24, 9, "informes", "Informes")], False, "informes")
     panel_admin("Gestión · Base de datos", "Copias de seguridad de PostgreSQL: hacer, subir, descargar y restaurar",
                 [w_nav("bd", 0, 0, 24, 1), w_basedatos(0, 1, 24, 14)], False, "bd")
     panel_admin("Gestión · Centro de ayuda", "Ayuda sobre las opciones del panel de gestión",
@@ -15503,7 +16282,7 @@ def cec_config(title):
                    ("socio_factura", w_vista(elegido, "factura", "Factura", 0, 1, 24, 15)),
                    ("socio_reparto", con_imprimir(w_reparto_socio(elegido, 0, 1, 24, 14))),
                    ("socio_mapa", con_imprimir(w_mapa(elegido, 0, 1, 24, 12))),
-                   ("socio_informes", w_informes_socio(elegido, 0, 1, 24, 8)), ("socio_datos", w_ficha(elegido, 0, 1, 24, 8)),
+                   ("socio_informes", w_informes_socio(elegido, 0, 1, 24, 11)), ("socio_datos", w_ficha(elegido, 0, 1, 24, 8)),
                    ("socio_ayuda", w_ayuda("socio", 0, 1, 24, 12))):
         add(st, w_socio_nav(0, 0, 24, 1))
         add(st, wd)
