@@ -1,2 +1,0 @@
-cups;distribuidora;comercializadora;tarifaAcceso;tensionConexion;potenciaContratadakW;modoControlPotencia;discriminacionHoraria;fechaInicioVigencia;fechaFinVigencia;provincia;municipio;codigoPostal;potenciaTotalGenerada;tipoAutoconsumo;seccion;subseccion;coeficienteReparto;cau;potenciaMaximaInstalacion
-"ES0031999900000002LW0F";EDISTRIBUCIÓN;"-";"ALTA TENSION 1 kV <= TENSION < 30 kV (6.1TD)";"Alta tensión";"650;650;650;650;650;800";MAXIMETRO;"TARIFA DE SEIS PERIODOS";"2021/06/01";;Granada;GUADIX;"18500";;;;;;;"1000.0"

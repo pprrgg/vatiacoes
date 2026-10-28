@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de ficheros de Datadis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:var(--cyan);}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+  code, .mono{font-family:var(--font-mono);}
+  code.inline{background:var(--panel2); border:1px solid var(--line); padding:1px 5px; font-size:12px; color:var(--amber);}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+
+  section{display:none; padding:72px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:860px;}
+  section .lede{color:var(--text-dim); max-width:780px; font-size:15px; margin-bottom:32px;}
+  section .lede b{color:var(--text);}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:14px; margin-bottom:8px;}
+  .comp-card p, .comp-card li{font-size:12.5px; color:var(--text-dim);}
+  .comp-card ul{padding-left:18px;}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:26px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .note{font-size:11.5px; color:var(--text-dimmer); margin-top:10px; border-left:2px solid var(--line); padding-left:10px; max-width:880px;}
+  .callout{max-width:880px; margin:18px 0; padding:14px 18px; border:1px dashed var(--amber); background:rgba(255,176,32,0.05); font-size:13px; color:var(--text-dim);}
+  .callout b{color:var(--amber);}
+
+  /* ---------- controles ---------- */
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:8px 9px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px;}
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  input[type=range]{width:100%; accent-color:var(--amber);}
+  .btn{font-family:var(--font-mono); font-size:12px; padding:9px 16px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s;}
+  .btn:hover{background:var(--amber); color:#0A121C;}
+  .btn.primary{background:var(--amber); color:#0A121C;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);} .btn.ghost:hover{border-color:var(--text-dim); color:var(--text); background:transparent;}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  .seg button{font-family:var(--font-mono); font-size:11.5px; padding:7px 12px; border:0; background:transparent; color:var(--text-dim); cursor:pointer;}
+  .seg button.on{background:var(--amber); color:#0A121C;}
+
+  /* ---------- simulador ---------- */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:14px 0;}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--panel2); border:1px solid var(--line); padding:14px; text-align:center;}
+  .kpi .v{font-family:var(--font-mono); font-size:19px; color:var(--amber);}
+  .kpi .l{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .kpi.good{border-color:var(--green);} .kpi.good .v{color:var(--green);}
+  .chart{width:100%; background:var(--panel2); border:1px solid var(--line); padding:8px 6px 4px;}
+  .chart svg{width:100%; height:auto; display:block;}
+  .chart-tit{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; margin:0 0 6px 4px;}
+  .chart-leg{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11.5px; color:var(--text-dim); margin:8px 4px 2px;}
+  .chart-leg i{display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px;}
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 8px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:7px 8px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table td.n{text-align:right; font-family:var(--font-mono);}
+  table.data-table input, table.data-table select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:6px 7px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; width:100%;}
+  table.data-table input.mal{border-color:var(--red);}
+  .tabla-scroll{overflow-x:auto;}
+
+  /* ---------- fichero ---------- */
+  pre.fichero{background:#05090F; border:1px solid var(--line); padding:14px 16px; font-family:var(--font-mono); font-size:12px; color:#CFE3F5; max-height:340px; overflow:auto; white-space:pre;}
+  .estado-ok{font-family:var(--font-mono); font-size:12px; color:var(--green);}
+  .estado-mal{font-family:var(--font-mono); font-size:12px; color:var(--red);}
+
+  details.detalle{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px; max-width:880px;}
+  details.detalle summary{cursor:pointer; padding:12px 16px; font-size:13.5px; list-style:none; color:var(--text);}
+  details.detalle summary::-webkit-details-marker{display:none;}
+  details.detalle summary::before{content:'▸'; color:var(--amber); margin-right:8px;}
+  details.detalle[open] summary::before{content:'▾';}
+  details.detalle .d-body{padding:0 16px 14px 34px; font-size:13px; color:var(--text-dim);}
+
+  footer{padding:44px 56px; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; opacity:0; transition:all .25s ease; z-index:200; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:44px 16px;}
+    .card{padding:16px;}
+  }
+  /* ---------- generador de Datadis ---------- */
+  .barras svg{width:100%; height:auto; display:block; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none;}
+  .barras rect.bar:hover{fill-opacity:.8;}
+  .ayuda-barras{font-size:11.5px; color:var(--text-dimmer); margin:2px 0 8px;}
+  .chk{display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--text-dim); margin:4px 0 12px; cursor:pointer;}
+  .chk input{accent-color:var(--amber);}
+  .seg-tipo{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .seg-tipo label{flex:1; min-width:220px; border:1px solid var(--line); background:var(--panel2); padding:12px 14px; cursor:pointer; font-size:12.5px; color:var(--text-dim);}
+  .seg-tipo label b{display:block; color:var(--text); font-size:14px; margin-bottom:2px;}
+  .seg-tipo input{display:none;}
+  .seg-tipo label:has(input:checked){border-color:var(--amber); background:rgba(255,176,32,0.06);}
+  .pot-row{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px;}
+  @media(max-width:700px){.pot-row{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  .aviso{font-size:12.5px; padding:10px 14px; border-left:3px solid var(--amber); background:rgba(255,176,32,0.05); color:var(--text-dim); margin:8px 0;}
+  .aviso.mal{border-left-color:var(--red); background:rgba(220,38,38,0.07);}
+  .aviso.ok{border-left-color:var(--green); background:rgba(22,163,74,0.06);}
+  .ficha{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:6px 0 4px;}
+  @media(max-width:900px){.ficha{grid-template-columns:repeat(2,1fr);}}
+  .ficha div{border:1px solid var(--line-soft); background:var(--panel2); padding:9px 12px; font-size:11px; color:var(--text-dimmer);}
+  .ficha b{display:block; font-family:var(--font-mono); font-size:13px; color:var(--text); font-weight:500; margin-bottom:2px;}
+  .tip{position:fixed; z-index:150; pointer-events:none; background:#05090F; border:1px solid var(--line); padding:8px 10px; font-family:var(--font-mono); font-size:11.5px; color:var(--text); white-space:nowrap; display:none; box-shadow:0 4px 18px rgba(0,0,0,.4);}
+  .tip i{display:inline-block; width:9px; height:9px; margin-right:6px; border-radius:2px;}
+  .tip .t{color:var(--text-dim); margin-bottom:4px;}
+  table.data-table td.exc{color:#e66767; font-weight:600;}
+  .lista-fich{list-style:none; margin:6px 0 0;}
+  .lista-fich li{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:12.5px; color:var(--text-dim);}
+  .lista-fich code{font-family:var(--font-mono); color:var(--text); font-size:12px; word-break:break-all;}
+  .lista-fich span{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer);}
+  .prog{height:4px; background:var(--line-soft); margin-top:12px; overflow:hidden;}
+  .prog i{display:block; height:100%; width:0; background:var(--amber); transition:width .2s;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap">
+    <div class="tabbar-brand">GENERADOR DATADIS</div>
+    <nav class="tabbar" id="sidenav">
+      <a href="#suministro" data-sec="suministro"><span class="tag">00</span>Suministro y peaje</a>
+      <a href="#perfil" data-sec="perfil"><span class="tag">01</span>Perfil de consumo o generación</a>
+      <a href="#vista" data-sec="vista"><span class="tag">02</span>Vista previa</a>
+      <a href="#descarga" data-sec="descarga"><span class="tag">03</span>Descargar ZIP</a>
+      <a href="#normativa" data-sec="normativa"><span class="tag">04</span>Normativa y formato</a>
+    </nav>
+  </div>
+
+  <main>
+
+    <!-- 00 · SUMINISTRO -->
+    <section id="suministro">
+      <div class="eyebrow kicker">00 · Suministro y peaje</div>
+      <h2>Los ficheros que descargarías de Datadis, para un suministro inventado.</h2>
+      <p class="lede">Elige el CUPS, el peaje y las potencias contratadas. En las secciones siguientes defines cómo consume o genera, y al final descargas un <b>.zip</b> con los CSV de la descarga web de Datadis: <b>Consumo</b> (curva de carga), <b>Potencias</b> (maxímetro), <b>Contrato</b> y <b>Energía</b> (reactiva), con su formato y para el periodo que elijas.</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0; padding-top:0; border-top:0;">Suministro</div>
+        <div class="grid4">
+          <div class="field"><label>CUPS (20 o 22 caracteres)</label><input type="text" id="cups" maxlength="22" placeholder="ES0031999900000001AB0F"></div>
+          <div class="field"><label>Distribuidora</label><select id="distrib">
+            <option value="0031">e-distribución (ES0031)</option><option value="0021">i-DE (ES0021)</option><option value="0022">UFD (ES0022)</option></select></div>
+          <div class="field" style="display:flex; align-items:flex-end;"><button class="btn" type="button" id="btnCups" style="width:100%;">Generar CUPS ficticio</button></div>
+          <div class="field"><label>Comercializadora</label><input type="text" id="comerc" value="-"></div>
+          <div class="field"><label>Provincia</label><input type="text" id="provincia" value="Granada"></div>
+          <div class="field"><label>Municipio</label><input type="text" id="municipio" value="GRANADA"></div>
+          <div class="field"><label>Código postal</label><input type="text" id="cp" value="18010" maxlength="5"></div>
+          <div class="field"><label>Inicio del contrato</label><input type="date" id="alta" value="2021-06-01"></div>
+        </div>
+        <div id="cupsEstado"></div>
+
+        <div class="fieldset-title">Periodo de los datos</div>
+        <div class="grid4">
+          <div class="field"><label>Desde (día incluido)</label><input type="date" id="desde"></div>
+          <div class="field"><label>Hasta (día incluido)</label><input type="date" id="hasta"></div>
+          <div class="field" style="display:flex; align-items:flex-end;"><button class="btn ghost" type="button" id="btnDosAnios" style="width:100%;">Dos años hasta ayer</button></div>
+          <div class="field"><label>Lecturas estimadas (% de días)</label><input type="number" id="estimadas" value="0.5" min="0" max="20" step="0.1"></div>
+        </div>
+        <p class="note">Datadis da como máximo los últimos dos años (24 meses) desde la descarga. Los días con lectura estimada salen con <code class="inline">metodoObtencion</code> = Estimada.</p>
+
+        <div class="fieldset-title">Peaje y potencias contratadas</div>
+        <div class="grid4">
+          <div class="field"><label>Peaje de acceso</label><select id="peaje">
+            <option value="2.0TD">2.0TD · baja tensión, hasta 15 kW</option>
+            <option value="3.0TD">3.0TD · baja tensión, de 15 a 50 kW</option>
+            <option value="3.0TD+">3.0TD · baja tensión, más de 50 kW</option>
+            <option value="6.1TD">6.1TD · alta tensión, de 1 a 30 kV</option>
+            <option value="6.2TD">6.2TD · alta tensión, de 30 a 72,5 kV</option></select></div>
+          <div class="field"><label>Resolución de la curva de carga</label><select id="resol">
+            <option value="auto">Según el contador (normativa)</option><option value="60">Horaria</option><option value="15">Cuartohoraria</option></select></div>
+          <div class="field" style="display:flex; align-items:flex-end;"><button class="btn ghost" type="button" id="btnAjustarPot" style="width:100%;">Ajustar potencias a la demanda</button></div>
+          <div class="field"><label>Semilla aleatoria</label><input type="number" id="semilla" value="1" min="0" step="1"></div>
+        </div>
+        <div class="pot-row" id="potencias"></div>
+        <div class="ficha" id="fichaPeaje"></div>
+        <div id="avisosPeaje"></div>
+      </div>
+    </section>
+
+    <!-- 01 · PERFIL -->
+    <section id="perfil">
+      <div class="eyebrow kicker">01 · Perfil de consumo o generación</div>
+      <h2>Cómo consume (o genera) el suministro hora a hora y mes a mes.</h2>
+      <p class="lede">Parte de un perfil tipo y retócalo arrastrando las barras: la forma de un día <b>laborable</b>, la de un <b>fin de semana o festivo</b> y el peso de cada <b>mes</b>. El consumo medio diario escala el conjunto. Cada día y cada cuarto de hora añaden variaciones aleatorias, como en una curva real.</p>
+
+      <div class="seg-tipo">
+        <label><input type="radio" name="tipo" value="consumidor" checked><b>Consumidor</b>Vivienda, comercio, industria… con o sin autoconsumo fotovoltaico.</label>
+        <label><input type="radio" name="tipo" value="generador"><b>Generador</b>Instalación fotovoltaica de producción: vierte lo que genera y consume solo sus servicios auxiliares.</label>
+      </div>
+
+      <div class="card" id="cardConsumo">
+        <div class="grid4">
+          <div class="field"><label>Perfil tipo</label><select id="plantilla"></select></div>
+          <div class="field"><label>Consumo medio diario (kWh/día)</label><input type="number" id="kwhDia" value="9" min="0.1" step="0.1"></div>
+          <div class="field"><label>Variación entre días (%)</label><input type="number" id="varDia" value="15" min="0" max="60" step="1"></div>
+          <div class="field"><label>Variación cuartohoraria (%)</label><input type="number" id="varQ" value="20" min="0" max="80" step="1"></div>
+        </div>
+        <div class="grid2">
+          <div><div class="chart-tit">Día laborable (lunes a viernes) · peso de cada hora</div><div class="barras" id="edLab"></div></div>
+          <div><div class="chart-tit">Sábado, domingo y festivo nacional · peso de cada hora</div><div class="barras" id="edFes"></div></div>
+        </div>
+        <div class="chart-tit" style="margin-top:12px;">Peso de cada mes (1 = mes medio)</div>
+        <div class="barras" id="edMes"></div>
+        <p class="ayuda-barras">Arrastra sobre las barras para cambiarlas. Las formas diarias se normalizan: solo importa la proporción entre horas; el total lo da el consumo medio diario y el peso del mes.</p>
+      </div>
+
+      <div class="card" id="cardGenerador" style="display:none;">
+        <div class="grid4">
+          <div class="field"><label>Servicios auxiliares (kWh/día)</label><input type="number" id="auxDia" value="2" min="0" step="0.1"></div>
+        </div>
+        <p class="note">Consumo propio de la instalación (vigilancia, comunicaciones, inversores en espera): casi constante, algo mayor de noche. De día se cubre con la propia generación.</p>
+      </div>
+
+      <div class="fieldset-title">Generación fotovoltaica</div>
+      <div class="card">
+        <label class="chk" id="chkFvWrap"><input type="checkbox" id="conFv"> El consumidor tiene autoconsumo fotovoltaico</label>
+        <div class="grid4" id="fvCampos">
+          <div class="field"><label>Generación media diaria (kWh/día)</label><input type="number" id="genDia" value="12" min="0.1" step="0.1"></div>
+          <div class="field"><label>Modalidad (RD 244/2019)</label><select id="modalidad">
+            <option value="41">Con excedentes acogida a compensación (41)</option>
+            <option value="51">Con excedentes no acogida a compensación (51)</option>
+            <option value="31">Sin excedentes (31)</option></select></div>
+          <div class="field"><label>Potencia pico resultante</label><input type="text" id="kwpTxt" readonly></div>
+          <div class="field"><label>Potencia del inversor (kW)</label><input type="number" id="inversor" min="0.1" step="0.1" placeholder="auto"></div>
+        </div>
+        <p class="note">Curva de PVGIS (PVGIS-SARAH3, 2016-2023) en Granada: módulos a 35° orientados al sur, 14 % de pérdidas, unos 1.680 kWh por kWp al año. Cada día se multiplica por un factor de nubosidad con la variación real de los días de ese mes. La potencia pico sale de la generación media diaria que pidas.</p>
+      </div>
+
+      <div class="fieldset-title">Energía reactiva</div>
+      <div class="card">
+        <div class="grid4">
+          <div class="field"><label>Factor de potencia medio (cos φ)</label><input type="number" id="cosphi" value="0.93" min="0.6" max="1" step="0.01"></div>
+          <div class="field"><label>Reactiva capacitiva en vacío (kVAr)</label><input type="number" id="capKvar" value="0" min="0" step="0.5"></div>
+        </div>
+        <p class="note">La inductiva sale de la activa consumida con el cos φ (peor con poca carga). La capacitiva aparece cuando el consumo es bajo y queda conectada una batería de condensadores (kVAr); 0 = sin batería.</p>
+      </div>
+    </section>
+
+    <!-- 02 · VISTA PREVIA -->
+    <section id="vista">
+      <div class="eyebrow kicker">02 · Vista previa</div>
+      <h2>Lo que traerán los ficheros, antes de descargarlos.</h2>
+      <p class="lede">Resumen de los datos generados con lo que has elegido: la energía de cada mes repartida por periodos del peaje, una semana de la curva de carga y el maxímetro de cada mes frente a la potencia contratada.</p>
+      <div class="kpis" id="kpis"></div>
+      <div id="avisosDatos"></div>
+
+      <div class="fieldset-title">Energía consumida de la red por mes y periodo</div>
+      <div class="chart" id="chMes"></div>
+      <div class="chart-leg" id="legMes"></div>
+
+      <div class="fieldset-title">Una semana de la curva de carga</div>
+      <div class="btn-row" style="margin-bottom:8px;"><div class="field" style="margin:0; min-width:220px;"><select id="semana"></select></div></div>
+      <div class="chart" id="chSemana"></div>
+      <div class="chart-leg" id="legSemana"></div>
+
+      <div class="fieldset-title">Maxímetro mensual (kW) por periodo</div>
+      <p class="note" style="margin:0 0 10px;">En rojo, los meses en que la potencia demandada supera la contratada de ese periodo (excesos de potencia).</p>
+      <div class="tabla-scroll"><table class="data-table" id="tablaMax"></table></div>
+
+      <div class="fieldset-title">Reactiva inductiva mensual (kVArh) por periodo · fichero Energía</div>
+      <div class="tabla-scroll"><table class="data-table" id="tablaReac"></table></div>
+    </section>
+
+    <!-- 03 · DESCARGA -->
+    <section id="descarga">
+      <div class="eyebrow kicker">03 · Descargar ZIP</div>
+      <h2>Un .zip con los CSV, con el nombre y el formato de la descarga web.</h2>
+      <p class="lede">Los mismos ficheros que da <b>datadis.es</b> al descargar los datos de un suministro: punto y coma como separador, coma decimal, campos entre comillas, fechas <code class="inline">AAAA/MM/DD</code> y horas de fin de periodo (<code class="inline">01:00</code> a <code class="inline">24:00</code>).</p>
+      <div class="card">
+        <label class="chk"><input type="checkbox" id="conCurvaReac"> Incluir también la curva de reactiva del contador (<code class="inline">Reactiva_….csv</code>: inductiva y capacitiva de cada periodo; Datadis no la publica, la da la distribuidora)</label>
+        <label class="chk"><input type="checkbox" id="conLeeme" checked> Incluir <code class="inline">LEEME.txt</code> con los parámetros de la simulación</label>
+        <ul class="lista-fich" id="listaFich"></ul>
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn primary" type="button" id="btnZip">&#8681; Generar y descargar el .zip</button>
+          <span id="estadoZip"></span>
+        </div>
+        <div class="prog"><i id="progZip"></i></div>
+      </div>
+      <div class="callout"><b>Datos simulados.</b> Sirven para probar herramientas (la plataforma VatiaCo, las calculadoras de facturación y de optimización de potencia de este blog…) sin pedir datos reales a nadie. No son lecturas de ningún contador: usa un CUPS ficticio si los vas a compartir.</div>
+      <p class="note">En la plataforma VatiaCo se cargan desde la pestaña <i>Socios → Cargar CSV</i> (el de <i>Energía</i> es la reactiva). La plataforma reconoce cada fichero por sus columnas.</p>
+    </section>
+
+    <!-- 04 · NORMATIVA -->
+    <section id="normativa">
+      <div class="eyebrow kicker">04 · Normativa y formato</div>
+      <h2>Qué datos da Datadis de cada suministro, y cómo.</h2>
+      <div class="grid3">
+        <div class="comp-card"><h4>Contadores (RD 1110/2007)</h4><ul>
+          <li><b>Tipo 5</b>: hasta 15 kW. <b>Tipo 4</b>: de 15 a 50 kW. Curva <b>horaria</b>.</li>
+          <li><b>Tipo 3</b>: de 50 a 450 kW. <b>Tipo 2</b>: de 450 kW a 10 MW. <b>Tipo 1</b>: 10 MW o más. Curva <b>cuartohoraria</b>.</li>
+          <li>El maxímetro integra siempre la potencia en periodos de 15 minutos.</li></ul></div>
+        <div class="comp-card"><h4>Peajes (Circular 3/2020 de la CNMC)</h4><ul>
+          <li><b>2.0TD</b>: 3 periodos de energía (punta, llano y valle) y 2 de potencia (P1 punta y llano, P2 valle).</li>
+          <li><b>3.0TD, 6.1TD y 6.2TD</b>: 6 periodos de energía y de potencia; las potencias deben ser crecientes, P1 ≤ P2 ≤ … ≤ P6.</li>
+          <li>Fines de semana y festivos nacionales de fecha fija no sustituibles: todo el día en valle (P3 o P6).</li></ul></div>
+        <div class="comp-card"><h4>Temporadas (6 periodos, península)</h4><ul>
+          <li>Alta (enero, febrero, julio y diciembre): P1 y P2.</li><li>Media alta (marzo y noviembre): P2 y P3.</li>
+          <li>Media (junio, agosto y septiembre): P3 y P4.</li><li>Baja (abril, mayo y octubre): P4 y P5.</li>
+          <li>Punta de 9 a 14 h y de 18 a 22 h; el resto, de 8 a 24 h; de 0 a 8 h, P6.</li></ul></div>
+      </div>
+      <div class="fieldset-title">Los ficheros</div>
+      <div class="tabla-scroll"><table class="data-table">
+        <tr><th>Fichero</th><th>Columnas</th><th>Notas</th></tr>
+        <tr><td><code class="inline">Consumo_</code></td><td>cups; fecha; hora; consumo_kWh; metodoObtencion; energiaVertida_kWh; energiaGenerada_kWh; energiaAutoconsumida_kWh</td><td>Energía de cada hora o cuarto de hora; la hora es la de fin del periodo. Consumo = energía tomada de la red. Las tres últimas, solo con autoconsumo. El día del cambio de hora tiene 23 o 25 horas.</td></tr>
+        <tr><td><code class="inline">Potencias_</code></td><td>cups; fechaMaximo; hora; maximoPotenciaDemandadaKW; periodo</td><td>Máxima potencia cuartohoraria de cada mes y periodo, con el día y la hora en que se dio.</td></tr>
+        <tr><td><code class="inline">Contrato_</code></td><td>cups; distribuidora; …; potenciaContratadakW; …; tipoAutoconsumo; …; potenciaMaximaInstalacion</td><td>Las potencias contratadas separadas por punto y coma dentro de un mismo campo. Con autoconsumo, la potencia, la modalidad y el CAU.</td></tr>
+        <tr><td><code class="inline">Energia_</code></td><td>cups; fecha; energiaP1 … energiaP6</td><td>Reactiva inductiva de cada mes y periodo (kVArh). En 2.0TD no hay término de reactiva: el fichero solo trae la cabecera.</td></tr>
+      </table></div>
+      <details class="detalle" style="margin-top:18px;"><summary>¿Cómo se generan los datos?</summary><div class="d-body">Para cada día del periodo se toma la forma del día (laborable o festivo), el peso del mes y una variación aleatoria del día; dentro del día, cada cuarto de hora tiene además su propia variación. El conjunto se escala para que el consumo medio diario sea el que pides. La fotovoltaica sigue la curva media de PVGIS de cada hora y mes con un factor de nubosidad diario, y se escala a la generación media diaria. Con la misma semilla y los mismos datos sale siempre lo mismo.</div></details>
+      <details class="detalle"><summary>¿Por qué consumo y generación salen separados?</summary><div class="d-body">El contador mide los flujos en la frontera con la red: <b>consumo_kWh</b> es lo que entra de la red, <b>energiaVertida_kWh</b> lo que sale, <b>energiaGenerada_kWh</b> lo que produce la instalación y <b>energiaAutoconsumida_kWh</b> la parte de la generación que se consume en el mismo periodo.</div></details>
+      <details class="detalle"><summary>¿Los ficheros son idénticos a los de Datadis?</summary><div class="d-body">Tienen sus nombres, columnas y formato (campos entre comillas, coma decimal, horas de fin de periodo, días de 23 y 25 horas). Datadis a veces deja meses sin maxímetro o días sin curva; aquí todos los meses y días están completos.</div></details>
+    </section>
+
+    <footer>
+      Generador de ficheros simulados con el formato de la descarga web de Datadis: curva de carga horaria o cuartohoraria, maxímetro, contrato y reactiva, para peajes de hasta 50 kW y de más de 50 kW.
+    </footer>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="tip" id="tip"></div>
+
+<script>
+// ===================== NAVEGACION =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = 'suministro';
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+navLinks.forEach(l=>l.addEventListener('click', e=>{ e.preventDefault(); history.replaceState(null,'',l.getAttribute('href')); activarSeccion(l.dataset.sec); }));
+window.addEventListener('hashchange', ()=>activarSeccion(location.hash.replace('#','')));
+activarSeccion(location.hash.replace('#',''));
+
+function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2400); }
+const $ = id => document.getElementById(id);
+const fmt = (v,d=1) => (+v).toLocaleString('es-ES',{minimumFractionDigits:d, maximumFractionDigits:d});
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
+const num = id => +String($(id).value).replace(',','.') || 0;
+
+// ===================== DATOS FIJOS =====================
+// Periodos P1..P6 (paleta validada para fondo oscuro)
+const COL_P = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#9085e9'];
+const COL_CONS = '#E7ECF2', COL_GEN = '#FFB020';
+// Festivos nacionales de fecha fija no sustituibles (todo el dia en valle)
+const FESTIVOS = new Set(['1-1','5-1','8-15','10-12','11-1','12-6','12-8','12-25']);
+const TEMPORADA = [1,1,2,4,4,3,1,3,3,4,2,1];      // periodo de punta de cada mes (6 periodos)
+// Generacion de 1 kWp (kWh) de cada hora UTC de cada mes: PVGIS-SARAH3 2016-2023, Granada (37,18, -3,59), 35° sur, 14 % de perdidas
+const FV_PERFIL = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0.068, 0.372, 0.522, 0.593, 0.617, 0.597, 0.524, 0.417, 0.246, 0.002, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0.001, 0.194, 0.38, 0.516, 0.599, 0.632, 0.628, 0.556, 0.446, 0.287, 0.095, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0.05, 0.253, 0.419, 0.537, 0.623, 0.611, 0.596, 0.52, 0.42, 0.296, 0.127, 0.002, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0.01, 0.126, 0.303, 0.451, 0.553, 0.63, 0.631, 0.584, 0.521, 0.424, 0.28, 0.136, 0.015, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0.029, 0.158, 0.343, 0.501, 0.608, 0.662, 0.659, 0.625, 0.554, 0.452, 0.316, 0.154, 0.03, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0.037, 0.153, 0.334, 0.484, 0.598, 0.666, 0.688, 0.663, 0.596, 0.486, 0.346, 0.181, 0.042, 0.004, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0.033, 0.136, 0.324, 0.483, 0.596, 0.674, 0.699, 0.685, 0.625, 0.517, 0.369, 0.191, 0.042, 0.004, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0.016, 0.13, 0.323, 0.487, 0.605, 0.685, 0.705, 0.691, 0.615, 0.506, 0.357, 0.175, 0.028, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0.002, 0.126, 0.327, 0.492, 0.616, 0.681, 0.688, 0.662, 0.574, 0.451, 0.296, 0.113, 0.003, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0.083, 0.292, 0.453, 0.566, 0.607, 0.622, 0.595, 0.493, 0.376, 0.22, 0.03, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0.003, 0.238, 0.389, 0.513, 0.568, 0.58, 0.536, 0.432, 0.321, 0.159, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0.088, 0.375, 0.503, 0.581, 0.588, 0.556, 0.47, 0.354, 0.17, 0, 0, 0, 0, 0, 0, 0]
+];
+const FV_DIA_CV = [0.35,0.36,0.38,0.34,0.24,0.17,0.1,0.14,0.2,0.33,0.42,0.37];
+const FV_DIA_MAX = [1.43,1.46,1.49,1.41,1.25,1.15,1.1,1.13,1.2,1.44,1.5,1.49];
+const PEAJES = {
+  '2.0TD':  {n:2, tarifa:'BAJA TENSION y POTENCIA <= 15 kW', tension:'Baja tensión', disc:'TARIFA DE TRES PERIODOS', pmin:0, pmax:15, pot:[4.6,4.6]},
+  '3.0TD':  {n:6, tarifa:'BAJA TENSION y POTENCIA > 15 kW (3.0TD)', tension:'Baja tensión', disc:'TARIFA DE SEIS PERIODOS', pmin:15, pmax:50, pot:[20,20,20,20,20,25]},
+  '3.0TD+': {n:6, tarifa:'BAJA TENSION y POTENCIA > 15 kW (3.0TD)', tension:'Baja tensión', disc:'TARIFA DE SEIS PERIODOS', pmin:50, pmax:Infinity, pot:[80,80,80,80,80,100]},
+  '6.1TD':  {n:6, tarifa:'ALTA TENSION 1 kV <= TENSION < 30 kV (6.1TD)', tension:'Alta tensión', disc:'TARIFA DE SEIS PERIODOS', pmin:0, pmax:Infinity, pot:[300,300,300,300,300,400]},
+  '6.2TD':  {n:6, tarifa:'ALTA TENSION 30 kV <= TENSION < 72,5 kV (6.2TD)', tension:'Alta tensión', disc:'TARIFA DE SEIS PERIODOS', pmin:0, pmax:Infinity, pot:[1500,1500,1500,1500,1500,1800]}
+};
+const DISTRIB = {'0031':'EDISTRIBUCIÓN', '0021':'I-DE REDES ELÉCTRICAS INTELIGENTES', '0022':'UFD DISTRIBUCIÓN ELECTRICIDAD'};
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+// Perfiles tipo: forma de cada hora (laborable y festivo), peso de cada mes y consumo diario de partida
+const g = (h,c,a) => Math.exp(-((((h+.5)-c)/a)**2));
+const PLANTILLAS = {
+  vivienda:   {n:'Vivienda', kwh:9, peaje:'2.0TD',
+    lab:h=>.25+.7*g(h,8,1.3)+.4*g(h,14.5,1.5)+1.3*g(h,21.5,1.8), fes:h=>.28+.5*g(h,10,2)+.6*g(h,14.5,1.6)+1.2*g(h,21.5,2),
+    mes:[1.3,1.2,1,.85,.8,.95,1.15,1.1,.9,.85,1,1.3]},
+  teletrabajo:{n:'Vivienda con teletrabajo', kwh:11, peaje:'2.0TD',
+    lab:h=>.25+(h>=8&&h<19?.75:0)+.9*g(h,21,1.8), fes:h=>.28+.5*g(h,11,2.5)+.6*g(h,14.5,1.6)+1.1*g(h,21.5,2),
+    mes:[1.3,1.2,1,.85,.8,.95,1.15,1.1,.9,.85,1,1.3]},
+  comercio:   {n:'Comercio (9-14 y 17-21 h)', kwh:90, peaje:'3.0TD',
+    lab:h=>.15+((h>=9&&h<14)||(h>=17&&h<21)?1:0)+(h===8||h===21?.4:0), fes:h=>.15+(h>=9&&h<14?.6:0),
+    mes:[1.05,1,.95,.9,.95,1.1,1.25,1.15,1,.9,.9,1.1]},
+  oficina:    {n:'Oficina (8-18 h)', kwh:150, peaje:'3.0TD',
+    lab:h=>.12+(h>=8&&h<18?1:0)+(h===7||h===18?.4:0), fes:h=>.12,
+    mes:[1.1,1.05,.95,.85,.9,1.1,1.2,.8,1,.9,.95,1.1]},
+  hosteleria: {n:'Restaurante / hostelería', kwh:200, peaje:'3.0TD',
+    lab:h=>.3+.4*g(h,9,1.5)+1.1*g(h,14,1.8)+1.2*g(h,21.5,1.8), fes:h=>.3+.5*g(h,10,1.5)+1.4*g(h,14.5,2)+1.4*g(h,21.5,2),
+    mes:[.85,.85,.95,1,1,1.1,1.25,1.3,1.05,.95,.85,.95]},
+  ind1:       {n:'Industria a un turno (7-15 h)', kwh:900, peaje:'3.0TD+',
+    lab:h=>.15+(h>=7&&h<15?1:0)+(h===6||h===15?.3:0), fes:h=>.12,
+    mes:[1.05,1.05,1.05,1,1.05,1.05,1,.45,1.05,1.05,1.05,.95]},
+  ind2:       {n:'Industria a dos turnos (6-22 h)', kwh:4500, peaje:'6.1TD',
+    lab:h=>.2+(h>=6&&h<22?1:0)*(h===14?.7:1), fes:h=>.18,
+    mes:[1.05,1.05,1.05,1,1.05,1.05,1,.45,1.05,1.05,1.05,.95]},
+  ind3:       {n:'Industria continua (3 turnos)', kwh:12000, peaje:'6.1TD',
+    lab:h=>1-(h===6||h===14||h===22?.15:0), fes:h=>.7,
+    mes:[1,1,1,1,1,1,1,.8,1,1,1,1]},
+  colegio:    {n:'Colegio / edificio público', kwh:250, peaje:'3.0TD+',
+    lab:h=>.1+(h>=8&&h<17?1:0)*(h>=14?.6:1), fes:h=>.1,
+    mes:[1.35,1.3,1.1,1,.95,.85,.35,.2,.9,1,1.2,1.3]},
+  riego:      {n:'Riego o bombeo de día', kwh:300, peaje:'3.0TD+',
+    lab:h=>.02+(h>=9&&h<18?1:0), fes:h=>.02+(h>=9&&h<18?1:0),
+    mes:[.2,.3,.6,1,1.4,1.8,2.1,2,1.4,.7,.3,.2]},
+  riegoValle: {n:'Riego o bombeo en valle (0-8 h)', kwh:300, peaje:'3.0TD+',
+    lab:h=>.02+(h<8?1:0), fes:h=>.02+(h<8||h>=14?1:0),
+    mes:[.2,.3,.6,1,1.4,1.8,2.1,2,1.4,.7,.3,.2]},
+  recarga:    {n:'Recarga de vehículos eléctricos', kwh:120, peaje:'3.0TD',
+    lab:h=>.05+.5*g(h,9,1.5)+.6*g(h,13.5,2)+1*g(h,19.5,2)+.4*(h<6?1:0), fes:h=>.05+.9*g(h,13,3)+.5*g(h,19.5,2),
+    mes:[1,1,1,1,1,1,1.1,1.1,1,1,1,1]}
+};
+
+// ===================== ESTADO =====================
+const ST = { plant:'vivienda', lab:[], fes:[], mes:[] };
+function cargarPlantilla(k){
+  const p = PLANTILLAS[k]; ST.plant = k;
+  const nor = f => { const v = Array.from({length:24},(_,h)=>f(h)), m = Math.max(...v); return v.map(x=>+(x/m).toFixed(3)); };
+  ST.lab = nor(p.lab); ST.fes = nor(p.fes); ST.mes = p.mes.slice();
+}
+
+// ===================== CUPS =====================
+// 2 letras de control: los 16 digitos modulo 529 (cociente y resto entre 23)
+const LETRAS = 'TRWAGMYFPDXBNJZSQVHLCKE';
+function control(num16){ const r = Number(BigInt(num16) % 529n); return LETRAS[Math.floor(r/23)] + LETRAS[r%23]; }
+function cupsValido(c){
+  const m = /^ES(\d{16})([A-Z]{2})(\d[FPRCXYZ])?$/.exec(c);
+  return m ? (control(m[1])===m[2] ? 'ok' : 'control') : 'formato';
+}
+function cupsFicticio(){
+  const n = Math.floor(Math.random()*1e8).toString().padStart(8,'0');
+  const num = $('distrib').value + '9999' + n;          // (9999: numeros que no usa ninguna distribuidora)
+  $('cups').value = 'ES' + num + control(num) + '0F';
+  pintarCups(); recalcular();
+}
+function pintarCups(){
+  const c = $('cups').value.trim().toUpperCase(), r = cupsValido(c);
+  $('cups').value = c;
+  $('cupsEstado').innerHTML = !c ? '<div class="aviso mal">Falta el CUPS: escribe uno o genera uno ficticio.</div>' :
+    r==='ok' ? `<div class="aviso ok">CUPS válido${c.slice(6,10)==='9999' ? ' (ficticio)' : ''}: ES + 16 dígitos (distribuidora ${c.slice(2,6)}) + letras de control ${c.slice(18,20)}${c.length===22 ? ' + frontera ' + c.slice(20) : ''}.</div>` :
+    r==='control' ? `<div class="aviso mal">Las letras de control no corresponden a los 16 dígitos: deberían ser ${control(c.slice(2,18))}.</div>` :
+    '<div class="aviso mal">Formato no válido: ES, 16 dígitos, 2 letras de control y, opcionalmente, un dígito y una letra (0F).</div>';
+}
+
+// ===================== FECHAS Y HORA LOCAL =====================
+// Europe/Madrid: horario de verano del ultimo domingo de marzo al ultimo de octubre (cambio a la 01:00 UTC)
+function ultimoDomingo(y, m){ const d = new Date(Date.UTC(y, m+1, 0)); return d.getUTCDate() - d.getUTCDay(); }
+function offsetUTC(ms){
+  const y = new Date(ms).getUTCFullYear();
+  const ini = Date.UTC(y, 2, ultimoDomingo(y,2), 1), fin = Date.UTC(y, 9, ultimoDomingo(y,9), 1);
+  return ms >= ini && ms < fin ? 2 : 1;
+}
+const iso = d => d.toISOString().slice(0,10);
+const diaDe = s => { const [y,m,d] = s.split('-').map(Number); return {y, m:m-1, d}; };
+// Instante UTC (ms) de la medianoche local del dia (y, m, d)
+function medianoche(y, m, d){ const t = Date.UTC(y, m, d); return t - offsetUTC(t - 3600e3) * 3600e3; }
+
+// ===================== ALEATORIOS (reproducibles) =====================
+function mulberry(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function hash(s){ let h = 2166136261; for(const c of s){ h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h>>>0; }
+function gauss(R){ let u=0, v=0; while(!u) u=R(); while(!v) v=R(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+
+// ===================== PERIODOS DEL PEAJE =====================
+function valle(dia){ const wd = dia.wd; return wd===0 || wd===6 || FESTIVOS.has(`${dia.m+1}-${dia.d}`); }
+function periodo(dia, h, nP){
+  const v = valle(dia);
+  if(nP===2){ if(v || h<8) return 3; return (h>=10&&h<14)||(h>=18&&h<22) ? 1 : 2; }
+  if(v || h<8) return 6;
+  const p = TEMPORADA[dia.m];
+  return (h>=9&&h<14)||(h>=18&&h<22) ? p : p+1;
+}
+function contador(pmax){ return pmax<=15 ? 5 : pmax<=50 ? 4 : pmax<=450 ? 3 : pmax<10000 ? 2 : 1; }
+
+// ===================== POTENCIAS CONTRATADAS =====================
+function pintarPotencias(conservar){
+  const P = PEAJES[$('peaje').value], ant = [...document.querySelectorAll('[data-pot]')].map(x=>x.value);
+  const n = P.n, vals = conservar && ant.length===n ? ant : P.pot.map(String);
+  const nombres = n===2 ? ['P1 punta y llano','P2 valle'] : ['P1','P2','P3','P4','P5','P6'];
+  $('potencias').innerHTML = vals.map((v,i)=>`<div class="field"><label>${nombres[i]} (kW)</label><input type="number" data-pot="${i}" value="${v}" min="0.1" step="0.1"></div>`).join('');
+  $('potencias').querySelectorAll('[data-pot]').forEach(el=>el.addEventListener('change', ()=>{ pintarPeaje(); recalcular(); }));
+}
+const potencias = () => [...document.querySelectorAll('[data-pot]')].map(x=>+String(x.value).replace(',','.')||0);
+function resolucion(){
+  const r = $('resol').value; if(r!=='auto') return +r;
+  return contador(Math.max(...potencias())) <= 3 ? 15 : 60;
+}
+function pintarPeaje(){
+  const k = $('peaje').value, P = PEAJES[k], pot = potencias(), pmax = Math.max(...pot), tc = contador(pmax), avisos = [];
+  $('fichaPeaje').innerHTML = `<div><b>${k.replace('+','')}</b>peaje de acceso</div><div><b>Tipo ${tc}</b>equipo de medida</div>
+    <div><b>${resolucion()===15?'Cuartohoraria':'Horaria'}</b>curva de carga</div><div><b>${pmax<=15?'ICP':'Maxímetro'}</b>control de potencia</div>`;
+  if(pmax > P.pmax) avisos.push(`Con ${fmt(pmax,1)} kW se pasa del límite del peaje (${P.pmax} kW).`);
+  if(k==='3.0TD' && pmax <= 15) avisos.push('El 3.0TD es para más de 15 kW en algún periodo: con 15 kW o menos corresponde el 2.0TD.');
+  if(k==='3.0TD+' && pmax <= 50) avisos.push('Para más de 50 kW, alguna potencia debe superar los 50 kW (si no, es un 3.0TD de hasta 50 kW).');
+  if(P.n===6 && pot.some((p,i)=>i && p < pot[i-1])) avisos.push('En los peajes de 6 periodos cada potencia debe ser igual o mayor que la anterior (P1 ≤ P2 ≤ … ≤ P6).');
+  if(pot.some(p=>p<=0)) avisos.push('Todas las potencias deben ser mayores que 0.');
+  if($('resol').value!=='auto' && resolucion()!==(tc<=3?15:60)) avisos.push(`Un contador tipo ${tc} da en Datadis la curva ${tc<=3?'cuartohoraria':'horaria'}; has elegido otra resolución.`);
+  $('avisosPeaje').innerHTML = avisos.map(a=>`<div class="aviso mal">${a}</div>`).join('');
+}
+
+// ===================== EDITOR DE BARRAS =====================
+// Valores que se cambian arrastrando (raton o dedo); el eje se mantiene mientras se arrastra.
+// o: {color, max, paso, etiquetas, cada, titulo, unidad, W, H, alSoltar}
+function editorBarras(cont, vals, o){
+  const n = vals.length, W=o.W||480, H=o.H||140, L=30, R=6, T=8, B=20, bw=(W-L-R)/n, max=o.max, y=v=>T+(H-T-B)*(1-v/max);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.titulo)}">`;
+  [0, max/2, max].forEach(v=>{ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-5}" y="${y(v)+3}" fill="#5B7086" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${fmt(v, max<5?1:0)}</text>`; });
+  for(let i=0; i<n; i++){
+    s += `<rect class="bar" x="${L+i*bw+1}" width="${bw-2}" y="${y(0)}" height="0" rx="2" fill="${o.color}"><title></title></rect>`;
+    if(i % (o.cada||1) === 0) s += `<text x="${L+i*bw+bw/2}" y="${H-6}" fill="#5B7086" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${o.etiquetas(i)}</text>`;
+  }
+  cont.innerHTML = s + '</svg>';
+  const svg = cont.firstChild, bars = svg.querySelectorAll('rect.bar');
+  const poner = i=>{ const v = Math.min(vals[i], max);
+    bars[i].setAttribute('y', y(v)); bars[i].setAttribute('height', Math.max(0, y(0)-y(v)));
+    bars[i].firstChild.textContent = `${o.titulo2 ? o.titulo2(i) : o.etiquetas(i)}: ${fmt(vals[i],2)}${o.unidad||''}`; };
+  vals.forEach((_,i)=>poner(i));
+  let ult = null;
+  const mover = e=>{
+    const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)*W/r.width, py = (e.clientY-r.top)*H/r.height;
+    const i = Math.max(0, Math.min(n-1, Math.floor((px-L)/bw)));
+    const v = +(Math.round(Math.max(0, Math.min(max, max*(1-(py-T)/(H-T-B))))/o.paso)*o.paso).toFixed(3);
+    const a = ult==null ? i : ult;      // (rellena las barras saltadas al mover deprisa)
+    for(let k=Math.min(a,i); k<=Math.max(a,i); k++){ vals[k] = v; poner(k); }
+    ult = i;
+  };
+  svg.addEventListener('pointerdown', e=>{ e.preventDefault(); svg.setPointerCapture(e.pointerId); ult = null; mover(e); });
+  svg.addEventListener('pointermove', e=>{ if(svg.hasPointerCapture(e.pointerId)) mover(e); });
+  const fin = ()=>{ if(ult==null) return; ult = null; o.alSoltar(); };
+  svg.addEventListener('pointerup', fin); svg.addEventListener('pointercancel', fin);
+}
+function pintarEditores(){
+  const hora = i => `${i}h`, dia = {color:'#37CFFF', max:1, paso:.02, etiquetas:hora, cada:3, titulo2:i=>`${i}–${i+1} h`, alSoltar:()=>{ ST.plant=''; $('plantilla').value=''; recalcular(); }};
+  editorBarras($('edLab'), ST.lab, {...dia, titulo:'Forma del día laborable'});
+  editorBarras($('edFes'), ST.fes, {...dia, color:'#9085e9', titulo:'Forma del fin de semana y festivo'});
+  editorBarras($('edMes'), ST.mes, {color:'#16A34A', max:Math.max(2, 2*Math.ceil(Math.max(...ST.mes)*1.2/2)), paso:.05, etiquetas:i=>MESES[i], titulo:'Peso de cada mes',
+    W:960, H:130, alSoltar:()=>{ ST.plant=''; $('plantilla').value=''; pintarEditores(); recalcular(); }});
+}
+
+// ===================== SIMULACION =====================
+// Devuelve la serie cuartohoraria (kWh) de consumo de red, vertida, generada y autoconsumida,
+// y la reactiva (kVArh), con la fecha y la hora local de cada cuarto
+function simular(){
+  const d0 = $('desde').value, d1 = $('hasta').value;
+  if(!d0 || !d1 || d1 < d0) return null;
+  const gen = document.querySelector('[name=tipo]:checked').value === 'generador', conFv = gen || $('conFv').checked;
+  const kP = $('peaje').value, nP = PEAJES[kP].n === 2 ? 2 : 6, pot = potencias();
+  const R = mulberry(hash($('cups').value + '|' + $('semilla').value));
+  const varDia = num('varDia')/100, varQ = num('varQ')/100;
+  // dias
+  const dias = [];
+  for(let t = Date.UTC(...Object.values(diaDe(d0))); iso(new Date(t)) <= d1; t += 864e5){
+    const dt = new Date(t), dia = {y:dt.getUTCFullYear(), m:dt.getUTCMonth(), d:dt.getUTCDate(), wd:dt.getUTCDay()};
+    dia.ini = medianoche(dia.y, dia.m, dia.d);
+    const s = new Date(t + 864e5); dia.fin = medianoche(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate());
+    dia.nq = Math.round((dia.fin - dia.ini)/9e5);
+    dias.push(dia);
+  }
+  if(dias.length > 800) return {error:'El periodo no puede pasar de 800 días (Datadis da como máximo dos años).'};
+  const NQ = dias.reduce((a,d)=>a+d.nq, 0);
+  const dem = new Float64Array(NQ), fv = new Float64Array(NQ), hl = new Uint8Array(NQ), per = new Uint8Array(NQ), di = new Uint16Array(NQ);
+  const mesMedio = ST.mes.reduce((a,b)=>a+b,0)/12 || 1;
+  let k = 0, ar = 0, fd = 0, totDem = 0, totFv = 0;
+  dias.forEach((dia, j)=>{
+    fd = .6*fd + gauss(R)*varDia*.8;                                    // variacion del dia (correlada)
+    const forma = valle(dia) ? ST.fes : ST.lab, fmes = ST.mes[dia.m]/mesMedio, fdia = Math.max(.05, 1+fd);
+    const nubes = Math.min(FV_DIA_MAX[dia.m], Math.max(.05, 1 + gauss(R)*FV_DIA_CV[dia.m]));
+    const q0 = k; let suma = 0;
+    for(let q=0; q<dia.nq; q++, k++){
+      const t = dia.ini + q*9e5, lt = new Date(t + offsetUTC(t)*3600e3), h = lt.getUTCHours();
+      ar = .75*ar + gauss(R)*varQ*.66;                                  // variacion de cada cuarto (correlada)
+      const v = Math.max(0, (forma[h] || 0) * (1 + ar));
+      dem[k] = v; suma += forma[h] || 0;
+      hl[k] = h; per[k] = periodo(dia, h, nP); di[k] = j;
+      if(conFv){                                                        // generacion de 1 kWp: hora UTC con interpolacion
+        const u = new Date(t).getUTCHours() + new Date(t).getUTCMinutes()/60 + 7.5/60 - .5, i0 = Math.floor(u), f = u - i0;
+        const tab = FV_PERFIL[dia.m], a = tab[(i0+24)%24], b = tab[(i0+25)%24];
+        fv[k] = (a*(1-f) + b*f) / 4 * nubes * (nubes < .7 ? .8 + .4*R() : 1);
+      }
+    }
+    // energia del dia segun su forma, el mes y la variacion diaria
+    const e = fmes * fdia * dia.nq/96;
+    for(let q=q0; q<k; q++){ dem[q] = suma ? dem[q]/suma * e : 0; totDem += dem[q]; }
+  });
+  // escalas: consumo medio diario y generacion media diaria pedidos
+  const nd = dias.length;
+  let kwp = 0, inv = 0;
+  if(gen){
+    const aux = num('auxDia');
+    for(let q=0; q<NQ; q++) dem[q] = aux/96 * (hl[q]<7||hl[q]>=21 ? 1.25 : .8) * (1 + .1*gauss(R));
+    const s = dem.reduce((a,b)=>a+b,0); for(let q=0; q<NQ; q++) dem[q] = Math.max(0, dem[q]*aux*nd/(s||1));
+  } else {
+    const f = num('kwhDia')*nd/(totDem||1); for(let q=0; q<NQ; q++) dem[q] *= f;
+  }
+  if(conFv){
+    for(let q=0; q<NQ; q++) totFv += fv[q];
+    const obj = num('genDia')*nd;
+    kwp = obj/(totFv||1);
+    inv = num('inversor') || +(kwp*.85).toFixed(1);
+    for(let it=0; it<3; it++){                                          // con el recorte del inversor
+      let s = 0; for(let q=0; q<NQ; q++) s += Math.min(fv[q]*kwp, inv/4);
+      kwp *= obj/(s||1);
+    }
+    for(let q=0; q<NQ; q++) fv[q] = Math.min(fv[q]*kwp, inv/4);
+  }
+  // flujos en la frontera y reactiva
+  const sinExc = !gen && $('modalidad').value === '31';
+  const red = new Float64Array(NQ), vert = new Float64Array(NQ), auto = new Float64Array(NQ), genr = new Float64Array(NQ);
+  const r1 = new Float64Array(NQ), r4 = new Float64Array(NQ);
+  const cphi = Math.min(.999, Math.max(.6, num('cosphi'))), cap = num('capKvar'), pref = Math.max(...pot);
+  for(let q=0; q<NQ; q++){
+    const gq = sinExc ? Math.min(fv[q], dem[q]) : fv[q];
+    auto[q] = Math.min(gq, dem[q]); red[q] = dem[q] - auto[q]; vert[q] = gq - auto[q]; genr[q] = gq;
+    const carga = red[q]*4/(pref||1);
+    const c = Math.min(.999, Math.max(.5, cphi - .08*Math.max(0, .3-carga) + .015*gauss(R)));
+    r1[q] = red[q]*Math.tan(Math.acos(c));
+    if(cap && carga < .15){ r4[q] = cap/4 * (1-carga/.15); r1[q] *= .3; }
+  }
+  return {dias, NQ, red, vert, auto, genr, r1, r4, hl, per, di, kwp, inv, conFv, gen, nP, kP, pot};
+}
+
+// ===================== AGREGADOS =====================
+function agregar(S){
+  const meses = new Map();                         // 'AAAA/MM' -> {e:[6], r:[6], max:[{kw, dia, q}]}
+  let q = 0;
+  S.dias.forEach((dia, j)=>{
+    const clave = `${dia.y}/${String(dia.m+1).padStart(2,'0')}`;
+    if(!meses.has(clave)) meses.set(clave, {e:[0,0,0,0,0,0], r:[0,0,0,0,0,0], max:[], gen:0, vert:0});
+    const M = meses.get(clave);
+    for(let i=0; i<dia.nq; i++, q++){
+      const p = S.per[q]-1, kw = S.red[q]*4;
+      M.e[p] += S.red[q]; M.r[p] += S.r1[q]; M.gen += S.genr[q]; M.vert += S.vert[q];
+      if(!M.max[p] || kw > M.max[p].kw) M.max[p] = {kw, j, i};
+    }
+  });
+  return meses;
+}
+// Etiquetas de fin de periodo (01:00..24:00): en primavera falta la hora 03:00 y en otono se repite
+function etiquetas(nq, paso){
+  const ph = 60/paso, n = nq*15/paso, base = Array.from({length:24*ph}, (_,i)=>{ const m=(i+1)*paso; return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; });
+  if(n === 23*ph) return base.slice(0, 2*ph).concat(base.slice(3*ph));
+  if(n === 25*ph) return base.slice(0, 3*ph).concat(base.slice(2*ph, 3*ph), base.slice(3*ph));
+  return base;
+}
+const fdia = d => `${d.y}/${String(d.m+1).padStart(2,'0')}/${String(d.d).padStart(2,'0')}`;
+
+// ===================== VISTA PREVIA =====================
+let SIM = null, AGR = null;
+const tip = $('tip');
+function mostrarTip(e, html){ tip.innerHTML = html; tip.style.display = 'block';
+  const r = tip.getBoundingClientRect(); let x = e.clientX + 14, y = e.clientY + 14;
+  if(x + r.width > innerWidth - 8) x = e.clientX - r.width - 14; if(y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  tip.style.left = x+'px'; tip.style.top = y+'px'; }
+const ocultarTip = () => tip.style.display = 'none';
+function ejeMax(v){ const p = Math.pow(10, Math.floor(Math.log10(Math.max(v,1e-6)))); return [1,2,2.5,5,10].map(k=>k*p).find(k=>k>=v); }
+const nomP = (p, nP) => nP===2 ? ['P1 punta','P2 llano','P3 valle'][p] : 'P'+(p+1);
+
+function pintarVista(){
+  if(!SIM || SIM.error){ $('kpis').innerHTML=''; $('avisosDatos').innerHTML = `<div class="aviso mal">${SIM ? SIM.error : 'Elige un periodo de datos válido (sección 00).'}</div>`; return; }
+  const S = SIM, M = AGR, nd = S.dias.length, nPe = S.nP===2 ? 3 : 6;
+  const sum = a => a.reduce((x,y)=>x+y,0), anio = 365/nd;
+  const tRed = sum(S.red), tGen = sum(S.genr), tVert = sum(S.vert), tAuto = sum(S.auto), tR1 = sum(S.r1);
+  const pmx = Math.max(...S.red)*4, cphi = tRed ? tRed/Math.hypot(tRed, tR1) : 1;
+  $('kpis').innerHTML = `
+    <div class="kpi"><div class="v">${fmt(tRed*anio,0)} kWh</div><div class="l">consumo de la red al año (${fmt(tRed/nd,1)} kWh/día)</div></div>
+    <div class="kpi"><div class="v">${S.conFv ? fmt(tGen*anio,0)+' kWh' : '–'}</div><div class="l">${S.conFv ? `generación al año (FV de ${fmt(S.kwp,1)} kWp, inversor ${fmt(S.inv,1)} kW)` : 'sin generación'}</div></div>
+    <div class="kpi"><div class="v">${S.conFv ? fmt(tVert*anio,0)+' kWh' : '–'}</div><div class="l">${S.conFv ? `vertida al año · autoconsumida ${fmt(tAuto*anio,0)} kWh` : 'sin excedentes'}</div></div>
+    <div class="kpi"><div class="v">${fmt(pmx,1)} kW</div><div class="l">potencia máxima cuartohoraria · cos φ medio ${fmt(cphi,3)}</div></div>`;
+  // avisos de excesos de potencia
+  const exc = [];
+  M.forEach((m, mes)=> m.max.forEach((x,p)=>{ if(x && x.kw > potPer(S, p)) exc.push(mes); }));
+  $('avisosDatos').innerHTML = exc.length ? `<div class="aviso mal">La demanda supera la potencia contratada en ${new Set(exc).size} meses (excesos de potencia). Puedes subir las potencias o pulsar <i>Ajustar potencias a la demanda</i> en la sección 00.</div>` :
+    '<div class="aviso ok">La potencia demandada no supera la contratada en ningún mes.</div>';
+
+  // --- barras apiladas: energia de red por mes y periodo
+  const meses = [...M.keys()], W = 960, H = 250, L = 52, Rr = 8, T = 12, B = 26, bw = (W-L-Rr)/meses.length;
+  const tot = meses.map(k=>sum(M.get(k).e)), mx = ejeMax(Math.max(...tot, .001)*1.05), y = v => T + (H-T-B)*(1-v/mx);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Energía consumida de la red por mes y periodo">`;
+  for(let i=0; i<=4; i++){ const v = mx*i/4; s += `<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-6}" y="${y(v)+3}" fill="#5B7086" font-size="10" text-anchor="end" font-family="IBM Plex Mono">${fmt(v, mx<10?1:0)}</text>`; }
+  s += `<text x="${L}" y="${T-2}" fill="#5B7086" font-size="10" font-family="IBM Plex Mono">kWh</text>`;
+  meses.forEach((k,i)=>{
+    const m = M.get(k), x = L + i*bw + Math.max(1, bw*.12), w = Math.max(2, bw*.76);
+    let acc = 0; const segs = [];
+    for(let p=0; p<nPe; p++){ const v = m.e[p]; if(v <= 0) continue;
+      const y0 = y(acc), y1 = y(acc+v); segs.push([p, y1, y0]); acc += v; }
+    segs.forEach(([p,y1,y0], n)=>{ const top = n===segs.length-1, h = Math.max(0, y0-y1-(top?0:2));
+      s += top && h > 4 ? `<path d="M${x} ${y0} V${y1+4} Q${x} ${y1} ${x+4} ${y1} H${x+w-4} Q${x+w} ${y1} ${x+w} ${y1+4} V${y0} Z" fill="${COL_P[p]}"/>` : `<rect x="${x}" y="${y1+(top?0:2)}" width="${w}" height="${h}" fill="${COL_P[p]}"/>`; });
+    s += `<rect class="hit" data-mes="${k}" x="${L+i*bw}" y="${T}" width="${bw}" height="${H-T-B}" fill="transparent"/>`;
+    if(meses.length <= 13 || i % 2 === 0) s += `<text x="${L+i*bw+bw/2}" y="${H-8}" fill="#5B7086" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">${MESES[+k.slice(5)-1]}${k.slice(5)==='01'||i===0 ? ' '+k.slice(2,4) : ''}</text>`;
+  });
+  $('chMes').innerHTML = s + '</svg>';
+  $('chMes').querySelectorAll('.hit').forEach(r=>{
+    r.addEventListener('pointermove', e=>{ const m = M.get(r.dataset.mes);
+      mostrarTip(e, `<div class="t">${r.dataset.mes} · ${fmt(sum(m.e),0)} kWh de la red</div>` + m.e.slice(0,nPe).map((v,p)=>`<div><i style="background:${COL_P[p]}"></i>${nomP(p,S.nP)}: ${fmt(v,1)} kWh</div>`).join('') +
+        (S.conFv ? `<div style="margin-top:4px;color:#8FA3B8">generada ${fmt(m.gen,0)} · vertida ${fmt(m.vert,0)} kWh</div>` : '')); });
+    r.addEventListener('pointerleave', ocultarTip); });
+  $('legMes').innerHTML = Array.from({length:nPe},(_,p)=>`<span><i style="background:${COL_P[p]}"></i>${nomP(p,S.nP)}</span>`).join('');
+
+  // --- semana: selector de semanas (lunes) y curva
+  const sel = $('semana'), prev = sel.value, lunes = [];
+  S.dias.forEach((d,j)=>{ if(d.wd===1 && j+7 <= S.dias.length) lunes.push(j); });
+  if(!lunes.length) lunes.push(0);
+  sel.innerHTML = lunes.map(j=>`<option value="${j}">Semana del ${S.dias[j].d} ${MESES[S.dias[j].m]} ${S.dias[j].y}</option>`).join('');
+  sel.value = lunes.map(String).includes(prev) ? prev : String(lunes[Math.min(lunes.length-1, lunes.findIndex(j=>S.dias[j].m===5) >= 0 ? lunes.findIndex(j=>S.dias[j].m===5) : 0)]);
+  pintarSemana();
+
+  // --- tablas de maximetro y reactiva
+  const cab = `<tr><th>Mes</th>${Array.from({length:nPe},(_,p)=>`<th style="text-align:right">${nomP(p,S.nP)}</th>`).join('')}</tr>`;
+  $('tablaMax').innerHTML = cab + `<tr><td><b>Contratada</b></td>${Array.from({length:nPe},(_,p)=>`<td class="n"><b>${fmt(potPer(S,p),1)}</b></td>`).join('')}</tr>` +
+    meses.map(k=>`<tr><td>${k}</td>${Array.from({length:nPe},(_,p)=>{ const x = M.get(k).max[p];
+      return x ? `<td class="n${x.kw > potPer(S,p) ? ' exc' : ''}" title="${fdia(S.dias[x.j])} ${etiquetas(S.dias[x.j].nq,15)[x.i]}">${fmt(x.kw,2)}</td>` : '<td class="n">–</td>'; }).join('')}</tr>`).join('');
+  $('tablaReac').innerHTML = S.nP===2 ? '<tr><td>En 2.0TD no se factura la reactiva: el fichero Energía solo trae la cabecera.</td></tr>' :
+    cab + meses.map(k=>`<tr><td>${k}</td>${M.get(k).r.map(v=>`<td class="n">${fmt(v,1)}</td>`).join('')}</tr>`).join('');
+  pintarFicheros();
+}
+// Potencia contratada que limita cada periodo del maximetro (2.0TD: P1 para punta y llano, P2 para valle)
+function potPer(S, p){ return S.nP===2 ? (p<2 ? S.pot[0] : S.pot[1]) : S.pot[p]; }
+
+function pintarSemana(){
+  const S = SIM; if(!S || S.error) return;
+  const j0 = +$('semana').value, paso = resolucion(), agrup = paso/15;
+  let q0 = 0; for(let j=0; j<j0; j++) q0 += S.dias[j].nq;
+  let nq = 0; for(let j=j0; j<Math.min(j0+7, S.dias.length); j++) nq += S.dias[j].nq;
+  const red = [], gen = [];
+  for(let q=q0; q<q0+nq; q+=agrup){ let a=0, b=0; for(let i=0;i<agrup;i++){ a += S.red[q+i]; b += S.genr[q+i]; } red.push(a*60/paso); gen.push(b*60/paso); }
+  const n = red.length, W = 960, H = 240, L = 52, Rr = 8, T = 12, B = 26;
+  const mx = ejeMax(Math.max(...red, ...(S.conFv?gen:[0]), .001)*1.05), x = i => L + (W-L-Rr)*i/(n-1||1), y = v => T + (H-T-B)*(1-v/mx);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva de carga de una semana">`;
+  for(let i=0; i<=4; i++){ const v = mx*i/4; s += `<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-6}" y="${y(v)+3}" fill="#5B7086" font-size="10" text-anchor="end" font-family="IBM Plex Mono">${fmt(v, mx<10?1:0)}</text>`; }
+  s += `<text x="${L}" y="${T-2}" fill="#5B7086" font-size="10" font-family="IBM Plex Mono">kW</text>`;
+  const dsem = ['dom','lun','mar','mié','jue','vie','sáb'];
+  let acc = 0;
+  for(let j=j0; j<Math.min(j0+7, S.dias.length); j++){ const d = S.dias[j], xi = x(acc/agrup);
+    s += `<line x1="${xi}" x2="${xi}" y1="${T}" y2="${H-B}" stroke="#182739"/><text x="${xi+4}" y="${H-8}" fill="#5B7086" font-size="10" font-family="IBM Plex Mono">${dsem[d.wd]} ${d.d}</text>`; acc += d.nq; }
+  const linea = (v, c) => `<polyline fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" points="${v.map((a,i)=>`${x(i).toFixed(1)},${y(a).toFixed(1)}`).join(' ')}"/>`;
+  if(S.conFv) s += `<polygon fill="${COL_GEN}" fill-opacity=".14" points="${x(0)},${y(0)} ${gen.map((a,i)=>`${x(i).toFixed(1)},${y(a).toFixed(1)}`).join(' ')} ${x(n-1)},${y(0)}"/>` + linea(gen, COL_GEN);
+  s += linea(red, COL_CONS);
+  s += `<line id="cruz" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="#8FA3B8" stroke-dasharray="3 3" visibility="hidden"/><circle id="pto" r="4.5" fill="${COL_CONS}" stroke="#0E1826" stroke-width="2" visibility="hidden"/>`;
+  s += `<rect id="hitSem" x="${L}" y="${T}" width="${W-L-Rr}" height="${H-T-B}" fill="transparent"/>`;
+  $('chSemana').innerHTML = s + '</svg>';
+  const svg = $('chSemana').firstChild, cruz = svg.querySelector('#cruz'), pto = svg.querySelector('#pto');
+  // instante de cada punto para el tooltip
+  const inst = []; let qq = q0;
+  for(let j=j0; j<Math.min(j0+7, S.dias.length); j++){ const d = S.dias[j], et = etiquetas(d.nq, paso); et.forEach(e=>inst.push(`${fdia(d)} ${e}`)); qq += d.nq; }
+  svg.querySelector('#hitSem').addEventListener('pointermove', e=>{
+    const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)*W/r.width, i = Math.max(0, Math.min(n-1, Math.round((px-L)/(W-L-Rr)*(n-1))));
+    cruz.setAttribute('x1', x(i)); cruz.setAttribute('x2', x(i)); cruz.setAttribute('visibility','visible');
+    pto.setAttribute('cx', x(i)); pto.setAttribute('cy', y(red[i])); pto.setAttribute('visibility','visible');
+    mostrarTip(e, `<div class="t">${inst[i] || ''} (fin del periodo)</div><div><i style="background:${COL_CONS}"></i>de la red ${fmt(red[i],2)} kW</div>` +
+      (S.conFv ? `<div><i style="background:${COL_GEN}"></i>generación ${fmt(gen[i],2)} kW</div>` : ''));
+  });
+  svg.querySelector('#hitSem').addEventListener('pointerleave', ()=>{ ocultarTip(); cruz.setAttribute('visibility','hidden'); pto.setAttribute('visibility','hidden'); });
+  $('legSemana').innerHTML = `<span><i style="background:${COL_CONS}"></i>consumo de la red (kW medios ${paso===15?'del cuarto de hora':'de la hora'})</span>` + (S.conFv ? `<span><i style="background:${COL_GEN}"></i>generación FV</span>` : '');
+}
+$('semana').addEventListener('change', pintarSemana);
+
+// ===================== FICHEROS CSV =====================
+const c3 = v => `"${(Math.round(v*1000)/1000).toFixed(3).replace('.',',')}"`;
+const cnum = v => String(+(+v).toFixed(3)).replace('.',',');
+const ddmmyyyy = s => s.split('-').reverse().join('-');
+function nombres(){
+  const d0 = $('desde').value, d1 = new Date(Date.parse($('hasta').value) + 864e5).toISOString().slice(0,10);
+  const id = 100000 + hash($('cups').value + $('semilla').value) % 800000, suf = `${ddmmyyyy(d0)}_${ddmmyyyy(d1)}`;
+  return {consumo:`Consumo_${id}${suf}.csv`, potencias:`Potencias_${id+1}${suf}.csv`, contrato:`Contrato_${id+2}${suf}.csv`,
+          energia:`Energia_${id+3}${suf}.csv`, reactiva:`Reactiva_${id+4}${suf}.csv`, zip:`datadis_${$('cups').value || 'CUPS'}_${suf}.zip`};
+}
+function* csvConsumo(S){
+  const c = $('cups').value, paso = resolucion(), ag = paso/15, R = mulberry(hash(c+'|est|'+$('semilla').value)), pe = num('estimadas')/100;
+  yield 'cups;fecha;hora;consumo_kWh;metodoObtencion;energiaVertida_kWh;energiaGenerada_kWh;energiaAutoconsumida_kWh\n';
+  let q = 0;
+  for(const d of S.dias){
+    const et = etiquetas(d.nq, paso), f = fdia(d), met = R() < pe ? 'Estimada' : 'Real', out = [];
+    for(let i=0; i<et.length; i++, q+=ag){
+      let a=0, v=0, gn=0, au=0; for(let k=0;k<ag;k++){ a+=S.red[q+k]; v+=S.vert[q+k]; gn+=S.genr[q+k]; au+=S.auto[q+k]; }
+      out.push(`"${c}";"${f}";"${et[i]}";${c3(a)};${met};${S.conFv ? `${c3(v)};${c3(gn)};${c3(au)}` : ';;'}\n`);
+    }
+    yield out.join('');
+  }
+}
+function csvReactiva(S){
+  const c = $('cups').value, paso = resolucion(), ag = paso/15, out = ['cups;fecha;hora;reactivaInductiva_kVArh;reactivaCapacitiva_kVArh;metodoObtencion\n'];
+  let q = 0;
+  for(const d of S.dias){ const et = etiquetas(d.nq, paso), f = fdia(d);
+    for(let i=0; i<et.length; i++, q+=ag){ let a=0, b=0; for(let k=0;k<ag;k++){ a+=S.r1[q+k]; b+=S.r4[q+k]; } out.push(`"${c}";"${f}";"${et[i]}";${c3(a)};${c3(b)};Real\n`); } }
+  return out.join('');
+}
+function csvPotencias(S, M){
+  const c = $('cups').value, out = ['cups;fechaMaximo;hora;maximoPotenciaDemandadaKW;periodo\n'];
+  M.forEach(m=> m.max.forEach((x,p)=>{ if(x) out.push(`"${c}";"${fdia(S.dias[x.j])}";"${etiquetas(S.dias[x.j].nq,15)[x.i]}";${c3(x.kw)};"${p+1}"\n`); }));
+  return out.join('');
+}
+function csvEnergia(S, M){
+  const c = $('cups').value, out = ['cups;fecha;energiaP1;energiaP2;energiaP3;energiaP4;energiaP5;energiaP6\n'];
+  if(S.nP !== 2) M.forEach((m,k)=> out.push(`"${c}";"${k}";${m.r.map(c3).join(';')}\n`));
+  return out.join('');
+}
+function csvContrato(S){
+  const c = $('cups').value, P = PEAJES[S.kP], pmx = Math.max(...S.pot);
+  const pot = S.pot.map(cnum).join(';'), alta = ($('alta').value || '2021-06-01').replace(/-/g,'/');
+  let auto = ';;;;;;';
+  if(S.gen) auto = `"${cnum(S.inv)}";;;;;"${c}A001";`;
+  else if(S.conFv){ const m = $('modalidad').value;
+    auto = `"${cnum(S.inv)}";"${m}";"${m==='31'?'a':'b'}";"${m==='41'?'b1':m==='51'?'b2':''}";"1";"${c}A001";`; }
+  return 'cups;distribuidora;comercializadora;tarifaAcceso;tensionConexion;potenciaContratadakW;modoControlPotencia;discriminacionHoraria;fechaInicioVigencia;fechaFinVigencia;provincia;municipio;codigoPostal;potenciaTotalGenerada;tipoAutoconsumo;seccion;subseccion;coeficienteReparto;cau;potenciaMaximaInstalacion\n' +
+    `"${c}";${DISTRIB[c.slice(2,6)] || 'DISTRIBUIDORA'};"${$('comerc').value || '-'}";"${P.tarifa}";"${P.tension}";"${pot}";${pmx<=15 && S.kP==='2.0TD' ? 'ICP' : 'MAXIMETRO'};"${P.disc}";"${alta}";;${$('provincia').value};${$('municipio').value.toUpperCase()};"${$('cp').value}";${auto}"${(Math.ceil(pmx*1.25*10)/10).toFixed(1)}"\r\n`;
+}
+function leeme(S){
+  const tipo = S.gen ? 'Generador fotovoltaico' : `Consumidor (${ST.plant ? PLANTILLAS[ST.plant].n : 'perfil dibujado a mano'})`;
+  return [`DATOS SIMULADOS con el formato de la descarga web de Datadis. No son lecturas de ningún contador.`, '',
+    `CUPS: ${$('cups').value}`, `Periodo: del ${$('desde').value} al ${$('hasta').value} (${S.dias.length} días)`,
+    `Peaje: ${S.kP.replace('+','')} (${PEAJES[S.kP].tarifa}); potencias contratadas: ${S.pot.join(' / ')} kW`,
+    `Equipo de medida tipo ${contador(Math.max(...S.pot))}; curva ${resolucion()===15 ? 'cuartohoraria' : 'horaria'}`,
+    `Tipo: ${tipo}`, S.gen ? `Servicios auxiliares: ${num('auxDia')} kWh/día` : `Consumo medio: ${num('kwhDia')} kWh/día`,
+    S.conFv ? `FV: ${num('genDia')} kWh/día de media (${S.kwp.toFixed(1)} kWp, inversor ${S.inv} kW)${S.gen ? '' : ', modalidad ' + $('modalidad').value}` : 'Sin generación',
+    `cos φ medio ${num('cosphi')}; capacitiva en vacío ${num('capKvar')} kVAr; semilla ${$('semilla').value}`, '',
+    'Ficheros: Consumo (curva de carga), Potencias (maxímetro), Contrato y Energia (reactiva mensual por periodo).',
+    'Generado con el Generador de ficheros de Datadis del blog de VatiaCo.', ''].join('\r\n');
+}
+function pintarFicheros(){
+  const S = SIM; if(!S || S.error){ $('listaFich').innerHTML = ''; return; }
+  const n = nombres(), paso = resolucion(), lineas = S.NQ*15/paso;
+  const items = [[n.consumo, `curva ${paso===15?'cuartohoraria':'horaria'}: ${fmt(lineas,0)} lecturas`], [n.potencias, `maxímetro: ${fmt([...AGR.values()].reduce((a,m)=>a+m.max.filter(Boolean).length,0),0)} filas`],
+    [n.contrato, 'contrato: 1 fila'], [n.energia, S.nP===2 ? 'reactiva: solo la cabecera (2.0TD)' : `reactiva: ${AGR.size} meses`]];
+  if($('conCurvaReac').checked) items.push([n.reactiva, `curva de reactiva: ${fmt(lineas,0)} filas`]);
+  if($('conLeeme').checked) items.push(['LEEME.txt', 'parámetros de la simulación']);
+  $('listaFich').innerHTML = items.map(([a,b])=>`<li><code>${esc(a)}</code><span>${b}</span></li>`).join('') +
+    `<li><code>${esc(n.zip)}</code><span>el .zip que se descarga</span></li>`;
+}
+
+// ===================== ZIP =====================
+// Zip con deflate (CompressionStream) o sin comprimir si el navegador no lo tiene
+const CRC = (()=>{ const t = new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(b, c=0xFFFFFFFF){ for(let i=0;i<b.length;i++) c = CRC[(c^b[i])&255]^(c>>>8); return c; }
+async function deflar(datos){
+  if(typeof CompressionStream === 'undefined') return null;
+  try{ const s = new Blob([datos]).stream().pipeThrough(new CompressionStream('deflate-raw')); return new Uint8Array(await new Response(s).arrayBuffer()); }
+  catch(e){ return null; }
+}
+async function hacerZip(ficheros){
+  const partes = [], central = [], ahora = new Date(), enc = new TextEncoder();
+  const dt = ((ahora.getHours()<<11)|(ahora.getMinutes()<<5)|(ahora.getSeconds()>>1)) & 0xFFFF, dd = (((ahora.getFullYear()-1980)<<9)|((ahora.getMonth()+1)<<5)|ahora.getDate()) & 0xFFFF;
+  let off = 0;
+  for(const f of ficheros){
+    const nom = enc.encode(f.nombre), datos = f.datos, crc = (crc32(datos) ^ 0xFFFFFFFF) >>> 0;
+    const comp = await deflar(datos), metodo = comp && comp.length < datos.length ? 8 : 0, cuerpo = metodo ? comp : datos;
+    const cab = (firma, extra) => { const b = new DataView(new ArrayBuffer(extra)); b.setUint32(0, firma, true); return b; };
+    const l = cab(0x04034b50, 30);
+    [[4,20],[6,0x0800],[8,metodo],[10,dt],[12,dd]].forEach(([o,v])=>l.setUint16(o,v,true));
+    l.setUint32(14,crc,true); l.setUint32(18,cuerpo.length,true); l.setUint32(22,datos.length,true); l.setUint16(26,nom.length,true); l.setUint16(28,0,true);
+    partes.push(new Uint8Array(l.buffer), nom, cuerpo);
+    const c = cab(0x02014b50, 46);
+    [[4,20],[6,20],[8,0x0800],[10,metodo],[12,dt],[14,dd]].forEach(([o,v])=>c.setUint16(o,v,true));
+    c.setUint32(16,crc,true); c.setUint32(20,cuerpo.length,true); c.setUint32(24,datos.length,true); c.setUint16(28,nom.length,true); c.setUint32(42,off,true);
+    central.push(new Uint8Array(c.buffer), nom);
+    off += 30 + nom.length + cuerpo.length;
+  }
+  const tamC = central.reduce((a,b)=>a+b.length,0), fin = new DataView(new ArrayBuffer(22));
+  fin.setUint32(0,0x06054b50,true); fin.setUint16(8,ficheros.length,true); fin.setUint16(10,ficheros.length,true); fin.setUint32(12,tamC,true); fin.setUint32(16,off,true);
+  return new Blob([...partes, ...central, new Uint8Array(fin.buffer)], {type:'application/zip'});
+}
+$('btnZip').onclick = async ()=>{
+  if(recalcular.pendiente) recalcularYa();          // (un cambio de hace un momento)
+  if(recalcular.pendiente) recalcularYa();          // (y el ajuste de potencias que haya lanzado)
+  const S = SIM, b = $('btnZip');
+  if(!S || S.error){ toast('Revisa el periodo de los datos'); return; }
+  if(cupsValido($('cups').value) !== 'ok'){ activarSeccion('suministro'); toast('Pon un CUPS válido'); return; }
+  b.disabled = true; $('estadoZip').textContent = 'Generando…'; $('progZip').style.width = '10%';
+  try{
+    await new Promise(r=>setTimeout(r, 20));
+    const enc = new TextEncoder(), n = nombres(), fs = [];
+    fs.push({nombre:n.consumo, datos:enc.encode([...csvConsumo(S)].join(''))}); $('progZip').style.width = '40%';
+    fs.push({nombre:n.potencias, datos:enc.encode(csvPotencias(S, AGR))});
+    fs.push({nombre:n.contrato, datos:enc.encode(csvContrato(S))});
+    fs.push({nombre:n.energia, datos:enc.encode(csvEnergia(S, AGR))});
+    if($('conCurvaReac').checked) fs.push({nombre:n.reactiva, datos:enc.encode(csvReactiva(S))});
+    if($('conLeeme').checked) fs.push({nombre:'LEEME.txt', datos:enc.encode(leeme(S))});
+    $('progZip').style.width = '65%';
+    const zip = await hacerZip(fs); $('progZip').style.width = '100%';
+    const a = document.createElement('a'), url = URL.createObjectURL(zip);
+    a.href = url; a.download = n.zip; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    $('estadoZip').innerHTML = `<span class="estado-ok">✓ ${esc(n.zip)} · ${fmt(zip.size/1048576,1)} MB</span>`; toast('Descargado ' + n.zip);
+  } catch(e){ $('estadoZip').innerHTML = `<span class="estado-mal">No se pudo generar: ${esc(e.message)}</span>`; }
+  b.disabled = false; setTimeout(()=>$('progZip').style.width = '0', 1500);
+};
+
+// ===================== RECALCULO Y CONTROLES =====================
+function recalcular(){
+  clearTimeout(recalcular.t);
+  recalcular.pendiente = true;
+  recalcular.t = setTimeout(recalcularYa, 120);
+}
+function recalcularYa(){
+  clearTimeout(recalcular.t); recalcular.pendiente = false;
+  SIM = simular(); AGR = SIM && !SIM.error ? agregar(SIM) : null;
+  if(SIM && SIM.conFv) $('kwpTxt').value = `${fmt(SIM.kwp,1)} kWp`;
+  pintarPeaje(); pintarVista(); guardar();
+  if(recalcular.ajustar && AGR){ recalcular.ajustar = false; ajustarPotencias(); }
+}
+function tipoActual(){
+  const gen = document.querySelector('[name=tipo]:checked').value === 'generador';
+  $('cardConsumo').style.display = gen ? 'none' : ''; $('cardGenerador').style.display = gen ? '' : 'none';
+  $('chkFvWrap').style.display = gen ? 'none' : ''; $('modalidad').closest('.field').style.display = gen ? 'none' : '';
+  $('fvCampos').style.display = gen || $('conFv').checked ? '' : 'none';
+}
+$('plantilla').innerHTML = '<option value="">Dibujado a mano</option>' + Object.entries(PLANTILLAS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
+$('plantilla').addEventListener('change', ()=>{
+  const k = $('plantilla').value; if(!k) return;
+  cargarPlantilla(k); const p = PLANTILLAS[k];
+  $('kwhDia').value = p.kwh;
+  if($('peaje').value !== p.peaje){ $('peaje').value = p.peaje; pintarPotencias(false); }
+  pintarEditores(); recalcular.ajustar = true; recalcular();     // (potencias a la medida del perfil nuevo)
+});
+document.querySelectorAll('[name=tipo]').forEach(r=>r.addEventListener('change', ()=>{ tipoActual(); recalcular(); }));
+$('conFv').addEventListener('change', ()=>{ tipoActual(); recalcular(); });
+$('peaje').addEventListener('change', ()=>{ pintarPotencias(false); recalcular(); });
+['resol','desde','hasta','estimadas','semilla','kwhDia','varDia','varQ','auxDia','genDia','modalidad','inversor','cosphi','capKvar','alta','comerc','provincia','municipio','cp']
+  .forEach(id=>$(id).addEventListener('change', recalcular));
+['conCurvaReac','conLeeme'].forEach(id=>$(id).addEventListener('change', ()=>{ pintarFicheros(); guardar(); }));
+$('cups').addEventListener('change', ()=>{ pintarCups(); recalcular(); });
+$('btnCups').onclick = cupsFicticio;
+$('distrib').addEventListener('change', ()=>{ const c = $('cups').value; if(c.slice(6,10)==='9999' || !c) cupsFicticio(); });
+function dosAnios(){ const ayer = new Date(Date.now() - 864e5), ini = new Date(Date.UTC(ayer.getUTCFullYear()-2, ayer.getUTCMonth(), ayer.getUTCDate()+1));
+  $('hasta').value = iso(ayer); $('desde').value = iso(ini); }
+$('btnDosAnios').onclick = ()=>{ dosAnios(); recalcular(); };
+// Potencias justas para la demanda simulada: maximo de cada periodo con un 5 % de margen, crecientes
+$('btnAjustarPot').onclick = ()=>{ ajustarPotencias(); toast('Potencias ajustadas a la demanda simulada'); };
+function ajustarPotencias(){
+  if(!AGR) return;
+  const S = SIM, nPe = S.nP===2 ? 3 : 6, mx = Array(nPe).fill(0);
+  AGR.forEach(m=> m.max.forEach((x,p)=>{ if(x) mx[p] = Math.max(mx[p], x.kw); }));
+  const red = v => v<=15 ? Math.ceil(v*10)/10 : Math.ceil(v);
+  let pot = S.nP===2 ? [Math.max(mx[0],mx[1]), mx[2]].map(v=>red(Math.max(1, v*1.05))) : mx.map(v=>red(Math.max(1, v*1.05)));
+  if(S.nP===6) for(let i=1;i<6;i++) pot[i] = Math.max(pot[i], pot[i-1]);
+  document.querySelectorAll('[data-pot]').forEach((el,i)=> el.value = pot[i]);
+  pintarPeaje(); recalcular();
+}
+
+// ===================== GUARDAR (memoria del navegador) =====================
+const CAMPOS = ['cups','distrib','comerc','provincia','municipio','cp','alta','desde','hasta','estimadas','peaje','resol','semilla','kwhDia','varDia','varQ','auxDia','genDia','modalidad','inversor','cosphi','capKvar'];
+function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem('VatiaCo')||'{}'); }catch(e){ return {}; } }
+function guardar(){
+  try{
+    const v = leerVatiaco();
+    v.datadis = {campos:Object.fromEntries(CAMPOS.map(k=>[k, $(k).value])), pot:potencias(), tipo:document.querySelector('[name=tipo]:checked').value,
+      conFv:$('conFv').checked, curvaReac:$('conCurvaReac').checked, leeme:$('conLeeme').checked, plant:ST.plant, lab:ST.lab, fes:ST.fes, mes:ST.mes};
+    localStorage.setItem('VatiaCo', JSON.stringify(v));
+  }catch(e){}
+}
+(function cargar(){
+  cargarPlantilla('vivienda'); dosAnios(); pintarPotencias(false);
+  const c = leerVatiaco().datadis, ok = (v,n) => Array.isArray(v) && v.length===n && v.every(x=>isFinite(x) && x>=0);
+  if(c && c.campos){
+    CAMPOS.forEach(k=>{ if(c.campos[k] != null && c.campos[k] !== '') $(k).value = c.campos[k]; });
+    pintarPotencias(false);
+    if(Array.isArray(c.pot)) document.querySelectorAll('[data-pot]').forEach((el,i)=>{ if(c.pot[i]) el.value = c.pot[i]; });
+    const r = document.querySelector(`[name=tipo][value="${c.tipo}"]`); if(r) r.checked = true;
+    $('conFv').checked = !!c.conFv; $('conCurvaReac').checked = !!c.curvaReac; $('conLeeme').checked = c.leeme !== false;
+    if(ok(c.lab,24) && ok(c.fes,24) && ok(c.mes,12)){ ST.lab = c.lab; ST.fes = c.fes; ST.mes = c.mes; ST.plant = PLANTILLAS[c.plant] ? c.plant : ''; }
+  }
+  $('plantilla').value = ST.plant;
+  if(!$('cups').value) cupsFicticio();
+  pintarCups(); tipoActual(); pintarEditores(); recalcular();
+})();
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se comparte entre todos los
+     documentos del blog a traves de localStorage, igual que en las demas calculadoras. El
+     estado de esta herramienta se guarda en VatiaCo["datadis"]. -->
+<script>
+(function(){
+  var LS_KEY = 'VatiaCo';
+  function leer(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function escribir(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+  document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]').forEach(function(el){
+    var p = leer().proyecto || {};
+    if(p[el.id]) el.value = p[el.id];
+    el.addEventListener('input', function(){ var v = leer(); v.proyecto = v.proyecto || {}; v.proyecto[el.id] = el.value; escribir(v); });
+  });
+})();
+</script>
+</body>
+</html>

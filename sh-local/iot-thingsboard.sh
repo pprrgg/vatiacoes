@@ -90,7 +90,10 @@ SUPER_PASSWORD="super"
 # principal (la crea el superusuario); las demas, otras comunidades suyas (como si las creara
 # el desde su pestaña Suministros autorizados). Sus socios tienen datos simulados. CSV separados por ";",
 # decimales con punto; sim_tipo: residencial, residencial_fv, comercial, industrial,
-# cargador_ve, cargador_ve_lento o generador_fv; sim_kwh_mes: consumo mensual. Socio sin email:
+# cargador_ve, cargador_ve_lento, estacion_ve (2 tomas de 22 kW), estacion_ve_fv o generador_fv; sim_kwh_mes: consumo mensual
+# (en generador_fv, lo generado en un mes medio: FV_KWH_MES_KWP = 140,2 kWh por kWp segun PVGIS; 7010 = 50 kWp;
+# estacion_ve_fv, estacion de recarga que consume el 70 % de lo que generan las generador_fv de su comunidad
+# y 3 kW en las horas sin sol: no usa sim_kwh_mes). Socio sin email:
 # sin usuario. EJEMPLO_COMUNIDADES vacio = sin comunidades de ejemplo.
 EJEMPLO_GESTOR_NOMBRE="Javier Ortega"
 EJEMPLO_GESTOR_EMAIL="demo@vatiaco.es"
@@ -107,7 +110,10 @@ albaicin;Carmen Ruiz;carmen.ruiz@ejemplo.es;carmen2026;611 100 001;37.1815;-3.59
 albaicin;Antonio García;antonio.garcia@ejemplo.es;antonio2026;611 100 002;37.1802;-3.5911;residencial;420
 albaicin;Panadería San Nicolás;panaderia@ejemplo.es;panaderia2026;958 100 003;37.1821;-3.5938;comercial;2800
 albaicin;Talleres Darro;;;958 100 004;37.1796;-3.5902;industrial;35000
-albaicin;Parking Plaza Larga;parking@ejemplo.es;parking2026;958 100 005;37.1830;-3.5921;cargador_ve;3500"
+albaicin;Parking Plaza Larga;parking@ejemplo.es;parking2026;958 100 005;37.1830;-3.5921;cargador_ve;3500
+albaicin;Estación de recarga Paseo de los Tristes;recarga@ejemplo.es;recarga2026;958 100 006;37.1793;-3.5893;estacion_ve_fv;
+albaicin;FV Cubiertas del Sacromonte;;;958 100 007;37.1838;-3.5852;generador_fv;7010
+albaicin;FV Polideportivo Albaicín;;;958 100 008;37.1852;-3.5940;generador_fv;7010"
 
 # Alta online de comunidades: la pagina esta en la web (Astro, <ALTA_URL_WEB>/alta/, menu
 # "Alta comunidad") y llama a la API (https://<TB_DOMAIN>/cec-api/alta/*). La comunidad
@@ -123,6 +129,11 @@ STRIPE_SECRET_KEY=""                 # sk_test_... (pruebas) o sk_live_...
 STRIPE_WEBHOOK_SECRET=""             # whsec_...
 STRIPE_PORTAL_LOGIN_URL=""           # enlace del portal de clientes de Stripe (opcional)
 ALTA_DIAS_PRUEBA="30"                # dias gratis antes del primer cobro (0 = sin prueba)
+
+# Servicios premium: vistas que salen con la marca "Premium" e inactivas, en las pestañas del
+# panel (comunidad y socio) y en los resumenes de Informes (la API tampoco los genera).
+# Separadas por comas: potencias, reactiva, factura. Vacio = todas activas.
+SERVICIOS_PREMIUM="potencias,reactiva,factura"
 ALTA_SYNC_SOCIOS="exacto"            # cada noche, socios facturados: exacto (= los de la plataforma), subir (solo si hay mas) o no
 ALTA_URL_CONDICIONES="https://vatiaco.es/condiciones/"   # condiciones del servicio y politica de privacidad
 ALTA_URL_PRIVACIDAD="https://vatiaco.es/privacidad/"
@@ -263,6 +274,7 @@ STRIPE_PORTAL_LOGIN_URL=$STRIPE_PORTAL_LOGIN_URL
 ALTA_URL_PUBLICA=https://${TB_DOMAIN:-$SERVE_IP}
 ALTA_NOMBRE_SERVICIO=$BRAND
 ALTA_DIAS_PRUEBA=$ALTA_DIAS_PRUEBA
+SERVICIOS_PREMIUM=$SERVICIOS_PREMIUM
 ALTA_SYNC_SOCIOS=$ALTA_SYNC_SOCIOS
 ALTA_URL_CONDICIONES=$ALTA_URL_CONDICIONES
 ALTA_URL_PRIVACIDAD=$ALTA_URL_PRIVACIDAD
@@ -416,8 +428,8 @@ ESQUEMA = """
 --   lat, lon      ubicacion de su rayo en el mapa (no esta en Datadis)
 --   simulado      pruebas: contrato, curva, maximetro y reactiva de los dos ultimos años
 --                 inventados (cec.simular) segun sim_tipo (residencial, residencial_fv, comercial,
---                 industrial, cargador_ve, cargador_ve_lento, generador_fv) y sim_kwh_mes (consumo mensual;
---                 en generador_fv, la energia generada al mes)
+--                 industrial, cargador_ve, cargador_ve_lento, estacion_ve, estacion_ve_fv, generador_fv) y sim_kwh_mes
+--                 (consumo mensual; en generador_fv, la energia generada al mes; estacion_ve_fv no lo usa)
 CREATE TABLE IF NOT EXISTS socio (
   id            text PRIMARY KEY,
   nombre        text NOT NULL,
@@ -431,15 +443,15 @@ CREATE TABLE IF NOT EXISTS socio (
   lat           double precision,
   lon           double precision,
   simulado      boolean NOT NULL DEFAULT false,
-  sim_tipo      text CHECK (sim_tipo IN ('residencial', 'residencial_fv', 'comercial', 'industrial', 'cargador_ve', 'cargador_ve_lento', 'generador_fv')),
+  sim_tipo      text CHECK (sim_tipo IN ('residencial', 'residencial_fv', 'comercial', 'industrial', 'cargador_ve', 'cargador_ve_lento', 'estacion_ve', 'estacion_ve_fv', 'generador_fv')),
   sim_kwh_mes   double precision CHECK (sim_kwh_mes > 0),
   alta          timestamptz NOT NULL DEFAULT now(),
   por           text,
   actualizado   timestamptz NOT NULL DEFAULT now()
 );
--- (bases creadas antes de los tipos residencial_fv, cargador_ve_lento y generador_fv)
+-- (bases creadas antes de los tipos residencial_fv, cargador_ve_lento, estacion_ve, estacion_ve_fv y generador_fv)
 ALTER TABLE socio DROP CONSTRAINT IF EXISTS socio_sim_tipo_check;
-ALTER TABLE socio ADD CONSTRAINT socio_sim_tipo_check CHECK (sim_tipo IN ('residencial', 'residencial_fv', 'comercial', 'industrial', 'cargador_ve', 'cargador_ve_lento', 'generador_fv'));
+ALTER TABLE socio ADD CONSTRAINT socio_sim_tipo_check CHECK (sim_tipo IN ('residencial', 'residencial_fv', 'comercial', 'industrial', 'cargador_ve', 'cargador_ve_lento', 'estacion_ve', 'estacion_ve_fv', 'generador_fv'));
 -- Coeficiente de reparto (fijo) de la energia del autoconsumo colectivo: los de la comunidad
 -- suman 1; van en el fichero que se entrega a la distribuidora (pestaña Coeficientes de reparto)
 ALTER TABLE socio ADD COLUMN IF NOT EXISTS coeficiente double precision CHECK (coeficiente >= 0 AND coeficiente <= 1);
@@ -1669,17 +1681,45 @@ SIM_TIPOS = {"residencial": ("Residencial", 300, 60, 0.0),
              "cargador_ve": ("Cargador de vehículo eléctrico", 4000, 60, 0.1),
              # carga lenta (3,7-7,4 kW) en las horas de sol: aprovecha la generacion
              "cargador_ve_lento": ("Cargador de vehículo eléctrico de carga lenta", 1500, 60, 0.1),
+             # estacion de recarga publica: EV_TOMAS tomas de corriente alterna de EV_KW_TOMA kW
+             "estacion_ve": ("Estación de recarga de vehículo eléctrico (2 tomas de 22 kW)", 1000, 60, 0.1),
+             # estacion de recarga que aprovecha la FV de la comunidad: EV_FV_PARTE de lo que generan sus
+             # generador_fv y EV_FV_SIN_SOL_KW en las horas sin sol (sim_kwh_mes no se usa)
+             "estacion_ve_fv": ("Estación de recarga de vehículo eléctrico con la generación fotovoltaica de la comunidad", 3000, 60, 0.1),
              # instalacion FV de la comunidad: sim_kwh_mes = energia generada en un mes medio
              "generador_fv": ("Instalación fotovoltaica de la comunidad", 3000, 60, 0.0)}
-FV_KWH_MES_KWP = 74.8        # generacion media de 1 kWp en la simulacion (kWh/mes)
+# Generacion FV de 1 kWp: media de cada hora (UTC) de cada mes, en kWh, de la serie horaria
+# de PVGIS (PVGIS-SARAH3, 2016-2023; JRC, re.jrc.ec.europa.eu/pvg_tools) en el Albaicin
+# (37,180, -3,594): silicio cristalino, 35 grados orientado al sur, 14 % de perdidas; 1.683
+# kWh/kWp al año (PVcalc: 1.668). Cada dia se multiplica por un factor de nubosidad de media 1
+# con la variacion de los dias de ese mes en la serie (desviacion tipica y maximo relativos).
+FV_PERFIL = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0.068, 0.372, 0.522, 0.593, 0.617, 0.597, 0.524, 0.417, 0.246, 0.002, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0.001, 0.194, 0.38, 0.516, 0.599, 0.632, 0.628, 0.556, 0.446, 0.287, 0.095, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0.05, 0.253, 0.419, 0.537, 0.623, 0.611, 0.596, 0.52, 0.42, 0.296, 0.127, 0.002, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0.01, 0.126, 0.303, 0.451, 0.553, 0.63, 0.631, 0.584, 0.521, 0.424, 0.28, 0.136, 0.015, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0.029, 0.158, 0.343, 0.501, 0.608, 0.662, 0.659, 0.625, 0.554, 0.452, 0.316, 0.154, 0.03, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0.037, 0.153, 0.334, 0.484, 0.598, 0.666, 0.688, 0.663, 0.596, 0.486, 0.346, 0.181, 0.042, 0.004, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0.033, 0.136, 0.324, 0.483, 0.596, 0.674, 0.699, 0.685, 0.625, 0.517, 0.369, 0.191, 0.042, 0.004, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0.016, 0.13, 0.323, 0.487, 0.605, 0.685, 0.705, 0.691, 0.615, 0.506, 0.357, 0.175, 0.028, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0.002, 0.126, 0.327, 0.492, 0.616, 0.681, 0.688, 0.662, 0.574, 0.451, 0.296, 0.113, 0.003, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0.083, 0.292, 0.453, 0.566, 0.607, 0.622, 0.595, 0.493, 0.376, 0.22, 0.03, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0.003, 0.238, 0.389, 0.513, 0.568, 0.58, 0.536, 0.432, 0.321, 0.159, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0.088, 0.375, 0.503, 0.581, 0.588, 0.556, 0.47, 0.354, 0.17, 0, 0, 0, 0, 0, 0, 0],
+]
+FV_DIA_CV = [0.35, 0.36, 0.38, 0.34, 0.24, 0.17, 0.1, 0.14, 0.2, 0.33, 0.42, 0.37]
+FV_DIA_MAX = [1.43, 1.46, 1.49, 1.41, 1.25, 1.15, 1.1, 1.13, 1.2, 1.44, 1.5, 1.49]
+FV_KWH_MES_KWP = round(sum(sum(f) * dm for f, dm in zip(FV_PERFIL, (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31))) / 12, 1)
 FV_CONSUMO = 0.03            # consumo propio de una instalacion FV (fraccion de lo generado)
 FV_VIVIENDA = 1.1            # residencial_fv: generacion media / consumo de la vivienda
+EV_TOMAS, EV_KW_TOMA = 2, 22.0
+EV_FV_PARTE, EV_FV_SIN_SOL_KW = 0.7, 3.0     # estacion_ve_fv
 POT_20TD = [3.45, 4.6, 5.75, 6.9, 8.05, 9.2, 10.35, 11.5, 13.8, 14.49]
 SIM_DIAS = 730               # dos años hasta ayer, como la descarga de Datadis
 
 
 def _forma(tipo, lt, finde, R, kwp):
-    """Demanda relativa (sin escala) en el instante local lt y generacion FV relativa."""
+    """Demanda relativa (sin escala) en el instante local lt y generacion media de 1 kWp (kW)."""
     import math
     h = lt.hour + lt.minute / 60 + 0.5
     if tipo in ("residencial", "residencial_fv"):
@@ -1696,9 +1736,8 @@ def _forma(tipo, lt, finde, R, kwp):
     else:                     # cargadores: lo pone _sesiones_ve; aqui (y en generador_fv) el consumo en espera
         d = 0.02
     d *= R.uniform(0.85, 1.15)
-    gen = 0.0
-    if kwp:
-        gen = max(0.0, math.sin(math.pi * (h - 7) / 13))
+    # generacion de 1 kWp en esa hora (UTC) de ese mes; la nubosidad del dia la pone simular()
+    gen = FV_PERFIL[lt.month - 1][lt.astimezone(timezone.utc).hour] if kwp else 0.0
     return d, gen
 
 
@@ -1718,6 +1757,58 @@ def _sesiones_ve(dia_slots, paso, R, finde, lento=False):
             ini = R.choice([R.gauss(9.5, 1.5), R.gauss(13.5, 2), R.gauss(19, 1.8)])
             kw = R.choice([7.4, 11, 22])
             e = R.uniform(8, 40)
+        fin = ini + e / kw
+        for i, h in enumerate(dia_slots):
+            a, b = max(h, ini), min(h + paso / 60, fin)
+            if b > a:
+                out[i] += kw * (b - a)
+    return out
+
+
+def _poisson(R, media):
+    import math
+    k, p, lim = 0, R.random(), math.exp(-media)
+    while p > lim:
+        k += 1
+        p *= R.random()
+    return k
+
+
+def _sesiones_estacion(dia_slots, paso, R, finde, kwh_mes):
+    """Uso habitual de una estacion publica de recarga en alterna (EV_TOMAS tomas de EV_KW_TOMA
+    kW, recarga sin gestionar), como en los perfiles de puntos publicos (ElaadNL):
+      - llegadas en tres grupos: por la mañana, quien deja el coche al ir a trabajar (8:30,
+        unas 8 h enchufado); a mediodia, recados y compras (13:00, unas 2 h); por la tarde,
+        residentes que lo dejan hasta el dia siguiente (18:30); en fin de semana, mas a mediodia;
+      - el coche carga a la potencia que admite su cargador de a bordo (3,7, 7,4, 11 o 22 kW;
+        la mayoria, 11 kW), no a la de la toma, desde que llega hasta completar la sesion;
+      - energia por sesion lognormal (mediana 10 kWh, de 3 a 50), limitada por el tiempo enchufado;
+      - si las tomas estan ocupadas el conductor se va (sesion perdida).
+    El numero de llegadas se ajusta al consumo mensual (12 kWh de media por sesion, y 1/4 mas
+    por las que se pierden), para que la escala mensual no deforme las potencias; con dos tomas
+    el uso se satura hacia 1.200 kWh/mes. Devuelve la energia (kWh) de cada periodo."""
+    import math
+    out = [0.0] * len(dia_slots)
+    llegadas = []
+    for _ in range(_poisson(R, kwh_mes / 30.4 / 12 * 1.25 * (0.8 if finde else 1.1))):
+        g = R.random()
+        if finde:
+            ini, dur = (R.gauss(12.5, 2.5), R.uniform(1, 4)) if g < 0.55 else (R.gauss(18.5, 1.8), 24.0)
+        elif g < 0.35:
+            ini, dur = R.gauss(8.5, 1.0), R.uniform(6, 10)
+        elif g < 0.6:
+            ini, dur = R.gauss(13, 2), R.uniform(1, 3)
+        else:
+            ini, dur = R.gauss(18.5, 1.5), 24.0
+        llegadas.append((min(max(ini, 0.0), 23.9), dur))
+    libre = [0.0] * EV_TOMAS              # hora a la que queda libre cada toma
+    for ini, dur in sorted(llegadas):
+        t = next((i for i in range(EV_TOMAS) if libre[i] <= ini), None)
+        if t is None:
+            continue
+        kw = min(EV_KW_TOMA, R.choices([3.7, 7.4, 11.0, 22.0], [20, 25, 45, 10])[0])
+        e = min(50.0, max(3.0, R.lognormvariate(math.log(10), 0.6)), kw * dur)
+        libre[t] = min(24.0, ini + dur)
         fin = ini + e / kw
         for i, h in enumerate(dia_slots):
             a, b = max(h, ini), min(h + paso / 60, fin)
@@ -1746,7 +1837,14 @@ def simular(cx, so, forzar, nota):
     if tipo == "generador_fv":       # kwh_mes es lo generado; consume solo sus auxiliares
         kwp, kwh_cons = kwh_mes / FV_KWH_MES_KWP, kwh_mes * FV_CONSUMO
     kwp = round(kwp, 1)
-    clave_sim = f"{tipo}|{kwh_mes:g}|{kwp:g}"
+    clave_sim = f"{tipo}|{kwh_mes:g}|{kwp:g}|pvgis"     # (pvgis: generacion de FV_PERFIL; regenera las anteriores)
+    fvs = []        # estacion_ve_fv: (CUPS, kWp) de las FV simuladas de la comunidad, para seguir su generacion
+    if tipo == "estacion_ve_fv":
+        for g in cx.execute("SELECT id, cups, sim_kwh_mes FROM socio WHERE simulado AND sim_tipo = 'generador_fv' "
+                            "ORDER BY id").fetchall():
+            gk = float(g["sim_kwh_mes"] or SIM_TIPOS["generador_fv"][1])
+            fvs.append(((g["cups"] or "").strip().upper() or cups_simulado(g["id"]), round(gk / FV_KWH_MES_KWP, 1)))
+        clave_sim += "|" + ",".join(f"{c}:{k:g}" for c, k in fvs)    # (otras FV: regenera)
     hoy = datetime.now(TZL).date()
     d_ini = hoy - timedelta(days=SIM_DIAS)
 
@@ -1760,18 +1858,26 @@ def simular(cx, so, forzar, nota):
         t1 = datetime.combine(d + timedelta(days=1), datetime.min.time(), TZL)
         n = round((t1.timestamp() - t0.timestamp()) / 60 / paso)
         finde = d.weekday() >= 5 or (d.month, d.day) in FESTIVOS
-        nubes = Rd.uniform(0.35, 1)
-        sol = 0.55 + 0.45 * math.cos(2 * math.pi * (d.timetuple().tm_yday - 172) / 365)
+        Rd.random()                                   # (la serie de la demanda sigue igual)
+        nubosidad = lambda c: min(FV_DIA_MAX[d.month - 1], max(0.05, random.Random(f"{c}|fv|{d}").gauss(1, FV_DIA_CV[d.month - 1])))
+        nubes = nubosidad(cups)
+        nubes_fv = [(k, nubosidad(c)) for c, k in fvs]      # (la misma que en los datos de cada FV)
         tss = [int(t0.timestamp()) * 1000 + i * paso * 60000 for i in range(n)]
         lts = [datetime.fromtimestamp(ts / 1000, TZL) for ts in tss]
-        ve = _sesiones_ve([lt.hour + lt.minute / 60 for lt in lts], paso, Rd, finde, tipo == "cargador_ve_lento") \
-            if tipo in ("cargador_ve", "cargador_ve_lento") else None
+        horas = [lt.hour + lt.minute / 60 for lt in lts]
+        ve = _sesiones_ve(horas, paso, Rd, finde, tipo == "cargador_ve_lento") \
+            if tipo in ("cargador_ve", "cargador_ve_lento") else \
+            _sesiones_estacion(horas, paso, Rd, finde, kwh_mes) if tipo == "estacion_ve" else None
         for i, (ts, lt) in enumerate(zip(tss, lts)):
             dem, gen = _forma(tipo, lt, finde, Rd, kwp)
             if ve:
                 dem += ve[i]
+            if tipo == "estacion_ve_fv":   # kWh del periodo, sin escala mensual
+                f = FV_PERFIL[lt.month - 1][lt.astimezone(timezone.utc).hour]
+                g = sum(k * min(0.85, f * nb) for k, nb in nubes_fv) * paso / 60
+                dem = EV_FV_PARTE * g if g > 0 else EV_FV_SIN_SOL_KW * paso / 60
             hora = f"{(i + 1) * paso // 60:02d}:{(i + 1) * paso % 60:02d}"
-            filas_raw.append([ts, d, hora, dem, gen * sol * nubes, lt])
+            filas_raw.append([ts, d, hora, dem, min(0.85, gen * nubes), lt])   # (pico: 0,85 kW por kWp)
             meses[(d.year, d.month)] = meses.get((d.year, d.month), 0) + dem
     # (media anual 1: el consumo mensual pedido es el de un mes medio)
     estacion = {"residencial": lambda m: 1 + 0.25 * math.cos(2 * math.pi * (m - 1) / 12),
@@ -1785,11 +1891,13 @@ def simular(cx, so, forzar, nota):
     for (y, m), tot in meses.items():   # los meses incompletos (los extremos) en proporcion
         dm = (date(y + m // 12, m % 12 + 1, 1) - date(y, m, 1)).days
         escala[(y, m)] = kwh_cons * estacion(m) * len(dias_mes[(y, m)]) / dm / tot if tot else 0
+        if tipo == "estacion_ve_fv":
+            escala[(y, m)] = 1.0
 
     filas, peak = [], 0.0
     for ts, d, hora, dem, gen, lt in filas_raw:
         dem *= escala[(d.year, d.month)]
-        gen = kwp * 0.8 * gen * paso / 60
+        gen = kwp * gen * paso / 60
         auto = min(gen, dem)
         v = {"consumo_kwh": round(dem - auto, 3)}
         if kwp:
@@ -1799,6 +1907,8 @@ def simular(cx, so, forzar, nota):
 
     # Contrato: peaje y potencia a partir del pico (con margen)
     pmax = peak * (1.3 if paso == 60 else 1.1)
+    if tipo in ("estacion_ve", "estacion_ve_fv"):    # todas las tomas a la vez a plena potencia
+        pmax = max(pmax, EV_TOMAS * EV_KW_TOMA)
     if tipo == "industrial":
         pj = "6.1TD"
     elif pmax <= 14.49:
@@ -1853,7 +1963,8 @@ def simular(cx, so, forzar, nota):
         guardar_energia(cx, cups, energia)
         rango = nueva_firma(cx, cups, cambiadas + [_mes_local(m) for m in meses_c])
     nota(f"{so['nombre']}: datos SIMULADOS {nombre_tipo.lower()} ({cups}, {pj}, {fmt(pots[0])} kW, "
-         f"{kwh_mes:g} kWh/mes{f', FV {kwp:g} kWp' if kwp else ''}): {len(filas)} lecturas "
+         + (f"{EV_FV_PARTE:.0%} de lo que generan {len(fvs)} FV de la comunidad, {EV_FV_SIN_SOL_KW:g} kW sin sol"
+            if tipo == "estacion_ve_fv" else f"{kwh_mes:g} kWh/mes{f', FV {kwp:g} kWp' if kwp else ''}") + f"): {len(filas)} lecturas "
          f"{'cuartohorarias' if paso == 15 else 'horarias'} del {d_ini:%d/%m/%Y} a ayer, "
          f"{len(cambiadas)} nuevas o cambiadas" + (" (regenerados: otro tipo o consumo)" if regenerar else ""))
     # Regenerado: ThingsBoard se sustituye entero (puede haber cambiado la resolucion)
@@ -3176,10 +3287,12 @@ def _svg_fichero(raiz, nombre, svg):
 
 
 # Precio fijo por periodos (mercado libre): los precios de la comunidad (gestion.precios, los que
-# se editan en Consumos -> Costes de la energia) -> {peaje: ({periodo: EUR/kWh}, compensacion de excedentes)}
+# se editan en Consumos -> Costes de la energia) -> {peaje: ({periodo: EUR/kWh}, compensacion de
+# excedentes, LCOE de la generacion)}
 def _precios():
     from . import gestion
-    return {t: ({int(k): v for k, v in x["p"].items()}, x["comp"]) for t, x in gestion.precios().items() if t not in ("defecto", "otros")}
+    return {t: ({int(k): v for k, v in x["p"].items()}, x["comp"], x.get("lcoe") or 0.0)
+            for t, x in gestion.precios().items() if t not in ("defecto", "otros")}
 NOMBRE_REPARTO = {"solitario": "En solitario (Datadis)", "manual": "Fijos manuales", "optimo": "Fijos óptimos",
                   "dinamico": "Dinámicos (por horas)"}
 
@@ -3213,17 +3326,17 @@ def _economia(ids, cups, peaje, horas, Gh, Dh, sol, fijos, fallback, modo, PRECI
             c["gen"][hd if c is dia else hs] += g
         m["gen"] += g
         for i in ids:
-            pr, comp = PRECIOS[_tarifa(peaje[i])]
+            pr, comp, lcoe = PRECIOS[_tarifa(peaje[i])]
             precio = pr[cec.periodo(lt, "2.0TD" if _tarifa(peaje[i]) == "2.0TD" else peaje[i])]
-            red_s, vert_s = sol.get((cups[i], h), (0.0, 0.0))
-            cs = red_s * precio - vert_s * comp
+            red_s, vert_s, gen_s = sol.get((cups[i], h), (0.0, 0.0, 0.0))
+            cs = red_s * precio - vert_s * comp + gen_s * lcoe
             coste["solitario"][i] += cs
             m["sol"] += cs
             for k in K[1:]:
                 b = fijos[k][i] if k in fijos else (dem[i] / td if td > 0 else fallback[i])
                 asig = b * g
                 a = min(asig, dem[i])
-                c_k = (dem[i] - a) * precio - (asig - a) * comp
+                c_k = (dem[i] - a) * precio - (asig - a) * comp + asig * lcoe
                 coste[k][i] += c_k
                 if k == modo:
                     m["com"] += c_k
@@ -3284,8 +3397,10 @@ def coeficientes_pdf(anio=None, propio=None):
         modo = gestion._ajuste(cx, "reparto_modo") or gestion.MODO_DEFECTO
         manual = gestion._manual(cx, part)
         # En solitario: las curvas de Datadis de cada socio (compra a la red y vertido)
-        sol = {(r["cups"], r["h"]): (float(r["red"]), float(r["vert"])) for r in cx.execute(
-            "SELECT cups, date_trunc('hour', ts) AS h, coalesce(sum(consumo_kwh), 0) AS red, coalesce(sum(vertida_kwh), 0) AS vert "
+        # (generacion propia = autoconsumo + vertido, como en el panel; se valora a su LCOE)
+        sol = {(r["cups"], r["h"]): (float(r["red"]), float(r["vert"]), float(r["gen"])) for r in cx.execute(
+            "SELECT cups, date_trunc('hour', ts) AS h, coalesce(sum(consumo_kwh), 0) AS red, coalesce(sum(vertida_kwh), 0) AS vert, "
+            "coalesce(sum(autoconsumo_kwh), 0) + coalesce(sum(vertida_kwh), 0) AS gen "
             "FROM lectura WHERE cups = ANY(%s) AND ts >= %s AND ts < %s GROUP BY 1, 2",
             ([s["cups"] for _, s in part], datetime(d0.year, d0.month, d0.day, tzinfo=TZL),
              datetime(d1.year, d1.month, d1.day, tzinfo=TZL) + timedelta(days=1))).fetchall()}
@@ -3392,9 +3507,10 @@ def coeficientes_pdf(anio=None, propio=None):
                                for n_, c_, g in vis] +
                               [["Total", "", _es(T["solitario"]), _es(T[ECO["modo"]]), _es(T["solitario"] - T[ECO["modo"]]),
                                 _es(100 * (T["solitario"] - T[ECO["modo"]]) / T["solitario"], 1) if T["solitario"] else "–"]]}
-        t_precios = {"cabecera": ["Peaje"] + [f"P{p} (€/kWh)" for p in range(1, 7)] + ["Excedentes (€/kWh)"], "texto": 1, "total": False,
+        t_precios = {"cabecera": ["Peaje"] + [f"P{p} (€/kWh)" for p in range(1, 7)] + ["Excedentes (€/kWh)", "LCOE generación (€/kWh)"],
+                     "texto": 1, "total": False,
                      "filas": [[t] + [_es(pr[p], 2) if p in pr else "–" for p in range(1, 7)] + [_es(comp, 2)]
-                               for t, (pr, comp) in PRECIOS.items()]}
+                               + [_es(lcoe, 3)] for t, (pr, comp, lcoe) in PRECIOS.items()]}
         en_vigor = NOMBRE_REPARTO[ECO["modo"]].lower()
         beneficio = T["solitario"] - T[ECO["modo"]]
         criterios = [("Coeficientes actuales", fij["actual"]), ("Proporcionales al consumo", fij["por_consumo"]),
@@ -3437,7 +3553,7 @@ def coeficientes_pdf(anio=None, propio=None):
         L = lambda *x: {"t": "l", "x": list(x)}
         Fig = lambda svg, cap, nota="": {"t": "fig", "svg": svg, "cap": cap, "nota": nota}
         Tab = lambda t, cap, size="7.5pt": {"t": "tab", "tabla": t, "cap": cap, "size": size}
-        n, refs = _citas(["rd244", "ted1247", "ley24", "datadis", "c3_2020", "peajes2026", "rd148"] + PRESENTACION)
+        n, refs = _citas(["rd244", "ted1247", "ley24", "datadis", "c3_2020", "peajes2026", "rd148", "irena"] + PRESENTACION)
         capitulos = [
             {"titulo": "Objeto y alcance", "bloques": [
                 P(f"Este documento justifica los coeficientes de reparto de la energía del autoconsumo colectivo de "
@@ -3549,7 +3665,8 @@ def coeficientes_pdf(anio=None, propio=None):
                 P("Se valora la energía con precio fijo por periodos, como en la mayoría de los contratos del mercado libre: no "
                   "hacen falta precios horarios. Hora a hora se calculan los kWh de consumo, autoconsumo, excedente y compra a la "
                   "red; se agrupan por periodo tarifario y se multiplican por el precio de cada periodo. Los excedentes se "
-                  "valoran al precio de compensación."),
+                  "valoran al precio de compensación y la energía generada que corresponde a cada participante (autoconsumo más "
+                  f"excedentes), a su LCOE {n['irena']}: el coste de producirla, para no considerar gratuito el autoconsumo."),
                 L("2.0TD: P1 de 10 a 14 h y de 18 a 22 h en laborables; P2 de 8 a 10, de 14 a 18 y de 22 a 24 h en laborables; "
                   "P3 de 0 a 8 h en laborables y todo el día en fines de semana y festivos nacionales.",
                   "3.0TD y 6.1TD: seis periodos; fines de semana, festivos y de 0 a 8 h, P6; el resto del día, dos periodos según "
@@ -3662,6 +3779,8 @@ REFERENCIAS = {
               "de diciembre de 1992.", "https://www.boe.es/eli/es/l/1992/12/28/37"),
     "datadis": ("DATADIS. Datadis: plataforma de acceso a los datos de consumo eléctrico de las distribuidoras [en línea].",
                 "https://datadis.es"),
+    "irena": ("INTERNATIONAL RENEWABLE ENERGY AGENCY. Renewable power generation costs in 2023. Abu Dabi: IRENA, 2024.",
+              "https://www.irena.org/publications"),
     "iso690": ("INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. ISO 690:2021. Information and documentation — Guidelines "
                "for bibliographic references and citations to information resources. Ginebra: ISO, 2021.", ""),
     "iso7144": ("INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. ISO 7144:1986. Documentation — Presentation of theses and "
@@ -3694,6 +3813,7 @@ TIPOS_RESUMEN = {
     "factura": ("Factura de electricidad con impuestos y alquiler del contador", "RES-FAC"),
 }
 GLOSARIO_RES = GLOSARIO + [
+    ("LCOE", "Coste nivelado de la energía (€/kWh): inversión, operación y mantenimiento de la generación repartidos entre la energía que produce en su vida útil."),
     ("cos φ", "Factor de potencia: E_activa / √(E_activa² + E_reactiva²). Sin recargo por reactiva desde 0,95."),
     ("Energía reactiva", "Energía (kVArh) que intercambian los receptores inductivos con la red sin producir trabajo útil."),
     ("Exceso de potencia", "Potencia demandada por encima de la contratada en un periodo, que se factura con el término de exceso."),
@@ -3781,11 +3901,13 @@ def _energia_en_comunidad(part, G, D, co):
 
 
 def _coste_energia(x, pr):
-    """Termino de energia de un mes (EUR): compra a la red por periodos al precio fijo de cada
-    uno y compensacion de excedentes al precio de compensacion. -> (compra, compensacion, neto)"""
+    """Coste de la energia de un mes (EUR): compra a la red por periodos al precio fijo de cada
+    uno, compensacion de excedentes al precio de compensacion y coste de la generacion que
+    corresponde al socio (autoconsumo + excedentes) a su LCOE. -> (compra, compensacion, generacion, neto)"""
     compra = sum(e * float(pr["p"].get(str(p)) or 0) for p, e in x["p"].items())
     comp = x["vert"] * float(pr["comp"] or 0)
-    return compra, comp, compra - comp
+    gen = (x["auto"] + x["vert"]) * float(pr.get("lcoe") or 0)
+    return compra, comp, gen, compra - comp + gen
 
 
 def _potencia_mensual(cx, cups, c, pj, meses, pr, d0, d1, paso):
@@ -3876,14 +3998,16 @@ def _reactiva_mensual(cx, cups, pj, meses, E, O):
     return {"exenta": exenta, "mes": out}
 
 
-def _factura(e, p, r, alq, O):
-    """Factura de un mes (como pintarFactura del panel): energia (la compensacion no pasa de la
-    energia comprada), potencia y excesos, reactiva, impuesto electrico sobre las tres,
-    alquiler del contador e IVA sobre todo."""
-    e = max(0.0, e)
+def _factura(c, p, r, alq, O):
+    """Coste de un mes (como pintarFactura del panel) con c = _coste_energia: energia de la
+    comercializadora (la compensacion no pasa de la energia comprada), potencia y excesos,
+    reactiva, impuesto electrico sobre las tres, alquiler del contador, IVA sobre todo y,
+    aparte y sin impuestos, la generacion que corresponde al socio a su LCOE."""
+    e = max(0.0, c[0] - c[1])
     iee = (e + p + r) * O["iee"] / 100
     iva = (e + p + r + iee + alq) * O["iva"] / 100
-    return {"e": e, "p": p, "r": r, "iee": iee, "alq": alq, "iva": iva, "tot": e + p + r + iee + alq + iva}
+    return {"e": e, "p": p, "r": r, "iee": iee, "alq": alq, "iva": iva, "gen": c[2],
+            "tot": e + p + r + iee + alq + iva + c[2]}
 
 
 def _datos_resumen(cx, desde, hasta, propio=None):
@@ -3918,9 +4042,9 @@ def _datos_resumen(cx, desde, hasta, propio=None):
             if k not in hay:
                 continue
             pot, rea = Pt["mes"][k]["total"], (Rc["mes"].get(k) or {}).get("total", 0.0)
-            F[k] = _factura(_coste_energia(E.get(k) or _vacio_e(), pr)[2], pot, rea, float(pr.get("alquiler") or 0), O)
+            F[k] = _factura(_coste_energia(E.get(k) or _vacio_e(), pr), pot, rea, float(pr.get("alquiler") or 0), O)
             if Ec is not None:
-                Fc[k] = _factura(_coste_energia(Ec.get(k) or _vacio_e(), pr)[2], pot, rea, float(pr.get("alquiler") or 0), O)
+                Fc[k] = _factura(_coste_energia(Ec.get(k) or _vacio_e(), pr), pot, rea, float(pr.get("alquiler") or 0), O)
         socios.append({"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "peaje": pj, "tarifa": t, "pr": pr,
                        "contrato": c, "E": E, "Ec": Ec, "P": Pt, "R": Rc, "F": F, "Fc": Fc if Ec is not None else None,
                        "hay": hay, "generador": so["id"] in gen_ids})
@@ -3967,24 +4091,26 @@ def _cap_energia(R, raiz, com):
             continue
         cost = [_coste_energia(e, x["pr"]) for e, x in xs]
         f = [_et_l(k), sum(e["red"] for e, _ in xs), sum(e["auto"] for e, _ in xs), sum(e["vert"] for e, _ in xs),
-             sum(e["gen"] for e, _ in xs), sum(c[0] for c in cost), sum(c[1] for c in cost), sum(c[2] for c in cost)]
+             sum(e["gen"] for e, _ in xs)] + [sum(c[j] for c in cost) for j in range(4)]
         if com:
-            sol = sum(_coste_energia(x["E"].get(k) or _vacio_e(), x["pr"])[2] for _, x in xs)
-            f += [sol, sol - f[7]]
+            sol = sum(_coste_energia(x["E"].get(k) or _vacio_e(), x["pr"])[3] for _, x in xs)
+            f += [sol, sol - f[8]]
         filas.append(f)
     cab = (["Mes", "Red (kWh)", "Autoconsumo (kWh)", "Excedentes (kWh)", "Generación" + (" asignada" if com else "") + " (kWh)",
-            "Compra (€)", "Compensación (€)", "Coste neto (€)"] + (["En solitario (€)", "Beneficio (€)"] if com else []))
-    dec = [None, 1, 1, 1, 1, 2, 2, 2, 2, 2]
+            "Compra (€)", "Compensación (€)", "Generación LCOE (€)", "Coste neto (€)"] +
+           (["En solitario (€)", "Beneficio (€)"] if com else []))
+    dec = [None, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2]
     tc = _t(cab, _fmt(filas + ([_sumas(filas)] if filas else []), dec))
     ks_c = [k for k in meses if any(x[clave].get(k) for x in soc)]
     fig = _fig(raiz, f"res_com_{clave}.svg", ks_c, lambda: G.barras(
         [_et(k) for k in ks_c],
         [{"n": "Compra a la red", "c": "#fda38a", "v": [f[5] for f in filas]},
+         {"n": "Generación (LCOE)", "c": G.AUTO[2], "v": [f[7] for f in filas]},
          {"n": "Compensación de excedentes", "c": G.VERT[2], "v": [-f[6] for f in filas]}],
         unidad="€", linea={"n": "Coste en solitario" if com else "Coste neto", "c": "#555",
-                           "v": [f[8] if com else f[7] for f in filas]}),
+                           "v": [f[9] if com else f[8] for f in filas]}),
         "Coste de la energía de cada mes de la comunidad",
-        "Barras: compra a la red y compensación de excedentes (negativa); línea: " +
+        "Barras: compra a la red, generación a su LCOE y compensación de excedentes (negativa); línea: " +
         ("coste de la misma energía en solitario." if com else "coste neto."))
     out.append({"titulo": "Resultados de la comunidad", "bloques": [
         {"t": "p", "x": f"Suma de los {len(soc)} socios" + (" que participan del reparto" if com else "") +
@@ -3997,14 +4123,14 @@ def _cap_energia(R, raiz, com):
         e = [x[clave].get(k) or _vacio_e() for k in meses]
         cost = [_coste_energia(y, x["pr"]) for y in e]
         f = [{"t": x["nombre"], "sub": x["cups"]}, x["peaje"], sum(y["red"] for y in e), sum(y["auto"] for y in e),
-             sum(y["vert"] for y in e), sum(c[2] for c in cost)]
+             sum(y["vert"] for y in e), sum(c[3] for c in cost)]
         if com:
-            sol = sum(_coste_energia(x["E"].get(k) or _vacio_e(), x["pr"])[2] for k in meses)
+            sol = sum(_coste_energia(x["E"].get(k) or _vacio_e(), x["pr"])[3] for k in meses)
             f += [sol, sol - f[5]]
         fil.append(f)
     if filas:
         tot = _sumas(filas)
-        fil.append(["Comunidad", "", tot[1], tot[2], tot[3], tot[7]] + ([tot[8], tot[9]] if com else []))
+        fil.append(["Comunidad", "", tot[1], tot[2], tot[3], tot[8]] + ([tot[9], tot[10]] if com else []))
     fil = _fmt(fil, [None, None, 1, 1, 1, 2, 2, 2])
     t_soc = _t(["Socio", "Peaje", "Red (kWh)", "Autoconsumo (kWh)", "Excedentes (kWh)", "Coste neto (€)"] +
                (["En solitario (€)", "Beneficio (€)"] if com else []), fil, texto=2)
@@ -4017,10 +4143,10 @@ def _cap_energia(R, raiz, com):
         for k in ks:
             e = x[clave][k]
             c = _coste_energia(e, x["pr"])
-            fx.append([_et_l(k)] + [e["p"].get(p, 0.0) for p in range(1, np_ + 1)] + [e["auto"], e["vert"], c[0], c[1], c[2]])
+            fx.append([_et_l(k)] + [e["p"].get(p, 0.0) for p in range(1, np_ + 1)] + [e["auto"], e["vert"]] + list(c))
         cab = ["Mes"] + [f"{nomp(p)} (kWh)" for p in range(1, np_ + 1)] + ["Autoc. (kWh)", "Exced. (kWh)", "Compra (€)",
-                                                                          "Comp. (€)", "Neto (€)"]
-        dec = [None] + [1] * np_ + [1, 1, 2, 2, 2]
+                                                                          "Comp. (€)", "LCOE (€)", "Neto (€)"]
+        dec = [None] + [1] * np_ + [1, 1, 2, 2, 2, 2]
         col = G.COL3 if np_ == 3 else G.COL6
         svg = _fig(raiz, f"res_{clave}_{i}.svg", ks, lambda: G.barras(
             [_et(k) for k in ks],
@@ -4033,7 +4159,8 @@ def _cap_energia(R, raiz, com):
         precios = ", ".join(f"{nomp(p)} {_es(float(pr['p'][str(p)]), 3)}" for p in range(1, np_ + 1) if str(p) in pr["p"])
         bl += [{"t": "h", "x": x["nombre"]},
                {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · precios {precios} €/kWh; compensación de excedentes "
-                               f"{_es(float(pr['comp']), 3)} €/kWh." + (" Socio generador: no recibe reparto." if x["generador"] else "")},
+                               f"{_es(float(pr['comp']), 3)} €/kWh; LCOE de la generación {_es(float(pr.get('lcoe') or 0), 3)} €/kWh." +
+                               (" Socio generador: no recibe reparto." if x["generador"] else "")},
                {"t": "tab", "tabla": _t(cab, _fmt(fx + ([_sumas(fx)] if fx else []), dec)),
                 "cap": f"Energía y coste de cada mes — {x['nombre']}", "size": "6.5pt"}] + svg
     out.append({"titulo": "Resultados por socio" if not R["propio"] else "Resultados del socio", "bloques": bl})
@@ -4181,7 +4308,7 @@ def _cap_reactiva(R, raiz):
 def _cap_factura(R, raiz):
     meses, out = R["meses"], []
     soc = R["socios"]
-    K = ("e", "p", "r", "iee", "alq", "iva", "tot")
+    K = ("e", "p", "r", "iee", "alq", "iva", "gen", "tot")
     filas = []
     for k in meses:
         xs = [x for x in soc if k in x["F"]]
@@ -4190,24 +4317,27 @@ def _cap_factura(R, raiz):
             con = [x for x in xs if x["Fc"] is not None]
             if con:
                 tc = sum(x["Fc"][k]["tot"] for x in con) + sum(x["F"][k]["tot"] for x in xs if x["Fc"] is None)
-                f += [tc, f[7] - tc]
+                f += [tc, f[8] - tc]
             else:
                 f += ["–", "–"]
             filas.append(f)
     cab = ["Mes", "Energía (€)", "Potencia (€)", "Reactiva (€)", "Imp. eléctrico (€)", "Alquiler (€)", "IVA (€)",
-           "Total (€)", "En comunidad (€)", "Ahorro (€)"]
-    dec = [None] + [2] * 9
+           "Generación LCOE (€)", "Total (€)", "En comunidad (€)", "Ahorro (€)"]
+    dec = [None] + [2] * 10
     C = [("e", "Energía", "#fda38a"), ("p", "Potencia", "#f5b942"), ("r", "Reactiva", "#c07a12"),
-         ("iee", "Impuesto eléctrico", "#9e9e9e"), ("alq", "Alquiler del contador", "#bdbdbd"), ("iva", "IVA", "#7b2fa8")]
+         ("iee", "Impuesto eléctrico", "#9e9e9e"), ("alq", "Alquiler del contador", "#bdbdbd"), ("iva", "IVA", "#7b2fa8"),
+         ("gen", "Generación (LCOE)", "#8fc3f0")]
     ks_c = [k for k in meses if any(k in x["F"] for x in soc)]
     fig = _fig(raiz, "res_fac_com.svg", ks_c, lambda: G.barras(
         [_et(k) for k in ks_c], [{"n": n, "c": c, "v": [f[1 + K.index(cl)] for f in filas]} for cl, n, c in C], unidad="€",
-        linea={"n": "Total en comunidad", "c": "#555", "v": [f[8] if isinstance(f[8], float) else None for f in filas]}),
+        linea={"n": "Total en comunidad", "c": "#555", "v": [f[9] if isinstance(f[9], float) else None for f in filas]}),
         "Factura estimada de cada mes de la comunidad por componentes",
         "Barras: componentes de la factura en solitario; línea: total con la energía en comunidad.")
     out.append({"titulo": "Resultados de la comunidad", "bloques": [
         {"t": "p", "x": "Suma de las facturas estimadas de todos los socios, en solitario (con sus lecturas de Datadis) y "
-                        "con la energía en comunidad (con el reparto de la comunidad; los socios que no participan, en solitario)."},
+                        "con la energía en comunidad (con el reparto de la comunidad; los socios que no participan, en solitario), "
+                        "más el coste de la generación que corresponde a cada uno a su LCOE (fuera de la factura de la "
+                        "comercializadora y sin impuestos)."},
         {"t": "tab", "tabla": _t(cab, _fmt(filas + ([_sumas(filas)] if filas else []), dec)),
          "cap": "Factura estimada de cada mes de la comunidad", "size": "6.5pt"}] + fig})
     vis = [x for x in soc if not R["propio"] or x["id"] == R["propio"]]
@@ -4219,7 +4349,7 @@ def _cap_factura(R, raiz):
     if filas:
         s = _sumas(filas)
         fil.append(["Comunidad", ""] + s[1:])
-    fil = _fmt(fil, [None, None] + [2] * 9)
+    fil = _fmt(fil, [None, None] + [2] * 10)
     bl = [{"t": "tab", "tabla": _t(["Socio", "Peaje"] + cab[1:], fil, texto=2),
            "cap": "Factura estimada del periodo" + (" del socio y de la comunidad" if R["propio"] else " por socio"),
            "size": "6pt"}]
@@ -4264,8 +4394,15 @@ def _metodo_resumen(tipo, R, n):
     energia = lambda: [H("Término de energía"),
                Mk("Con precio fijo por periodos (la mayoría de los contratos del mercado libre), el coste de la energía de cada "
                   "mes es la energía comprada a la red en cada periodo $p$ por su precio $pi_p$ (con peajes y cargos), menos los "
-                  "excedentes por el precio de compensación $pi_c$ (compensación simplificada del RD 244/2019):"),
-               Fm('C_E = sum_p E_p dot pi_p - E_"exc" dot pi_c'),
+                  "excedentes por el precio de compensación $pi_c$ (compensación simplificada del RD 244/2019), más el coste de "
+                  "producir la energía generada que corresponde al socio, $E_\"gen\" = E_\"aut\" + E_\"exc\"$ (autoconsumo más "
+                  "excedentes), a su coste nivelado $\"LCOE\"$:"),
+               Fm('C_E = sum_p E_p dot pi_p - E_"exc" dot pi_c + E_"gen" dot "LCOE"'),
+               P_(f"El LCOE (levelized cost of energy) reparte la inversión, la operación y el mantenimiento de la instalación "
+                  f"fotovoltaica entre la energía que produce en su vida útil {n['irena']}: sin él, el autoconsumo parecería "
+                  "gratuito y el ahorro quedaría sobrestimado. Por defecto se usan valores aproximados del autoconsumo "
+                  "fotovoltaico en España según el tamaño típico de cada peaje (residencial 2.0TD, comercial 3.0TD, industrial "
+                  "6.1TD); el gestor los ajusta a los de su instalación."),
                P_(f"Peajes y cargos según la Circular 3/2020 {n['c3_2020']}, la Resolución de peajes de 2026 {n['peajes2026']} "
                   f"y el Real Decreto 148/2021 {n['rd148']}; compensación de excedentes según el Real Decreto 244/2019 {n['rd244']}.")]
     out = {"energia": lambda: datos + periodos + energia() + [
@@ -4317,20 +4454,23 @@ def _metodo_resumen(tipo, R, n):
                   f"3/2020 {n['c3_2020']} y Circular 1/2025 {n['c1_2025']}), el de reactiva $F_R$, el Impuesto Especial sobre la "
                   f"Electricidad (Ley 38/1992 {n['ley38']}), el alquiler del contador $A_c$ (Orden ITC/3860/2007 {n['itc3860']}) "
                   f"y el IVA (Ley 37/1992 {n['ley37']}):"),
-               Fm('"IEE" = (max(0, C_E) + T_P + F_"EP" + F_R) dot t_"IEE"'),
-               Fm('"IVA" = (max(0, C_E) + T_P + F_"EP" + F_R + "IEE" + A_c) dot t_"IVA"'),
-               Fm('F = max(0, C_E) + T_P + F_"EP" + F_R + "IEE" + A_c + "IVA"'),
+               Fm('C_F = max(0, sum_p E_p dot pi_p - E_"exc" dot pi_c)'),
+               Fm('"IEE" = (C_F + T_P + F_"EP" + F_R) dot t_"IEE"'),
+               Fm('"IVA" = (C_F + T_P + F_"EP" + F_R + "IEE" + A_c) dot t_"IVA"'),
+               Fm('F = C_F + T_P + F_"EP" + F_R + "IEE" + A_c + "IVA" + E_"gen" dot "LCOE"'),
+               Mk(f"El último término es el coste de la generación que corresponde al socio a su LCOE {n['irena']}: no forma "
+                  "parte de la factura de la comercializadora ni lleva impuestos, pero es lo que cuesta producir esa energía."),
                P_(f"Tipos: impuesto eléctrico {_es(R['O']['iee'], 8)} % e IVA {_es(R['O']['iva'], 0)} %. Es una estimación: no "
                   "incluye las cuotas mínimas del impuesto eléctrico, el bono social ni los servicios adicionales del contrato. "
                   "En comunidad, la energía es la que corresponde a cada socio con el reparto de la comunidad.")]}
     return out[tipo]()
 
 
-CLAVES_RES = {"energia": ["datadis", "c3_2020", "peajes2026", "rd148", "rd244", "ley24"],
-              "comunidad": ["datadis", "c3_2020", "rd244", "ted1247", "peajes2026", "rd148", "ley24"],
+CLAVES_RES = {"energia": ["datadis", "c3_2020", "peajes2026", "rd148", "rd244", "irena", "ley24"],
+              "comunidad": ["datadis", "c3_2020", "rd244", "ted1247", "peajes2026", "rd148", "irena", "ley24"],
               "potencia": ["datadis", "c3_2020", "c1_2025", "peajes2026", "cnmc_crit", "rd1110"],
               "reactiva": ["datadis", "c3_2020", "peajes2026", "cnmc_crit"],
-              "factura": ["datadis", "c3_2020", "c1_2025", "peajes2026", "rd244", "ley38", "itc3860", "ley37", "cnmc_crit"]}
+              "factura": ["datadis", "c3_2020", "c1_2025", "peajes2026", "rd244", "ley38", "itc3860", "ley37", "irena", "cnmc_crit"]}
 
 
 def resumen_pdf(tipo, desde=None, hasta=None, propio=None):
@@ -4386,10 +4526,10 @@ def resumen_pdf(tipo, desde=None, hasta=None, propio=None):
                               "Ahorro posible (€)"],
                  "reactiva": ["Socio", "Peaje", "Reactiva (kVArh)", "cos φ medio", "Peor cos φ", "Facturable (kVArh)", "Coste (€)"],
                  "factura": ["Socio", "Peaje", "Energía (€)", "Potencia (€)", "Reactiva (€)", "Imp. eléctrico (€)", "Alquiler (€)",
-                             "IVA (€)", "Total (€)", "En comunidad (€)", "Ahorro (€)"]}[tipo]
+                             "IVA (€)", "Generación LCOE (€)", "Total (€)", "En comunidad (€)", "Ahorro (€)"]}[tipo]
         # Solo las columnas principales (la tabla del resumen va a 8,5 pt en una pagina)
         idx = {"energia": [0, 1, 2, 3, 4, 5], "comunidad": [0, 1, 3, 4, 5, 7], "potencia": [0, 1, 5, 6, 7],
-               "reactiva": [0, 1, 2, 3, 5, 6], "factura": [0, 1, 2, 3, 8, 9, 10]}[tipo]
+               "reactiva": [0, 1, 2, 3, 5, 6], "factura": [0, 1, 2, 3, 9, 10, 11]}[tipo]
         cifras = {"cabecera": [cab_r[j] for j in idx], "texto": 2, "total": False,
                   "filas": [[f[j] for j in idx] for f in fil if not isinstance(f[0], dict) or propio]}
         resumen = [f"Resumen mensual de {nombre_t[0].lower() + nombre_t[1:]} de "
@@ -5232,6 +5372,12 @@ PRECIOS_DEFECTO = {"2.0TD": {"p": {"1": 0.20, "2": 0.14, "3": 0.09}, "comp": 0.0
 # termino de reactiva (EUR/kVArh: cos fi entre 0,80 y 0,95, y por debajo de 0,80)
 for _t, _alq in (("2.0TD", 0.81), ("3.0TD", 9.0), ("6.1TD", 25.0)):
     PRECIOS_DEFECTO[_t]["alquiler"] = _alq
+# LCOE (coste nivelado de la energia, EUR/kWh) de la generacion fotovoltaica que corresponde a
+# cada socio: lo que cuesta producirla (inversion, operacion y mantenimiento repartidos en su vida
+# util). Por defecto, valores aproximados de autoconsumo FV en España segun el tamaño de la
+# instalacion tipica de cada peaje (residencial, comercial, industrial)
+for _t, _lcoe in (("2.0TD", 0.06), ("3.0TD", 0.05), ("6.1TD", 0.045)):
+    PRECIOS_DEFECTO[_t]["lcoe"] = _lcoe
 OTROS_DEFECTO = {"iee": 5.11269632, "iva": 21.0, "reac1": 0.041554, "reac2": 0.062332}
 
 
@@ -5245,7 +5391,7 @@ def precios():
         if t in out and t != "otros":
             for campo in ("p", "pot", "tep45", "tep123"):
                 out[t][campo].update({k: float(y) for k, y in (x.get(campo) or {}).items() if k in out[t][campo]})
-            for campo in ("comp", "alquiler"):
+            for campo in ("comp", "alquiler", "lcoe"):
                 if x.get(campo) is not None:
                     out[t][campo] = float(x[campo])
     return {**out, "defecto": not v}
@@ -5273,8 +5419,12 @@ def guardar_precios(d):
         alq = x.get("alquiler")
         if alq is not None and not 0 <= float(alq) <= 500:
             raise ValueError("El alquiler del contador va de 0 a 500 €/mes")
+        lcoe = x.get("lcoe")
+        if lcoe is not None and not 0 <= float(lcoe) <= 2:
+            raise ValueError("El LCOE de la generación va de 0 a 2 €/kWh")
         limpio[t] = {"p": ps, "pot": pot, "tep45": tep45, "tep123": tep123, **({"comp": float(comp)} if comp is not None else {}),
-                     **({"alquiler": float(alq)} if alq is not None else {})}
+                     **({"alquiler": float(alq)} if alq is not None else {}),
+                     **({"lcoe": float(lcoe)} if lcoe is not None else {})}
     with db.conectar() as cx:
         if limpio:
             _poner_ajuste(cx, "precios", limpio)
@@ -8232,14 +8382,20 @@ INSERT y sin propietarios) para importarla en Adminer o con psql; el panel solo 
 
 Cada funcion trabaja con las bases que se le permiten (bases=): el gestor, con la de su
 comunidad (por defecto); el superusuario, con la de la plataforma y las de todas las
-comunidades. La base de ThingsBoard tiene su copia diaria y se restaura a mano (README)."""
+comunidades. La base de ThingsBoard tiene su copia diaria y se restaura a mano (README).
+
+Paquete (copia completa): un .tar con varias .dump y manifiesto.json (fecha y de que es cada
+una); se descarga de una vez y, al subirlo, cada .dump queda como copia "subida" de su base."""
 import gzip
+import io
 import json
 import os
 import re
+import secrets
 import subprocess
+import tarfile
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from .comun import TZL, comunidad, log
@@ -8333,7 +8489,14 @@ def ruta(nombre, bases=None, otras=False):
 
 
 def _nuevo(base, tipo):
-    return DIR / f"{base}-{tipo}-{datetime.now(TZL):%Y%m%d-%H%M%S}.dump"
+    """Fichero nuevo para una copia; si ya hay uno de ese segundo (varias de la misma base en un
+    paquete), el segundo siguiente."""
+    t = datetime.now(TZL)
+    while True:
+        f = DIR / f"{base}-{tipo}-{t:%Y%m%d-%H%M%S}.dump"
+        if not f.exists():
+            return f
+        t += timedelta(seconds=1)
 
 
 def crear(bases=None, tipo="manual", permitidas=None):
@@ -8386,6 +8549,70 @@ def subir(tmp, base=None, permitidas=None, otras=False):
     f = _nuevo(base, "subida")
     Path(tmp).rename(f)
     return dict(_info(f, [base]), origen=origen, restaurable=base in permitidas)
+
+
+FORMATO_PAQUETE = "vatiaco-copias"
+
+
+def paquete(nombres, bases=None, otras=False, titulos=None):
+    """Junta en un .tar (temporal, en DIR; lo borra quien lo envia) las copias pedidas y un
+    manifiesto.json con la fecha y de que base es cada una (titulos: base -> nombre legible)."""
+    if not nombres:
+        raise ValueError("No hay copias que juntar")
+    fs = [ruta(n, bases, otras) for n in dict.fromkeys(nombres)]
+    infos = [_info(f, bases or _propia()) or _ajena(f) for f in fs]
+    man = {"formato": FORMATO_PAQUETE, "version": 1, "fecha": datetime.now(TZL).isoformat(timespec="seconds"),
+           "copias": [{"fichero": i["nombre"], "base": i["base"], "tipo": i["tipo"], "fecha": i["fecha"],
+                       "bytes": i["bytes"], "nombre": (titulos or {}).get(i["base"])} for i in infos]}
+    tmp = DIR / f".paquete-{datetime.now(TZL):%Y%m%d-%H%M%S}-{os.getpid()}-{id(fs)}.tar"
+    try:
+        with tarfile.open(tmp, "w") as t:
+            datos = json.dumps(man, ensure_ascii=False, indent=1).encode()
+            ti = tarfile.TarInfo("manifiesto.json"); ti.size = len(datos); ti.mtime = int(datetime.now().timestamp())
+            t.addfile(ti, io.BytesIO(datos))
+            for f in fs:
+                t.add(f, arcname=f.name)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return tmp
+
+
+def es_paquete(f):
+    try:
+        return tarfile.is_tarfile(f)
+    except OSError:
+        return False
+
+
+def subir_paquete(tmp, permitidas=None, otras=False):
+    """Guarda como copias "subidas" las .dump de un paquete (cada una, de la base que dice; no se
+    sale de DIR: solo ficheros regulares con nombre de copia). Plataforma primero."""
+    out, errores = [], []
+    try:
+        t = tarfile.open(tmp)
+        miembros = t.getmembers()
+    except tarfile.TarError as e:
+        raise ValueError(f"El fichero .tar está dañado ({e})")
+    with t:
+        for m in miembros:
+            n = Path(m.name).name
+            if not m.isfile() or not n.endswith(".dump"):
+                continue
+            x = DIR / f".subida-{secrets.token_hex(8)}.tmp"
+            try:
+                with t.extractfile(m) as src, open(x, "wb") as dst:
+                    while trozo := src.read(1 << 20):
+                        dst.write(trozo)
+                out.append(dict(subir(x, "auto", permitidas, otras), fichero=n))
+            except ValueError as e:
+                errores.append(f"{n}: {e}")
+            finally:
+                x.unlink(missing_ok=True)
+    if not out:
+        raise ValueError("El paquete no tiene copias válidas" + (": " + "; ".join(errores) if errores else ""))
+    out.sort(key=lambda r: r["base"] != "plataforma")
+    return out, errores
 
 
 def registro(f):
@@ -8453,6 +8680,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
+from starlette.background import BackgroundTask
 
 from . import alta, cec, copias, db, gestion, informes, plataforma, tb
 from .comun import COMUNIDAD, E, TZL, comunidad, config, datadis_configurado, log
@@ -8946,7 +9174,14 @@ async def informe_coeficientes(anio: int | None = Query(None, ge=2000, le=2100),
 TipoResumen = Literal["energia", "comunidad", "potencia", "reactiva", "factura"]
 
 
+# Resumenes de las vistas premium (SERVICIOS_PREMIUM): inactivos
+RESUMEN_PREMIUM = {"potencias": "potencia", "reactiva": "reactiva", "factura": "factura"}
+PREMIUM = {RESUMEN_PREMIUM[x.strip()] for x in (E.get("SERVICIOS_PREMIUM") or "").split(",") if x.strip() in RESUMEN_PREMIUM}
+
+
 async def _resumen(tipo, desde, hasta, propio=None):
+    if tipo in PREMIUM:
+        raise HTTPException(403, "Servicio premium: este informe no está incluido en el plan de la comunidad")
     if desde and hasta and hasta < desde:
         raise HTTPException(422, "desde es posterior a hasta")
     if desde and hasta and (hasta - desde).days > 3 * 366:
@@ -9578,18 +9813,35 @@ async def plat_copias_crear(p: PeticionCopia, _: str = Depends(superusuario)):
 
 
 @app.post("/plataforma/copias/subir", status_code=201,
-          summary="Sube una copia (.dump, cuerpo binario) de la base indicada (?base=plataforma, cec_<id> o auto: la de la copia)")
+          summary="Sube una copia (cuerpo binario): una .dump de la base indicada (?base=plataforma, cec_<id> o "
+                  "auto: la de la copia) o un paquete .tar (copia completa: cada .dump, de la base que dice)")
 async def plat_copias_subir(request: Request, base: str = Query("auto"), quien: str = Depends(superusuario)):
     tmp = copias.DIR / f".subida-{secrets.token_hex(8)}.tmp"
     try:
         with open(tmp, "wb") as f:
             async for trozo in request.stream():
                 f.write(trozo)
-        r = await asyncio.to_thread(lambda: _copias(copias.subir, tmp, base, _bases_plat(), True))
-        log.info("%s sube la copia %s (base %s)", quien, r["nombre"], r["base"])
-        return r
+        if await asyncio.to_thread(copias.es_paquete, tmp):
+            out, errores = await asyncio.to_thread(lambda: _copias(copias.subir_paquete, tmp, _bases_plat(), True))
+        else:
+            out, errores = [await asyncio.to_thread(lambda: _copias(copias.subir, tmp, base, _bases_plat(), True))], []
+        for r in out:
+            log.info("%s sube la copia %s (base %s)", quien, r["nombre"], r["base"])
+        return {"paquete": len(out) > 1 or bool(errores) or "fichero" in out[0], "copias": out, "errores": errores}
     finally:
         tmp.unlink(missing_ok=True)
+
+
+class PeticionPaquete(BaseModel):
+    nombres: list[str] = Field(..., description="Copias que se juntan en el .tar (ver GET /plataforma/copias)")
+
+
+@app.post("/plataforma/copias/paquete", summary="Descarga varias copias en un solo fichero .tar (con su manifiesto)")
+async def plat_copias_paquete(p: PeticionPaquete, _: str = Depends(superusuario)):
+    titulos = {b["id"]: b["nombre"] for b in await asyncio.to_thread(plataforma.bases)}
+    f = await asyncio.to_thread(lambda: _copias(copias.paquete, p.nombres, list(titulos), True, titulos))
+    return FileResponse(f, media_type="application/x-tar", background=BackgroundTask(f.unlink, missing_ok=True),
+                        filename=f"vatiaco-copias-{date.today():%Y%m%d}.tar")
 
 
 @app.get("/plataforma/copias/{nombre}", summary="Descarga una copia")
@@ -10042,6 +10294,7 @@ services:
       ALTA_ORIGENES: ${ALTA_ORIGENES}
       ALTA_NOMBRE_SERVICIO: ${ALTA_NOMBRE_SERVICIO}
       ALTA_DIAS_PRUEBA: ${ALTA_DIAS_PRUEBA}
+      SERVICIOS_PREMIUM: ${SERVICIOS_PREMIUM}
       ALTA_SYNC_SOCIOS: ${ALTA_SYNC_SOCIOS}
       ALTA_URL_CONDICIONES: ${ALTA_URL_CONDICIONES}
       ALTA_URL_PRIVACIDAD: ${ALTA_URL_PRIVACIDAD}
@@ -10566,7 +10819,9 @@ def usuario_cliente(cid, c, dash_id, fullscreen=False):
 import unicodedata
 
 CEC = E.get("CEC_NOMBRE", "")
-CEC_DASH_VERSION = 64           # sube este numero para regenerar el panel de la comunidad
+CEC_DASH_VERSION = 66           # sube este numero para regenerar el panel de la comunidad
+# Vistas premium (SERVICIOS_PREMIUM de iot-thingsboard.sh): pestañas inactivas con la marca "Premium"
+PREMIUM = sorted({x.strip() for x in (E.get("SERVICIOS_PREMIUM") or "").split(",")} & {"potencias", "reactiva", "factura"})
 OCULTAR_PIE = "section.tb-powered-by-footer { display: none !important; }"
 # El CSS de impresion esta en config/branding/VatiaCo.css (global)
 CSS_PANEL = OCULTAR_PIE
@@ -10913,13 +11168,13 @@ var REPARTOS = { manual: 'coeficientes fijos', optimo: 'coeficientes fijos ópti
 // Potencia: termino de potencia (EUR/kW y año) por periodo y terminos de exceso de potencia de la
 // Resolucion de peajes de 2026 (anexo II): tep45 (EUR/kW y dia, puntos de medida tipo 4 y 5:
 // potencias <= 50 kW) y tep123 (EUR/kW, tipo 1, 2 y 3: alguna potencia > 50 kW)
-var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, pot: { 1: 30.0, 2: 3.0 },
+var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, lcoe: 0.06, pot: { 1: 30.0, 2: 3.0 },
                            tep45: { 1: 0.279426, 2: 0.005316 }, tep123: { 1: 2.968850, 2: 0.056473 } },
-                '3.0TD': { p: { 1: 0.19, 2: 0.16, 3: 0.13, 4: 0.12, 5: 0.10, 6: 0.09 }, comp: 0.06,
+                '3.0TD': { p: { 1: 0.19, 2: 0.16, 3: 0.13, 4: 0.12, 5: 0.10, 6: 0.09 }, comp: 0.06, lcoe: 0.05,
                            pot: { 1: 20.0, 2: 11.0, 3: 5.0, 4: 4.3, 5: 2.8, 6: 1.6 },
                            tep45: { 1: 0.171373, 2: 0.090584, 3: 0.028721, 4: 0.021891, 5: 0.006142, 6: 0.006142 },
                            tep123: { 1: 3.325715, 2: 1.757877, 3: 0.557353, 4: 0.424794, 5: 0.119179, 6: 0.119179 } },
-                '6.1TD': { p: { 1: 0.16, 2: 0.14, 3: 0.12, 4: 0.11, 5: 0.09, 6: 0.08 }, comp: 0.05,
+                '6.1TD': { p: { 1: 0.16, 2: 0.14, 3: 0.12, 4: 0.11, 5: 0.09, 6: 0.08 }, comp: 0.05, lcoe: 0.045,
                            pot: { 1: 30.0, 2: 15.5, 3: 7.0, 4: 5.5, 5: 1.6, 6: 0.9 },
                            tep45: { 1: 0.275735, 2: 0.146094, 3: 0.054668, 4: 0.038455, 5: 0.000817, 6: 0.000722 },
                            tep123: { 1: 3.431797, 2: 1.818277, 3: 0.680379, 4: 0.478581, 5: 0.010172, 6: 0.008984 } } };
@@ -10945,15 +11200,18 @@ function editorPrecios() {
   var pn = q('.dd-prec1'), gestor = (S.ctx.currentUser || {}).authority === 'TENANT_ADMIN', P = S.prec || PRECIOS;
   var v = function (x) { return x == null ? '' : String(+(+x).toFixed(4)); };
   pn.innerHTML = '<table><tr><th>Peaje</th>' + [1, 2, 3, 4, 5, 6].map(function (p) { return '<th>P' + p + '</th>'; }).join('') +
-    '<th>Excedentes</th></tr>' + ['2.0TD', '3.0TD', '6.1TD'].map(function (t) {
+    '<th>Excedentes</th><th title="Coste nivelado de la energía generada (inversión, operación y mantenimiento en su vida útil)">LCOE generación</th></tr>' +
+    ['2.0TD', '3.0TD', '6.1TD'].map(function (t) {
       return '<tr><td><b>' + t + '</b></td>' + [1, 2, 3, 4, 5, 6].map(function (p) {
         return '<td>' + (P[t].p[p] == null ? '–' : '<input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="' + p +
           '" value="' + v(P[t].p[p]) + '"' + (gestor ? '' : ' disabled') + '>') + '</td>';
       }).join('') + '<td><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="comp" value="' + v(P[t].comp) + '"' +
-        (gestor ? '' : ' disabled') + '></td></tr>';
+        (gestor ? '' : ' disabled') + '></td><td><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="lcoe" value="' +
+        v(P[t].lcoe != null ? P[t].lcoe : PRECIOS[t].lcoe) + '"' + (gestor ? '' : ' disabled') + '></td></tr>';
     }).join('') + '</table>' +
-    '<div class="dd-prec-pie">€/kWh del término de energía (con peajes y cargos, sin impuestos) por periodo, y precio de compensación de ' +
-    'los excedentes. Se usan en esta pestaña y en el informe de justificación de los coeficientes.' +
+    '<div class="dd-prec-pie">€/kWh del término de energía (con peajes y cargos, sin impuestos) por periodo, precio de compensación de ' +
+    'los excedentes y LCOE de la generación (coste de producir cada kWh fotovoltaico que corresponde al socio: el suyo propio en solitario, ' +
+    'el de su coeficiente en comunidad; por defecto, valores aproximados de autoconsumo FV). Se usan en esta pestaña, en la factura y en los informes.' +
     (S.prec && S.prec.defecto ? ' Ahora: los aproximados por defecto.' : '') +
     (gestor ? ' <button type="button" class="dd-bprec dd-pg" disabled title="Guarda los precios cambiados y recalcula los costes">Recalcular</button> <button type="button" class="dd-bprec dd-pd">Valores por defecto</button>' : '') +
     ' <span class="dd-pmsg"></span></div>';
@@ -10964,12 +11222,12 @@ function editorPrecios() {
     var out = todosPrecios();
     qa('.dd-prec1 input').forEach(function (i) {
       var x = out[i.dataset.t], val = i.value === '' ? null : +i.value;
-      if (i.dataset.p === 'comp') x.comp = val; else x.p[i.dataset.p] = val;
+      if (i.dataset.p === 'comp' || i.dataset.p === 'lcoe') x[i.dataset.p] = val; else x.p[i.dataset.p] = val;
     });
     guardar(out);
   };
   q('.dd-pd').onclick = function () { var out = todosPrecios(); ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
-    out[t].p = JSON.parse(JSON.stringify(PRECIOS[t].p)); out[t].comp = PRECIOS[t].comp; }); guardar(out); };
+    out[t].p = JSON.parse(JSON.stringify(PRECIOS[t].p)); out[t].comp = PRECIOS[t].comp; out[t].lcoe = PRECIOS[t].lcoe; }); guardar(out); };
 }
 // Guarda los precios (PUT /precios) y vuelve a pintar los costes: mientras, el boton queda
 // deshabilitado y a su lado "Actualizando…" con un indicador que gira; si falla, el error y el
@@ -11001,7 +11259,7 @@ function todosPrecios() {
   ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
     var x = P[t] || PRECIOS[t];
     var c = function (k) { return JSON.parse(JSON.stringify(x[k] || PRECIOS[t][k])); };
-    out[t] = { p: c('p'), comp: x.comp, pot: c('pot'), tep45: c('tep45'), tep123: c('tep123'),
+    out[t] = { p: c('p'), comp: x.comp, lcoe: x.lcoe != null ? x.lcoe : PRECIOS[t].lcoe, pot: c('pot'), tep45: c('tep45'), tep123: c('tep123'),
                alquiler: x.alquiler != null ? x.alquiler : { '2.0TD': 0.81, '3.0TD': 9, '6.1TD': 25 }[t] };
   });
   return out;
@@ -11136,6 +11394,15 @@ function indice(ts, t0) {
 self.onInit = function () {
   S.ctx = self.ctx;
   S.raiz = self.ctx.$container[0];
+  // Vista premium (SERVICIOS_PREMIUM): no se carga nada, solo el aviso
+  if ((self.ctx.settings || {}).premium) {
+    var nom = { potencias: 'Potencias', reactiva: 'Energía reactiva', factura: 'Factura' }[(self.ctx.settings || {}).vista] || 'Esta vista';
+    S.raiz.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;font:14px Roboto,Arial,sans-serif;color:#555">' +
+      '<div style="max-width:420px;text-align:center;padding:24px;border:1px solid #f0e2a8;border-radius:8px;background:#fffbea">' +
+      '<div style="font-size:30px;color:#e0a800">★</div><h3 style="margin:6px 0 8px;color:#7b2fa8">' + nom + ': servicio premium</h3>' +
+      '<p style="margin:0">Esta vista y sus informes no están incluidos en el plan de la comunidad. Pregunta a la plataforma cómo activarlos.</p></div></div>';
+    return;
+  }
   // Subpestaña Costes de la energia: tabla de precios de la comunidad, siempre desplegada en ella
   // (editable por el gestor)
   // Pestaña del widget (settings.vista): consumos, potencias, reactiva o factura, cada una con sus
@@ -11387,14 +11654,18 @@ function cargarCostes(n, t0, t1) {
   });
 }
 
-// Euros de cada casilla: compra a la red por periodo, compensacion de excedentes (negativa) y neto
+// Euros de cada casilla: compra a la red por periodo, compensacion de excedentes (negativa), coste
+// de la generacion que corresponde al socio (LCOE x (autoconsumo + excedentes)) y neto
+function lcoe() { var P = precio(); return P.lcoe != null ? +P.lcoe : PRECIOS[tarifa()].lcoe; }
 function euros(G) {
-  var P = precio(), np = pj() === '2.0TD' ? 3 : 6;
+  var P = precio(), np = pj() === '2.0TD' ? 3 : 6, L = lcoe();
   return G.V.map(function (v) {
     var o = { neto: 0 };
     for (var p = 1; p <= np; p++) { o['p' + p] = (v['p' + p] || 0) * P.p[p]; o.neto += o['p' + p]; }
     o.comp = (v.vert || 0) * P.comp;   // v.vert ya es negativo
-    o.neto += o.comp;
+    o.lcoe = ((v.auto || 0) - (v.vert || 0)) * L;
+    o.factura = o.neto + o.comp;      // lo que cobra la comercializadora (sin la generacion)
+    o.neto += o.comp + o.lcoe;
     return o;
   });
 }
@@ -11429,6 +11700,8 @@ function pintarCostes() {
   });
   series.push({ type: 'bar', name: 'Compensación de excedentes', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#4caf7d' },
                 data: ver.map(function (o) { return o.comp ? r2(o.comp) : null; }) });
+  series.push({ type: 'bar', name: 'Generación (LCOE)', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#8fc3f0' },
+                data: ver.map(function (o) { return o.lcoe ? r2(o.lcoe) : null; }) });
   series.push({ type: 'line', name: 'Coste neto' + (com ? ' en comunidad' : ' en solitario'), step: S.modo === 'dia' ? 'middle' : false,
                 symbol: 'circle', symbolSize: 4, lineStyle: { width: 2, color: '#7b2fa8' }, itemStyle: { color: '#7b2fa8' }, z: 5,
                 data: ver.map(function (o) { return r2(o.neto); }) });
@@ -11448,7 +11721,8 @@ function pintarCostes() {
   q('.dd-titulo').innerHTML = 'Coste de la energía ' + { dia: 'horario', semana: 'diario', mes: 'diario', anio: 'mensual' }[S.modo] +
     ' (€)' + (com ? ' — en comunidad' : ' — en solitario') + '<br><small style="color:#777;font-weight:400">Precio fijo por periodos, ' +
     tarifa() + (S.prec && !S.prec.defecto ? ' (precios de la comunidad, sin impuestos): ' : ' (aproximados, sin impuestos; edítalos en la tabla de precios): ') + pr.join(' · ') + ' €/kWh; excedentes compensados a ' + VL.num(P.comp, 2) +
-    ' €/kWh. Beneficio = coste en solitario (Datadis) − coste en comunidad.</small>';
+    ' €/kWh; generación (autoconsumo + excedentes) a su LCOE, ' + VL.num(lcoe(), 3) + ' €/kWh. Coste neto = compra − compensación + generación. ' +
+    'Beneficio = coste en solitario (Datadis) − coste en comunidad.</small>';
   q('.dd-vacio').textContent = 'Sin datos en este periodo';
   q('.dd-vacio').style.display = hay ? 'none' : 'block';
 }
@@ -11892,16 +12166,20 @@ function pintarReacCostes(r, t0) {
 // pasa de la energia comprada), potencia, reactiva, impuesto electrico, alquiler del contador e IVA
 function pintarFactura(r, t0, cd) {
   var et = casillas(t0), O = otros(), alq = alquiler(), Pt = calcPot(r, t0), Rc = S.reacs.length ? calcReac(r, t0) : null;
-  var energia = function (G) { return euros(G).map(function (o) { return Math.max(0, o.neto); }); };
+  // Energia de la comercializadora (la compensacion no pasa de lo comprado) y, aparte, el coste de
+  // la generacion que corresponde al socio (LCOE, sin impuestos: no es parte de esa factura)
+  var energia = function (G) { return euros(G).map(function (o) { return { e: Math.max(0, o.factura), g: o.lcoe }; }); };
   var Gs = agrupar(r, cats(S.hayGen), t0), Es = energia(Gs), Ec = cd ? energia(agrupar(curvasCom(cd, t0, mover(new Date(t0), 'anio', 1).getTime()), cats(true), t0, true)) : null;
   var hay = et.map(function (_, m) { return Gs.hay[m] || Pt.hayM[m] || (Rc && Rc.hayM[m]); });
   var com = S.enCom && Ec;
   var fac = function (E) {
-    var F = { e: [], p: [], r: [], iee: [], alq: [], iva: [], tot: [] };
+    var F = { e: [], p: [], r: [], iee: [], alq: [], iva: [], gen: [], tot: [] };
     et.forEach(function (_, m) {
-      if (!hay[m]) { ['e', 'p', 'r', 'iee', 'alq', 'iva', 'tot'].forEach(function (k) { F[k].push(null); }); return; }
-      var e = E[m] || 0, p = Pt.total[m] || 0, rr = Rc ? Rc.total[m] || 0 : 0, iee = (e + p + rr) * O.iee / 100, iva = (e + p + rr + iee + alq) * O.iva / 100;
-      F.e.push(e); F.p.push(p); F.r.push(rr); F.iee.push(iee); F.alq.push(alq); F.iva.push(iva); F.tot.push(e + p + rr + iee + alq + iva);
+      if (!hay[m]) { ['e', 'p', 'r', 'iee', 'alq', 'iva', 'gen', 'tot'].forEach(function (k) { F[k].push(null); }); return; }
+      var e = (E[m] || {}).e || 0, g = (E[m] || {}).g || 0, p = Pt.total[m] || 0, rr = Rc ? Rc.total[m] || 0 : 0;
+      var iee = (e + p + rr) * O.iee / 100, iva = (e + p + rr + iee + alq) * O.iva / 100;
+      F.e.push(e); F.p.push(p); F.r.push(rr); F.iee.push(iee); F.alq.push(alq); F.iva.push(iva); F.gen.push(g);
+      F.tot.push(e + p + rr + iee + alq + iva + g);
     });
     return F;
   };
@@ -11909,13 +12187,13 @@ function pintarFactura(r, t0, cd) {
   S.datos = { fact: true, r: r, t0: t0, cd: cd, et: et, F: F, Fs: Fs, Fc: Fc };
   var T = sumaA(F.tot);
   q('.dd-k1').textContent = n ? eur(T) : '–';
-  q('.dd-l1').textContent = 'Factura del año, IVA incluido (€)' + (com ? ' · en comunidad' : ' · en solitario') + (n && n < 12 ? ' · ' + n + ' meses' : '');
+  q('.dd-l1').textContent = 'Factura del año con IVA y generación (LCOE) (€)' + (com ? ' · en comunidad' : ' · en solitario') + (n && n < 12 ? ' · ' + n + ' meses' : '');
   q('.dd-k2').textContent = n ? eur(T / n) : '–';
   q('.dd-l2').textContent = 'Factura media mensual (€)';
   q('.dd-k3').textContent = n && Fc ? eur(sumaA(Fs.tot) - sumaA(Fc.tot)) : '–';
   q('.dd-l3').textContent = Fc ? 'Ahorro en la factura por estar en la comunidad (€)' : 'En comunidad: sin reparto';
   var C = [['e', 'Energía', '#fda38a'], ['p', 'Potencia', '#f5b942'], ['r', 'Reactiva', '#c07a12'], ['iee', 'Impuesto eléctrico', '#9e9e9e'],
-           ['alq', 'Alquiler del contador', '#bdbdbd'], ['iva', 'IVA', '#7b2fa8']];
+           ['alq', 'Alquiler del contador', '#bdbdbd'], ['iva', 'IVA', '#7b2fa8'], ['gen', 'Generación (LCOE)', '#8fc3f0']];
   donaAnual(C.map(function (c) { return { name: c[1], value: +sumaA(F[c[0]]).toFixed(2), itemStyle: { color: c[2] } }; }), '€');
   var series = C.map(function (c) { return { type: 'bar', name: c[1], stack: S.apilado ? 'a' : null, barMaxWidth: 48, itemStyle: { color: c[2] }, data: F[c[0]].map(r2) }; });
   if (Fc) series.push({ type: 'line', name: 'Total ' + (com ? 'en solitario' : 'en comunidad'), symbol: 'circle', symbolSize: 4,
@@ -11924,7 +12202,8 @@ function pintarFactura(r, t0, cd) {
   q('.dd-titulo').innerHTML = 'Factura de cada mes (€)' + (com ? ' — en comunidad' : ' — en solitario') + '<br><small style="color:#777;font-weight:400">' +
     'Energía (precio fijo por periodos; la compensación de excedentes no supera la energía del mes), potencia (término y excesos), ' +
     'reactiva, impuesto eléctrico (' + VL.num(O.iee, 2) + ' % de energía, potencia, excesos y reactiva), alquiler del contador (' + VL.num(alq, 2) +
-    ' €/mes) e IVA (' + VL.num(O.iva, 0) + ' %). Estimación con los precios de la comunidad. Normativa de peajes: ' + NORMA + '.</small>';
+    ' €/mes) e IVA (' + VL.num(O.iva, 0) + ' %), más el coste de la generación que corresponde al socio (LCOE ' + VL.num(lcoe(), 3) +
+    ' €/kWh, fuera de la factura de la comercializadora y sin impuestos). Estimación con los precios de la comunidad. Normativa de peajes: ' + NORMA + '.</small>';
   vacioAnual(n, 'Sin datos en este año');
 }
 
@@ -12190,6 +12469,9 @@ NAV_CSS = """
 .vl-tabs button .material-icons.vl-ico-txt { font-family: Roboto, Arial, sans-serif; font-style: normal; font-weight: 700;
   font-size: 11px; letter-spacing: -.02em; display: inline-block; min-width: 18px; text-align: center; text-transform: none; }
 .vl-tabs .vl-sep { display: none; }
+.vl-tabs button.vl-prem { position: relative; }
+.vl-prem-m { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; background: #ffd54f; color: #5d4300;
+  font: 700 10px/16px Roboto, Arial, sans-serif; font-style: normal; letter-spacing: .02em; vertical-align: 1px; white-space: nowrap; }
 /* Pantalla estrecha (las pestañas no caben): menu hamburguesa con la pestaña activa */
 .vl-burger { display: none; align-items: center; gap: 10px; border: 0; background: none; padding: 6px 10px; min-width: 0;
   font: 500 14px Roboto, Arial, sans-serif; color: #7b2fa8; cursor: pointer; white-space: nowrap; }
@@ -12282,6 +12564,8 @@ VL_RAIL_CSS = """
 #vl-rail .vl-tabs button.on { background: rgba(255,255,255,.18); border-left-color: #ffd54f; color: #fff;
   font-weight: 500; cursor: default; }
 #vl-rail .vl-tabs button:disabled { opacity: .45; cursor: default; }
+#vl-rail .vl-tabs button.vl-prem { position: relative; opacity: .7; cursor: not-allowed; }
+#vl-rail .vl-tabs button.vl-prem .vl-prem-m { opacity: 1; }
 /* Separador: lo de arriba es del gestor; lo de abajo, de la comunidad seleccionada (su nombre) */
 #vl-rail .vl-sep { display: block; flex: none; margin: 8px 0 2px; padding: 10px 16px 4px; border-top: 1px solid rgba(255,255,255,.25);
   font-size: 11px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.75);
@@ -12295,6 +12579,7 @@ body.vl-con-rail tb-root { position: fixed !important; top: 0; right: 0; bottom:
   #vl-rail .vl-logo-c { display: block; }
   #vl-rail .vl-tabs button { justify-content: center; padding: 14px 0; }
   #vl-rail .vl-tabs button span { display: none; }
+  #vl-rail .vl-tabs button.vl-prem::after { content: '★'; position: absolute; top: 6px; right: 10px; color: #ffd54f; font-size: 12px; }
   #vl-rail .vl-sep { padding: 0; margin: 8px 12px; }
   #vl-rail .vl-sep span { display: none; }
   body.vl-con-rail tb-root { left: 64px; }
@@ -12328,8 +12613,12 @@ VL_RAIL_JS = "var VL_RAIL_CSS = " + json.dumps(VL_RAIL_CSS) + ";\n" + r"""
 var VL_SVG = { contador: '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
   '<rect x="7.5" y="5.5" width="9" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
   '<path d="M12.8 11.6l-3 4.4h2.1l-.7 3.4 3-4.6h-2.1z" fill="currentColor"/>' };
-function vlBoton(i, texto, icono, on) {
+function vlBoton(i, texto, icono, on, premium) {
   var esc = function (t) { return String(t).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); };
+  // premium: inactiva, con la marca (servicio premium, no incluido)
+  if (premium) return '<button type="button" class="vl-prem" disabled data-i="' + i + '" title="' + esc(texto) +
+    ': servicio premium (no incluido)">' + vlBoton(i, texto, icono, false).replace(/^<button[^>]*>/, '').replace(/<\/span><\/button>$/,
+    ' <em class="vl-prem-m">★ Premium</em></span></button>');
   return '<button type="button" data-i="' + i + '" title="' + esc(texto) + '"' + (on ? ' class="on" aria-current="page"' : '') + '>' +
     // icono "txt:kWh": una unidad escrita en lugar del icono de Material
     (icono ? (String(icono).indexOf('svg:') === 0 && VL_SVG[icono.slice(4)] ?
@@ -12409,13 +12698,14 @@ function vlNav(ctx, el, nav, activo) {
   el.innerHTML = nav.map(function (n, i) {
     if (n[0] === '-') return '<div class="vl-sep" title="' + String(n[1]).replace(/"/g, '&quot;') + '"><span>' +
       String(n[1]).replace(/[&<>]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[x]; }) + '</span></div>';
-    return vlBoton(i, n[1], n[4], esActiva(n));
+    return vlBoton(i, n[1], n[4], esActiva(n), n[5]);
   }).join('');
   var on = el.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   ctx.http.get('/api/tenant/dashboards?pageSize=200&page=0').subscribe(function (r) {
     var ids = {}; (r.data || []).forEach(function (d) { ids[d.title] = d.id.id; });
     [].forEach.call(el.querySelectorAll('button'), function (b) {
       var n = nav[+b.dataset.i], id = ids[n[2]];
+      if (n[5]) return;                               // premium: inactiva
       if (!id) { b.disabled = true; return; }
       if (esActiva(n)) return;
       b.onclick = function () {
@@ -12467,13 +12757,13 @@ self.onInit = function () {
   if ((self.ctx.settings || {}).sub) c.querySelector('.vl-nav-w').className = 'vl-sub-w';
   var activo = sc ? sc.getStateId() : '';
   el.innerHTML = tabs.map(function (t, i) {
-    return vlBoton(i, socio && t[2] ? t[2] : t[1], t[3], t[0] === activo);
+    return vlBoton(i, socio && t[2] ? t[2] : t[1], t[3], t[0] === activo, t[4]);
   }).join('');
   var on = el.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   self.rail = vlRail(self.ctx, el);
   [].forEach.call(el.querySelectorAll('button'), function (b) {
     var t = tabs[+b.dataset.i];
-    if (!sc || t[0] === activo) return;
+    if (!sc || t[0] === activo || t[4]) return;
     b.onclick = function () {
       var p = sc.getStateParams ? sc.getStateParams() : {};
       if (sc.updateState) sc.updateState(t[0], p, false); else sc.openState(t[0], p, false);
@@ -12496,6 +12786,9 @@ SOCIO_TABS = [["socio", "Consumos", "", "svg:contador"], ["socio_potencias", "Po
 COM_TABS = [["default", "Consumos", "", "svg:contador"], ["com_potencias", "Potencias", "", "speed"],
             ["com_reactiva", "Reactiva", "", "waves"], ["com_factura", "Factura", "", "receipt_long"],
             ["com_mapa", "Ubicación", "", "place"]]
+# t[4]: pestaña premium (inactiva, con la marca)
+for _t in SOCIO_TABS + COM_TABS:
+    _t.append(_t[0].split("_", 1)[-1] in PREMIUM)
 
 
 def w_socio_nav(x, y, w, h, tabs=None, sub=False):
@@ -12743,6 +13036,7 @@ ALTA_CSS = """
 .al-b.pend { background: #7b2fa8; color: #fff; }
 .al-consola { position: sticky; bottom: 0; background: #fff; box-shadow: 0 -2px 8px rgba(0,0,0,.08); margin-bottom: 0; z-index: 1; }
 .al-con-cab { display: flex; align-items: center; gap: 8px; } .al-con-cab h3 { margin: 0; flex: 1; }
+.al-tabla, .c-tabla { overflow-x: auto; } .c-ayuda { margin: 6px 0 0; color: #555; }
 .al-csvs { display: inline-flex; flex-wrap: nowrap; gap: 4px; }
 .al-csvb { width: 28px; height: 26px; padding: 0; border: 1px solid #d9c6e6; border-radius: 4px; background: #f1e6f8; color: #7b2fa8;
   cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
@@ -12935,8 +13229,9 @@ var ICO_CONTADOR = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden=
   '<rect x="7.5" y="5.5" width="9" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
   '<path d="M12.8 11.6l-3 4.4h2.1l-.7 3.4 3-4.6h-2.1z" fill="currentColor"/></svg>';
 var SIMT = { residencial: 'Residencial', residencial_fv: 'Residencial con FV', comercial: 'Comercial', industrial: 'Industrial', cargador_ve: 'Cargador VE',
-             cargador_ve_lento: 'Cargador VE lento', generador_fv: 'FV de la comunidad' };
-var SIMKWH = { residencial: 300, residencial_fv: 300, comercial: 2500, industrial: 60000, cargador_ve: 4000, cargador_ve_lento: 1500, generador_fv: 3000 };
+             cargador_ve_lento: 'Cargador VE lento', estacion_ve: 'Estación de recarga VE (2 × 22 kW)',
+             estacion_ve_fv: 'Estación de recarga VE con la FV (70 % de lo generado; 3 kW sin sol)', generador_fv: 'FV de la comunidad' };
+var SIMKWH = { residencial: 300, residencial_fv: 300, comercial: 2500, industrial: 60000, cargador_ve: 4000, cargador_ve_lento: 1500, estacion_ve: 1000, estacion_ve_fv: 3000, generador_fv: 3000 };
 self.onInit = function () {
   var c = self.ctx.$container[0];
   var q = function (s) { return c.querySelector('.' + s); };
@@ -12993,7 +13288,7 @@ self.onInit = function () {
             '<td class="ck"><input type="checkbox" data-bloq="' + esc(f.id) + '"' + (f.estado === 'suspendido' ? ' checked' : '') +
               ' title="Bloqueado: no puede entrar en su panel"></td>' +
             '<td><b>' + esc(f.nombre) + '</b>' + (f.simulado ? ' <span class="al-chip sim" title="' + esc(SIMT[f.sim_tipo] || f.sim_tipo || '') +
-              (f.sim_kwh_mes ? ' · ' + Number(f.sim_kwh_mes).toLocaleString('es-ES') + ' kWh/mes' : '') + '">simulado</span>' : '') +
+              (f.sim_kwh_mes && f.sim_tipo !== 'estacion_ve_fv' ? ' · ' + Number(f.sim_kwh_mes).toLocaleString('es-ES') + ' kWh/mes' : '') + '">simulado</span>' : '') +
               '<br><small>' + esc(f.id) + '</small></td>' +
             '<td>' + (f.cups ? esc(f.cups) : '–') + (sum ? '<br><small>' + sum + '</small>' : '') + '</td>' +
             '<td>' + datos + '</td><td>' + cargar + '</td></tr>';
@@ -13555,7 +13850,8 @@ AYUDA = {
     "En <i>Consumos</i>, junto a <i>Consumos y excedentes</i>: lo que te cuesta la energía con precio fijo por periodos (los "
     "precios de la comunidad, sin impuestos), en solitario (tus "
     "curvas de Datadis) y en comunidad (con tu coeficiente de reparto), y la diferencia: tu beneficio de estar en la "
-    "comunidad. Los excedentes se valoran al precio de compensación."],
+    "comunidad. Los excedentes se valoran al precio de compensación y la energía generada que te corresponde (la de tu "
+    "instalación en solitario, la de tu coeficiente en comunidad) a su LCOE: lo que cuesta producirla."],
    ["¿Dónde veo mi contrato?",
     "En la pestaña <i>Contrato</i> del gráfico: tarifa, potencias, distribuidora y datos de autoconsumo, tal como "
     "constan en Datadis."]]],
@@ -13614,16 +13910,27 @@ AYUDA = {
     "en <i>error</i>: corrige la causa y pulsa <i>Reintentar</i>. El impago o la baja suspenden al gestor, y el pago al "
     "día lo reactiva."]]],
   ["Copias de seguridad", "storage", [
-   ["¿Cómo hago una copia?",
-    "En <i>Copias de seguridad y registro</i>, marca las bases que quieras y pulsa <i>Hacer copia de las marcadas</i>. "
-    "Además, cada día a las 03:00 se hace una copia automática de todas, que se guarda 7 días."],
-   ["¿Cómo restauro una copia?",
-    "Selecciónala y pulsa <i>Restaurar</i>. Sustituye todos los datos de esa base en una sola operación, y antes se "
-    "guarda el estado actual como copia <i>previa</i>. Tras reinstalar, restaura primero la base <code>plataforma</code> "
-    "y después las de las comunidades (<code>cec_…</code>): sus usuarios entran con su contraseña de siempre."],
+   ["¿Qué se puede copiar?",
+    "Cada base de datos por separado: la de los <b>gestores</b> (registro de la plataforma: gestores, comunidades y "
+    "cuentas de Datadis) y la de cada <b>comunidad</b> (sus socios, datos y gestión, con su gestor). Están en la lista "
+    "<i>Qué copiar o restaurar</i> de la pestaña <i>Copias de seguridad y registro</i>, con su última copia."],
+   ["¿Cómo hago una copia y la guardo en mi ordenador?",
+    "Marca las bases en <i>Qué copiar o restaurar</i> y pulsa <i>Hacer copia</i> (se guarda en el servidor) o <i>Hacer "
+    "copia y descargar</i> (además la descarga: una base en un <code>.dump</code>, varias en un solo <code>.tar</code>). "
+    "<i>Copia completa y descargar</i> lo hace con todas a la vez. Cada día a las 03:00 se hace además una copia "
+    "automática de todas, que se guarda 7 días."],
+   ["¿Cómo restauro?",
+    "Marca las bases y pulsa <i>Restaurar la última copia</i>, o elige copias concretas en <i>Copias guardadas</i> (con "
+    "<i>Ver</i> filtras por base) y pulsa <i>Restaurar</i>. Sustituye todos los datos de cada base en una sola operación, "
+    "y antes se guarda el estado actual como copia <i>previa</i> (para deshacerlo, restaura esa previa). Los gestores se "
+    "restauran primero y después las comunidades; sus usuarios entran con su contraseña de siempre."],
+   ["¿Cómo restauro desde un archivo de mi ordenador?",
+    "En <i>Restaurar desde un archivo</i>, elige el <code>.dump</code> (una base) o el <code>.tar</code> (copia completa) "
+    "y pulsa <i>Subir y restaurar</i>; con <i>Solo subir a la lista</i> queda guardado para restaurarlo después. La base "
+    "se reconoce sola. Así se lleva la plataforma entera a otro servidor."],
    ["¿Puedo subir la copia de una comunidad que no está en la plataforma?",
-    "Sí. Súbela y restáurala: se crea la comunidad con su gestor. Si la copia es antigua y no guarda los datos del "
-    "gestor, se te piden antes de crearla."]]]],
+    "Sí. Al restaurarla se crea la comunidad con su gestor. Si la copia es antigua y no guarda los datos del gestor, se "
+    "te piden antes de crearla."]]]],
 }
 
 AYUDA_CSS = """
@@ -13730,16 +14037,25 @@ PLAT_HTML = """<div class="al">
  </div>
  <div class="al-pest" data-pest="cop">
  <section class="al-caja">
-  <h3>Copias de seguridad de PostgreSQL</h3>
-  <div class="al-ctrl c-bases"></div>
-  <div class="al-ctrl"><button class="al-b c-hacer">Hacer copia de las marcadas</button></div>
-  <div class="al-ctrl"><label>Subir copia de <select class="c-base"></select></label><input type="file" class="c-fich" accept=".dump">
-   <button class="al-b sec c-subir">Subir</button></div>
+  <div class="al-con-cab"><h3>Qué copiar o restaurar</h3>
+   <button class="al-b c-completa" title="Copia ahora de todas las bases y la descarga en un solo fichero .tar">Copia completa y descargar</button></div>
+  <p class="c-ayuda">Una fila por base de datos: los <b>gestores</b> (registro de la plataforma: gestores, comunidades y
+   cuentas de Datadis) y cada <b>comunidad</b> (sus socios, datos y gestión). Marca las que quieras y elige qué hacer.</p>
+  <div class="al-ctrl al-bloque"><span class="al-nsel c-bnsel">0 marcadas</span>
+   <button class="al-b peq c-bacc" data-acc="hacer">Hacer copia</button>
+   <button class="al-b sec peq c-bacc" data-acc="bajar">Hacer copia y descargar</button>
+   <button class="al-b peq c-bacc" data-acc="ultima">Restaurar la última copia</button></div>
+  <div class="al-tabla c-btabla">Cargando…</div>
+ </section>
+ <section class="al-caja">
+  <div class="al-con-cab"><h3>Copias guardadas</h3>
+   <label>Ver <select class="c-filtro"><option value="">todas las bases</option></select></label></div>
   <div class="al-ctrl al-bloque"><span class="al-nsel c-nsel">0 seleccionadas</span>
-   <button class="al-b sec peq c-sel" data-acc="descargar">Descargar</button>
+   <button class="al-b sec peq c-sel" data-acc="descargar" title="Cada copia en su fichero .dump">Descargar</button>
+   <button class="al-b sec peq c-sel" data-acc="paquete" title="Todas las seleccionadas en un solo fichero .tar">Descargar en un fichero</button>
    <button class="al-b peq c-sel" data-acc="restaurar">Restaurar</button>
    <button class="al-b peligro peq c-sel" data-acc="borrar">Borrar</button></div>
-  <div class="c-tabla">Cargando…</div>
+  <div class="al-tabla c-tabla">Cargando…</div>
   <div class="al-bloque c-nueva al-oculto">
    <h3 class="c-nt">Crear la comunidad de la copia</h3>
    <p>La copia es de una comunidad que no está en la plataforma y no guarda sus datos: pon el nombre de la comunidad y su
@@ -13753,14 +14069,26 @@ PLAT_HTML = """<div class="al">
    <div class="al-ctrl"><button class="al-b cn-crear">Crear comunidad y restaurar la copia</button>
     <button class="al-b sec cn-cancelar">Cancelar</button></div>
   </div>
-  <p><b>Restaurar</b> sustituye todos los datos de esa base por los de la copia, en una sola operación (si algo falla no se
-   cambia nada); antes se guarda el estado actual como copia <i>previa</i>. La base <code>plataforma</code> es el registro de
-   comunidades, gestores y cuentas de Datadis; cada <code>cec_…</code> son los datos de una comunidad y sus socios.
-   Tras reinstalar, restaura primero la de la plataforma y después las de las comunidades: al restaurar se vuelven a crear
-   en ThingsBoard sus tenants, paneles y usuarios, que entran con su contraseña de siempre (las copias guardan su hash).
-   Las copias diarias se hacen a las 03:00 (7 días). Se pueden subir copias de cualquier comunidad, aunque no esté en la
-   plataforma (<i>la de la copia</i> la reconoce sola): al restaurarla se crea la comunidad con su gestor (las copias
-   antiguas, que no guardan sus datos, piden arriba los del gestor).</p>
+ </section>
+ <section class="al-caja">
+  <h3>Restaurar desde un archivo</h3>
+  <div class="al-ctrl"><input type="file" class="c-fich" accept=".dump,.tar">
+   <label>Base <select class="c-base"></select></label>
+   <button class="al-b c-subir" data-rest="1">Subir y restaurar</button>
+   <button class="al-b sec c-subir">Solo subir a la lista</button></div>
+  <p>Vale una copia suelta (<code>.dump</code>, de los gestores o de una comunidad) o una <b>copia completa</b>
+   (<code>.tar</code>, la de <i>Copia completa y descargar</i> o <i>Descargar en un fichero</i>): se restauran todas las que
+   lleva, primero la de los gestores y después las comunidades. Antes de restaurar se pide confirmación y se guarda el estado
+   actual de cada base como copia <i>previa</i>; si algo falla en una base, esa no cambia. Si la copia es de una comunidad que
+   no está en la plataforma, se crea con su gestor (las copias antiguas, que no guardan sus datos, piden los del gestor).</p>
+ </section>
+ <section class="al-caja">
+  <h3>Cómo funcionan</h3>
+  <p><b>Restaurar</b> sustituye todos los datos de esa base por los de la copia, en una sola operación, y vuelve a crear en
+   ThingsBoard su tenant, sus paneles y sus usuarios, que entran con su contraseña de siempre (las copias guardan su hash).
+   Cada día a las 03:00 se hace una copia automática de todas las bases, que se guarda 7 días; las manuales, subidas y previas
+   se guardan hasta que las borres. Para llevar la plataforma a otro servidor: <i>Copia completa y descargar</i> aquí y, allí,
+   <i>Restaurar desde un archivo</i> con el <code>.tar</code>.</p>
  </section>
  <section class="al-caja al-reg">
   <div class="al-con-cab"><h3>Registro de copias</h3><span class="al-chip al-reg-estado">listo</span>
@@ -13772,7 +14100,7 @@ PLAT_HTML = """<div class="al">
 </div>"""
 
 PLAT_JS = ALTA_JS + VL_ENTRAR_JS + AYUDA_JS + r"""
-var P = { filas: [], edita: null, copias: [], csel: {} };
+var P = { filas: [], edita: null, copias: [], csel: {}, bases: [], bsel: {}, cfiltro: '' };
 var TIPOS = { diaria: 'diaria', manual: 'manual', subida: 'subida', previa: 'previa a restaurar' };
 function tam(b) { var u = ['B', 'KB', 'MB', 'GB'], i = 0; while (b >= 1024 && i < 3) { b /= 1024; i++; }
   return b.toLocaleString('es-ES', { maximumFractionDigits: i ? 1 : 0 }) + ' ' + u[i]; }
@@ -13828,6 +14156,7 @@ self.onInit = function () {
     altas();
     api('GET', '/plataforma/comunidades').then(function (filas) {
       P.filas = filas;
+      if (P.bases.length) pintarBases();   // gestores de la lista de copias
       q('al-tabla').innerHTML = !filas.length ? '<p>No hay gestores: crea el primero con su comunidad abajo.</p>' :
         '<table><tr><th>Gestor</th><th>Contacto</th><th>Estado</th><th>Comunidad</th><th>Datadis</th><th>Suscripción</th><th class="n">Socios</th><th>Alta</th><th></th></tr>' +
         filas.map(function (f) {
@@ -14016,54 +14345,107 @@ self.onInit = function () {
         var d = j.detail; throw new Error(typeof d === 'string' ? d : (d && d.mensaje) || 'HTTP ' + r.status); });
     });
   }
+  // Bases (los gestores = la de la plataforma, y una por comunidad) con su ultima copia, y copias
+  // guardadas. Las bases de copias subidas de comunidades que no estan en la plataforma tambien salen
+  // (solo se pueden restaurar: al hacerlo se crea la comunidad).
   function copias() {
-    api('GET', '/plataforma/copias/bases').then(function (bs) {
-      var marcadas = [].map.call(c.querySelectorAll('.c-bases input:checked'), function (i) { return i.value; });
-      var nuevo = !q('c-bases').children.length;
-      q('c-bases').innerHTML = bs.map(function (b) {
-        return '<label><input type="checkbox" value="' + esc(b.id) + '"' + (nuevo || marcadas.indexOf(b.id) >= 0 ? ' checked' : '') + '> ' +
-          esc(b.nombre) + ' <code>' + esc(b.id) + '</code></label>';
-      }).join('');
-      var sel = q('c-base').value;
-      q('c-base').innerHTML = '<option value="auto">la de la copia (automático)</option>' +
-        bs.map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.id) + '</option>'; }).join('');
-      if (sel) q('c-base').value = sel;
-    });
-    api('GET', '/plataforma/copias').then(function (filas) {
-      P.copias = filas;
-      var hay = {}; filas.forEach(function (f) { hay[f.nombre] = 1; });
+    Promise.all([api('GET', '/plataforma/copias/bases'), api('GET', '/plataforma/copias')]).then(function (r) {
+      var hay = {}, vistas = {};
+      P.copias = r[1];
+      P.copias.forEach(function (f) { hay[f.nombre] = 1; });
       Object.keys(P.csel).forEach(function (n) { if (!hay[n]) delete P.csel[n]; });
-      if (!filas.length) { q('c-tabla').innerHTML = '<p>No hay copias.</p>'; ccontar(); return; }
-      q('c-tabla').innerHTML = '<table><tr><th class="sel"><input type="checkbox" class="c-todas" title="Seleccionar todas"></th>' +
-        '<th>Fecha</th><th>Base</th><th>Tipo</th><th class="n">Tamaño</th><th>Fichero</th></tr>' +
-        filas.map(function (f) {
-          var n = esc(f.nombre);
-          return '<tr><td class="sel"><input type="checkbox" data-cs="' + n + '"' + (P.csel[f.nombre] ? ' checked' : '') + '></td>' +
-            '<td>' + fh(f.fecha) + '</td><td><code>' + esc(f.base) + '</code>' +
-            (f.restaurable ? '' : ' <span class="al-chip sim" title="Al restaurarla se crea la comunidad">no está en la plataforma</span>') + '</td>' +
-            '<td>' + (f.tipo === 'previa' ? '<span class="al-chip sim">' + TIPOS[f.tipo] + '</span>' : TIPOS[f.tipo] || f.tipo) + '</td>' +
-            '<td class="n">' + tam(f.bytes) + '</td><td>' + n + '</td></tr>';
-        }).join('') + '</table>';
-      [].forEach.call(c.querySelectorAll('[data-cs]'), function (i) { i.onchange = function () {
-        if (i.checked) P.csel[i.dataset.cs] = 1; else delete P.csel[i.dataset.cs];
-        ccontar();
-      }; });
-      q('c-todas').onchange = function () {
-        var si = q('c-todas').checked;
-        P.copias.forEach(function (f) { if (si) P.csel[f.nombre] = 1; else delete P.csel[f.nombre]; });
-        [].forEach.call(c.querySelectorAll('[data-cs]'), function (i) { i.checked = si; });
-        ccontar();
-      };
-      ccontar();
-    }).catch(function (e) { q('c-tabla').innerHTML = ''; msg('No se pudieron leer las copias: ' + e.message, 'err'); });
+      P.bases = r[0].map(function (b) { vistas[b.id] = 1; return { id: b.id, nombre: b.nombre, comunidad: b.comunidad, registrada: true }; });
+      P.copias.forEach(function (f) {
+        if (!vistas[f.base]) { vistas[f.base] = 1; P.bases.push({ id: f.base, nombre: 'Comunidad que no está en la plataforma', registrada: false }); }
+      });
+      Object.keys(P.bsel).forEach(function (b) { if (!vistas[b]) delete P.bsel[b]; });
+      if (P.cfiltro && !vistas[P.cfiltro]) P.cfiltro = '';
+      var sel = q('c-base').value;
+      q('c-base').innerHTML = '<option value="auto">la que diga la copia (automático)</option>' + P.bases.map(function (b) {
+        return '<option value="' + esc(b.id) + '">' + esc(titulo(b)) + '</option>'; }).join('');
+      q('c-base').value = sel || 'auto';
+      q('c-filtro').innerHTML = '<option value="">todas las bases</option>' + P.bases.map(function (b) {
+        return '<option value="' + esc(b.id) + '">' + esc(titulo(b)) + '</option>'; }).join('');
+      q('c-filtro').value = P.cfiltro || '';
+      pintarBases(); pintarCopias();
+    }).catch(function (e) { q('c-btabla').innerHTML = q('c-tabla').innerHTML = ''; msg('No se pudieron leer las copias: ' + e.message, 'err'); });
   }
-  // Acciones sobre las copias marcadas en la lista
+  function titulo(b) { return b.id === 'plataforma' ? 'Gestores (registro de la plataforma)' : b.nombre + ' (' + b.id + ')'; }
+  function deBase(id, conPrevias) {   // copias de una base, la mas reciente primero
+    return P.copias.filter(function (f) { return f.base === id && (conPrevias || f.tipo !== 'previa'); });
+  }
+  function pintarBases() {
+    q('c-btabla').innerHTML = '<table><tr><th class="sel"><input type="checkbox" class="c-btodas" title="Marcar todas"></th>' +
+      '<th>Qué</th><th>Gestor</th><th>Última copia</th><th class="n">Copias</th><th class="n">Ocupan</th><th></th></tr>' +
+      P.bases.map(function (b) {
+        var cs = deBase(b.id, true), u = deBase(b.id)[0], g = b.comunidad && P.filas.filter(function (f) { return f.id === b.comunidad; })[0];
+        var bytes = cs.reduce(function (s, f) { return s + f.bytes; }, 0);
+        return '<tr><td class="sel"><input type="checkbox" data-bs="' + esc(b.id) + '"' + (P.bsel[b.id] ? ' checked' : '') + '></td>' +
+          '<td>' + (b.id === 'plataforma' ? '<b>Gestores</b><br><small>registro de la plataforma: gestores, comunidades y Datadis</small>'
+                   : '<b>' + esc(b.nombre) + '</b><br><small><code>' + esc(b.id) + '</code></small>') +
+          (b.registrada ? '' : ' <span class="al-chip sim" title="Al restaurarla se crea la comunidad">no está en la plataforma</span>') + '</td>' +
+          '<td>' + (b.id === 'plataforma' ? '<small>todos</small>' : g ? esc(g.gestor_nombre || '') + '<br><small>' + esc(g.gestor_email || '') + '</small>' : '–') + '</td>' +
+          '<td>' + (u ? fh(u.fecha) + ' <small>' + esc(TIPOS[u.tipo] || u.tipo) + '</small>' : '<span class="al-chip no">ninguna</span>') + '</td>' +
+          '<td class="n">' + cs.length + '</td><td class="n">' + (bytes ? tam(bytes) : '–') + '</td>' +
+          '<td>' + (cs.length ? '<button class="al-b sec peq" data-ver="' + esc(b.id) + '">Ver copias</button>' : '') + '</td></tr>';
+      }).join('') + '</table>';
+    [].forEach.call(c.querySelectorAll('[data-bs]'), function (i) { i.onchange = function () {
+      if (i.checked) P.bsel[i.dataset.bs] = 1; else delete P.bsel[i.dataset.bs];
+      bcontar();
+    }; });
+    [].forEach.call(c.querySelectorAll('[data-ver]'), function (b) { b.onclick = function () {
+      P.cfiltro = q('c-filtro').value = b.dataset.ver; pintarCopias();
+      q('c-tabla').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }; });
+    q('c-btodas').onchange = function () {
+      var si = q('c-btodas').checked;
+      P.bases.forEach(function (b) { if (si) P.bsel[b.id] = 1; else delete P.bsel[b.id]; });
+      [].forEach.call(c.querySelectorAll('[data-bs]'), function (i) { i.checked = si; });
+      bcontar();
+    };
+    bcontar();
+  }
+  function bsel() { return P.bases.filter(function (b) { return P.bsel[b.id]; }); }
+  function bcontar() {
+    var n = bsel().length, t = q('c-btodas');
+    q('c-bnsel').textContent = n + (n === 1 ? ' marcada' : ' marcadas');
+    [].forEach.call(c.querySelectorAll('.c-bacc'), function (b) { b.disabled = !n; });
+    if (t) { t.checked = n > 0 && n === P.bases.length; t.indeterminate = n > 0 && n < P.bases.length; }
+  }
+  function visibles() { return P.copias.filter(function (f) { return !P.cfiltro || f.base === P.cfiltro; }); }
+  function pintarCopias() {
+    var filas = visibles();
+    if (!filas.length) { q('c-tabla').innerHTML = '<p>No hay copias' + (P.cfiltro ? ' de esa base' : '') + '.</p>'; ccontar(); return; }
+    q('c-tabla').innerHTML = '<table><tr><th class="sel"><input type="checkbox" class="c-todas" title="Seleccionar todas"></th>' +
+      '<th>Fecha</th><th>De</th><th>Tipo</th><th class="n">Tamaño</th><th>Fichero</th></tr>' +
+      filas.map(function (f) {
+        var n = esc(f.nombre), b = P.bases.filter(function (x) { return x.id === f.base; })[0] || { id: f.base, nombre: f.base };
+        return '<tr><td class="sel"><input type="checkbox" data-cs="' + n + '"' + (P.csel[f.nombre] ? ' checked' : '') + '></td>' +
+          '<td>' + fh(f.fecha) + '</td><td>' + esc(f.base === 'plataforma' ? 'Gestores' : b.registrada ? b.nombre : f.base) +
+          (f.restaurable ? '' : ' <span class="al-chip sim" title="Al restaurarla se crea la comunidad">no está en la plataforma</span>') + '</td>' +
+          '<td>' + (f.tipo === 'previa' ? '<span class="al-chip sim">' + TIPOS[f.tipo] + '</span>' : TIPOS[f.tipo] || f.tipo) + '</td>' +
+          '<td class="n">' + tam(f.bytes) + '</td><td><small>' + n + '</small></td></tr>';
+      }).join('') + '</table>';
+    [].forEach.call(c.querySelectorAll('[data-cs]'), function (i) { i.onchange = function () {
+      if (i.checked) P.csel[i.dataset.cs] = 1; else delete P.csel[i.dataset.cs];
+      ccontar();
+    }; });
+    q('c-todas').onchange = function () {
+      var si = q('c-todas').checked;
+      visibles().forEach(function (f) { if (si) P.csel[f.nombre] = 1; else delete P.csel[f.nombre]; });
+      [].forEach.call(c.querySelectorAll('[data-cs]'), function (i) { i.checked = si; });
+      ccontar();
+    };
+    ccontar();
+  }
+  q('c-filtro').onchange = function () { P.cfiltro = q('c-filtro').value; pintarCopias(); };
+  // Acciones sobre las copias seleccionadas en la lista (las de otras bases que no se ven, tambien)
   function csel() { return P.copias.filter(function (f) { return P.csel[f.nombre]; }); }
   function ccontar() {
-    var n = csel().length, t = q('c-todas');
+    var n = csel().length, t = q('c-todas'), vs = visibles().filter(function (f) { return P.csel[f.nombre]; }).length;
     q('c-nsel').textContent = n + (n === 1 ? ' seleccionada' : ' seleccionadas');
     [].forEach.call(c.querySelectorAll('.c-sel'), function (b) { b.disabled = !n; });
-    if (t) { t.checked = n > 0 && n === P.copias.length; t.indeterminate = n > 0 && n < P.copias.length; }
+    if (t) { t.checked = vs > 0 && vs === visibles().length; t.indeterminate = vs > 0 && vs < visibles().length; }
   }
   // Una tras otra; seguir: si falla una, se apunta y se sigue con las demas (si no, se para)
   function serie(fs, fn, seguir) {
@@ -14079,17 +14461,70 @@ self.onInit = function () {
     if (errores) throw new Error(errores + ' de ' + n + ' con errores (ver el registro)');
     cmsg(t, 'ok');
   }
+  function guardarBlob(bl, n) {
+    var a = document.createElement('a'); a.href = URL.createObjectURL(bl); a.download = n;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  }
+  function bajar1(f) {
+    return binario('GET', '/plataforma/copias/' + encodeURIComponent(f.nombre)).then(function (r) { return r.blob(); }).then(function (bl) {
+      guardarBlob(bl, f.nombre); reg('Descargada ' + f.nombre + ' (' + tam(bl.size) + ').');
+    });
+  }
+  // Varias copias en un .tar (con manifiesto): se sube tal cual en "Restaurar desde un archivo"
+  function bajarPaquete(nombres) {
+    var h = new Date(), n = 'vatiaco-copias-' + h.getFullYear() + ('0' + (h.getMonth() + 1)).slice(-2) + ('0' + h.getDate()).slice(-2) +
+      '-' + ('0' + h.getHours()).slice(-2) + ('0' + h.getMinutes()).slice(-2) + '.tar';
+    reg('Juntando ' + nombres.length + ' copias en ' + n + '…');
+    return fetch(API + '/plataforma/copias/paquete', { method: 'POST', body: JSON.stringify({ nombres: nombres }),
+      headers: { 'X-Authorization': 'Bearer ' + (localStorage.getItem('jwt_token') || ''), 'Content-Type': 'application/json' } }).then(function (r) {
+      if (r.ok) return r.blob();
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        throw new Error(typeof j.detail === 'string' ? j.detail : 'HTTP ' + r.status); });
+    }).then(function (bl) { guardarBlob(bl, n); reg('Descargado ' + n + ' (' + tam(bl.size) + ').'); return n; });
+  }
+  // Copia ahora de esas bases; bajar: y la descarga (una base: su .dump; varias: un .tar)
+  function hacer(bases, bajar) {
+    var fuera = bases.filter(function (b) { return !b.registrada; });
+    bases = bases.filter(function (b) { return b.registrada; });
+    if (fuera.length) reg('Sin copia nueva (no están en la plataforma): ' + fuera.map(function (b) { return b.id; }).join(', ') + '.');
+    if (!bases.length) { cmsg('Esas bases no están en la plataforma: solo se pueden restaurar.', 'err'); return; }
+    ctarea('Haciendo la copia de ' + bases.map(titulo).join(', ') + '…', function () {
+      return api('POST', '/plataforma/copias', { bases: bases.map(function (b) { return b.id; }) }).then(function (r) {
+        reg('Copia hecha: ' + r.map(function (f) { return f.nombre + ' (' + tam(f.bytes) + ')'; }).join(', ') + '.');
+        if (!bajar) { cmsg('Copia hecha de ' + r.length + (r.length === 1 ? ' base.' : ' bases.'), 'ok'); return; }
+        return (r.length === 1 ? bajar1(r[0]) : bajarPaquete(r.map(function (f) { return f.nombre; }))).then(function () {
+          cmsg('Copia hecha y descargada' + (r.length === 1 ? ' (' + r[0].nombre + ').' : ' en un solo fichero (' + r.length + ' bases).'), 'ok');
+        });
+      });
+    });
+  }
+  var BACC = {
+    hacer: function (bs) { hacer(bs, false); },
+    bajar: function (bs) { hacer(bs, true); },
+    ultima: function (bs) {
+      var fs = [], sin = [];
+      bs.forEach(function (b) { var u = deBase(b.id)[0]; if (u) fs.push(u); else sin.push(titulo(b)); });
+      if (sin.length) reg('Sin copias que restaurar: ' + sin.join(', ') + '.', fs.length ? '' : 'err');
+      if (!fs.length) { cmsg('Esas bases no tienen copias (las previas no cuentan: restáuralas desde la lista).', 'err'); return; }
+      ACC.restaurar(fs);
+    }
+  };
+  [].forEach.call(c.querySelectorAll('.c-bacc'), function (b) { b.onclick = function () {
+    var bs = bsel();
+    if (!bs.length) { cmsg('Marca alguna base en la lista.', 'err'); return; }
+    BACC[b.dataset.acc](bs);
+  }; });
+  q('c-completa').onclick = function () { hacer(P.bases.filter(function (b) { return b.registrada; }), true); };
   var ACC = {
     descargar: function (fs) {
       ctarea('Descargando ' + fs.length + (fs.length === 1 ? ' copia…' : ' copias…'), function () {
-        return serie(fs, function (f) {
-          return binario('GET', '/plataforma/copias/' + encodeURIComponent(f.nombre)).then(function (r) { return r.blob(); }).then(function (bl) {
-            var a = document.createElement('a'); a.href = URL.createObjectURL(bl); a.download = f.nombre;
-            document.body.appendChild(a); a.click();
-            setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-            reg('Descargada ' + f.nombre + ' (' + tam(bl.size) + ').');
-          });
-        }, true).then(function (e) { fin('Descargadas ' + (fs.length - e) + ' de ' + fs.length + ' copias.', fs.length, e); });
+        return serie(fs, bajar1, true).then(function (e) { fin('Descargadas ' + (fs.length - e) + ' de ' + fs.length + ' copias.', fs.length, e); });
+      });
+    },
+    paquete: function (fs) {
+      ctarea('Descargando ' + fs.length + (fs.length === 1 ? ' copia' : ' copias') + ' en un solo fichero…', function () {
+        return bajarPaquete(fs.map(function (f) { return f.nombre; })).then(function (n) { cmsg('Descargado ' + n + '.', 'ok'); });
       });
     },
     restaurar: function (fs) {
@@ -14167,29 +14602,29 @@ self.onInit = function () {
     if (!fs.length) { cmsg('Marca alguna copia en la lista.', 'err'); return; }
     ACC[b.dataset.acc](fs);
   }; });
-  q('c-hacer').onclick = function () {
-    var bases = [].map.call(c.querySelectorAll('.c-bases input:checked'), function (i) { return i.value; });
-    if (!bases.length) { msg('Marca al menos una base de datos.', 'err'); return; }
-    ctarea('Haciendo la copia de ' + bases.join(', ') + '…', function () {
-      return api('POST', '/plataforma/copias', { bases: bases }).then(function (r) {
-        cmsg('Copia hecha: ' + r.map(function (f) { return f.nombre + ' (' + tam(f.bytes) + ')'; }).join(', ') + '.', 'ok'); });
-    });
-  };
-  q('c-subir').onclick = function () {
-    var f = q('c-fich').files[0], base = q('c-base').value || 'auto', paso = 0;
-    if (!f) { cmsg('Elige un fichero .dump.', 'err'); return; }
-    ctarea('Subiendo ' + f.name + ' (' + tam(f.size) + ') como copia de ' + (base === 'auto' ? 'la base que diga la copia' : base) + '…', function () {
+  // Restaurar desde un archivo: .dump suelta o .tar (copia completa). Se sube a la lista y, con
+  // "Subir y restaurar", se restaura (confirmando antes) todo lo que traia
+  [].forEach.call(c.querySelectorAll('.c-subir'), function (bt) { bt.onclick = function () {
+    var f = q('c-fich').files[0], base = q('c-base').value || 'auto', paso = 0, rest = !!bt.dataset.rest, subidas = null;
+    if (!f) { cmsg('Elige un fichero .dump (una base) o .tar (copia completa).', 'err'); return; }
+    ctarea('Subiendo ' + f.name + ' (' + tam(f.size) + ')…', function () {
       return subida('/plataforma/copias/subir?base=' + encodeURIComponent(base), f, function (fr) {
         var p = Math.floor(fr * 4);
-        if (p > paso) { paso = p; reg('Enviado ' + p * 25 + ' %' + (p === 4 ? ': el servidor comprueba que es una copia válida…' : '')); }
+        if (p > paso) { paso = p; reg('Enviado ' + p * 25 + ' %' + (p === 4 ? ': el servidor comprueba que son copias válidas…' : '')); }
       }).then(function (r) {
         q('c-fich').value = '';
-        if (r.origen && r.origen !== r.base) reg('Aviso: la copia es de ' + r.origen + ' y se guarda como copia de ' + r.base + '.');
-        if (!r.restaurable) reg('Aviso: ' + r.base + ' no está en la plataforma: al restaurarla se crea la comunidad.');
-        cmsg('Copia subida como ' + r.nombre + ' (' + tam(r.bytes) + ', base ' + r.base + '). Ya se puede restaurar desde la lista.', 'ok');
+        r.errores.forEach(function (e) { reg('No se usa ' + e, 'err'); });
+        r.copias.forEach(function (x) {
+          if (x.origen && x.origen !== x.base) reg('Aviso: la copia es de ' + x.origen + ' y se guarda como copia de ' + x.base + '.');
+          if (!x.restaurable) reg('Aviso: ' + x.base + ' no está en la plataforma: al restaurarla se crea la comunidad.');
+          reg('Subida ' + (x.fichero ? x.fichero + ' como ' : '') + x.nombre + ' (' + tam(x.bytes) + ').');
+        });
+        subidas = r.copias;
+        cmsg((r.paquete ? 'Copia completa subida: ' + r.copias.length + (r.copias.length === 1 ? ' base' : ' bases') : 'Copia subida como ' + r.copias[0].nombre) +
+             (rest ? '.' : '. Ya se puede restaurar desde la lista.'), 'ok');
       });
-    });
-  };
+    }).then(function () { if (rest && subidas) ACC.restaurar(subidas); });
+  }; });
   form(null);
   lista();
   copias();
@@ -14801,6 +15236,7 @@ def w_vista(alias, vista, titulo, x, y, w, h):
     impuestos y alquiler del contador)."""
     t = w_consumo(alias, x, y, w, h)
     t[1]["config"]["settings"]["vista"] = vista
+    t[1]["config"]["settings"]["premium"] = vista in PREMIUM
     t[1]["config"]["title"] = titulo
     return t
 
@@ -16161,7 +16597,7 @@ def nav_gestion():
             ["-", CEC, "", "", ""]] + \
            [["participantes", "Socios", "Gestión · Socios", "", "manage_accounts"],
             ["coeficientes", "Coeficientes de reparto", "Gestión · Coeficientes de reparto", "", "txt:β"]] + \
-           [["", t[1], CEC, t[0], t[3]] for t in COM_TABS] + \
+           [["", t[1], CEC, t[0], t[3], t[4]] for t in COM_TABS] + \
            [["informes", "Informes", "Gestión · Informes", "", "description"]] + \
            [[a, n, f"Gestión · {n}", "", "folder"] for a, n in AREAS_GESTION] + \
            [["bd", "Base de datos", "Gestión · Base de datos", "", "storage"],
@@ -16478,18 +16914,27 @@ cec_widget("VatiaCo.gestion", "Gestión de la comunidad", GESTION_HTML, GESTION_
 cec_widget("VatiaCo.nav", "Pestañas de gestión", NAV_W_HTML, NAV_W_JS, 1, NAV_W_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.participantes", "Socios", PART_HTML, PART_JS, 16, ALTA_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.ficha_socio", "Datos del socio", FICHA_HTML, FICHA_JS, 7, FICHA_CSS, recursos=[])
-cec_widget("VatiaCo.informes_socio", "Informes del socio", INFS_HTML, INFS_JS, 6, INFS_CSS, recursos=[])
+def con_premium(html):
+    """Resumenes de las vistas premium: opciones inactivas con la marca (la API tampoco los da)."""
+    for vista, tipo in (("potencias", "potencia"), ("reactiva", "reactiva"), ("factura", "factura")):
+        if vista in PREMIUM:
+            html = re.sub(rf'<option value="{tipo}">([^<]*)</option>',
+                          rf'<option value="{tipo}" disabled>\1 — ★ Premium (no incluido)</option>', html)
+    return html
+
+
+cec_widget("VatiaCo.informes_socio", "Informes del socio", con_premium(INFS_HTML), INFS_JS, 6, INFS_CSS, recursos=[])
 cec_widget("VatiaCo.socio_nav", "Pestañas del socio", NAV_W_HTML, SOCIO_NAV_JS, 1, NAV_W_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.basedatos", "Copias de la base de datos", BD_HTML, BD_JS, 14, BD_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.reparto", "Coeficientes de reparto", REPARTO_HTML, REPARTO_JS, 20, REPARTO_CSS, tipo="static")
 cec_widget("VatiaCo.reparto_socio", "Socio en la comunidad", REPSOC_HTML, REPSOC_JS, 14, REPSOC_CSS)
 cec_widget("VatiaCo.ayuda", "Centro de ayuda", AYUDA_HTML, AYUDA_W_JS, 12, AYUDA_W_CSS, tipo="static", recursos=[])
-cec_widget("VatiaCo.admin_datos", "Administración de datos", ADMIN_HTML, ADMIN_JS, 11, ADMIN_CSS,
+cec_widget("VatiaCo.admin_datos", "Administración de datos", con_premium(ADMIN_HTML), ADMIN_JS, 11, ADMIN_CSS,
            tipo="static", recursos=[])
 
 # Un unico panel estandar: asignado a todos los socios (cada uno ve solo lo suyo) y
 # panel de inicio del administrador (ve los totales y, desde el mapa, a cada socio)
-panel = cec_panel(CEC, cec_config(CEC), json.dumps([CEC_DASH_VERSION]))
+panel = cec_panel(CEC, cec_config(CEC), json.dumps([CEC_DASH_VERSION, PREMIUM]))
 for so in SOCIOS:
     tb.post(f"/api/customer/{so['cid']}/dashboard/{panel['id']['id']}")
     if so["email"]:
@@ -16685,8 +17130,9 @@ edita, suspende (no puede entrar; no se borra nada) y borra a sus hijos en una t
 - Por gestor: **Entrar** (en el panel de su comunidad, como el gestor), **Editar** (nombre,
   email, teléfono, contraseña), **Suspender / Reactivar** y **Borrar** (borra también su
   comunidad: tenant y base de datos; antes guarda una copia *previa*).
-- **Copias de PostgreSQL**: de la base \`plataforma\` y de las de todas las comunidades: hacer
-  ahora, subir, descargar, borrar y restaurar (antes se guarda la actual como copia *previa*).
+- **Copias de PostgreSQL**: de la base \`plataforma\` (gestores) y de las de todas las comunidades:
+  hacer ahora, descargar (sueltas o todas en un \`.tar\`: *copia completa*), subir (\`.dump\` o
+  \`.tar\`), borrar y restaurar (antes se guarda la actual como copia *previa*).
 
 ### Alta online de comunidades (Stripe)
 
@@ -16711,6 +17157,9 @@ Nada se restaura solo. Con las copias de \`backups/postgres\`, desde el panel de
 
 1. Restaura \`plataforma-…\` (registro de comunidades, gestores y cuentas de Datadis).
 2. Restaura la copia de cada comunidad (\`cec_<id>-…\`).
+
+O, con una copia completa descargada (\`vatiaco-copias-….tar\`): *Restaurar desde un archivo* →
+*Subir y restaurar* (restaura primero los gestores y después cada comunidad).
 
 Cada restauración vuelve a crear en ThingsBoard el tenant, los paneles y los usuarios (gestor
 y socios) con su contraseña de siempre y su estado (activo o suspendido): las copias
