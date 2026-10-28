@@ -94,6 +94,9 @@
   .socio-row .dot{width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:#0A121C;}
   .socio-row .pc{font-family:var(--font-mono); color:var(--amber); text-align:right;}
   .socio-row .kwh{font-family:var(--font-mono); color:var(--text-dim); text-align:right;}
+  .socio-row.con-x{grid-template-columns:28px 1fr 64px 74px 26px;}
+  .btn-x{width:24px; height:24px; border:1px solid var(--line); background:transparent; color:var(--text-dimmer); border-radius:var(--radius); cursor:pointer; font-size:14px; line-height:1; padding:0;}
+  .btn-x:hover{border-color:var(--red); color:var(--red);}
   .suma{font-family:var(--font-mono); font-size:12px; margin-top:10px;}
   .suma.ok{color:var(--green);} .suma.mal{color:var(--red);}
 
@@ -116,6 +119,21 @@
   table.data-table input, table.data-table select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:6px 7px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; width:100%;}
   table.data-table input.mal{border-color:var(--red);}
   .tabla-scroll{overflow-x:auto;}
+
+  /* ---------- perfiles horarios editables ---------- */
+  .barras svg{width:100%; height:auto; display:block; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none;}
+  .barras rect.bar:hover{fill-opacity:.8;}
+  .socios-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; margin-top:12px;}
+  @media(max-width:420px){.socios-grid{grid-template-columns:1fr;}}
+  .perfil-card{background:var(--panel); border:1px solid var(--line); border-top:2px solid var(--c); border-radius:var(--radius); padding:12px 14px 10px;}
+  .perfil-cab{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; font-size:11.5px; color:var(--text-dim);}
+  .perfil-cab .dot{width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:#0A121C;}
+  .perfil-cab input, .perfil-cab select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:5px 6px; font-family:var(--font-mono); font-size:11.5px; border-radius:var(--radius);}
+  .perfil-cab input{width:72px;} .perfil-cab select{max-width:150px;}
+  .perfil-cab .btn-x{margin-left:auto;}
+  .perfil-res{display:flex; gap:4px 14px; flex-wrap:wrap; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+  .perfil-res b{color:var(--text-dim); font-weight:500;}
+  .ayuda-barras{font-size:11.5px; color:var(--text-dimmer); margin:2px 0 8px;}
 
   /* ---------- fichero ---------- */
   pre.fichero{background:#05090F; border:1px solid var(--line); padding:14px 16px; font-family:var(--font-mono); font-size:12px; color:#CFE3F5; max-height:340px; overflow:auto; white-space:pre;}
@@ -198,14 +216,13 @@
           <div id="filasFijo"></div>
           <div class="suma ok" id="sumaFijo"></div>
           <div class="btn-row" style="margin-top:14px;">
-            <button class="btn ghost" type="button" id="btnMenos">− Vivienda</button>
-            <button class="btn ghost" type="button" id="btnMas">+ Vivienda</button>
+            <button class="btn ghost" type="button" data-mas-socio>+ Socio</button>
             <button class="btn ghost" type="button" id="btnIguales">A partes iguales</button>
             <button class="btn ghost" type="button" id="btnEjemplo">Ejemplo 50/20/20/10</button>
           </div>
         </div>
       </div>
-      <div class="callout"><b>¿Cómo se eligen?</b> Lo habitual es repartir según lo que aporta cada socio a la inversión, su consumo anual o su potencia contratada. En la sección 03 puedes calcular los fijos que más energía aprovechan con unos perfiles de consumo.</div>
+      <div class="callout"><b>¿Cómo se eligen?</b> Lo habitual es repartir según lo que aporta cada socio a la inversión, su consumo anual o su potencia contratada. En la sección 03 puedes dibujar el perfil horario de cada socio y de la instalación FV y calcular los fijos que más energía aprovechan.</div>
     </section>
 
     <!-- 02 · DINAMICOS -->
@@ -219,7 +236,8 @@
           <div class="field"><label>Hora del día: <b id="horaDinV" class="mono" style="color:var(--amber)"></b></label>
             <input type="range" id="horaDin" min="0" max="23" step="1" value="12"></div>
           <div id="filasDin"></div>
-          <p class="note">Producción y consumos de esa hora según el día simulado (sección 03). Cambia allí la instalación y los perfiles de las viviendas.</p>
+          <div class="btn-row" style="margin-top:12px;"><button class="btn ghost" type="button" data-mas-socio>+ Socio</button></div>
+          <p class="note">Producción y consumos de esa hora según el día simulado (sección 03). Edita allí las barras de la instalación FV y del consumo de cada socio.</p>
         </div>
       </div>
 
@@ -247,18 +265,23 @@
     <section id="comparar">
       <div class="eyebrow kicker">03 · Fijos frente a dinámicos</div>
       <h2>Lo que no consume un socio en su hora se vierte a la red: el reparto importa.</h2>
-      <p class="lede">Simula un día: elige la instalación y el perfil de consumo de cada vivienda. Las barras muestran la energía que recibe cada vivienda cada hora; la parte <b>clara</b> es lo que no consume (excedente) y la línea, el consumo total. Compara los coeficientes fijos de la sección 01 con los dinámicos.</p>
+      <p class="lede">Simula un día: <b>dibuja</b> la curva de la instalación FV y el perfil horario de consumo de cada socio arrastrando sus barras, y añade o quita socios. Los gráficos de abajo muestran la energía que recibe cada socio cada hora; la parte <b>clara</b> es lo que no consume (excedente) y la línea, el consumo total. Compara los coeficientes fijos de la sección 01 con los dinámicos.</p>
       <div class="card">
         <div class="grid4">
-          <div class="field"><label>Potencia de la instalación (kWp)</label><input type="number" id="kwp" value="10" min="0.5" step="0.5"></div>
-          <div class="field"><label>Época del año</label><select id="epoca"><option value="verano">Verano</option><option value="primavera" selected>Primavera / otoño</option><option value="invierno">Invierno</option></select></div>
+          <div class="field"><label>Potencia pico de la instalación (kWp)</label><input type="number" id="kwp" value="10" min="0.5" step="0.5"></div>
+          <div class="field"><label>Curva FV</label><select id="epoca"><option value="verano">Día de verano</option><option value="primavera" selected>Día de primavera / otoño</option><option value="invierno">Día de invierno</option><option value="personal">Dibujada a mano</option></select></div>
           <div class="field"><label>Coeficientes fijos</label><select id="fijosOrigen"><option value="manual">Los de la sección 01</option><option value="consumo">Proporcionales al consumo</option><option value="optimo">Los fijos óptimos</option></select></div>
           <div class="field" style="display:flex; align-items:flex-end;"><button class="btn" type="button" id="btnAplicarOptimo" style="width:100%;">Llevar los óptimos a la sección 01</button></div>
         </div>
-        <div class="tabla-scroll">
-          <table class="data-table" id="tablaPerfiles"></table>
-        </div>
+        <div class="chart-tit" style="margin-top:4px;">Generación FV de la instalación (kWh cada hora): <b id="fvTotal" class="mono" style="color:var(--amber)"></b></div>
+        <p class="ayuda-barras">Arrastra sobre las barras para cambiar la curva; la potencia pico la escala (el máximo del eje es 1 kWh por kWp).</p>
+        <div class="barras" id="edFv"></div>
       </div>
+
+      <div class="fieldset-title">Perfil horario de consumo de cada socio</div>
+      <div class="btn-row"><button class="btn" type="button" data-mas-socio>+ Socio</button>
+        <span class="ayuda-barras" style="margin:0;">Arrastra sobre las barras (kWh de cada hora). El consumo diario reescala todo el perfil; «Rellenar con» parte de un perfil tipo.</span></div>
+      <div class="socios-grid" id="perfiles"></div>
 
       <div class="kpis" id="kpis"></div>
       <div class="grid2">
@@ -266,7 +289,7 @@
         <div><div class="chart-tit">Coeficientes dinámicos</div><div class="chart" id="chartDin"></div></div>
       </div>
       <div class="chart-leg" id="leyenda"></div>
-      <p class="note">Simplificación de un día tipo con perfiles orientativos. Los fijos óptimos son los que más energía autoconsumen ese día; los dinámicos reparten cada hora en proporción al consumo, que es el máximo posible. En la plataforma VatiaCo el cálculo se hace con los datos reales de Datadis de los últimos 12 meses (pestaña Socios: <i>Proponer → Optimizado</i> y <i>Optimizar reparto horario</i>).</p>
+      <p class="note">Simplificación de un día tipo con los perfiles que dibujes. Los fijos óptimos son los que más energía autoconsumen ese día; los dinámicos reparten cada hora en proporción al consumo, que es el máximo posible. En la plataforma VatiaCo el cálculo se hace con los datos reales de Datadis de los últimos 12 meses (pestaña Socios: <i>Proponer → Optimizado</i> y <i>Optimizar reparto horario</i>).</p>
     </section>
 
     <!-- 04 · FICHERO -->
@@ -395,7 +418,21 @@ const PERFILES = {
 };
 const PERF_DEF = ['familia','teletrabajo','comercio','nocturno','jubilados','bombeo','familia','teletrabajo'];
 const KWH_DEF = [10,9,14,12,8,15,10,9];
-const ST = { pc:[50,20,20,10], perf:PERF_DEF.slice(0,4), kwh:KWH_DEF.slice(0,4), cups:[] };
+const MAX_SOCIOS = COLORES.length;
+// Curvas FV de partida (kWh por kWp en cada hora): amanecer, ocaso y pico
+const FORMAS_FV = {verano:[6.5,21,.78], primavera:[7.3,19.5,.68], invierno:[8.5,17.5,.52]};
+function formaFv(e){
+  const [ini, fin, pico] = FORMAS_FV[e] || FORMAS_FV.primavera;
+  return Array.from({length:24}, (_,h)=>{ const t = h+.5; return t<=ini||t>=fin ? 0 : +(pico*Math.pow(Math.sin(Math.PI*(t-ini)/(fin-ini)),1.3)).toFixed(3); });
+}
+// Perfil horario (kWh de cada hora) de un perfil tipo con ese consumo diario
+function plantilla(p, kwh){
+  const f = Array.from({length:24}, (_,h)=>PERFILES[p].f(h)), s = f.reduce((a,b)=>a+b,0);
+  return f.map(x=> +(x*kwh/s).toFixed(2));
+}
+const sum24 = v => v.reduce((a,b)=>a+b,0);
+// dem: kWh de cada hora de cada socio; fv: kWh por kWp de cada hora
+const ST = { pc:[50,20,20,10], dem:PERF_DEF.slice(0,4).map((p,i)=>plantilla(p,KWH_DEF[i])), fv:formaFv('primavera'), cups:[] };
 const letra = i => String.fromCharCode(65+i);
 
 // ===================== REPARTO: DIAGRAMA SVG =====================
@@ -435,43 +472,87 @@ function pintarFijos(){
   const prod = +$('prodFijo').value;
   $('prodFijoV').textContent = fmt(prod,1)+' kWh';
   diagrama($('diagFijo'), ST.pc, prod, 'Producción: ');
-  $('filasFijo').innerHTML = ST.pc.map((p,i)=>`<div class="socio-row"><span class="dot" style="background:${COLORES[i]}">${letra(i)}</span>
-    <input type="range" min="0" max="100" step="0.5" value="${p}" data-i="${i}" aria-label="Vivienda ${letra(i)}">
-    <span class="pc">${fmt(p,1)} %</span><span class="kwh">${fmt(prod*p/100,2)} kWh</span></div>`).join('');
+  $('filasFijo').innerHTML = ST.pc.map((p,i)=>`<div class="socio-row con-x"><span class="dot" style="background:${COLORES[i]}">${letra(i)}</span>
+    <input type="range" min="0" max="100" step="0.5" value="${p}" data-i="${i}" aria-label="Socio ${letra(i)}">
+    <span class="pc">${fmt(p,1)} %</span><span class="kwh">${fmt(prod*p/100,2)} kWh</span>${botonQuitar(i)}</div>`).join('');
   const suma = ST.pc.reduce((a,b)=>a+b,0);
-  $('sumaFijo').textContent = 'Suma: '+fmt(suma,1)+' % · cada vivienda recibe su porcentaje de la producción, consuma o no';
+  $('sumaFijo').textContent = 'Suma: '+fmt(suma,1)+' % · cada socio recibe su porcentaje de la producción, consuma o no';
   $('sumaFijo').className = 'suma ' + (Math.abs(suma-100)<0.01?'ok':'mal');
   $('filasFijo').querySelectorAll('input').forEach(inp=> inp.addEventListener('input', ()=>{
     ajustar(+inp.dataset.i, +inp.value); pintarTodo(); }));
 }
-function numViviendas(n){
-  n = Math.max(2, Math.min(8, n));
-  while(ST.pc.length < n){ const i=ST.pc.length; ST.pc.push(0); ST.perf.push(PERF_DEF[i]); ST.kwh.push(KWH_DEF[i]); }
-  while(ST.pc.length > n){ ST.pc.pop(); ST.perf.pop(); ST.kwh.pop(); }
+// ===================== SOCIOS: AÑADIR Y QUITAR =====================
+// (botones en las secciones 01, 02 y 03; las letras se reasignan por orden)
+const botonQuitar = i => `<button class="btn-x" type="button" data-quitar="${i}" title="Quitar el socio ${letra(i)}" aria-label="Quitar el socio ${letra(i)}">×</button>`;
+function normalizarPc(){
   const s = ST.pc.reduce((a,b)=>a+b,0);
-  ST.pc = s>0 ? ST.pc.map(p=>p*100/s) : ST.pc.map(()=>100/n);
-  pintarTodo();
+  ST.pc = s>0 ? ST.pc.map(p=>p*100/s) : ST.pc.map(()=>100/ST.pc.length);
 }
+function agregarSocio(){
+  const i = ST.pc.length;
+  if(i >= MAX_SOCIOS){ toast(`Como máximo ${MAX_SOCIOS} socios`); return; }
+  ST.pc.push(100/(i+1)); ST.dem.push(plantilla(PERF_DEF[i], KWH_DEF[i]));
+  normalizarPc(); pintarTodo(); toast(`Socio ${letra(i)} añadido: dibuja su consumo en la sección 03`);
+}
+function quitarSocio(i){
+  if(ST.pc.length <= 2){ toast('Hacen falta al menos 2 socios'); return; }
+  ST.pc.splice(i,1); ST.dem.splice(i,1); ST.cups.splice(i,1);
+  normalizarPc(); pintarTodo(); toast(`Socio ${letra(i)} quitado`);
+}
+document.addEventListener('click', e=>{
+  const q = e.target.closest('[data-quitar]');
+  if(q) quitarSocio(+q.dataset.quitar);
+  else if(e.target.closest('[data-mas-socio]')) agregarSocio();
+});
 $('prodFijo').addEventListener('input', pintarFijos);
-$('btnMas').onclick = ()=>numViviendas(ST.pc.length+1);
-$('btnMenos').onclick = ()=>numViviendas(ST.pc.length-1);
 $('btnIguales').onclick = ()=>{ ST.pc = ST.pc.map(()=>100/ST.pc.length); pintarTodo(); };
-$('btnEjemplo').onclick = ()=>{ numViviendas(4); ST.pc=[50,20,20,10]; $('prodFijo').value=10; pintarTodo(); };
+$('btnEjemplo').onclick = ()=>{
+  while(ST.pc.length > 4){ ST.pc.pop(); ST.dem.pop(); }
+  while(ST.pc.length < 4){ const i=ST.pc.length; ST.pc.push(0); ST.dem.push(plantilla(PERF_DEF[i], KWH_DEF[i])); }
+  ST.pc=[50,20,20,10]; $('prodFijo').value=10; pintarTodo();
+};
+
+// ===================== EDITOR DE BARRAS (24 horas) =====================
+// Se cambian arrastrando con el raton o el dedo; el eje se mantiene mientras se arrastra.
+// o: {color, max, paso, titulo, W y H (tamaño del dibujo), alCambiar (durante el arrastre), alSoltar}
+function ejeMax(v){
+  const p = Math.pow(10, Math.floor(Math.log10(Math.max(v, .1))));
+  return [1,2,2.5,5,10].map(k=>k*p).find(k=>k>=v);
+}
+function editorBarras(cont, vals, o){
+  const W=o.W||480, H=o.H||150, L=34, R=6, T=8, B=20, bw=(W-L-R)/24, max=o.max, y=v=>T+(H-T-B)*(1-v/max);
+  const dec = max<2 ? 2 : max<20 ? 1 : 0;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.titulo)}">`;
+  [0, max/2, max].forEach(v=>{ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-5}" y="${y(v)+3}" fill="#5B7086" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${fmt(v,dec)}</text>`; });
+  for(let h=0; h<24; h++){
+    s += `<rect class="bar" data-h="${h}" x="${L+h*bw+1}" width="${bw-2}" y="${y(0)}" height="0" fill="${o.color}"><title></title></rect>`;
+    if(h%3===0) s += `<text x="${L+h*bw+bw/2}" y="${H-6}" fill="#5B7086" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${h}h</text>`;
+  }
+  cont.innerHTML = s + '</svg>';
+  const svg = cont.firstChild, bars = svg.querySelectorAll('rect.bar');
+  const poner = h=>{ const v = Math.min(vals[h], max);
+    bars[h].setAttribute('y', y(v)); bars[h].setAttribute('height', y(0)-y(v));
+    bars[h].firstChild.textContent = `${h}–${h+1} h: ${fmt(vals[h],2)} kWh`; };
+  vals.forEach((_,h)=>poner(h));
+  let ult = null;
+  const mover = e=>{
+    const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)*W/r.width, py = (e.clientY-r.top)*H/r.height;
+    const h = Math.max(0, Math.min(23, Math.floor((px-L)/bw)));
+    const v = +(Math.round(Math.max(0, Math.min(max, max*(1-(py-T)/(H-T-B))))/o.paso)*o.paso).toFixed(3);
+    const a = ult==null ? h : ult;      // (rellena las horas saltadas al mover deprisa)
+    for(let k=Math.min(a,h); k<=Math.max(a,h); k++){ vals[k] = v; poner(k); }
+    ult = h; if(o.alCambiar) o.alCambiar(vals);
+  };
+  svg.addEventListener('pointerdown', e=>{ e.preventDefault(); svg.setPointerCapture(e.pointerId); ult = null; mover(e); });
+  svg.addEventListener('pointermove', e=>{ if(svg.hasPointerCapture(e.pointerId)) mover(e); });
+  const fin = ()=>{ if(ult==null) return; ult = null; o.alSoltar(vals); };
+  svg.addEventListener('pointerup', fin); svg.addEventListener('pointercancel', fin);
+}
 
 // ===================== 03 · SIMULACION DE UN DIA =====================
-function generacion(){
-  const kwp = Math.max(0, +$('kwp').value || 0), e = $('epoca').value;
-  const [ini, fin, pico] = e==='verano' ? [6.5, 21, .78] : e==='invierno' ? [8.5, 17.5, .52] : [7.3, 19.5, .68];
-  return Array.from({length:24}, (_,h)=>{
-    const t = h + .5; return t<=ini||t>=fin ? 0 : kwp*pico*Math.pow(Math.sin(Math.PI*(t-ini)/(fin-ini)),1.3);
-  });
-}
-function demanda(){
-  return ST.perf.map((p,i)=>{
-    const f = Array.from({length:24}, (_,h)=>PERFILES[p].f(h)), s = f.reduce((a,b)=>a+b,0);
-    return f.map(x=> x*ST.kwh[i]/s);
-  });
-}
+const kwp = () => Math.max(0, +$('kwp').value || 0);
+function generacion(){ return ST.fv.map(x=> kwp()*x); }
+function demanda(){ return ST.dem.map(d=> d.slice()); }
 function autoconsumo(b, G, D){
   // b: [i][h] coeficientes; devuelve por vivienda y hora lo autoconsumido y lo asignado
   return D.map((d,i)=> d.map((x,h)=>{ const a = b[i][h]*G[h]; return {asig:a, auto:Math.min(a,x)}; }));
@@ -495,7 +576,7 @@ function calcular(){
   let fijos;
   const org = $('fijosOrigen').value;
   if(org==='manual') fijos = ST.pc.map(p=>p/100);
-  else if(org==='consumo'){ const t=ST.kwh.reduce((a,b)=>a+b,0); fijos = ST.kwh.map(k=>t?k/t:1/n); }
+  else if(org==='consumo'){ const k=D.map(sum24), t=k.reduce((a,b)=>a+b,0); fijos = k.map(x=>t?x/t:1/n); }
   else fijos = fijosOptimos(G, D);
   const bF = D.map((_,i)=>G.map(()=>fijos[i]));
   const bD = D.map((d,i)=>G.map((_,h)=>{ const t=D.reduce((s,x)=>s+x[h],0); return t>0 ? d[h]/t : fijos[i]; }));
@@ -529,27 +610,49 @@ function pintarComparar(){
   const dT = C.D.reduce((t,d)=>t+d.reduce((a,b)=>a+b,0),0);
   $('kpis').innerHTML = `
     <div class="kpi"><div class="v">${fmt(g,1)} kWh</div><div class="l">generados en el día</div></div>
-    <div class="kpi"><div class="v">${fmt(dT,1)} kWh</div><div class="l">consumo de las viviendas</div></div>
+    <div class="kpi"><div class="v">${fmt(dT,1)} kWh</div><div class="l">consumo de los socios</div></div>
     <div class="kpi"><div class="v">${g?fmt(100*aF/g,1):'–'} %</div><div class="l">aprovechado con fijos (${fmt(aF,1)} kWh)</div></div>
     <div class="kpi good"><div class="v">${g?fmt(100*aD/g,1):'–'} %</div><div class="l">aprovechado con dinámicos (${fmt(aD,1)} kWh)</div></div>`;
   grafico($('chartFijo'), C, C.rF);
   grafico($('chartDin'), C, C.rD);
   $('leyenda').innerHTML = ST.pc.map((_,i)=>`<span><i style="background:${COLORES[i]}"></i>${letra(i)} autoconsumo</span>`).join('') +
     `<span><i style="background:#8FA3B8; opacity:.35"></i>excedente (parte clara)</span><span><i style="background:none; border-top:2px dashed #E7ECF2; height:0; width:14px;"></i>consumo total</span>`;
-  // tabla de perfiles con los resultados de cada vivienda
-  $('tablaPerfiles').innerHTML = `<tr><th>Vivienda</th><th>Perfil de consumo</th><th>Consumo diario (kWh)</th><th>Coef. fijo</th><th>Autoconsumo fijos</th><th>Autoconsumo dinámicos</th></tr>` +
-    ST.perf.map((p,i)=>{
-      const af = C.rF[i].reduce((t,x)=>t+x.auto,0), ad = C.rD[i].reduce((t,x)=>t+x.auto,0);
-      return `<tr><td><span class="socio-row" style="border:0; padding:0; display:inline"><span class="dot" style="background:${COLORES[i]}; display:inline-flex">${letra(i)}</span></span></td>
-        <td><select data-perf="${i}">${Object.entries(PERFILES).map(([k,v])=>`<option value="${k}"${k===p?' selected':''}>${v.n}</option>`).join('')}</select></td>
-        <td><input type="number" min="0.5" step="0.5" value="${ST.kwh[i]}" data-kwh="${i}" style="max-width:110px"></td>
-        <td class="n">${fmt(100*C.fijos[i],1)} %</td><td class="n">${fmt(af,2)} kWh</td><td class="n">${fmt(ad,2)} kWh</td></tr>`;
-    }).join('');
-  $('tablaPerfiles').querySelectorAll('[data-perf]').forEach(el=>el.onchange=()=>{ ST.perf[+el.dataset.perf]=el.value; pintarTodo(); });
-  $('tablaPerfiles').querySelectorAll('[data-kwh]').forEach(el=>el.onchange=()=>{ ST.kwh[+el.dataset.kwh]=Math.max(.1,+el.value||0); pintarTodo(); });
+  pintarPerfiles(C);
   return C;
 }
-['kwp','epoca','fijosOrigen'].forEach(id=>$(id).addEventListener('change', pintarTodo));
+// Curva FV (en kWh de la instalacion) y una tarjeta por socio con su perfil horario editable
+function pintarPerfiles(C){
+  const k = kwp(), totFv = ()=> $('fvTotal').textContent = fmt(k*sum24(ST.fv),1)+' kWh/día';
+  totFv();
+  editorBarras($('edFv'), ST.fv.map(x=>x*k), {color:'#FFB020', max:Math.max(k,.5), paso:Math.max(k,.5)/100, titulo:'Generación FV por horas', W:900, H:160,
+    alCambiar: v=>{ ST.fv = v.map(x=> k ? Math.min(1, x/k) : 0); $('epoca').value = 'personal'; totFv(); },
+    alSoltar: ()=> pintarTodo()});
+  $('perfiles').innerHTML = ST.dem.map((d,i)=>{
+    const af = C.rF[i].reduce((t,x)=>t+x.auto,0), ad = C.rD[i].reduce((t,x)=>t+x.auto,0);
+    return `<div class="perfil-card" style="--c:${COLORES[i]}">
+      <div class="perfil-cab"><span class="dot" style="background:${COLORES[i]}">${letra(i)}</span>
+        <label>kWh/día <input type="number" min="0" step="0.5" value="${+sum24(d).toFixed(2)}" data-kwhdia="${i}" aria-label="Consumo diario del socio ${letra(i)}"></label>
+        <select data-plant="${i}" aria-label="Rellenar el perfil del socio ${letra(i)}"><option value="">Rellenar con…</option>${Object.entries(PERFILES).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('')}<option value="plano">Constante</option></select>
+        ${botonQuitar(i)}</div>
+      <div class="barras" data-ed="${i}"></div>
+      <div class="perfil-res"><span>Coef. fijo <b>${fmt(100*C.fijos[i],1)} %</b></span><span>Autoconsumo fijos <b>${fmt(af,2)} kWh</b></span><span>dinámicos <b>${fmt(ad,2)} kWh</b></span></div>
+    </div>`;
+  }).join('');
+  ST.dem.forEach((d,i)=>{
+    const card = $('perfiles').children[i], inp = card.querySelector('[data-kwhdia]');
+    editorBarras(card.querySelector('[data-ed]'), d, {color:COLORES[i], max:ejeMax(Math.max(...d, .2)*1.3), paso:.05, titulo:`Consumo por horas del socio ${letra(i)}`,
+      alCambiar: v=>{ inp.value = +sum24(v).toFixed(2); }, alSoltar: ()=> pintarTodo()});
+  });
+  $('perfiles').querySelectorAll('[data-kwhdia]').forEach(el=>el.onchange=()=>{
+    const i = +el.dataset.kwhdia, nuevo = Math.max(0, +String(el.value).replace(',','.') || 0), ant = sum24(ST.dem[i]);
+    ST.dem[i] = ST.dem[i].map(x=> +(ant ? x*nuevo/ant : nuevo/24).toFixed(3)); pintarTodo(); });
+  $('perfiles').querySelectorAll('[data-plant]').forEach(el=>el.onchange=()=>{
+    const i = +el.dataset.plant, kwh = sum24(ST.dem[i]) || KWH_DEF[i];
+    ST.dem[i] = el.value==='plano' ? Array(24).fill(+(kwh/24).toFixed(3)) : plantilla(el.value, kwh); pintarTodo(); });
+}
+$('kwp').addEventListener('change', pintarTodo);
+$('fijosOrigen').addEventListener('change', pintarTodo);
+$('epoca').addEventListener('change', ()=>{ if($('epoca').value!=='personal') ST.fv = formaFv($('epoca').value); pintarTodo(); });
 $('btnAplicarOptimo').onclick = ()=>{ const C=calcular(); ST.pc = fijosOptimos(C.G,C.D).map(b=>b*100); $('fijosOrigen').value='manual'; pintarTodo(); toast('Coeficientes óptimos llevados a la sección 01'); };
 
 // ===================== 02 · DINAMICOS =====================
@@ -557,8 +660,8 @@ function pintarDinamicos(C){
   const h = +$('horaDin').value, b = C.bD.map(x=>x[h]*100), g = C.G[h];
   $('horaDinV').textContent = `${String(h).padStart(2,'0')}:00 – ${String(h+1).padStart(2,'0')}:00`;
   diagrama($('diagDin'), b, g, `Hora ${h}-${h+1} h · `);
-  $('filasDin').innerHTML = b.map((p,i)=>`<div class="socio-row"><span class="dot" style="background:${COLORES[i]}">${letra(i)}</span>
-    <span style="color:var(--text-dim)">consume ${fmt(C.D[i][h],2)} kWh</span><span class="pc">${fmt(p,1)} %</span><span class="kwh">${fmt(g*p/100,2)} kWh</span></div>`).join('');
+  $('filasDin').innerHTML = b.map((p,i)=>`<div class="socio-row con-x"><span class="dot" style="background:${COLORES[i]}">${letra(i)}</span>
+    <span style="color:var(--text-dim)">consume ${fmt(C.D[i][h],2)} kWh</span><span class="pc">${fmt(p,1)} %</span><span class="kwh">${fmt(g*p/100,2)} kWh</span>${botonQuitar(i)}</div>`).join('');
 }
 $('horaDin').addEventListener('input', ()=>pintarDinamicos(calcular()));
 
@@ -591,7 +694,7 @@ function redondear6(pesos){
 const coma6 = m => (m/1e6).toFixed(6).replace('.',',');
 function pintarCups(){
   while(ST.cups.length < ST.pc.length) ST.cups.push('');
-  $('tablaCups').innerHTML = `<tr><th>Vivienda</th><th>CUPS</th><th>Coef. fijo (sección 01)</th></tr>` + ST.pc.map((p,i)=>
+  $('tablaCups').innerHTML = `<tr><th>Socio</th><th>CUPS</th><th>Coef. fijo (sección 01)</th></tr>` + ST.pc.map((p,i)=>
     `<tr><td><span class="dot" style="background:${COLORES[i]}; display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center; justify-content:center; color:#0A121C; font-family:var(--font-mono); font-size:11px; font-weight:600;">${letra(i)}</span></td>
      <td><input type="text" data-cups="${i}" value="${esc(ST.cups[i])}" placeholder="ES0021000000000001AA" maxlength="22"></td>
      <td class="n">${coma6(redondear6(ST.pc)[i])}</td></tr>`).join('');
@@ -665,16 +768,20 @@ function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem('VatiaCo')||
 function guardarVatiaco(v){ try{ localStorage.setItem('VatiaCo', JSON.stringify(v)); }catch(e){} }
 function guardar(){
   const v = leerVatiaco();
-  v.coeficientes = {pc:ST.pc, perf:ST.perf, kwh:ST.kwh, cups:ST.cups, kwp:$('kwp').value, epoca:$('epoca').value, cau:$('cau').value};
+  v.coeficientes = {pc:ST.pc, dem:ST.dem, fv:ST.fv, cups:ST.cups, kwp:$('kwp').value, epoca:$('epoca').value, cau:$('cau').value};
   guardarVatiaco(v);
 }
 (function cargar(){
   const c = leerVatiaco().coeficientes;
-  if(c && Array.isArray(c.pc) && c.pc.length>=2 && c.pc.length<=8){
-    ST.pc = c.pc.map(Number); ST.perf = (c.perf||[]).map((p,i)=>PERFILES[p]?p:PERF_DEF[i]); ST.kwh = (c.kwh||[]).map(Number);
-    while(ST.perf.length<ST.pc.length) ST.perf.push(PERF_DEF[ST.perf.length]);
-    while(ST.kwh.length<ST.pc.length) ST.kwh.push(KWH_DEF[ST.kwh.length]);
-    ST.cups = c.cups || []; if(c.kwp) $('kwp').value = c.kwp; if(c.epoca) $('epoca').value = c.epoca; if(c.cau) $('cau').value = c.cau;
+  const es24 = v => Array.isArray(v) && v.length===24 && v.every(x=>isFinite(x) && x>=0);
+  if(c && Array.isArray(c.pc) && c.pc.length>=2 && c.pc.length<=MAX_SOCIOS){
+    ST.pc = c.pc.map(Number);
+    // perfiles dibujados; los guardados por la version anterior (perf y kwh), desde su perfil tipo
+    ST.dem = ST.pc.map((_,i)=> es24((c.dem||[])[i]) ? c.dem[i].map(Number) :
+      plantilla(PERFILES[(c.perf||[])[i]] ? c.perf[i] : PERF_DEF[i], +((c.kwh||[])[i]) || KWH_DEF[i]));
+    ST.cups = c.cups || []; if(c.kwp) $('kwp').value = c.kwp; if(c.cau) $('cau').value = c.cau;
+    if(c.epoca && $('epoca').querySelector(`option[value="${c.epoca}"]`)) $('epoca').value = c.epoca;
+    ST.fv = es24(c.fv) ? c.fv.map(x=>Math.min(1, +x)) : formaFv($('epoca').value);
   }
 })();
 $('cau').addEventListener('input', guardar);
