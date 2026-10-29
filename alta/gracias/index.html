@@ -38,6 +38,18 @@
                 if (d.url_plataforma) { $('#plataforma').href = d.url_plataforma + '/'; $('#plataforma').hidden = false; }
                 return;
               }
+              if (d.estado === 'revision') {
+                $('#titulo').textContent = '¡Solicitud recibida!';
+                $('#subtitulo').textContent = 'Revisamos cada alta antes de crear la comunidad' + (d.comunidad ? ' (' + d.comunidad + ')' : '') + '.';
+                estado('En revisión: te escribiremos' + (d.email ? ' a ' + d.email : '') + ' en cuanto esté lista. También puedes volver a esta página.', '');
+                return;
+              }
+              if (d.estado === 'rechazada') {
+                $('#titulo').textContent = 'Alta no aprobada';
+                $('#subtitulo').textContent = 'No hemos podido aprobar esta solicitud.';
+                estado('Si crees que es un error, escríbenos a info@vatiaco.es.', 'mal');
+                return;
+              }
               if (d.estado === 'error') {
                 estado('Alta recibida. Estamos terminando de crear tu comunidad y te escribiremos en cuanto esté lista.', 'mal');
                 return;
