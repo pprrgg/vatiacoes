@@ -2,8 +2,8 @@
 import TopNav from '../../components/TopNav.astro';
 import PieSitio from '../../components/PieSitio.astro';
 import '../../styles/sitio.css';
-// Vuelta desde Stripe tras pagar (/alta/gracias/?sesion=cs_...): pregunta a la API por el
-// alta hasta que la comunidad esta creada (tarda un minuto).
+// Tras enviar el alta (/alta/gracias/?alta=<id>): pregunta a la API por el alta hasta que la
+// comunidad esta creada (tarda un minuto).
 const API = 'https://VatiaCo.duckdns.org/cec-api';
 ---
 <!DOCTYPE html>
@@ -43,16 +43,16 @@ const API = 'https://VatiaCo.duckdns.org/cec-api';
             <div class="etiqueta">Alta de comunidad</div>
             <h1 id="titulo">¡Gracias!</h1>
             <p id="subtitulo">Estamos preparando la plataforma de tu comunidad.</p>
-            <span class="estado" id="estado"><span class="giro"></span><span id="estado-txt">Comprobando el pago…</span></span>
+            <span class="estado" id="estado"><span class="giro"></span><span id="estado-txt">Creando la comunidad…</span></span>
             <ol class="pasos">
               <li>Entra en la plataforma con <strong id="email">tu email</strong> y la contraseña que elegiste.</li>
               <li>Da de alta a los socios con su CUPS: cada uno tendrá su panel.</li>
               <li>Cada noche se descargan sus lecturas de Datadis y se calcula el reparto.</li>
             </ol>
-            <p id="prueba" hidden></p>
+            <p style="font-size: 0.85rem;">El uso de la plataforma es gratuito y queda bajo la responsabilidad del gestor de la
+              comunidad, según las <a href="/condiciones/">condiciones de uso</a>.</p>
             <div class="acciones">
               <a class="btn principal" id="plataforma" href="#" data-plataforma="Acceso socios" hidden>Entrar en la plataforma</a>
-              <a class="btn" id="portal" href="#" hidden>Gestionar suscripción</a>
             </div>
           </div>
         </div>
@@ -64,24 +64,18 @@ const API = 'https://VatiaCo.duckdns.org/cec-api';
       (function () {
         var $ = function (s) { return document.querySelector(s); };
         try { sessionStorage.removeItem('alta-comunidad-borrador'); } catch (e) {}
-        var sesion = new URLSearchParams(location.search).get('sesion'), intentos = 0;
+        var aid = new URLSearchParams(location.search).get('alta'), intentos = 0;
         function estado(txt, clase, girando) {
           $('#estado').className = 'estado' + (clase ? ' ' + clase : '');
           $('#estado').innerHTML = (girando ? '<span class="giro"></span>' : '') + '<span></span>';
           $('#estado span:last-child').textContent = txt;
         }
         function consultar() {
-          fetch(API + '/alta/estado?sesion=' + encodeURIComponent(sesion))
+          fetch(API + '/alta/estado?alta=' + encodeURIComponent(aid))
             .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
             .then(function (d) {
               if (d.comunidad) $('#subtitulo').textContent = 'Estamos preparando la plataforma de ' + d.comunidad + '.';
               if (d.email) $('#email').textContent = d.email;
-              if (d.fin_prueba) {
-                $('#prueba').hidden = false;
-                $('#prueba').textContent = 'Tu periodo de prueba gratuito dura hasta el ' +
-                  new Date(d.fin_prueba).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) + '. No se cobrará nada antes.';
-              }
-              if (d.url_portal) { $('#portal').href = d.url_portal; $('#portal').hidden = false; }
               if (d.estado === 'creada') {
                 $('#titulo').textContent = '¡Alta completada!';
                 $('#subtitulo').textContent = (d.comunidad || 'Tu comunidad') + ' ya está en la plataforma.';
@@ -90,20 +84,20 @@ const API = 'https://VatiaCo.duckdns.org/cec-api';
                 return;
               }
               if (d.estado === 'error') {
-                estado('Pago recibido. Estamos terminando de crear tu comunidad y te escribiremos en cuanto esté lista.', 'mal');
+                estado('Alta recibida. Estamos terminando de crear tu comunidad y te escribiremos en cuanto esté lista.', 'mal');
                 return;
               }
-              estado(d.pagada ? 'Creando la comunidad… (un minuto)' : 'Comprobando el pago…', '', true);
+              estado('Creando la comunidad… (un minuto)', '', true);
               if (++intentos < 60) setTimeout(consultar, 5000);
               else estado('Está tardando más de lo normal: te escribiremos en cuanto esté lista.', 'mal');
             })
             .catch(function () {
               if (++intentos < 6) setTimeout(consultar, 5000);
-              else estado('No podemos consultar el alta ahora mismo. Si has pagado, te escribiremos en cuanto esté lista.', 'mal');
+              else estado('No podemos consultar el alta ahora mismo. Te escribiremos en cuanto esté lista.', 'mal');
             });
         }
-        if (sesion && /^cs_[A-Za-z0-9_]+$/.test(sesion)) consultar();
-        else estado('No hay ningún pago que comprobar.', 'mal');
+        if (aid && /^[A-Za-z0-9_-]{8,40}$/.test(aid)) consultar();
+        else estado('No hay ningún alta que comprobar.', 'mal');
       })();
     </script>
   </body>

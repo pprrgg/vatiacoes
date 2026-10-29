@@ -10,6 +10,6 @@ export const TITULAR = {
   marca: 'VatiaCo',
   web: 'https://vatiaco.es',
   actualizado: '20 de octubre de 2026',  // fecha de la ultima revision de los textos legales
-  // true mientras la plataforma este en fase de pruebas: lo dicen las condiciones y el aviso legal
+  // true mientras la plataforma este en desarrollo: lo dicen las condiciones y el aviso legal (uso gratuito siempre)
   enPruebas: true,
 };

@@ -115,29 +115,20 @@ albaicin;Estación de recarga Paseo de los Tristes;recarga@ejemplo.es;recarga202
 albaicin;FV Cubiertas del Sacromonte;;;958 100 007;37.1838;-3.5852;generador_fv;7010
 albaicin;FV Polideportivo Albaicín;;;958 100 008;37.1852;-3.5940;generador_fv;7010"
 
-# Alta online de comunidades: la pagina esta en la web (Astro, <ALTA_URL_WEB>/alta/, menu
-# "Alta comunidad") y llama a la API (https://<TB_DOMAIN>/cec-api/alta/*). La comunidad
-# rellena el formulario, paga la cuota con Stripe y la API la crea como el superusuario
-# (plataforma.crear_comunidad: tenant, base de datos, paneles y gestor con la contraseña que
-# eligio). Impago o baja -> gestor suspendido; al dia -> reactivado.
-# Vacio STRIPE_SECRET_KEY = alta online desactivada (la pagina lo dice).
-# En Stripe: webhook a https://<TB_DOMAIN>/cec-api/alta/webhook con los eventos
-# checkout.session.completed, customer.subscription.updated, customer.subscription.deleted
-# e invoice.payment_failed; su secreto (whsec_...) va en STRIPE_WEBHOOK_SECRET. El producto,
-# los precios escalonados por socio y el IVA se crean solos en Stripe la primera vez.
-STRIPE_SECRET_KEY=""                 # sk_test_... (pruebas) o sk_live_...
-STRIPE_WEBHOOK_SECRET=""             # whsec_...
-STRIPE_PORTAL_LOGIN_URL=""           # enlace del portal de clientes de Stripe (opcional)
-ALTA_DIAS_PRUEBA="30"                # dias gratis antes del primer cobro (0 = sin prueba)
+# Alta online de comunidades, gratuita: la pagina esta en la web (Astro, <ALTA_URL_WEB>/alta/,
+# menu "Alta comunidad") y llama a la API (https://<TB_DOMAIN>/cec-api/alta/*). La comunidad
+# rellena el formulario y la API la crea como el superusuario (plataforma.crear_comunidad:
+# tenant, base de datos, paneles y gestor con la contraseña que eligio). Sin cuotas ni pagos:
+# el uso queda bajo la responsabilidad del gestor (condiciones de uso de la web).
+ALTA_ONLINE="si"                     # no = alta online desactivada (la pagina lo dice)
 
 # Servicios premium: vistas que salen con la marca "Premium" e inactivas, en las pestañas del
 # panel (comunidad y socio) y en los resumenes de Informes (la API tampoco los genera).
-# Separadas por comas: potencias, reactiva, factura. Vacio = todas activas.
-SERVICIOS_PREMIUM="potencias,reactiva,factura"
-ALTA_SYNC_SOCIOS="exacto"            # cada noche, socios facturados: exacto (= los de la plataforma), subir (solo si hay mas) o no
-ALTA_URL_CONDICIONES="https://vatiaco.es/condiciones/"   # condiciones del servicio y politica de privacidad
+# Separadas por comas: potencias, reactiva, factura. Vacio = todas activas (uso gratuito).
+SERVICIOS_PREMIUM=""
+ALTA_URL_CONDICIONES="https://vatiaco.es/condiciones/"   # condiciones de uso y politica de privacidad
 ALTA_URL_PRIVACIDAD="https://vatiaco.es/privacidad/"
-ALTA_URL_WEB="https://vatiaco.es"     # web con la pagina de alta (vuelta desde Stripe)
+ALTA_URL_WEB="https://vatiaco.es"     # web con la pagina de alta
 # Origenes que pueden llamar a /cec-api/alta (CORS): la web y "astro dev"
 ALTA_ORIGENES="https://vatiaco.es,https://www.vatiaco.es,http://localhost:4321"
 
@@ -268,14 +259,10 @@ TB_TENANT_PASSWORD=$TB_TENANT_PASSWORD
 SUPER_EMAIL=$SUPER_EMAIL
 TB_LANG=$TB_LANG
 TENANT_DOMINIO=$HOSTNAME_LAN.local
-STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
-STRIPE_PORTAL_LOGIN_URL=$STRIPE_PORTAL_LOGIN_URL
+ALTA_ONLINE=$ALTA_ONLINE
 ALTA_URL_PUBLICA=https://${TB_DOMAIN:-$SERVE_IP}
 ALTA_NOMBRE_SERVICIO=$BRAND
-ALTA_DIAS_PRUEBA=$ALTA_DIAS_PRUEBA
 SERVICIOS_PREMIUM=$SERVICIOS_PREMIUM
-ALTA_SYNC_SOCIOS=$ALTA_SYNC_SOCIOS
 ALTA_URL_CONDICIONES=$ALTA_URL_CONDICIONES
 ALTA_URL_PRIVACIDAD=$ALTA_URL_PRIVACIDAD
 ALTA_URL_WEB=$ALTA_URL_WEB
@@ -296,7 +283,7 @@ chmod 600 .env
 #   app/plataforma.py comunidades, gestores, Datadis  app/main.py     API, planificador, auth
 #   app/gestion.py   gestion de la comunidad: registros de cada area y documentos PDF
 #   app/copias.py    copias de seguridad de PostgreSQL (hacer, subir, descargar, restaurar)
-#   app/alta.py      alta online de comunidades con la cuota en Stripe (pagina en la web Astro)
+#   app/alta.py      alta online gratuita de comunidades (pagina en la web Astro)
 rm -rf config/fastapi/app
 mkdir -p config/fastapi/app
 cat > config/fastapi/Dockerfile <<'__FASTAPI_EOF__'
@@ -336,7 +323,6 @@ bcrypt==4.2.*
 APScheduler==3.10.*
 openpyxl==3.1.*
 typst>=0.13,<0.15
-stripe==11.*
 __FASTAPI_EOF__
 
 : > config/fastapi/app/__init__.py
@@ -6490,10 +6476,9 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Altas online (pagina /alta, app/alta.py): la solicitud del formulario y, una vez pagada en
--- Stripe, su suscripcion. hash: bcrypt de la contraseña que eligio el gestor (se le pone al
--- crear su usuario). suspendida_pago: el gestor esta suspendido por impago o baja (solo esas
--- suspensiones las levanta el cobro; las del superusuario no)
+-- Altas online gratuitas (pagina /alta, app/alta.py): la solicitud del formulario y su estado.
+-- hash: bcrypt de la contraseña que eligio el gestor (se le pone al crear su usuario). Las
+-- columnas stripe_*, sub_*, fin_* y suspendida_pago son de cuando el alta era de pago (sin uso)
 CREATE TABLE IF NOT EXISTS alta (
   id                 text PRIMARY KEY,
   comunidad_id       text NOT NULL,      -- identificador que tendra la comunidad
@@ -6515,6 +6500,8 @@ CREATE TABLE IF NOT EXISTS alta (
   creada             timestamptz NOT NULL DEFAULT now(),
   actualizado        timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE alta DROP CONSTRAINT IF EXISTS alta_periodo_check;
+ALTER TABLE alta ADD CONSTRAINT alta_periodo_check CHECK (periodo IN ('mensual', 'anual', 'gratuito'));
 """
 
 # Comunidad con los datos de su gestor (los nombres que usa el resto de la API).
@@ -6900,16 +6887,13 @@ def aprovisionar_todas():
 def resumen():
     """Una fila por gestor y su comunidad (tabla del panel del superusuario)."""
     out = []
-    with _cx() as cx:   # suscripcion de las comunidades dadas de alta online
-        subs = {r["comunidad"]: r for r in cx.execute(
-            "SELECT comunidad, sub_estado, socios_facturados, periodo, fin_prueba, fin_periodo, suspendida_pago "
-            "FROM alta WHERE comunidad IS NOT NULL").fetchall()}
+    with _cx() as cx:   # comunidades dadas de alta online
+        online = {r["comunidad"] for r in cx.execute("SELECT comunidad FROM alta WHERE comunidad IS NOT NULL").fetchall()}
     for c in lista():
         try:
             socios = con(c, db.socios)
         except Exception:
             socios = None
-        s = subs.get(c["id"])
         out.append({"id": c["id"], "nombre": c["nombre"], "base": c["base"], "lat": c["lat"], "lon": c["lon"],
                     "gestor_nombre": c["gestor_nombre"], "gestor_email": c["gestor_email"],
                     "gestor_telefono": c["gestor_telefono"], "gestor_estado": c["gestor_estado"],
@@ -6918,10 +6902,7 @@ def resumen():
                     "aprovisionada": bool(c["tenant_id"]), "creada": c["creada"].isoformat(),
                     "datadis_user": c["datadis_user"], "datadis_nifs": c["datadis_nifs"],
                     "datadis": bool(c["datadis_user"] and c["datadis_pass"]),
-                    "suscripcion": s and {"estado": s["sub_estado"], "socios": s["socios_facturados"],
-                                          "periodo": s["periodo"], "suspendida_pago": s["suspendida_pago"],
-                                          "fin_prueba": s["fin_prueba"] and s["fin_prueba"].isoformat(),
-                                          "fin_periodo": s["fin_periodo"] and s["fin_periodo"].isoformat()}})
+                    "alta_online": c["id"] in online})
     return out
 
 
@@ -7930,66 +7911,36 @@ def baja_socio(sid):
 __FASTAPI_EOF__
 
 cat > config/fastapi/app/alta.py <<'__FASTAPI_EOF__'
-"""Alta online de comunidades energeticas con la cuota en Stripe.
+"""Alta online de comunidades energeticas, gratuita (sin cuotas ni pagos).
 
 La pagina de alta esta en la web (Astro, https://vatiaco.es/alta/) y llama a estas rutas
 publicas (/cec-api/alta/*, con CORS para ALTA_ORIGENES):
   formulario (la comunidad se elige entre las del IDAE, las del mapa de la web; se registran
      los datos de su gestor) -> solicitud(): valida lo mismo que el panel del
      superusuario (plataforma.validar_comunidad) y guarda la solicitud (tabla alta de la base
-     plataforma, con el hash de la contraseña del gestor) -> Stripe Checkout (tarjeta o SEPA,
-     ALTA_DIAS_PRUEBA dias gratis)
-  -> webhook checkout.session.completed -> crear(): plataforma.crear_comunidad, lo mismo que
-     hace el superusuario (base de datos, tenant, paneles y usuario del gestor); el gestor
-     entra con la contraseña que eligio en el formulario
-  -> customer.subscription.updated/deleted -> acceso(): impago o baja = gestor suspendido
-     (plataforma.suspender_gestor); al dia otra vez = reactivado (solo si lo suspendio el cobro)
+     plataforma, con el hash de la contraseña del gestor)
+  -> crear() en segundo plano: plataforma.crear_comunidad, lo mismo que hace el superusuario
+     (base de datos, tenant, paneles y usuario del gestor); el gestor entra con la contraseña
+     que eligio en el formulario
+  -> estado(): la pagina /alta/gracias/ pregunta hasta que la comunidad esta creada
 
-Stripe es la fuente de verdad del cobro; la tabla alta guarda una copia de la suscripcion para
-el panel del superusuario. Tarifa por socio, escalonada: cada socio paga el precio de su tramo."""
+El uso de la plataforma es gratuito y queda bajo la responsabilidad del gestor (condiciones
+de uso de la web)."""
 import re
 import secrets
 import threading
 import time
-from datetime import datetime, timezone
 
 import psycopg
 import requests
-import stripe
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from . import db, plataforma
 from .comun import E, log
 
-TRAMOS = [   # centimos por socio y mes
-    {"desde": 1, "hasta": 50, "centimos": 99},
-    {"desde": 51, "hasta": 250, "centimos": 89},
-    {"desde": 251, "hasta": 1000, "centimos": 79},
-    {"desde": 1001, "hasta": 3000, "centimos": 69},
-]
-MAX_SOCIOS = 3000              # mas socios: tarifa a medida (no se admite alta online)
-MESES_COBRADOS_ANUAL = 10      # la cuota anual cobra 10 meses: 2 gratis
-PROVINCIAS = [
-    "A Coruña", "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Barcelona", "Bizkaia",
-    "Burgos", "Cáceres", "Cádiz", "Cantabria", "Castellón", "Ceuta", "Ciudad Real", "Córdoba", "Cuenca", "Gipuzkoa",
-    "Girona", "Granada", "Guadalajara", "Huelva", "Huesca", "Illes Balears", "Jaén", "La Rioja", "Las Palmas", "León",
-    "Lleida", "Lugo", "Madrid", "Málaga", "Melilla", "Murcia", "Navarra", "Ourense", "Palencia", "Pontevedra",
-    "Salamanca", "Santa Cruz de Tenerife", "Segovia", "Sevilla", "Soria", "Tarragona", "Teruel", "Toledo", "Valencia",
-    "Valladolid", "Zamora", "Zaragoza",
-]
-# Fuera del ambito del IVA (en Canarias puede corresponder IGIC: confirmalo con la gestoria)
-PROVINCIAS_SIN_IVA = ["Las Palmas", "Santa Cruz de Tenerife", "Ceuta", "Melilla"]
-AL_DIA = ("trialing", "active", "past_due")   # suscripciones con acceso a la plataforma
-LOOKUP_MENSUAL, LOOKUP_ANUAL, CLAVE_IVA = "cuota_socio_mensual", "cuota_socio_anual", "iva_21_es"
-
 URL = (E.get("ALTA_URL_PUBLICA") or "").rstrip("/")          # la plataforma (ThingsBoard)
 WEB = (E.get("ALTA_URL_WEB") or "").rstrip("/")              # la web con la pagina de alta
-DIAS_PRUEBA = int(E.get("ALTA_DIAS_PRUEBA") or 0)
-stripe.api_key = E.get("STRIPE_SECRET_KEY") or None
-stripe.max_network_retries = 2
-_PRECIOS = {}
-_LK = threading.Lock()         # precios de Stripe
 _CREAR = threading.Lock()      # una comunidad a la vez
 _IDAE = {"hasta": 0.0, "datos": {}}
 
@@ -8002,7 +7953,7 @@ class Errores(Exception):
 
 
 def activa():
-    return bool(stripe.api_key and E.get("STRIPE_WEBHOOK_SECRET") and WEB)
+    return bool(WEB) and (E.get("ALTA_ONLINE") or "si") != "no"
 
 
 def _cx():
@@ -8017,12 +7968,10 @@ def preparar():
                    "WHERE estado = 'creando'")
 
 
-def tarifa():
+def info():
     """Lo que necesita la pagina de alta."""
     return {"activa": activa(), "nombre_servicio": E.get("ALTA_NOMBRE_SERVICIO") or "Plataforma de comunidades energéticas",
-            "tramos": TRAMOS, "max_socios": MAX_SOCIOS, "meses_cobrados_anual": MESES_COBRADOS_ANUAL,
-            "dias_prueba": DIAS_PRUEBA, "provincias": PROVINCIAS, "provincias_sin_iva": PROVINCIAS_SIN_IVA,
-            "url_portal": E.get("STRIPE_PORTAL_LOGIN_URL") or "", "url_condiciones": E.get("ALTA_URL_CONDICIONES") or "",
+            "gratuita": True, "url_condiciones": E.get("ALTA_URL_CONDICIONES") or "",
             "url_privacidad": E.get("ALTA_URL_PRIVACIDAD") or "", "url_plataforma": URL}
 
 
@@ -8067,18 +8016,13 @@ def _texto(v, minimo, maximo):
 
 def _validar(f):
     """Formulario -> datos (o Errores por campo). La comunidad es una del IDAE (sus datos salen
-    de alli); del formulario solo se registran el gestor y la suscripcion. Lo de la comunidad y
-    el gestor lo comprueba ademas plataforma.validar_comunidad, igual que en el panel del
-    superusuario."""
+    de alli); del formulario solo se registra el gestor. Lo de la comunidad y el gestor lo
+    comprueba ademas plataforma.validar_comunidad, igual que en el panel del superusuario."""
     err = {}
     d = _comunidad_idae(f.get("idae"))
     d.update(contacto=_texto(f.get("contacto"), 3, 80), email=str(f.get("email") or "").strip().lower(),
              telefono=_texto(f.get("telefono"), 0, 30) or "")
     pw = str(f.get("password") or "")
-    # Socios facturados al empezar: los de la comunidad en el IDAE (sin dato, 1); luego se ajustan
-    # cada noche a los dados de alta en la plataforma (sincronizar_socios)
-    socios = max(1, int(d["socios_idae"] or 0))
-    periodo = f.get("periodo") if f.get("periodo") in ("mensual", "anual") else None
     if not d["contacto"]:
         err["contacto"] = "Indica tu nombre y apellidos."
     if not plataforma.EMAIL.match(d["email"]) or len(d["email"]) > 120:
@@ -8089,12 +8033,8 @@ def _validar(f):
         err["password"] = "La contraseña debe tener al menos 8 caracteres."
     elif pw != str(f.get("password2") or ""):
         err["password2"] = "Las contraseñas no coinciden."
-    if socios > MAX_SOCIOS:
-        err["comunidad"] = f"Para más de {MAX_SOCIOS} socios, escríbenos y te preparamos una tarifa a medida."
-    if not periodo:
-        err["periodo"] = "Elige la forma de pago."
     if f.get("acepta") is not True:
-        err["acepta"] = "Debes aceptar las condiciones del servicio."
+        err["acepta"] = "Debes aceptar las condiciones de uso."
     if err:
         raise Errores(err)
     try:
@@ -8106,94 +8046,26 @@ def _validar(f):
         raise Errores({"comunidad": "Esta comunidad ya está dada de alta en la plataforma. Si eres su gestor, entra con tu usuario."})
     if plataforma._hashes_tb([d["email"]]):
         raise Errores({"email": "Ese email ya es usuario de la plataforma."})
-    with _cx() as cx:   # otra alta pagada con esa comunidad o ese gestor que aun no ha terminado
-        if cx.execute("SELECT 1 FROM alta WHERE stripe_suscripcion IS NOT NULL AND (comunidad IS NOT NULL OR estado <> 'creada') "
-                      "AND (comunidad_id = %s OR datos->>'email' = %s) AND coalesce(sub_estado, '') NOT IN "
-                      "('canceled', 'incomplete_expired')", (cid, d["email"])).fetchone():
+    with _cx() as cx:   # otra alta con esa comunidad o ese gestor que aun no ha terminado
+        if cx.execute("SELECT 1 FROM alta WHERE estado IN ('pendiente', 'creando') AND (comunidad_id = %s OR datos->>'email' = %s)",
+                      (cid, d["email"])).fetchone():
             raise Errores({"general": "Ya hay un alta en curso con esta comunidad o este email."})
-    return d, cid, pw, socios, periodo
-
-
-def precios():
-    """Precios mensual y anual (escalonados por socio) y tasa de IVA del 21 %: se buscan en
-    Stripe por su clave y, si no estan (la primera vez), se crean."""
-    with _LK:
-        if _PRECIOS:
-            return _PRECIOS
-        ps = {p["lookup_key"]: p["id"] for p in stripe.Price.list(lookup_keys=[LOOKUP_MENSUAL, LOOKUP_ANUAL], active=True)}
-        if len(ps) < 2:
-            prod = next((p for p in stripe.Product.list(active=True, limit=100).auto_paging_iter()
-                         if (p.get("metadata") or {}).get("clave") == "plataforma_comunidad"), None) or stripe.Product.create(
-                name=E.get("ALTA_NOMBRE_SERVICIO") or "Plataforma de comunidades energéticas",
-                description="Cuota por socio de la plataforma de la comunidad energética.",
-                metadata={"clave": "plataforma_comunidad"})
-            for clave, intervalo, factor, apodo in ((LOOKUP_MENSUAL, "month", 1, "Cuota mensual por socio"),
-                                                     (LOOKUP_ANUAL, "year", MESES_COBRADOS_ANUAL, "Cuota anual por socio")):
-                if clave in ps:
-                    continue
-                ps[clave] = stripe.Price.create(
-                    product=prod["id"], currency="eur", nickname=apodo, recurring={"interval": intervalo},
-                    billing_scheme="tiered", tiers_mode="graduated", tax_behavior="exclusive",
-                    tiers=[{"up_to": "inf" if i == len(TRAMOS) - 1 else t["hasta"], "unit_amount": t["centimos"] * factor}
-                           for i, t in enumerate(TRAMOS)],
-                    lookup_key=clave, transfer_lookup_key=True)["id"]
-                log.info("Stripe: precio %s creado (%s)", clave, ps[clave])
-        iva = next((t["id"] for t in stripe.TaxRate.list(active=True, limit=100).auto_paging_iter()
-                    if (t.get("metadata") or {}).get("clave") == CLAVE_IVA), None)
-        if not iva:
-            iva = stripe.TaxRate.create(display_name="IVA", percentage=21, inclusive=False, country="ES", jurisdiction="ES",
-                                        description="IVA general España", metadata={"clave": CLAVE_IVA})["id"]
-            log.info("Stripe: tasa de IVA creada (%s)", iva)
-        _PRECIOS.update(mensual=ps[LOOKUP_MENSUAL], anual=ps[LOOKUP_ANUAL], iva=iva)
-        return _PRECIOS
+    return d, cid, pw
 
 
 def solicitud(f):
-    """Formulario de alta -> sesion de Stripe Checkout (la pagina va a su url)."""
+    """Formulario de alta -> la comunidad se crea en segundo plano (tarda un minuto). La pagina
+    va a /alta/gracias/?alta=<id>, que pregunta por su estado."""
     if not activa():
         raise Errores({"general": "El alta online no está disponible."})
-    d, cid, pw, socios, periodo = _validar(f)
-    p = precios()
+    d, cid, pw = _validar(f)
     aid = secrets.token_urlsafe(12)
     with _cx() as cx:
-        cx.execute("INSERT INTO alta (id, comunidad_id, datos, hash, socios, periodo) VALUES (%s, %s, %s, %s, %s, %s)",
-                   (aid, cid, Jsonb(d), plataforma._hash(pw), socios, periodo))
-    meta = {"alta": aid, "comunidad": d["comunidad"], "municipio": d["municipio"], "socios_declarados": str(socios)}
-    sub = {"description": f"{d['comunidad']} · {socios} socios", "metadata": meta}
-    if DIAS_PRUEBA:
-        sub.update(trial_period_days=DIAS_PRUEBA, trial_settings={"end_behavior": {"missing_payment_method": "cancel"}})
-    if d["provincia"] not in PROVINCIAS_SIN_IVA:
-        sub["default_tax_rates"] = [p["iva"]]
-    extra = {"custom_text": {"submit": {"message": f"No se cobra nada durante los primeros {DIAS_PRUEBA} días. "
-                                                   "Puedes cancelar en cualquier momento antes de que termine la prueba."}}} \
-        if DIAS_PRUEBA else {}
-    ses = stripe.checkout.Session.create(
-        mode="subscription", locale="es", customer_email=d["email"], client_reference_id=aid,
-        line_items=[{"price": p[periodo], "quantity": socios}], billing_address_collection="required",
-        tax_id_collection={"enabled": True}, payment_method_collection="always", allow_promotion_codes=True,
-        metadata=meta, subscription_data=sub, **extra,
-        success_url=f"{WEB}/alta/gracias/?sesion={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{WEB}/alta/?cancelado=1")
-    with _cx() as cx:
-        cx.execute("UPDATE alta SET stripe_sesion = %s WHERE id = %s", (ses["id"], aid))
-    log.info("alta online: %s (%s, %s socios, %s) va a pagar", d["comunidad"], d["municipio"], socios, periodo)
-    return {"url": ses["url"]}
-
-
-# ---------------- Stripe -> plataforma ----------------
-def _fecha(s):
-    return datetime.fromtimestamp(s, timezone.utc) if s else None
-
-
-def _guardar_sub(aid, sub):
-    """Copia del estado de la suscripcion en la tabla alta."""
-    linea = ((sub.get("items") or {}).get("data") or [{}])[0]
-    fin = linea.get("current_period_end") or sub.get("current_period_end")   # segun la version de la API
-    with _cx() as cx:
-        cx.execute("UPDATE alta SET stripe_suscripcion = %s, stripe_cliente = %s, sub_estado = %s, socios_facturados = %s, "
-                   "fin_prueba = %s, fin_periodo = %s, actualizado = now() WHERE id = %s",
-                   (sub["id"], sub.get("customer"), sub.get("status"), linea.get("quantity"),
-                    _fecha(sub.get("trial_end")), _fecha(fin), aid))
+        cx.execute("INSERT INTO alta (id, comunidad_id, datos, hash, socios, periodo) VALUES (%s, %s, %s, %s, %s, 'gratuito')",
+                   (aid, cid, Jsonb(d), plataforma._hash(pw), max(1, int(d["socios_idae"] or 0))))
+    log.info("alta online: %s (%s) solicitada por %s", d["comunidad"], d["municipio"], d["email"])
+    threading.Thread(target=crear, args=(aid,), name=f"alta-{aid}", daemon=True).start()
+    return {"alta": aid}
 
 
 def _fila(aid):
@@ -8201,25 +8073,13 @@ def _fila(aid):
         return cx.execute("SELECT * FROM alta WHERE id = %s", (aid,)).fetchone()
 
 
-def pagada(sesion):
-    """Checkout completado: se guarda la suscripcion y se crea la comunidad (en segundo plano:
-    tarda un minuto y Stripe espera la respuesta del webhook pocos segundos)."""
-    aid = (sesion.get("metadata") or {}).get("alta") or sesion.get("client_reference_id")
-    if not aid or not sesion.get("subscription") or not _fila(aid):
-        log.warning("alta online: sesion %s sin alta conocida", sesion.get("id"))
-        return
-    _guardar_sub(aid, stripe.Subscription.retrieve(sesion["subscription"]))
-    threading.Thread(target=crear, args=(aid,), name=f"alta-{aid}", daemon=True).start()
-
-
 def crear(aid):
-    """Crea la comunidad pagada igual que el superusuario (plataforma.crear_comunidad) y pone
-    al gestor la contraseña que eligio. Un reintento retoma la que se quedo a medias."""
+    """Crea la comunidad igual que el superusuario (plataforma.crear_comunidad) y pone al
+    gestor la contraseña que eligio. Un reintento retoma la que se quedo a medias."""
     with _CREAR:
         with _cx() as cx:
             a = cx.execute("UPDATE alta SET estado = 'creando', error = NULL, actualizado = now() "
-                           "WHERE id = %s AND estado IN ('pendiente', 'error') AND stripe_suscripcion IS NOT NULL "
-                           "RETURNING *", (aid,)).fetchone()
+                           "WHERE id = %s AND estado IN ('pendiente', 'error') RETURNING *", (aid,)).fetchone()
         if not a:
             return _fila(aid)
         d, cid = a["datos"], a["comunidad_id"]
@@ -8246,79 +8106,27 @@ def crear(aid):
             with _cx() as cx:
                 cx.execute("UPDATE alta SET estado = 'error', error = %s, actualizado = now() WHERE id = %s",
                            (str(e)[-2000:], aid))
-            return _fila(aid)
-    try:
-        stripe.Subscription.modify(a["stripe_suscripcion"], metadata={"comunidad_id": cid})
-    except Exception:
-        log.exception("alta online: metadatos de la suscripcion de %s", cid)
-    acceso(aid)      # por si la suscripcion cambio mientras se creaba
     return _fila(aid)
 
 
-def acceso(aid):
-    """Gestor suspendido si la suscripcion no esta al dia (impago o baja) y reactivado cuando
-    vuelve a estarlo, solo si lo suspendio el cobro (no si lo suspendio el superusuario)."""
+def estado(aid):
+    """Para la pagina de confirmacion."""
     a = _fila(aid)
-    c = a and a["comunidad"] and plataforma.por_id(a["comunidad"])
-    if not c or not a["sub_estado"]:
-        return
-    al_dia = a["sub_estado"] in AL_DIA
-    if not al_dia and not a["suspendida_pago"] and c["gestor_estado"] == "activo":
-        plataforma.suspender_gestor(c["id"], True)
-        with _cx() as cx:
-            cx.execute("UPDATE alta SET suspendida_pago = true WHERE id = %s", (aid,))
-        log.warning("alta online: %s suspendida (suscripcion %s)", c["id"], a["sub_estado"])
-    elif al_dia and a["suspendida_pago"]:
-        with _cx() as cx:
-            cx.execute("UPDATE alta SET suspendida_pago = false WHERE id = %s", (aid,))
-        plataforma.suspender_gestor(c["id"], False)
-        log.info("alta online: %s reactivada (suscripcion %s)", c["id"], a["sub_estado"])
-
-
-def webhook(cuerpo, firma):
-    """Eventos de Stripe (firma comprobada con STRIPE_WEBHOOK_SECRET)."""
-    ev = stripe.Webhook.construct_event(cuerpo, firma, E["STRIPE_WEBHOOK_SECRET"])
-    o = ev["data"]["object"]
-    if ev["type"] == "checkout.session.completed":
-        if o.get("mode") == "subscription":
-            pagada(o)
-    elif ev["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
-        aid = (o.get("metadata") or {}).get("alta")
-        if aid and _fila(aid):
-            _guardar_sub(aid, o)
-            acceso(aid)
-    elif ev["type"] == "invoice.payment_failed":
-        log.warning("alta online: pago fallido (cliente %s, factura %s)", o.get("customer"), o.get("id"))
-
-
-def estado(sesion):
-    """Para la pagina de confirmacion. Si el webhook aun no ha llegado (o no esta configurado)
-    se pregunta a Stripe por la sesion."""
-    with _cx() as cx:
-        a = cx.execute("SELECT * FROM alta WHERE stripe_sesion = %s", (sesion,)).fetchone()
     if not a:
-        raise KeyError(sesion)
-    if not a["stripe_suscripcion"]:
-        ses = stripe.checkout.Session.retrieve(sesion)
-        if ses.get("status") == "complete" and ses.get("subscription"):
-            pagada(ses)
-            a = _fila(a["id"])
-    return {"comunidad": a["datos"].get("comunidad"), "email": a["datos"].get("email"),
-            "pagada": bool(a["stripe_suscripcion"]), "estado": a["estado"],
-            "fin_prueba": a["fin_prueba"] and a["fin_prueba"].isoformat(),
-            "url_plataforma": URL, "url_portal": E.get("STRIPE_PORTAL_LOGIN_URL") or ""}
+        raise KeyError(aid)
+    return {"comunidad": a["datos"].get("comunidad"), "email": a["datos"].get("email"), "estado": a["estado"],
+            "url_plataforma": URL}
 
 
 # ---------------- superusuario ----------------
 def lista():
-    """Altas online pagadas (las que no se pagaron no salen)."""
+    """Altas online y su estado."""
     with _cx() as cx:
-        return [dict(r, creada=r["creada"].isoformat(), fin_prueba=r["fin_prueba"] and r["fin_prueba"].isoformat())
+        return [dict(r, creada=r["creada"].isoformat())
                 for r in cx.execute(
                     "SELECT id, comunidad_id, comunidad, datos->>'comunidad' AS nombre, datos->>'municipio' AS municipio, datos->>'provincia' AS provincia, "
-                    "datos->>'contacto' AS contacto, datos->>'email' AS email, socios, periodo, estado, error, "
-                    "sub_estado, socios_facturados, fin_prueba, suspendida_pago, creada FROM alta "
-                    "WHERE stripe_suscripcion IS NOT NULL ORDER BY creada DESC LIMIT 200").fetchall()]
+                    "datos->>'contacto' AS contacto, datos->>'email' AS email, socios, estado, error, creada FROM alta "
+                    "ORDER BY creada DESC LIMIT 200").fetchall()]
 
 
 def reintentar(aid):
@@ -8331,44 +8139,6 @@ def reintentar(aid):
     if a["estado"] == "error":
         raise RuntimeError(a["error"])
     return a["estado"]
-
-
-def al_borrar(cid):
-    """El superusuario borra una comunidad dada de alta online: se cancela su suscripcion (si
-    no, Stripe seguiria cobrandola)."""
-    with _cx() as cx:
-        subs = cx.execute("SELECT stripe_suscripcion FROM alta WHERE comunidad = %s AND stripe_suscripcion IS NOT NULL "
-                          "AND coalesce(sub_estado, '') NOT IN ('canceled', 'incomplete_expired')", (cid,)).fetchall()
-    for s in subs:
-        if not stripe.api_key:
-            raise RuntimeError("La comunidad tiene una suscripción en Stripe y falta STRIPE_SECRET_KEY para cancelarla")
-        stripe.Subscription.cancel(s["stripe_suscripcion"])
-        log.info("alta online: suscripcion %s de %s cancelada (comunidad borrada)", s["stripe_suscripcion"], cid)
-
-
-def sincronizar_socios():
-    """Cada noche: socios facturados = socios de la comunidad (ALTA_SYNC_SOCIOS: subir =
-    solo si hay mas que los facturados; exacto = tambien a la baja; no = nunca). Limpia las
-    solicitudes que no se pagaron."""
-    with _cx() as cx:
-        cx.execute("DELETE FROM alta WHERE stripe_suscripcion IS NULL AND creada < now() - interval '2 days'")
-        filas = cx.execute("SELECT * FROM alta WHERE comunidad IS NOT NULL AND sub_estado IN ('trialing', 'active')").fetchall()
-    modo = E.get("ALTA_SYNC_SOCIOS") or "subir"
-    if not stripe.api_key or modo not in ("subir", "exacto"):
-        return
-    for a in filas:
-        try:
-            c = plataforma.por_id(a["comunidad"])
-            n = min(len(plataforma.con(c, db.socios)), MAX_SOCIOS)
-            sub = stripe.Subscription.retrieve(a["stripe_suscripcion"])
-            linea = sub["items"]["data"][0]
-            if n > linea["quantity"] or (modo == "exacto" and 0 < n != linea["quantity"]):
-                stripe.SubscriptionItem.modify(linea["id"], quantity=n, proration_behavior="create_prorations")
-                log.info("alta online: %s pasa de %s a %s socios facturados", c["id"], linea["quantity"], n)
-                sub = stripe.Subscription.retrieve(a["stripe_suscripcion"])
-            _guardar_sub(a["id"], sub)
-        except Exception:
-            log.exception("socios facturados de %s", a["comunidad"])
 __FASTAPI_EOF__
 
 cat > config/fastapi/app/copias.py <<'__FASTAPI_EOF__'
@@ -8701,9 +8471,6 @@ async def vida(app):
                  id="credenciales", coalesce=True, max_instances=1, misfire_grace_time=3600)
     PLAN.add_job(sync_programada, CronTrigger(hour=hh, minute=mm, timezone=TZL), id="diaria",
                  coalesce=True, max_instances=1, misfire_grace_time=3 * 3600)
-    # Altas online: socios facturados en Stripe = socios de cada comunidad
-    PLAN.add_job(alta.sincronizar_socios, CronTrigger(hour=4, minute=30, timezone=TZL), id="alta-socios",
-                 coalesce=True, max_instances=1, misfire_grace_time=3600)
     PLAN.start()
     log.info("sincronización diaria a las %s (API de Datadis, cuenta de cada comunidad)", SYNC_HORA)
     yield
@@ -8871,7 +8638,7 @@ async def salud():
     return {"ok": True}
 
 
-# ---------------- alta online (publica: pagina de alta de la web, Stripe) ----------------
+# ---------------- alta online gratuita (publica: pagina de alta de la web) ----------------
 # La pagina esta en la web (Astro, otro origen): CORS solo para estas rutas y ALTA_ORIGENES.
 ORIGENES = {o.strip().rstrip("/") for o in (E.get("ALTA_ORIGENES") or "").split(",") if o.strip()}
 
@@ -8893,12 +8660,12 @@ async def cors_alta(request: Request, siguiente):
 _INTENTOS = {}   # ip -> instantes de sus solicitudes de alta (10 cada 10 minutos)
 
 
-@app.get("/alta/tarifa", summary="Tarifa y datos de la página de alta (pública)")
-async def alta_tarifa():
-    return alta.tarifa()
+@app.get("/alta/info", summary="Datos de la página de alta (pública)")
+async def alta_info():
+    return alta.info()
 
 
-@app.post("/alta/solicitud", summary="Formulario de alta -> pago en Stripe Checkout (pública)")
+@app.post("/alta/solicitud", summary="Formulario de alta -> se crea la comunidad (pública)")
 async def alta_solicitud(datos: dict, request: Request):
     ahora, ip = time.time(), request.client.host if request.client else "?"
     lista = [t for t in _INTENTOS.get(ip, []) if ahora - t < 600]
@@ -8911,27 +8678,15 @@ async def alta_solicitud(datos: dict, request: Request):
         return JSONResponse({"errores": e.errores}, 422)
     except Exception:
         log.exception("alta online")
-        raise HTTPException(502, "No se ha podido iniciar el pago. Inténtalo de nuevo en unos minutos.")
+        raise HTTPException(502, "No se ha podido hacer el alta. Inténtalo de nuevo en unos minutos.")
 
 
-@app.get("/alta/estado", summary="Estado de un alta tras el pago (página de confirmación, pública)")
-async def alta_estado(sesion: str = Query(..., pattern=r"^cs_[A-Za-z0-9_]+$")):
+@app.get("/alta/estado", summary="Estado de un alta (página de confirmación, pública)")
+async def alta_estado(alta_id: str = Query(..., alias="alta", pattern=r"^[A-Za-z0-9_-]{8,40}$")):
     try:
-        return await asyncio.to_thread(alta.estado, sesion)
+        return await asyncio.to_thread(alta.estado, alta_id)
     except KeyError:
-        raise HTTPException(404, "Sesión no encontrada")
-
-
-@app.post("/alta/webhook", include_in_schema=False)
-async def alta_webhook(request: Request):
-    """Eventos de Stripe. Un 500 hace que Stripe lo reintente mas tarde."""
-    cuerpo = await request.body()
-    try:
-        await asyncio.to_thread(alta.webhook, cuerpo, request.headers.get("stripe-signature") or "")
-    except (ValueError, alta.stripe.error.SignatureVerificationError) as e:
-        log.warning("webhook de Stripe rechazado: %s", e)
-        raise HTTPException(400, "Firma no válida")
-    return {"recibido": True}
+        raise HTTPException(404, "Alta no encontrada")
 
 
 # ---------------- acceso de los gestores a la API de ThingsBoard ----------------
@@ -9738,13 +9493,12 @@ async def plataforma_suspender_gestor(cid: str, p: PeticionSuspension, _: str = 
             summary="Borra al gestor y su comunidad (tenant, base de datos; antes guarda una copia previa)")
 async def plataforma_borrar(cid: str, quien: str = Depends(superusuario)):
     async with _LANZAR:
-        await asyncio.to_thread(_plat, alta.al_borrar, cid)     # si se dio de alta online: deja de cobrarse
         r = await asyncio.to_thread(_plat, plataforma.borrar_comunidad, cid)
     log.info("%s borra la comunidad %s", quien, cid)
     return r
 
 
-@app.get("/plataforma/altas", summary="Altas online pagadas (Stripe) y su estado")
+@app.get("/plataforma/altas", summary="Altas online y su estado")
 async def plataforma_altas(_: str = Depends(superusuario)):
     return await asyncio.to_thread(alta.lista)
 
@@ -10286,16 +10040,12 @@ services:
       API_KEY: ${FASTAPI_API_KEY}
       SYNC_HORA: ${SYNC_HORA}
       DATADIS_PAUSA_S: ${DATADIS_PAUSA_S}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_PORTAL_LOGIN_URL: ${STRIPE_PORTAL_LOGIN_URL}
+      ALTA_ONLINE: ${ALTA_ONLINE}
       ALTA_URL_PUBLICA: ${ALTA_URL_PUBLICA}
       ALTA_URL_WEB: ${ALTA_URL_WEB}
       ALTA_ORIGENES: ${ALTA_ORIGENES}
       ALTA_NOMBRE_SERVICIO: ${ALTA_NOMBRE_SERVICIO}
-      ALTA_DIAS_PRUEBA: ${ALTA_DIAS_PRUEBA}
       SERVICIOS_PREMIUM: ${SERVICIOS_PREMIUM}
-      ALTA_SYNC_SOCIOS: ${ALTA_SYNC_SOCIOS}
       ALTA_URL_CONDICIONES: ${ALTA_URL_CONDICIONES}
       ALTA_URL_PRIVACIDAD: ${ALTA_URL_PRIVACIDAD}
     volumes:
@@ -13906,9 +13656,8 @@ AYUDA = {
     "(por <code>id</code>; necesitan <code>gestor_password</code>) y actualiza las que ya existen. Las contraseñas vacías "
     "no se cambian."],
    ["¿Qué son las altas online?",
-    "Son las comunidades que se dan de alta y pagan desde la web (Stripe): se crean solas. Si la creación falla, quedan "
-    "en <i>error</i>: corrige la causa y pulsa <i>Reintentar</i>. El impago o la baja suspenden al gestor, y el pago al "
-    "día lo reactiva."]]],
+    "Son las comunidades que se dan de alta desde la web, de forma gratuita: se crean solas. Si la creación falla, quedan "
+    "en <i>error</i>: corrige la causa y pulsa <i>Reintentar</i>."]]],
   ["Copias de seguridad", "storage", [
    ["¿Qué se puede copiar?",
     "Cada base de datos por separado: la de los <b>gestores</b> (registro de la plataforma: gestores, comunidades y "
@@ -14013,11 +13762,10 @@ PLAT_HTML = """<div class="al">
   <div class="al-tabla">Cargando…</div>
  </section>
  <section class="al-caja al-altas al-oculto">
-  <h3>Altas online (pagadas en Stripe)</h3>
+  <h3>Altas online</h3>
   <div class="al-atabla"></div>
-  <p>Comunidades que se han dado de alta y han pagado desde la web: la API las crea como si las creara el superusuario. Si
-   la creación falla queda en <i>error</i>: corrige la causa y pulsa <i>Reintentar</i>. Impago o baja en Stripe suspenden al
-   gestor y el pago al día lo reactiva; borrar la comunidad cancela su suscripción.</p>
+  <p>Comunidades que se han dado de alta desde la web (gratuita): la API las crea como si las creara el superusuario. Si
+   la creación falla queda en <i>error</i>: corrige la causa y pulsa <i>Reintentar</i>.</p>
  </section>
  <section class="al-caja al-form">
   <h3 class="al-titulo">Nuevo gestor y su comunidad</h3>
@@ -14127,20 +13875,16 @@ self.onInit = function () {
   function nombre(id) { return (P.filas.filter(function (f) { return f.id === id; })[0] || {}).nombre || id; }
 
   var EST = { activo: '<span class="al-chip ok">activo</span>', suspendido: '<span class="al-chip no">suspendido</span>' };
-  var SUB = { trialing: 'en prueba', active: 'al día', past_due: 'pago pendiente', unpaid: 'impagada', canceled: 'cancelada',
-              incomplete: 'incompleta', incomplete_expired: 'caducada', paused: 'pausada' };
-  var SUB_OK = { trialing: 1, active: 1, past_due: 1 };
   var ALTA_EST = { creando: '<span class="al-chip">creando…</span>', creada: '<span class="al-chip ok">creada</span>',
                    error: '<span class="al-chip no">error</span>', pendiente: '<span class="al-chip">pendiente</span>' };
   function altas() {
     api('GET', '/plataforma/altas').then(function (filas) {
       q('al-altas').classList.toggle('al-oculto', !filas.length);
-      q('al-atabla').innerHTML = '<table><tr><th>Comunidad</th><th>Municipio</th><th>Gestor</th><th class="n">Socios</th><th>Suscripción</th><th>Estado</th><th>Fecha</th><th></th></tr>' +
+      q('al-atabla').innerHTML = '<table><tr><th>Comunidad</th><th>Municipio</th><th>Gestor</th><th class="n">Socios (IDAE)</th><th>Estado</th><th>Fecha</th><th></th></tr>' +
         filas.map(function (a) {
           return '<tr><td><b>' + esc(a.nombre) + '</b><br><small>' + esc(a.comunidad_id) + '</small></td><td>' + esc(a.municipio) + '<br><small>' + esc(a.provincia) + '</small></td>' +
             '<td>' + esc(a.contacto) + '<br><small>' + esc(a.email) + '</small></td>' +
-            '<td class="n">' + (a.socios_facturados || a.socios) + '<br><small>' + esc(a.periodo) + '</small></td>' +
-            '<td>' + esc(SUB[a.sub_estado] || a.sub_estado || '–') + '</td>' +
+            '<td class="n">' + a.socios + '</td>' +
             '<td>' + (ALTA_EST[a.estado] || esc(a.estado)) + (a.error ? '<br><small title="' + esc(a.error) + '">' + esc(a.error.slice(-120)) + '</small>' : '') + '</td>' +
             '<td>' + fecha(a.creada) + '</td>' +
             '<td class="acc">' + (a.estado === 'error' ? '<button class="al-b peq" data-r="' + esc(a.id) + '">Reintentar</button>' : '') + '</td></tr>';
@@ -14158,13 +13902,10 @@ self.onInit = function () {
       P.filas = filas;
       if (P.bases.length) pintarBases();   // gestores de la lista de copias
       q('al-tabla').innerHTML = !filas.length ? '<p>No hay gestores: crea el primero con su comunidad abajo.</p>' :
-        '<table><tr><th>Gestor</th><th>Contacto</th><th>Estado</th><th>Comunidad</th><th>Datadis</th><th>Suscripción</th><th class="n">Socios</th><th>Alta</th><th></th></tr>' +
+        '<table><tr><th>Gestor</th><th>Contacto</th><th>Estado</th><th>Comunidad</th><th>Datadis</th><th>Alta</th><th class="n">Socios</th><th>Alta</th><th></th></tr>' +
         filas.map(function (f) {
           var dd = f.datadis ? esc(f.datadis_user) : '<span class="al-chip no">sin cuenta</span>';
-          var s = f.suscripcion, sub = !s ? '<small>manual</small>' :
-            '<span class="al-chip' + (SUB_OK[s.estado] ? ' ok' : ' no') + '">' + esc(SUB[s.estado] || s.estado || '–') + '</span><br><small>' +
-            (s.socios || '–') + ' socios · ' + esc(s.periodo || '') + (s.estado === 'trialing' && s.fin_prueba ? ' · prueba hasta ' + fecha(s.fin_prueba) : '') +
-            (s.suspendida_pago ? ' · suspendida por el cobro' : '') + '</small>';
+          var sub = f.alta_online ? '<small>online</small>' : '<small>manual</small>';
           var id = esc(f.id), susp = f.gestor_estado === 'suspendido';
           return '<tr><td><b>' + esc(f.gestor_nombre || '–') + '</b></td>' +
             '<td>' + esc(f.gestor_email || '–') + (f.gestor_telefono ? '<br><small>' + esc(f.gestor_telefono) + '</small>' : '') + '</td>' +
@@ -14202,7 +13943,7 @@ self.onInit = function () {
         var f = fila(b.dataset.x);
         if (prompt('Se borran el gestor ' + (f.gestor_email || '') + ' y la comunidad ' + f.nombre + ': su tenant de ThingsBoard ' +
                    '(usuarios, dispositivos y paneles) y su base de datos (' + f.base + '). Antes se guarda una copia previa.\n' +
-                   (f.suscripcion ? 'Se cancela también su suscripción en Stripe (alta online).\n' : '') + '\n' +
+                   '\n' +
                    'Escribe el identificador de la comunidad (' + f.id + ') para confirmar:') !== f.id) return;
         msg('Borrando ' + f.nombre + '…');
         tarea(api('DELETE', ruta(f.id)).then(function (r) {
@@ -17126,7 +16867,7 @@ edita, suspende (no puede entrar; no se borra nada) y borra a sus hijos en una t
   su mismo perfil y cuenta de Datadis. Entra con su email en la principal (la primera) y pasa a
   las demás con *Entrar* (en ThingsBoard tiene en cada una un usuario propio,
   \`gestor@<id>.$HOSTNAME_LAN.local\`). Editar su nombre, email o contraseña vale para todas.
-  Suspenderlo es por comunidad. Las comunidades que crea él no pasan por el alta online (Stripe).
+  Suspenderlo es por comunidad. Las comunidades que crea él no pasan por el alta online.
 - Por gestor: **Entrar** (en el panel de su comunidad, como el gestor), **Editar** (nombre,
   email, teléfono, contraseña), **Suspender / Reactivar** y **Borrar** (borra también su
   comunidad: tenant y base de datos; antes guarda una copia *previa*).
@@ -17134,22 +16875,15 @@ edita, suspende (no puede entrar; no se borra nada) y borra a sus hijos en una t
   hacer ahora, descargar (sueltas o todas en un \`.tar\`: *copia completa*), subir (\`.dump\` o
   \`.tar\`), borrar y restaurar (antes se guarda la actual como copia *previa*).
 
-### Alta online de comunidades (Stripe)
+### Alta online de comunidades (gratuita)
 
 La página de alta está en la web (Astro, \`$ALTA_URL_WEB/alta/\`, menú *Alta comunidad*) y llama a
 la API (\`https://${TB_DOMAIN:-$SERVE_IP}/cec-api/alta/*\`, CORS para \`$ALTA_ORIGENES\`). La comunidad
-rellena sus datos y los de su gestor (con su contraseña), paga en Stripe Checkout y, cuando
-Stripe lo confirma, la API la crea como el superusuario (\`plataforma.crear_comunidad\`). Impago o
-baja → gestor suspendido; pago al día → reactivado. Los socios facturados suben solos cada
-noche (04:30) si la comunidad tiene más socios. En el panel del superusuario: columna
-*Suscripción* y tabla *Altas online* (con *Reintentar* si la creación falló). Borrar una
-comunidad dada de alta online cancela su suscripción.
-
-En Stripe: claves en \`STRIPE_SECRET_KEY\` (empieza por \`sk_test_\`) y webhook a
-\`https://$TB_DOMAIN/cec-api/alta/webhook\` (eventos \`checkout.session.completed\`,
-\`customer.subscription.updated\`, \`customer.subscription.deleted\`, \`invoice.payment_failed\`) con
-su secreto en \`STRIPE_WEBHOOK_SECRET\`. Producto, precios escalonados por socio e IVA se crean
-solos. Activa SEPA y el portal de clientes en Stripe. Alta online: $( [ -n "$STRIPE_SECRET_KEY" ] && echo activa || echo "desactivada (sin STRIPE_SECRET_KEY)" ).
+se elige entre las del IDAE, se rellenan los datos de su gestor (con su contraseña) y la API la
+crea como el superusuario (\`plataforma.crear_comunidad\`). Sin cuotas ni pagos: el uso queda bajo
+la responsabilidad del gestor (condiciones de uso de la web). En el panel del superusuario: columna
+*Alta* (online o manual) y tabla *Altas online* (con *Reintentar* si la creación falló).
+Alta online: $( [ "$ALTA_ONLINE" != no ] && echo activa || echo "desactivada (ALTA_ONLINE=no)" ).
 
 ### Restaurar después de reinstalar
 
@@ -17223,10 +16957,10 @@ echo " Sysadmin TB       : sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD"
 echo "$EJEMPLOS_INFO" | while IFS='|' read -r E_NOM E_MAIL E_PW; do
   if [ -n "$E_MAIL" ]; then echo " Gestor de ejemplo : $E_MAIL / $E_PW  ($E_NOM)"; fi
 done
-if [ -n "$STRIPE_SECRET_KEY" ]; then
-  echo " Alta online       : $ALTA_URL_WEB/alta/  (webhook de Stripe: https://${TB_DOMAIN:-$SERVE_IP}/cec-api/alta/webhook)"
+if [ "$ALTA_ONLINE" != no ]; then
+  echo " Alta online       : $ALTA_URL_WEB/alta/  (gratuita)"
 else
-  echo " Alta online       : desactivada (rellena STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET)"
+  echo " Alta online       : desactivada (ALTA_ONLINE=no)"
 fi
 echo " API               : https://$IP/cec-api/docs  (sincronizacion diaria $SYNC_HORA)"
 echo " MQTT TLS          : mqtts://${TB_DOMAIN:-$IP}:$MQTTS_PORT  (usuario = token del dispositivo)"

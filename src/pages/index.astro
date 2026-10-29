@@ -1,6 +1,7 @@
 ---
 import TopNav from '../components/TopNav.astro';
 import PieSitio from '../components/PieSitio.astro';
+import DemoAcceso from '../components/DemoAcceso.astro';
 import '../styles/sitio.css';
 // Pagina principal de VatiaCo: la plataforma para comunidades energeticas.
 // El blog (visor de public/docs) esta en /blog/; los enlaces antiguos /?doc=... se
@@ -102,6 +103,7 @@ const recursos = [
             <a class="btn" href={MAPA}>Ver comunidades en el mapa</a>
             <a class="btn" href="/blog/">Leer el blog</a>
           </div>
+          <DemoAcceso compacto />
         </div>
       </div>
 

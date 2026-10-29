@@ -2,96 +2,89 @@
 import PaginaLegal from '../components/PaginaLegal.astro';
 import { TITULAR as T } from '../data/titular';
 ---
-<PaginaLegal titulo="Condiciones del servicio" descripcion="Condiciones de contratación de la plataforma VatiaCo para comunidades energéticas.">
+<PaginaLegal titulo="Condiciones de uso" descripcion="Condiciones de uso gratuito de la plataforma VatiaCo para comunidades energéticas.">
   <p>Estas condiciones regulan el uso de la plataforma {T.marca} por las comunidades energéticas que se dan de alta en
-    <a href="/alta/">vatiaco.es/alta</a>. El proveedor es {T.nombre}, NIF {T.nif}, con domicilio en {T.domicilio}
-    («{T.marca}»). Al marcar la casilla de aceptación del alta, la comunidad (el «cliente») las acepta.</p>
+    <a href="/alta/">vatiaco.es/alta</a>. La plataforma la pone a disposición {T.nombre}, NIF {T.nif}, con domicilio en
+    {T.domicilio} (el «titular»). Al marcar la casilla de aceptación del alta, el gestor las acepta en nombre de la comunidad.</p>
 
-  {T.enPruebas && (
-    <div class="ficha aviso-pruebas">
-      <p><strong>Plataforma en fase de pruebas.</strong> {T.marca} está en sus inicios: la plataforma funciona con comunidades reales,
-        pero se sigue desarrollando. Puede tener interrupciones, errores y cambios de funciones sin previo aviso, y todavía no se
-        ofrece ningún nivel de servicio garantizado. Por eso el primer mes es gratuito y no hay permanencia: recomendamos usar
-        este tiempo para comprobar que la plataforma se ajusta a lo que necesita la comunidad.</p>
-    </div>
-  )}
+  <div class="ficha aviso-pruebas">
+    <p><strong>Uso gratuito y bajo la responsabilidad del gestor.</strong> {T.marca} se ofrece de forma gratuita, sin cuotas ni
+      pagos de ningún tipo, y tal cual está, sin garantías. El gestor que da de alta la comunidad decide si la plataforma le es
+      útil y responde de su uso.{T.enPruebas && ' La plataforma se sigue desarrollando: puede tener interrupciones, errores y cambios de funciones sin previo aviso.'}</p>
+  </div>
 
-  <h2>1. El servicio</h2>
+  <h2>1. La plataforma</h2>
   <p>{T.marca} da a la comunidad una plataforma en la nube con: un panel para cada socio, un panel de gestión para la junta,
     la descarga diaria de lecturas desde Datadis con la cuenta y las autorizaciones de la comunidad, el cálculo del reparto,
     informes, gestión documental y copias de seguridad. Las funciones pueden cambiar con el tiempo a medida que la plataforma
     evoluciona.</p>
 
-  <h2>2. Quién puede contratar</h2>
-  <p>El servicio se dirige a comunidades energéticas y otras entidades, no a consumidores. Quien hace el alta declara que actúa
-    en nombre de la comunidad y que está autorizado para ello; será su <strong>gestor</strong> en la plataforma y responde de que
-    los datos del alta sean ciertos.</p>
+  <h2>2. Gratuidad</h2>
+  <p>El uso de la plataforma es <strong>gratuito</strong>. No se cobran cuotas, altas, socios ni funciones, no se piden datos
+    bancarios y no hay permanencia. El titular no obtiene contraprestación económica por la plataforma ni la ofrece como
+    actividad comercial.</p>
 
-  <h2>3. Prueba gratuita</h2>
-  <p>El primer mes es gratuito. Durante la prueba no se cobra nada. Si el cliente se da de baja antes de que termine, no paga
-    nada; si no, la suscripción continúa y se cobra la primera cuota al acabar la prueba. Stripe avisa por email antes de ese
-    primer cobro.</p>
+  <h2>3. El gestor</h2>
+  <p>La plataforma se dirige a comunidades energéticas y a los profesionales que las acompañan (instaladores, ingenierías y
+    gestores), no a consumidores. Quien hace el alta declara que actúa en nombre de la comunidad y que está autorizado para
+    ello; será su <strong>gestor</strong> en la plataforma y responde de que los datos del alta sean ciertos.</p>
 
-  <h2>4. Precio y pago</h2>
+  <h2>4. Responsabilidad del gestor</h2>
+  <p>El gestor usa la plataforma bajo su propia responsabilidad. En particular, es responsable de:</p>
   <ul>
-    <li>La cuota es por socio y mes, escalonada: cada socio paga el precio de su tramo (0,99 € hasta 50 socios; 0,89 € del 51 al
-      250; 0,79 € del 251 al 1.000; 0,69 € del 1.001 al 3.000). Los precios no incluyen el IVA.</li>
-    <li>La modalidad anual cobra diez mensualidades por doce meses de servicio.</li>
-    <li>Al darse de alta se facturan los socios que la comunidad tiene registrados en el IDAE (uno si no consta ninguno). Después,
-      el número de socios facturados se ajusta automáticamente cada noche a los socios dados de alta en la plataforma, al alza o
-      a la baja; el importe se prorratea.</li>
-    <li>El pago se hace por adelantado, con tarjeta o domiciliación SEPA, a través de Stripe. {T.marca} no guarda los datos de la
-      tarjeta ni de la cuenta bancaria.</li>
-    <li>{T.marca} puede cambiar los precios avisando por email con al menos 30 días de antelación; el cambio se aplica desde la
-      siguiente renovación y el cliente puede darse de baja antes sin coste.</li>
+    <li>Los datos que introduce en la plataforma y de tener el consentimiento o la base legal necesaria para tratarlos (en
+      particular, las autorizaciones de los titulares de los suministros en Datadis).</li>
+    <li>Revisar los cálculos, repartos, informes y documentos antes de usarlos, y de las decisiones que la comunidad tome con
+      ellos. Son una ayuda a la gestión y no sustituyen el criterio de un profesional, la facturación de la comercializadora
+      ni la información oficial de la distribuidora.</li>
+    <li>Guardar en secreto las contraseñas y gestionar el acceso de los socios.</li>
+    <li>Conservar sus propias copias de los datos de la comunidad, que puede descargar en cualquier momento desde su panel.</li>
   </ul>
 
-  <h2>5. Duración y baja</h2>
-  <p><strong>No hay permanencia.</strong> El cliente puede darse de baja en cualquier momento desde su área de cliente o
-    escribiendo a <a href={'mailto:' + T.email}>{T.email}</a>. La baja surte efecto al final del periodo ya pagado y no da derecho
-    a devolver la parte no consumida. Si un pago no se puede cobrar, el acceso del gestor se suspende hasta que se regularice; si
-    la suscripción se cancela, la comunidad deja de tener acceso.</p>
+  <h2>5. Sin garantías y exención de responsabilidad del titular</h2>
+  <p>La plataforma se ofrece <strong>«tal cual» y «según disponibilidad»</strong>, sin garantías de ningún tipo, expresas o
+    implícitas, sobre su funcionamiento continuo, su ausencia de errores, la exactitud de los cálculos o su adecuación a un fin
+    concreto. Puede haber interrupciones por mantenimiento, fallos técnicos o causas ajenas (por ejemplo, que Datadis no publique
+    o retrase las lecturas), y el titular puede suspender o terminar la plataforma en cualquier momento.</p>
+  <p>En la máxima medida que permite la ley, el titular no responde de los daños o perjuicios, directos o indirectos, que
+    resulten del uso o de la imposibilidad de usar la plataforma, de la pérdida de datos, de errores en los cálculos o informes,
+    ni de las decisiones tomadas con la información de la plataforma. Esta exención no se aplica a los casos de dolo o culpa
+    grave en los que la ley no la permite.</p>
 
-  <h2>6. Disponibilidad y responsabilidad</h2>
-  <p>{T.marca} pone los medios razonables para que la plataforma funcione de forma continua y hace copias de seguridad diarias,
-    pero <strong>no garantiza un nivel de disponibilidad determinado</strong>{T.enPruebas && ', y menos aún durante la fase de pruebas'}: puede haber interrupciones por mantenimiento,
-    fallos técnicos o causas ajenas (por ejemplo, que Datadis no publique o retrase las lecturas). Los cálculos de reparto e
-    informes son una ayuda a la gestión y no sustituyen a la facturación de la comercializadora ni a la información oficial de
-    la distribuidora.</p>
-  <p>Salvo dolo o culpa grave, la responsabilidad de {T.marca} frente al cliente se limita a la cantidad que este haya pagado en
-    los doce meses anteriores al hecho que la cause, y no incluye lucro cesante ni daños indirectos.</p>
+  <h2>6. Uso correcto</h2>
+  <p>El gestor se compromete a usar la plataforma para la gestión de su comunidad, de forma lícita y sin dañar su
+    funcionamiento ni el de las demás comunidades. El titular puede suspender el acceso de quien la use de forma contraria a
+    estas condiciones.</p>
 
-  <h2>7. Uso correcto</h2>
-  <p>El cliente se compromete a usar la plataforma para la gestión de su comunidad, a guardar en secreto las contraseñas y a
-    tener el consentimiento o la base legal necesaria para los datos que introduce (en particular, las autorizaciones de los
-    titulares de los suministros en Datadis).</p>
+  <h2>7. Baja</h2>
+  <p>La comunidad puede darse de baja en cualquier momento escribiendo a <a href={'mailto:' + T.email}>{T.email}</a>, sin coste
+    ni penalización.</p>
 
   <h2>8. Datos de la comunidad</h2>
   <p>Los datos que la comunidad guarda en la plataforma son suyos. El gestor puede descargar en cualquier momento copias de la base
-    de datos de su comunidad y exportar sus registros. Tras la baja, los datos se conservan 30 días para que pueda recuperarlos y
-    después se borran, salvo lo que deba guardarse por obligación legal.</p>
+    de datos de su comunidad y exportar sus registros. Tras la baja, o si la plataforma deja de ofrecerse, los datos se conservan
+    30 días para que pueda recuperarlos y después se borran, salvo lo que deba guardarse por obligación legal.</p>
 
   <h2 id="encargo">9. Protección de datos: encargo del tratamiento</h2>
-  <p>Respecto a los datos personales de los socios y de los suministros, el cliente es <strong>responsable del tratamiento</strong>
-    y {T.marca} es <strong>encargado del tratamiento</strong> (art. 28 RGPD). {T.marca} se compromete a:</p>
+  <p>Respecto a los datos personales de los socios y de los suministros, la comunidad es <strong>responsable del
+    tratamiento</strong> y el titular es <strong>encargado del tratamiento</strong> (art. 28 RGPD). El titular se compromete a:</p>
   <ol>
-    <li>Tratar los datos solo para prestar el servicio y siguiendo las instrucciones documentadas del cliente, que son las que
-      resultan del uso de la plataforma.</li>
+    <li>Tratar los datos solo para prestar la plataforma y siguiendo las instrucciones documentadas de la comunidad, que son las
+      que resultan del uso de la plataforma.</li>
     <li>Garantizar la confidencialidad de quienes acceden a ellos.</li>
     <li>Aplicar medidas de seguridad adecuadas: cifrado de las conexiones, contraseñas cifradas, una base de datos separada por
       comunidad, control de accesos y copias de seguridad diarias.</li>
-    <li>No subcontratar el tratamiento sin informar antes al cliente, que podrá oponerse dándose de baja. La plataforma funciona en
-      un servidor propio en España; los pagos los gestiona Stripe.</li>
-    <li>Ayudar al cliente a atender los derechos de los socios y avisarle sin dilación indebida de cualquier brecha de seguridad
-      que afecte a sus datos.</li>
-    <li>Al terminar el servicio, devolver o borrar los datos según el apartado 8.</li>
-    <li>Poner a disposición del cliente la información necesaria para demostrar el cumplimiento de estas obligaciones.</li>
+    <li>No subcontratar el tratamiento sin informar antes a la comunidad, que podrá oponerse dándose de baja. La plataforma
+      funciona en un servidor propio en España.</li>
+    <li>Ayudar a la comunidad a atender los derechos de los socios y avisarle sin dilación indebida de cualquier brecha de
+      seguridad que afecte a sus datos.</li>
+    <li>Al terminar el uso de la plataforma, devolver o borrar los datos según el apartado 8.</li>
+    <li>Poner a disposición de la comunidad la información necesaria para demostrar el cumplimiento de estas obligaciones.</li>
   </ol>
   <p>El tratamiento de los datos del propio gestor se explica en la <a href="/privacidad/">política de privacidad</a>.</p>
 
   <h2>10. Cambios en las condiciones</h2>
-  <p>{T.marca} puede actualizar estas condiciones avisando por email con 30 días de antelación. Si el cliente no está de acuerdo,
-    puede darse de baja antes de que entren en vigor.</p>
+  <p>El titular puede actualizar estas condiciones avisando por email al gestor. Si no está de acuerdo, puede darse de baja.</p>
 
   <h2>11. Ley y jurisdicción</h2>
   <p>Estas condiciones se rigen por la ley española. Para cualquier controversia, las partes se someten a los juzgados y
