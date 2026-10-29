@@ -125,10 +125,10 @@ ALTA_MAX_DIA="20"                    # tope de altas online en 24 h (cada una cr
 ALTA_APROBACION="si"                 # si = cada alta espera a que el superusuario la apruebe en su panel
                                      # (no hay verificacion del email); no = se crea al momento
 
-# Servicios premium: vistas que salen con la marca "Premium" e inactivas, en las pestañas del
+# Vistas bloqueadas: salen inactivas y de un color algo distinto (sin marca) en las pestañas del
 # panel (comunidad y socio) y en los resumenes de Informes (la API tampoco los genera).
-# Separadas por comas: potencias, reactiva, factura. Vacio = todas activas (uso gratuito).
-SERVICIOS_PREMIUM=""
+# Separadas por comas: potencias, reactiva, factura. Vacio = todas activas.
+SERVICIOS_PREMIUM="potencias,reactiva,factura"
 ALTA_URL_CONDICIONES="https://vatiaco.es/condiciones/"   # condiciones de uso y politica de privacidad
 ALTA_URL_PRIVACIDAD="https://vatiaco.es/privacidad/"
 ALTA_URL_WEB="https://vatiaco.es"     # web con la pagina de alta
@@ -9140,14 +9140,14 @@ async def informe_coeficientes(anio: int | None = Query(None, ge=2000, le=2100),
 TipoResumen = Literal["energia", "comunidad", "potencia", "reactiva", "factura"]
 
 
-# Resumenes de las vistas premium (SERVICIOS_PREMIUM): inactivos
+# Resumenes de las vistas bloqueadas (SERVICIOS_PREMIUM): inactivos
 RESUMEN_PREMIUM = {"potencias": "potencia", "reactiva": "reactiva", "factura": "factura"}
 PREMIUM = {RESUMEN_PREMIUM[x.strip()] for x in (E.get("SERVICIOS_PREMIUM") or "").split(",") if x.strip() in RESUMEN_PREMIUM}
 
 
 async def _resumen(tipo, desde, hasta, propio=None):
     if tipo in PREMIUM:
-        raise HTTPException(403, "Servicio premium: este informe no está incluido en el plan de la comunidad")
+        raise HTTPException(403, "Este informe no está disponible")
     if desde and hasta and hasta < desde:
         raise HTTPException(422, "desde es posterior a hasta")
     if desde and hasta and (hasta - desde).days > 3 * 366:
@@ -10823,7 +10823,7 @@ import unicodedata
 
 CEC = E.get("CEC_NOMBRE", "")
 CEC_DASH_VERSION = 66           # sube este numero para regenerar el panel de la comunidad
-# Vistas premium (SERVICIOS_PREMIUM de iot-thingsboard.sh): pestañas inactivas con la marca "Premium"
+# Vistas bloqueadas (SERVICIOS_PREMIUM de iot-thingsboard.sh): pestañas inactivas, de un color algo distinto
 PREMIUM = sorted({x.strip() for x in (E.get("SERVICIOS_PREMIUM") or "").split(",")} & {"potencias", "reactiva", "factura"})
 OCULTAR_PIE = "section.tb-powered-by-footer { display: none !important; }"
 # El CSS de impresion esta en config/branding/VatiaCo.css (global)
@@ -11397,13 +11397,13 @@ function indice(ts, t0) {
 self.onInit = function () {
   S.ctx = self.ctx;
   S.raiz = self.ctx.$container[0];
-  // Vista premium (SERVICIOS_PREMIUM): no se carga nada, solo el aviso
+  // Vista bloqueada (SERVICIOS_PREMIUM): no se carga nada, solo el aviso
   if ((self.ctx.settings || {}).premium) {
     var nom = { potencias: 'Potencias', reactiva: 'Energía reactiva', factura: 'Factura' }[(self.ctx.settings || {}).vista] || 'Esta vista';
     S.raiz.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;font:14px Roboto,Arial,sans-serif;color:#555">' +
-      '<div style="max-width:420px;text-align:center;padding:24px;border:1px solid #f0e2a8;border-radius:8px;background:#fffbea">' +
-      '<div style="font-size:30px;color:#e0a800">★</div><h3 style="margin:6px 0 8px;color:#7b2fa8">' + nom + ': servicio premium</h3>' +
-      '<p style="margin:0">Esta vista y sus informes no están incluidos en el plan de la comunidad. Pregunta a la plataforma cómo activarlos.</p></div></div>';
+      '<div style="max-width:420px;text-align:center;padding:24px;border:1px solid #e6dcef;border-radius:8px;background:#faf7fc">' +
+      '<h3 style="margin:0 0 8px;color:#7b2fa8">' + nom + '</h3>' +
+      '<p style="margin:0">Esta vista y sus informes no están disponibles.</p></div></div>';
     return;
   }
   // Subpestaña Costes de la energia: tabla de precios de la comunidad, siempre desplegada en ella
@@ -12472,9 +12472,7 @@ NAV_CSS = """
 .vl-tabs button .material-icons.vl-ico-txt { font-family: Roboto, Arial, sans-serif; font-style: normal; font-weight: 700;
   font-size: 11px; letter-spacing: -.02em; display: inline-block; min-width: 18px; text-align: center; text-transform: none; }
 .vl-tabs .vl-sep { display: none; }
-.vl-tabs button.vl-prem { position: relative; }
-.vl-prem-m { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; background: #ffd54f; color: #5d4300;
-  font: 700 10px/16px Roboto, Arial, sans-serif; font-style: normal; letter-spacing: .02em; vertical-align: 1px; white-space: nowrap; }
+.vl-tabs button.vl-prem { opacity: 1; color: #a593bf; cursor: not-allowed; }
 /* Pantalla estrecha (las pestañas no caben): menu hamburguesa con la pestaña activa */
 .vl-burger { display: none; align-items: center; gap: 10px; border: 0; background: none; padding: 6px 10px; min-width: 0;
   font: 500 14px Roboto, Arial, sans-serif; color: #7b2fa8; cursor: pointer; white-space: nowrap; }
@@ -12567,8 +12565,7 @@ VL_RAIL_CSS = """
 #vl-rail .vl-tabs button.on { background: rgba(255,255,255,.18); border-left-color: #ffd54f; color: #fff;
   font-weight: 500; cursor: default; }
 #vl-rail .vl-tabs button:disabled { opacity: .45; cursor: default; }
-#vl-rail .vl-tabs button.vl-prem { position: relative; opacity: .7; cursor: not-allowed; }
-#vl-rail .vl-tabs button.vl-prem .vl-prem-m { opacity: 1; }
+#vl-rail .vl-tabs button.vl-prem { opacity: 1; color: #cbb6e6; cursor: not-allowed; }
 /* Separador: lo de arriba es del gestor; lo de abajo, de la comunidad seleccionada (su nombre) */
 #vl-rail .vl-sep { display: block; flex: none; margin: 8px 0 2px; padding: 10px 16px 4px; border-top: 1px solid rgba(255,255,255,.25);
   font-size: 11px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.75);
@@ -12582,7 +12579,6 @@ body.vl-con-rail tb-root { position: fixed !important; top: 0; right: 0; bottom:
   #vl-rail .vl-logo-c { display: block; }
   #vl-rail .vl-tabs button { justify-content: center; padding: 14px 0; }
   #vl-rail .vl-tabs button span { display: none; }
-  #vl-rail .vl-tabs button.vl-prem::after { content: '★'; position: absolute; top: 6px; right: 10px; color: #ffd54f; font-size: 12px; }
   #vl-rail .vl-sep { padding: 0; margin: 8px 12px; }
   #vl-rail .vl-sep span { display: none; }
   body.vl-con-rail tb-root { left: 64px; }
@@ -12618,10 +12614,9 @@ var VL_SVG = { contador: '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5" 
   '<path d="M12.8 11.6l-3 4.4h2.1l-.7 3.4 3-4.6h-2.1z" fill="currentColor"/>' };
 function vlBoton(i, texto, icono, on, premium) {
   var esc = function (t) { return String(t).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); };
-  // premium: inactiva, con la marca (servicio premium, no incluido)
+  // bloqueada (SERVICIOS_PREMIUM): inactiva, de un color algo distinto
   if (premium) return '<button type="button" class="vl-prem" disabled data-i="' + i + '" title="' + esc(texto) +
-    ': servicio premium (no incluido)">' + vlBoton(i, texto, icono, false).replace(/^<button[^>]*>/, '').replace(/<\/span><\/button>$/,
-    ' <em class="vl-prem-m">★ Premium</em></span></button>');
+    ': no disponible">' + vlBoton(i, texto, icono, false).replace(/^<button[^>]*>/, '');
   return '<button type="button" data-i="' + i + '" title="' + esc(texto) + '"' + (on ? ' class="on" aria-current="page"' : '') + '>' +
     // icono "txt:kWh": una unidad escrita en lugar del icono de Material
     (icono ? (String(icono).indexOf('svg:') === 0 && VL_SVG[icono.slice(4)] ?
@@ -12789,7 +12784,7 @@ SOCIO_TABS = [["socio", "Consumos", "", "svg:contador"], ["socio_potencias", "Po
 COM_TABS = [["default", "Consumos", "", "svg:contador"], ["com_potencias", "Potencias", "", "speed"],
             ["com_reactiva", "Reactiva", "", "waves"], ["com_factura", "Factura", "", "receipt_long"],
             ["com_mapa", "Ubicación", "", "place"]]
-# t[4]: pestaña premium (inactiva, con la marca)
+# t[4]: pestaña bloqueada (SERVICIOS_PREMIUM: inactiva, de un color algo distinto)
 for _t in SOCIO_TABS + COM_TABS:
     _t.append(_t[0].split("_", 1)[-1] in PREMIUM)
 
@@ -16954,11 +16949,12 @@ cec_widget("VatiaCo.nav", "Pestañas de gestión", NAV_W_HTML, NAV_W_JS, 1, NAV_
 cec_widget("VatiaCo.participantes", "Socios", PART_HTML, PART_JS, 16, ALTA_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.ficha_socio", "Datos del socio", FICHA_HTML, FICHA_JS, 7, FICHA_CSS, recursos=[])
 def con_premium(html):
-    """Resumenes de las vistas premium: opciones inactivas con la marca (la API tampoco los da)."""
+    """Resumenes de las vistas bloqueadas: opciones inactivas, de un color algo distinto (la API
+    tampoco los da)."""
     for vista, tipo in (("potencias", "potencia"), ("reactiva", "reactiva"), ("factura", "factura")):
         if vista in PREMIUM:
             html = re.sub(rf'<option value="{tipo}">([^<]*)</option>',
-                          rf'<option value="{tipo}" disabled>\1 — ★ Premium (no incluido)</option>', html)
+                          rf'<option value="{tipo}" disabled style="color:#a593bf">\1</option>', html)
     return html
 
 
