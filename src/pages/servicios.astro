@@ -34,7 +34,7 @@ const servicios = [
       'Descarga diaria y automática de las lecturas de Datadis de todos los suministros.',
       'Panel de cada socio: su consumo, su parte de la generación y su posición en el mapa.',
       'Panel del gestor: socios, reparto, informes PDF y Excel, documentos y copias de seguridad.',
-      'Alta online en unos minutos y sin coste: la plataforma de la comunidad se crea al momento.',
+      'Alta online sin coste: la plataforma de la comunidad se crea en cuanto revisamos la solicitud.',
     ],
     enlaces: [
       { t: 'Mapa de comunidades', href: '/comunidades/' },
@@ -44,7 +44,7 @@ const servicios = [
 
 const pasos = [
   { t: 'Alta online', d: 'Elige la comunidad del IDAE y registra a su gestor' },
-  { t: 'Plataforma lista', d: 'Se crea al momento, sin pagos ni datos bancarios' },
+  { t: 'Plataforma lista', d: 'Se crea tras revisar la solicitud, sin pagos ni datos bancarios' },
   { t: 'Socios', d: 'El gestor da de alta a los socios con su CUPS' },
   { t: 'Datos', d: 'Cada noche llegan las lecturas de Datadis y se calcula el reparto' },
   { t: 'Seguimiento', d: 'Informes, documentos y asambleas desde la propia plataforma' },
@@ -96,7 +96,7 @@ const pasos = [
           <div class="etiqueta">Servicios</div>
           <h1>Tu comunidad energética, gestionada <em>sin coste</em>.</h1>
           <p>Una plataforma propia para tu comunidad: un panel para cada socio y otro para la gestión, con los datos de Datadis cada día.
-            <strong style="color: var(--white);">De uso gratuito, sin cuotas, sin permanencia y sin datos bancarios</strong>,
+            <strong style="color: var(--white);">De uso gratuito</strong>,
             pensada para instaladores, ingenierías y gestores de comunidades energéticas.</p>
           <div class="acciones">
             <a class="btn principal" href="/alta/">Dar de alta una comunidad</a>
@@ -175,6 +175,26 @@ const pasos = [
             <article class="perfil">
               <h3>Gestores de comunidades</h3>
               <p>Socios, asambleas, documentos y reparto en un solo panel, con un acceso propio para cada socio.</p>
+            </article>
+          </div>
+
+          <div class="etiqueta" style="margin-top: 2.5rem;">Tus datos</div>
+          <h3 style="margin: 0 0 1rem; color: var(--white);">Los datos son de la comunidad, y se los lleva cuando quiera.</h3>
+          <div class="perfiles">
+            <article class="perfil">
+              <h3>Exportación en CSV</h3>
+              <p>Con un clic, todos los datos de la comunidad (socios, suministros, lecturas y gestión) en ficheros que se abren con
+                cualquier hoja de cálculo, sin depender de la plataforma.</p>
+            </article>
+            <article class="perfil">
+              <h3>Copias completas</h3>
+              <p>Copia automática cada día y copias manuales que el gestor descarga en formato PostgreSQL y en SQL, para guardarlas
+                donde quiera o restaurarlas.</p>
+            </article>
+            <article class="perfil">
+              <h3>Aviso previo</h3>
+              <p>Si la plataforma dejara de ofrecerse, se avisará a los gestores con al menos 60 días de antelación para que
+                descarguen sus datos.</p>
             </article>
           </div>
 

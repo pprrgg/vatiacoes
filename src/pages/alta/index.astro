@@ -40,6 +40,9 @@ const lista = IDAE.comunidades
       .campo input, .campo select { width: 100%; padding: 0.65rem 0.8rem; font: inherit; color: var(--white); background: var(--black);
         border: 1px solid var(--gray-5); border-radius: 0.5rem; }
       .campo input:focus, .campo select:focus { outline: none; border-color: var(--accent); }
+      .campo input[type="file"] { padding: 0.5rem 0.6rem; cursor: pointer; }
+      .campo input[type="file"]::file-selector-button { font: inherit; margin-right: 0.8rem; padding: 0.35rem 0.8rem; border: 0;
+        border-radius: 0.4rem; background: var(--accent); color: var(--white); cursor: pointer; }
       .campo .ayuda { font-size: 0.8rem; color: var(--gray-3); margin-top: 0.3rem; }
       .campo .err { display: none; font-size: 0.8rem; color: #ff8a80; margin-top: 0.3rem; }
       .campo.mal input, .campo.mal select { border-color: #ff8a80; }
@@ -80,8 +83,8 @@ const lista = IDAE.comunidades
         <div class="wrap">
           <div class="etiqueta">Alta de comunidad</div>
           <h1>Plataforma <em>de uso gratuito</em>.</h1>
-          <p>Rellena los datos y la plataforma de tu comunidad se crea al momento: paneles, base de datos y tu usuario de gestor para
-            dar de alta a los socios. Sin cuotas, sin permanencia y sin datos bancarios.</p>
+          <p>Rellena los datos y la plataforma de tu comunidad se crea <span id="cuando">en cuanto revisamos la solicitud</span>: paneles,
+            base de datos y tu usuario de gestor para dar de alta a los socios. Sin cuotas, sin permanencia y sin datos bancarios.</p>
         </div>
       </div>
 
@@ -143,6 +146,14 @@ const lista = IDAE.comunidades
                   <div class="campo" data-campo="password2">
                     <label for="password2">Repite la contraseña</label>
                     <input id="password2" name="password2" type="password" autocomplete="new-password" />
+                    <div class="err"></div>
+                  </div>
+                  <div class="campo ancho" data-campo="documento" id="campo-documento">
+                    <label for="documento">Documento que te acredita como gestor</label>
+                    <input id="documento" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
+                    <div class="ayuda">Por ejemplo, el acta de la asamblea o de la junta que te nombra, o el documento de la entidad
+                      que te encarga la gestión. PDF, JPG o PNG, hasta 5 MB. Lo revisamos antes de crear la comunidad y solo se usa
+                      para eso.</div>
                     <div class="err"></div>
                   </div>
                 </div>
@@ -229,14 +240,36 @@ const lista = IDAE.comunidades
         function general(t) { var e = $('#error-general'); e.textContent = t; e.hidden = false; }
 
         restaurar();
-        fetch(API + '/alta/info').then(function (r) { return r.json(); }).then(function (t) {
+        var DOC = { pide: true, max: 5 };
+        fetch(API + '/alta/info').then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(function (t) {
           if (t.url_condiciones) $('#url-condiciones').href = t.url_condiciones;
           if (t.url_privacidad) $('#url-privacidad').href = t.url_privacidad;
+          if (t.aprobacion === false) $('#cuando').textContent = 'al momento';
+          DOC.pide = t.documento !== false; DOC.max = t.documento_max_mb || 5;
+          $('#campo-documento').hidden = !DOC.pide;
           $('#inactiva').hidden = t.activa;
           $('#enviar').disabled = !t.activa;
-        }).catch(function () { $('#inactiva').hidden = false; $('#enviar').disabled = true; });
+        }).catch(function () {
+          // la API no responde (o el navegador bloquea la consulta): no es que el alta este desactivada
+          $('#inactiva').firstChild.textContent = 'No podemos conectar con la plataforma ahora mismo. Inténtalo en unos minutos o escríbenos a ';
+          $('#inactiva').hidden = false; $('#enviar').disabled = true;
+        });
 
         form.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); guardar(); });
+        $('#documento').addEventListener('change', function () { limpiar('documento'); });
+
+        // Documento acreditativo -> { nombre, datos: base64 } (null si no hay)
+        function leerDocumento() {
+          var f = $('#documento').files[0];
+          if (!f || !DOC.pide) return Promise.resolve(null);
+          if (f.size > DOC.max * 1024 * 1024) return Promise.reject({ documento: 'El documento ocupa más de ' + DOC.max + ' MB.' });
+          return new Promise(function (ok, mal) {
+            var r = new FileReader();
+            r.onload = function () { ok({ nombre: f.name, datos: String(r.result).split(',')[1] || '' }); };
+            r.onerror = function () { mal({ documento: 'No se ha podido leer el documento. Vuelve a adjuntarlo.' }); };
+            r.readAsDataURL(f);
+          });
+        }
 
         var TEXTO = 'Crear la plataforma de la comunidad';
         form.addEventListener('submit', function (e) {
@@ -246,16 +279,23 @@ const lista = IDAE.comunidades
           var d = {}; CAMPOS.concat(['password', 'password2']).forEach(function (k) { d[k] = form[k].value; });
           d.idae = { n: elegida.n, m: elegida.m };
           d.acepta = form.acepta.checked;
+          if (DOC.pide && !$('#documento').files[0]) {
+            errores({ documento: 'Adjunta un documento que acredite que eres gestor de la comunidad.' }); return; }
           var b = $('#enviar'); b.disabled = true; b.textContent = 'Enviando…';
-          fetch(API + '/alta/solicitud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
-            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (c) { return { ok: r.ok, c: c }; }); })
+          leerDocumento().then(function (doc) {
+            d.documento = doc;
+            return fetch(API + '/alta/solicitud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
+              .then(function (r) { return r.json().catch(function () { return {}; }).then(function (c) { return { ok: r.ok, c: c }; }); },
+                    function () { return Promise.reject('red'); });
+          }, function (e) { errores(e); b.disabled = false; b.textContent = TEXTO; return Promise.reject('hecho'); })
             .then(function (x) {
               if (x.ok && x.c.alta) { location.href = '/alta/gracias/?alta=' + encodeURIComponent(x.c.alta); return; }
               if (x.c.errores) errores(x.c.errores);
               else general(x.c.detail || 'No se ha podido hacer el alta. Inténtalo de nuevo.');
               b.disabled = false; b.textContent = TEXTO;
             })
-            .catch(function () {
+            .catch(function (e) {
+              if (e === 'hecho') return;
               general('No hay conexión con la plataforma. Inténtalo de nuevo en unos minutos.');
               b.disabled = false; b.textContent = TEXTO;
             });

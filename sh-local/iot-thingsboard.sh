@@ -35,7 +35,7 @@ set -euo pipefail
 # Todo el stack vive en esta carpeta del host (config, datos, copias)
 INSTALL_DIR="$HOME/iot-tb"
 IP="localhost"          # IP wifi: la que usas para administrar
-SERVE_IP="192.168.1.135"    # IP cableada: el router redirige aqui 80/443 (HTTPS de TB y MQTT)
+SERVE_IP="192.168.1.134"    # IP cableada: el router redirige aqui 80/443 (HTTPS de TB y MQTT)
 HOSTNAME_LAN="pkserver"
 TZ="Europe/Madrid"
 
@@ -121,6 +121,9 @@ albaicin;FV Polideportivo Albaicín;;;958 100 008;37.1852;-3.5940;generador_fv;7
 # tenant, base de datos, paneles y gestor con la contraseña que eligio). Sin cuotas ni pagos:
 # el uso queda bajo la responsabilidad del gestor (condiciones de uso de la web).
 ALTA_ONLINE="si"                     # no = alta online desactivada (la pagina lo dice)
+ALTA_MAX_DIA="20"                    # tope de altas online en 24 h (cada una crea un tenant y una base)
+ALTA_APROBACION="si"                 # si = cada alta espera a que el superusuario la apruebe en su panel
+                                     # (no hay verificacion del email); no = se crea al momento
 
 # Servicios premium: vistas que salen con la marca "Premium" e inactivas, en las pestañas del
 # panel (comunidad y socio) y en los resumenes de Informes (la API tampoco los genera).
@@ -260,6 +263,8 @@ SUPER_EMAIL=$SUPER_EMAIL
 TB_LANG=$TB_LANG
 TENANT_DOMINIO=$HOSTNAME_LAN.local
 ALTA_ONLINE=$ALTA_ONLINE
+ALTA_MAX_DIA=$ALTA_MAX_DIA
+ALTA_APROBACION=$ALTA_APROBACION
 ALTA_URL_PUBLICA=https://${TB_DOMAIN:-$SERVE_IP}
 ALTA_NOMBRE_SERVICIO=$BRAND
 SERVICIOS_PREMIUM=$SERVICIOS_PREMIUM
@@ -6502,6 +6507,22 @@ CREATE TABLE IF NOT EXISTS alta (
 );
 ALTER TABLE alta DROP CONSTRAINT IF EXISTS alta_periodo_check;
 ALTER TABLE alta ADD CONSTRAINT alta_periodo_check CHECK (periodo IN ('mensual', 'anual', 'gratuito'));
+-- revision: espera a que el superusuario la apruebe (ALTA_APROBACION); rechazada: no se crea
+ALTER TABLE alta DROP CONSTRAINT IF EXISTS alta_estado_check;
+ALTER TABLE alta ADD CONSTRAINT alta_estado_check
+  CHECK (estado IN ('revision', 'rechazada', 'pendiente', 'creando', 'creada', 'error'));
+-- Documento que acredita al gestor (acta, nombramiento...: PDF, JPG o PNG), lo revisa el superusuario
+ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento bytea;
+ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento_nombre text;
+ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento_tipo text;
+
+-- Copias de las comunidades que han salido de la plataforma (descargas del gestor): sha256 y
+-- base. El gestor solo puede subir y restaurar copias con una huella de aqui (app/copias.huella)
+CREATE TABLE IF NOT EXISTS copia_huella (
+  huella  text PRIMARY KEY,
+  base    text NOT NULL,
+  creada  timestamptz NOT NULL DEFAULT now()
+);
 """
 
 # Comunidad con los datos de su gestor (los nombres que usa el resto de la API).
@@ -6582,6 +6603,17 @@ def por_id(cid):
 
 
 _GESTORES = {"hasta": 0.0, "emails": frozenset()}
+
+
+def registrar_huella(base, huella):
+    """Copia de la base que sale de la plataforma (descarga): el gestor podra volver a subirla."""
+    with _cx() as cx:
+        cx.execute("INSERT INTO copia_huella (huella, base) VALUES (%s, %s) ON CONFLICT DO NOTHING", (huella, base))
+
+
+def huella_conocida(base, huella):
+    with _cx() as cx:
+        return bool(cx.execute("SELECT 1 FROM copia_huella WHERE huella = %s AND base = %s", (huella, base)).fetchone())
 
 
 def es_gestor(email):
@@ -7919,6 +7951,9 @@ publicas (/cec-api/alta/*, con CORS para ALTA_ORIGENES):
      los datos de su gestor) -> solicitud(): valida lo mismo que el panel del
      superusuario (plataforma.validar_comunidad) y guarda la solicitud (tabla alta de la base
      plataforma, con el hash de la contraseña del gestor)
+  -> con ALTA_APROBACION (no se verifica el email) el gestor adjunta un documento que le
+     acredita (acta, nombramiento...) y el alta queda en 'revision' hasta que el superusuario
+     lo revisa y la aprueba (aprobar) o la rechaza (rechazar) en su panel
   -> crear() en segundo plano: plataforma.crear_comunidad, lo mismo que hace el superusuario
      (base de datos, tenant, paneles y usuario del gestor); el gestor entra con la contraseña
      que eligio en el formulario
@@ -7926,6 +7961,8 @@ publicas (/cec-api/alta/*, con CORS para ALTA_ORIGENES):
 
 El uso de la plataforma es gratuito y queda bajo la responsabilidad del gestor (condiciones
 de uso de la web)."""
+import base64
+import binascii
 import re
 import secrets
 import threading
@@ -7941,6 +7978,11 @@ from .comun import E, log
 
 URL = (E.get("ALTA_URL_PUBLICA") or "").rstrip("/")          # la plataforma (ThingsBoard)
 WEB = (E.get("ALTA_URL_WEB") or "").rstrip("/")              # la web con la pagina de alta
+MAX_DIA = int(E.get("ALTA_MAX_DIA") or 20)                   # altas online en 24 h (cada una crea tenant y base)
+APROBACION = (E.get("ALTA_APROBACION") or "si") != "no"      # el superusuario aprueba cada alta
+DOC_MAX_MB = 5                                               # documento acreditativo del gestor
+DOC_TIPOS = ((b"%PDF-", "application/pdf", ".pdf"), (b"\x89PNG\r\n\x1a\n", "image/png", ".png"),
+             (b"\xff\xd8\xff", "image/jpeg", ".jpg"))
 _CREAR = threading.Lock()      # una comunidad a la vez
 _IDAE = {"hasta": 0.0, "datos": {}}
 
@@ -7971,7 +8013,8 @@ def preparar():
 def info():
     """Lo que necesita la pagina de alta."""
     return {"activa": activa(), "nombre_servicio": E.get("ALTA_NOMBRE_SERVICIO") or "Plataforma de comunidades energéticas",
-            "gratuita": True, "url_condiciones": E.get("ALTA_URL_CONDICIONES") or "",
+            "gratuita": True, "aprobacion": APROBACION, "documento": APROBACION, "documento_max_mb": DOC_MAX_MB,
+            "url_condiciones": E.get("ALTA_URL_CONDICIONES") or "",
             "url_privacidad": E.get("ALTA_URL_PRIVACIDAD") or "", "url_plataforma": URL}
 
 
@@ -8014,6 +8057,26 @@ def _texto(v, minimo, maximo):
     return t if minimo <= len(t) <= maximo and "|" not in t else None
 
 
+def _documento(v):
+    """Documento acreditativo del formulario ({nombre, datos: base64}) -> (bytes, nombre, tipo),
+    o un mensaje de error. El tipo sale del contenido (PDF, PNG o JPG), no del nombre."""
+    if not isinstance(v, dict) or not v.get("datos"):
+        return "Adjunta un documento que acredite que eres gestor de la comunidad." if APROBACION else None
+    try:
+        b = base64.b64decode(str(v["datos"]), validate=True)
+    except (binascii.Error, ValueError):
+        return "No se ha podido leer el documento. Vuelve a adjuntarlo."
+    if len(b) > DOC_MAX_MB * 1024 * 1024:
+        return f"El documento ocupa más de {DOC_MAX_MB} MB."
+    tipo = next((t for t in DOC_TIPOS if b.startswith(t[0])), None)
+    if not tipo:
+        return "El documento debe ser un PDF, JPG o PNG."
+    nombre = re.sub(r"[^\w.\- ]", "_", str(v.get("nombre") or "documento"))[:80].strip(" .") or "documento"
+    if not nombre.lower().endswith(tipo[2]):
+        nombre += tipo[2]
+    return b, nombre, tipo[1]
+
+
 def _validar(f):
     """Formulario -> datos (o Errores por campo). La comunidad es una del IDAE (sus datos salen
     de alli); del formulario solo se registra el gestor. Lo de la comunidad y el gestor lo
@@ -8033,6 +8096,9 @@ def _validar(f):
         err["password"] = "La contraseña debe tener al menos 8 caracteres."
     elif pw != str(f.get("password2") or ""):
         err["password2"] = "Las contraseñas no coinciden."
+    doc = _documento(f.get("documento"))
+    if isinstance(doc, str):
+        err["documento"] = doc
     if f.get("acepta") is not True:
         err["acepta"] = "Debes aceptar las condiciones de uso."
     if err:
@@ -8047,24 +8113,33 @@ def _validar(f):
     if plataforma._hashes_tb([d["email"]]):
         raise Errores({"email": "Ese email ya es usuario de la plataforma."})
     with _cx() as cx:   # otra alta con esa comunidad o ese gestor que aun no ha terminado
-        if cx.execute("SELECT 1 FROM alta WHERE estado IN ('pendiente', 'creando') AND (comunidad_id = %s OR datos->>'email' = %s)",
+        if cx.execute("SELECT 1 FROM alta WHERE estado IN ('revision', 'pendiente', 'creando') AND (comunidad_id = %s OR datos->>'email' = %s)",
                       (cid, d["email"])).fetchone():
             raise Errores({"general": "Ya hay un alta en curso con esta comunidad o este email."})
-    return d, cid, pw
+    return d, cid, pw, doc or (None, None, None)
 
 
 def solicitud(f):
-    """Formulario de alta -> la comunidad se crea en segundo plano (tarda un minuto). La pagina
-    va a /alta/gracias/?alta=<id>, que pregunta por su estado."""
+    """Formulario de alta -> la comunidad se crea en segundo plano (tarda un minuto), o queda en
+    revision si la aprueba el superusuario. La pagina va a /alta/gracias/?alta=<id>, que
+    pregunta por su estado."""
     if not activa():
         raise Errores({"general": "El alta online no está disponible."})
-    d, cid, pw = _validar(f)
+    with _cx() as cx:
+        n = cx.execute("SELECT count(*) AS n FROM alta WHERE creada > now() - interval '1 day'").fetchone()["n"]
+    if n >= MAX_DIA:
+        log.warning("alta online: tope de %s altas en 24 h alcanzado", MAX_DIA)
+        raise Errores({"general": "Hoy se han recibido muchas altas. Inténtalo mañana o escríbenos a info@vatiaco.es."})
+    d, cid, pw, doc = _validar(f)
     aid = secrets.token_urlsafe(12)
     with _cx() as cx:
-        cx.execute("INSERT INTO alta (id, comunidad_id, datos, hash, socios, periodo) VALUES (%s, %s, %s, %s, %s, 'gratuito')",
-                   (aid, cid, Jsonb(d), plataforma._hash(pw), max(1, int(d["socios_idae"] or 0))))
+        cx.execute("INSERT INTO alta (id, comunidad_id, datos, hash, socios, periodo, estado, documento, documento_nombre, "
+                   "documento_tipo) VALUES (%s, %s, %s, %s, %s, 'gratuito', %s, %s, %s, %s)",
+                   (aid, cid, Jsonb(d), plataforma._hash(pw), max(1, int(d["socios_idae"] or 0)),
+                    "revision" if APROBACION else "pendiente", *doc))
     log.info("alta online: %s (%s) solicitada por %s", d["comunidad"], d["municipio"], d["email"])
-    threading.Thread(target=crear, args=(aid,), name=f"alta-{aid}", daemon=True).start()
+    if not APROBACION:
+        threading.Thread(target=crear, args=(aid,), name=f"alta-{aid}", daemon=True).start()
     return {"alta": aid}
 
 
@@ -8125,8 +8200,19 @@ def lista():
         return [dict(r, creada=r["creada"].isoformat())
                 for r in cx.execute(
                     "SELECT id, comunidad_id, comunidad, datos->>'comunidad' AS nombre, datos->>'municipio' AS municipio, datos->>'provincia' AS provincia, "
-                    "datos->>'contacto' AS contacto, datos->>'email' AS email, socios, estado, error, creada FROM alta "
+                    "datos->>'contacto' AS contacto, datos->>'email' AS email, socios, estado, error, creada, "
+                    "documento_nombre FROM alta "
                     "ORDER BY creada DESC LIMIT 200").fetchall()]
+
+
+def documento(aid):
+    """Documento acreditativo de un alta -> (bytes, nombre, tipo)."""
+    with _cx() as cx:
+        a = cx.execute("SELECT documento, documento_nombre, documento_tipo FROM alta WHERE id = %s AND documento IS NOT NULL",
+                       (aid,)).fetchone()
+    if not a:
+        raise KeyError(aid)
+    return bytes(a["documento"]), a["documento_nombre"], a["documento_tipo"]
 
 
 def reintentar(aid):
@@ -8139,6 +8225,35 @@ def reintentar(aid):
     if a["estado"] == "error":
         raise RuntimeError(a["error"])
     return a["estado"]
+
+
+def aprobar(aid):
+    """El superusuario aprueba un alta en revision: se crea la comunidad (como en reintentar)."""
+    with _cx() as cx:
+        a = cx.execute("UPDATE alta SET estado = 'pendiente', actualizado = now() WHERE id = %s AND estado = 'revision' "
+                       "RETURNING id", (aid,)).fetchone()
+    if not a:
+        if not _fila(aid):
+            raise KeyError(aid)
+        raise ValueError("Solo se aprueban las altas en revisión")
+    a = crear(aid)
+    if a["estado"] == "error":
+        raise RuntimeError(a["error"])
+    return a["estado"]
+
+
+def rechazar(aid):
+    """El superusuario rechaza un alta en revision: no se crea nada y se borran el hash de la
+    contraseña y el documento. La comunidad y el email quedan libres para otra alta."""
+    with _cx() as cx:
+        a = cx.execute("UPDATE alta SET estado = 'rechazada', hash = NULL, documento = NULL, actualizado = now() "
+                       "WHERE id = %s AND estado = 'revision' RETURNING id", (aid,)).fetchone()
+    if not a:
+        if not _fila(aid):
+            raise KeyError(aid)
+        raise ValueError("Solo se rechazan las altas en revisión")
+    log.info("alta online %s rechazada", aid)
+    return "rechazada"
 __FASTAPI_EOF__
 
 cat > config/fastapi/app/copias.py <<'__FASTAPI_EOF__'
@@ -8157,6 +8272,7 @@ comunidades. La base de ThingsBoard tiene su copia diaria y se restaura a mano (
 Paquete (copia completa): un .tar con varias .dump y manifiesto.json (fecha y de que es cada
 una); se descarga de una vez y, al subirlo, cada .dump queda como copia "subida" de su base."""
 import gzip
+import hashlib
 import io
 import json
 import os
@@ -8165,9 +8281,14 @@ import secrets
 import subprocess
 import tarfile
 import tempfile
+import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import psycopg
+from psycopg import sql
+
+from . import db
 from .comun import TZL, comunidad, log
 
 DIR = Path(os.environ.get("BACKUP_DIR", "/backups"))
@@ -8408,6 +8529,58 @@ def registro(f):
         return None
 
 
+def huella(f):
+    """sha256 de un fichero de copia. El gestor solo puede volver a subir copias que se
+    descargaron de la plataforma (su huella queda registrada: plataforma.huella_conocida): una
+    hecha fuera podria llevar SQL arbitrario, y pg_restore lo ejecutaria con el usuario de
+    PostgreSQL de la API."""
+    h = hashlib.sha256()
+    with open(f, "rb") as x:
+        while trozo := x.read(1 << 20):
+            h.update(trozo)
+    return h.hexdigest()
+
+
+_SECRETO = re.compile(r"hash|pass|token|secret", re.I)   # columnas que no salen en la exportacion
+LEEME_EXPORTAR = """Datos de la comunidad exportados de la plataforma ({fecha}).
+
+Cada fichero .csv es una tabla de la base de datos de la comunidad, con una fila de cabecera
+(UTF-8, separado por comas): se abre con cualquier hoja de calculo y no depende de la
+plataforma. No incluye contraseñas ni claves de acceso, ni el contenido de los documentos PDF
+(se descargan uno a uno desde Gestion). Para volver a cargar todo en la plataforma, usa una
+copia .dump de la pestaña Base de datos.
+"""
+
+
+def exportar(base=None):
+    """Todos los datos de la base en CSV (una tabla por fichero, con cabecera) en un .zip temporal
+    en DIR (lo borra quien lo envia). Sin hashes, contraseñas ni tokens, ni columnas binarias."""
+    base = base or _propia()[0]
+    tmp = DIR / f".exportar-{secrets.token_hex(8)}.zip"
+    try:
+        with psycopg.connect(db.dsn(base)) as cx, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+            cols = {}
+            for t, c in cx.execute("SELECT table_name, column_name FROM information_schema.columns "
+                                   "WHERE table_schema = 'public' AND data_type <> 'bytea' "
+                                   "AND table_name IN (SELECT table_name FROM information_schema.tables "
+                                   "WHERE table_schema = 'public' AND table_type = 'BASE TABLE') "
+                                   "ORDER BY table_name, ordinal_position").fetchall():
+                if t != "plataforma_registro" and not _SECRETO.search(c):
+                    cols.setdefault(t, []).append(c)
+            for t, cs in cols.items():
+                q = sql.SQL("COPY (SELECT {} FROM {}) TO STDOUT WITH (FORMAT csv, HEADER)").format(
+                    sql.SQL(", ").join(map(sql.Identifier, cs)), sql.Identifier(t))
+                with z.open(f"{t}.csv", "w") as dst, cx.cursor().copy(q) as cp:
+                    dst.write(b"\xef\xbb\xbf")   # BOM: las hojas de calculo lo abren en UTF-8
+                    for trozo in cp:
+                        dst.write(trozo)
+            z.writestr("LEEME.txt", LEEME_EXPORTAR.format(fecha=datetime.now(TZL).strftime("%d/%m/%Y %H:%M")))
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return tmp
+
+
 def borrar(nombre, bases=None, otras=False):
     f = ruta(nombre, bases, otras)
     f.unlink()
@@ -8444,6 +8617,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from typing import Literal
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -8646,7 +8820,11 @@ ORIGENES = {o.strip().rstrip("/") for o in (E.get("ALTA_ORIGENES") or "").split(
 @app.middleware("http")
 async def cors_alta(request: Request, siguiente):
     origen = request.headers.get("origin")
-    if not request.url.path.startswith("/alta/") or origen not in ORIGENES:
+    # con --root-path /cec-api, uvicorn pone el prefijo en la ruta (/cec-api/alta/...): se quita
+    ruta, raiz = request.scope.get("path") or "", request.scope.get("root_path") or ""
+    if raiz and ruta.startswith(raiz):
+        ruta = ruta[len(raiz):]
+    if not ruta.startswith("/alta/") or origen not in ORIGENES:
         return await siguiente(request)
     cab = {"Access-Control-Allow-Origin": origen, "Vary": "Origin"}
     if request.method == "OPTIONS":
@@ -8665,13 +8843,30 @@ async def alta_info():
     return alta.info()
 
 
-@app.post("/alta/solicitud", summary="Formulario de alta -> se crea la comunidad (pública)")
-async def alta_solicitud(datos: dict, request: Request):
+@app.post("/alta/solicitud", summary="Formulario de alta (con el documento del gestor en base64) (pública)")
+async def alta_solicitud(request: Request):
     ahora, ip = time.time(), request.client.host if request.client else "?"
+    maximo = (alta.DOC_MAX_MB * 4 // 3 + 1) * 1024 * 1024    # el documento en base64 y el formulario
+    if int(request.headers.get("content-length") or 0) > maximo:
+        raise HTTPException(413, f"El documento ocupa más de {alta.DOC_MAX_MB} MB.")
+    if len(_INTENTOS) > 5000:
+        for k in [k for k, v in _INTENTOS.items() if ahora - v[-1] >= 600]:
+            del _INTENTOS[k]
     lista = [t for t in _INTENTOS.get(ip, []) if ahora - t < 600]
     if len(lista) >= 10:
         raise HTTPException(429, "Demasiados intentos. Prueba de nuevo en unos minutos.")
     _INTENTOS[ip] = lista + [ahora]
+    cuerpo = bytearray()
+    async for trozo in request.stream():
+        cuerpo += trozo
+        if len(cuerpo) > maximo:
+            raise HTTPException(413, f"El documento ocupa más de {alta.DOC_MAX_MB} MB.")
+    try:
+        datos = json.loads(cuerpo)
+    except ValueError:
+        raise HTTPException(400, "Formulario no válido")
+    if not isinstance(datos, dict):
+        raise HTTPException(400, "Formulario no válido")
     try:
         return await asyncio.to_thread(alta.solicitud, datos)
     except alta.Errores as e:
@@ -8706,6 +8901,11 @@ GESTOR_ESCRIBE_NO = ("/api/notification/request", "/api/notification/rule", "/ap
 
 
 def gestor_puede(metodo, ruta):
+    # La ruta llega sin decodificar (%75sers = users para ThingsBoard): se compara decodificada,
+    # y nada de rutas raras que ThingsBoard pudiera normalizar a otra
+    ruta = unquote(ruta)
+    if any(x in ruta for x in ("..", "//", ";", "\\", "%")):
+        return False
     if metodo in ("GET", "HEAD", "OPTIONS"):
         if ruta.startswith(GESTOR_LEE_SI) and "/users" not in ruta:
             return True
@@ -8713,25 +8913,36 @@ def gestor_puede(metodo, ruta):
     return ruta.startswith(GESTOR_ESCRIBE_SI) and not ruta.startswith(GESTOR_ESCRIBE_NO)
 
 
+def _jwt(token):
+    """Contenido de un JWT sin comprobar la firma (la comprueba ThingsBoard), o {}."""
+    try:
+        trozo = token.split(".")[1]
+        return json.loads(base64.urlsafe_b64decode(trozo + "=" * (-len(trozo) % 4)))
+    except Exception:
+        return {}
+
+
 @app.get("/acceso", include_in_schema=False)
 async def acceso(request: Request):
-    cab = request.headers.get("x-authorization") or request.headers.get("authorization") or ""
-    if not cab.lower().startswith("bearer "):
-        return Response(status_code=204)          # sin sesion: lo decide ThingsBoard
-    try:   # la firma la comprueba ThingsBoard; aqui solo hace falta saber quien es
-        trozo = cab[7:].strip().split(".")[1]
-        datos = json.loads(base64.urlsafe_b64decode(trozo + "=" * (-len(trozo) % 4)))
-    except Exception:
-        return Response(status_code=204)
-    if "TENANT_ADMIN" not in (datos.get("scopes") or []):
-        return Response(status_code=204)
-    if not await asyncio.to_thread(plataforma.es_gestor, datos.get("sub")):
-        return Response(status_code=204)
+    # Todos los sitios por los que ThingsBoard podria leer el token: si alguno es de un gestor,
+    # mandan sus limites (si no, uno podria ir con el token en una cabecera que aqui no se mira)
+    uri = request.headers.get("x-forwarded-uri") or ""
+    tokens = [c[7:].strip() for c in (request.headers.get("x-authorization"), request.headers.get("authorization"))
+              if c and c.lower().startswith("bearer ")]
+    tokens += parse_qs(urlsplit(uri).query).get("token", [])
+    gestor = None
+    for t in tokens:
+        datos = _jwt(t)
+        if "TENANT_ADMIN" in (datos.get("scopes") or []) and await asyncio.to_thread(plataforma.es_gestor, datos.get("sub")):
+            gestor = datos.get("sub")
+            break
+    if not gestor:
+        return Response(status_code=204)          # sin sesion de gestor: lo decide ThingsBoard
     metodo = (request.headers.get("x-forwarded-method") or "GET").upper()
-    ruta = (request.headers.get("x-forwarded-uri") or "").split("?")[0]
+    ruta = uri.split("?")[0]
     if gestor_puede(metodo, ruta):
         return Response(status_code=204)
-    log.info("gestor %s: %s %s denegado", datos.get("sub"), metodo, ruta)
+    log.info("gestor %s: %s %s denegado", gestor, metodo, ruta)
     return JSONResponse({"status": 403, "errorCode": 20, "message": "El gestor solo puede usar su panel de la comunidad"}, 403)
 
 
@@ -9094,21 +9305,38 @@ async def copias_crear(p: PeticionCopia, _: str = Depends(admin)):
     return await asyncio.to_thread(_copias, copias.crear, p.bases)
 
 
-@app.post("/copias/subir", status_code=201, summary="Sube una copia de la base de la comunidad (fichero .dump, cuerpo binario)")
+def _huella_propia(f):
+    """Una copia subida por el gestor solo vale si salio de la plataforma para su comunidad."""
+    if not plataforma.huella_conocida(comunidad()["base"], copias.huella(f)):
+        raise ValueError("Solo se pueden subir copias descargadas de esta plataforma para esta comunidad")
+
+
+@app.post("/copias/subir", status_code=201,
+          summary="Sube una copia de la base de la comunidad descargada antes de aquí (fichero .dump, cuerpo binario)")
 async def copias_subir(request: Request, _: str = Depends(admin)):
     tmp = copias.DIR / f".subida-{secrets.token_hex(8)}.tmp"
     try:
         with open(tmp, "wb") as f:
             async for trozo in request.stream():
                 f.write(trozo)
+        await asyncio.to_thread(_copias, _huella_propia, tmp)
         return await asyncio.to_thread(_copias, copias.subir, tmp)
     finally:
         tmp.unlink(missing_ok=True)
 
 
+@app.get("/copias/exportar.zip", summary="Todos los datos de la comunidad en CSV (un .zip, sin contraseñas)")
+async def copias_exportar(quien: str = Depends(admin)):
+    f = await asyncio.to_thread(_copias, copias.exportar)
+    log.info("%s exporta los datos de %s en CSV", quien, comunidad()["base"])
+    return FileResponse(f, media_type="application/zip", background=BackgroundTask(f.unlink, missing_ok=True),
+                        filename=f"{comunidad()['base']}-datos-{date.today():%Y%m%d}.zip")
+
+
 @app.get("/copias/{nombre}", summary="Descarga una copia")
 async def copias_descargar(nombre: str, _: str = Depends(admin)):
     f = _copias(copias.ruta, nombre)
+    await asyncio.to_thread(plataforma.registrar_huella, comunidad()["base"], await asyncio.to_thread(copias.huella, f))
     return FileResponse(f, media_type="application/octet-stream", filename=nombre)
 
 
@@ -9124,6 +9352,8 @@ async def copias_restaurar(nombre: str, quien: str = Depends(admin)):
         activo = await asyncio.to_thread(db.job_activo)
         if activo:
             raise Ocupado(activo)
+        if "-subida-" in nombre:   # las subidas antes de comprobar la huella tambien
+            await asyncio.to_thread(_copias, lambda: _huella_propia(copias.ruta(nombre)))
         r = await asyncio.to_thread(_copias, copias.restaurar, nombre)
         # La copia puede ser anterior a tablas nuevas: se crean las que falten
         await asyncio.to_thread(db.preparar)
@@ -9507,6 +9737,27 @@ async def plataforma_altas(_: str = Depends(superusuario)):
 async def plataforma_alta_reintentar(aid: str, quien: str = Depends(superusuario)):
     r = await asyncio.to_thread(_plat, alta.reintentar, aid)
     log.info("%s reintenta el alta online %s", quien, aid)
+    return {"estado": r}
+
+
+@app.get("/plataforma/altas/{aid}/documento", summary="Documento que acredita al gestor de un alta online")
+async def plataforma_alta_documento(aid: str, _: str = Depends(superusuario)):
+    b, nombre, tipo = await asyncio.to_thread(_plat, alta.documento, aid)
+    return Response(b, media_type=tipo, headers={"Content-Disposition": f'attachment; filename="{nombre}"',
+                                                 "X-Content-Type-Options": "nosniff"})
+
+
+@app.post("/plataforma/altas/{aid}/aprobar", summary="Aprueba un alta online en revisión: se crea la comunidad")
+async def plataforma_alta_aprobar(aid: str, quien: str = Depends(superusuario)):
+    r = await asyncio.to_thread(_plat, alta.aprobar, aid)
+    log.info("%s aprueba el alta online %s", quien, aid)
+    return {"estado": r}
+
+
+@app.post("/plataforma/altas/{aid}/rechazar", summary="Rechaza un alta online en revisión (no se crea nada)")
+async def plataforma_alta_rechazar(aid: str, quien: str = Depends(superusuario)):
+    r = await asyncio.to_thread(_plat, alta.rechazar, aid)
+    log.info("%s rechaza el alta online %s", quien, aid)
     return {"estado": r}
 
 
@@ -10041,6 +10292,8 @@ services:
       SYNC_HORA: ${SYNC_HORA}
       DATADIS_PAUSA_S: ${DATADIS_PAUSA_S}
       ALTA_ONLINE: ${ALTA_ONLINE}
+      ALTA_MAX_DIA: ${ALTA_MAX_DIA}
+      ALTA_APROBACION: ${ALTA_APROBACION}
       ALTA_URL_PUBLICA: ${ALTA_URL_PUBLICA}
       ALTA_URL_WEB: ${ALTA_URL_WEB}
       ALTA_ORIGENES: ${ALTA_ORIGENES}
@@ -12590,7 +12843,14 @@ BD_HTML = """<div class="bd">
   <section class="bd-caja">
    <h3>Subir una copia</h3>
    <div class="bd-ctrl"><input type="file" class="bd-fich" accept=".dump"><button class="bd-b sec bd-subir">Subir</button></div>
-   <p>Fichero <code>.dump</code> de la base de la comunidad (el que se descarga aquí). Después se puede restaurar desde la lista.</p>
+   <p>Fichero <code>.dump</code> de la base de la comunidad descargado antes desde aquí (por seguridad, no se admiten copias
+    hechas fuera de la plataforma). Después se puede restaurar desde la lista.</p>
+  </section>
+  <section class="bd-caja">
+   <h3>Exportar todos los datos</h3>
+   <div class="bd-ctrl"><button class="bd-b sec bd-exportar">Exportar en CSV</button></div>
+   <p>Un <code>.zip</code> con un fichero CSV por tabla (socios, suministros, lecturas, gestión…), que se abre con cualquier
+    hoja de cálculo y no depende de la plataforma. Sin contraseñas.</p>
   </section>
  </div>
  <div class="bd-msg"></div>
@@ -12708,6 +12968,19 @@ self.onInit = function () {
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
       }), function () { return 'Descargada ' + n + '.'; });
   }
+
+  q('bd-exportar').onclick = function () {
+    tarea('Exportando los datos en CSV… (puede tardar si hay muchas lecturas)',
+      api('GET', '/copias/exportar.zip', null, true).then(function (r) {
+        var n = (/filename="?([^";]+)/.exec(r.headers.get('content-disposition') || '') || [])[1] || 'datos-comunidad.zip';
+        return r.blob().then(function (b) {
+          var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = n;
+          document.body.appendChild(a); a.click();
+          setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+          return n;
+        });
+      }), function (n) { return 'Datos exportados en ' + n + '.'; });
+  };
 
   function restaurar(n) {
     if (!confirm('Se sustituirán TODOS los datos de la comunidad por los de la copia\n' + n +
@@ -13656,8 +13929,11 @@ AYUDA = {
     "(por <code>id</code>; necesitan <code>gestor_password</code>) y actualiza las que ya existen. Las contraseñas vacías "
     "no se cambian."],
    ["¿Qué son las altas online?",
-    "Son las comunidades que se dan de alta desde la web, de forma gratuita: se crean solas. Si la creación falla, quedan "
-    "en <i>error</i>: corrige la causa y pulsa <i>Reintentar</i>."]]],
+    "Son las comunidades que se dan de alta desde la web, de forma gratuita. Como no se verifica el email, cada alta queda "
+    "<i>en revisión</i> hasta que la apruebas (se crea la comunidad) o la rechazas (no se crea nada, y se borra el "
+    "documento). Antes revisa con <i>Documento</i> el que adjuntó el gestor (acta, nombramiento…) y comprueba que es "
+    "de esa comunidad; al aprobarla, avísale por email. Si la creación falla, queda en "
+    "<i>error</i>: corrige la causa y pulsa <i>Reintentar</i>."]]],
   ["Copias de seguridad", "storage", [
    ["¿Qué se puede copiar?",
     "Cada base de datos por separado: la de los <b>gestores</b> (registro de la plataforma: gestores, comunidades y "
@@ -13764,8 +14040,11 @@ PLAT_HTML = """<div class="al">
  <section class="al-caja al-altas al-oculto">
   <h3>Altas online</h3>
   <div class="al-atabla"></div>
-  <p>Comunidades que se han dado de alta desde la web (gratuita): la API las crea como si las creara el superusuario. Si
-   la creación falla queda en <i>error</i>: corrige la causa y pulsa <i>Reintentar</i>.</p>
+  <p>Comunidades que se han dado de alta desde la web (gratuita). Las que están <i>en revisión</i> esperan a que las
+   apruebes: abre con <i>Documento</i> el que acredita al gestor y comprueba que es de esa comunidad (el email no se
+   verifica), pulsa <i>Aprobar</i> y avísale por
+   email. Al aprobar, la API la crea como si la creara el superusuario. Si la creación falla queda en <i>error</i>:
+   corrige la causa y pulsa <i>Reintentar</i>.</p>
  </section>
  <section class="al-caja al-form">
   <h3 class="al-titulo">Nuevo gestor y su comunidad</h3>
@@ -13876,7 +14155,8 @@ self.onInit = function () {
 
   var EST = { activo: '<span class="al-chip ok">activo</span>', suspendido: '<span class="al-chip no">suspendido</span>' };
   var ALTA_EST = { creando: '<span class="al-chip">creando…</span>', creada: '<span class="al-chip ok">creada</span>',
-                   error: '<span class="al-chip no">error</span>', pendiente: '<span class="al-chip">pendiente</span>' };
+                   error: '<span class="al-chip no">error</span>', pendiente: '<span class="al-chip">pendiente</span>',
+                   revision: '<span class="al-chip">en revisión</span>', rechazada: '<span class="al-chip no">rechazada</span>' };
   function altas() {
     api('GET', '/plataforma/altas').then(function (filas) {
       q('al-altas').classList.toggle('al-oculto', !filas.length);
@@ -13887,12 +14167,30 @@ self.onInit = function () {
             '<td class="n">' + a.socios + '</td>' +
             '<td>' + (ALTA_EST[a.estado] || esc(a.estado)) + (a.error ? '<br><small title="' + esc(a.error) + '">' + esc(a.error.slice(-120)) + '</small>' : '') + '</td>' +
             '<td>' + fecha(a.creada) + '</td>' +
-            '<td class="acc">' + (a.estado === 'error' ? '<button class="al-b peq" data-r="' + esc(a.id) + '">Reintentar</button>' : '') + '</td></tr>';
+            '<td class="acc">' + (a.estado === 'error' ? '<button class="al-b peq" data-r="' + esc(a.id) + '">Reintentar</button>' :
+              a.estado === 'revision' ? (a.documento_nombre ? '<button class="al-b peq sec" data-doc="' + esc(a.id) + '" data-dn="' + esc(a.documento_nombre) + '">Documento</button> ' : '') +
+                '<button class="al-b peq" data-ap="' + esc(a.id) + '">Aprobar</button> ' +
+                '<button class="al-b peq" data-re="' + esc(a.id) + '" data-n="' + esc(a.nombre) + '">Rechazar</button>' : '') + '</td></tr>';
         }).join('') + '</table>';
       [].forEach.call(c.querySelectorAll('[data-r]'), function (b) { b.onclick = function () {
         msg('Creando la comunidad del alta online… (un minuto)');
         tarea(api('POST', '/plataforma/altas/' + encodeURIComponent(b.dataset.r) + '/reintentar').then(function () {
           msg('Alta online completada: comunidad creada.', 'ok'); }));
+      }; });
+      [].forEach.call(c.querySelectorAll('[data-doc]'), function (b) { b.onclick = function () {
+        binario('GET', '/plataforma/altas/' + encodeURIComponent(b.dataset.doc) + '/documento')
+          .then(function (r) { return r.blob(); }).then(function (bl) { guardarBlob(bl, b.dataset.dn); })
+          .catch(function (e) { msg(e.message, 'err'); });
+      }; });
+      [].forEach.call(c.querySelectorAll('[data-ap]'), function (b) { b.onclick = function () {
+        msg('Creando la comunidad del alta online… (un minuto)');
+        tarea(api('POST', '/plataforma/altas/' + encodeURIComponent(b.dataset.ap) + '/aprobar').then(function () {
+          msg('Alta aprobada: comunidad creada. Avisa al gestor por email.', 'ok'); }));
+      }; });
+      [].forEach.call(c.querySelectorAll('[data-re]'), function (b) { b.onclick = function () {
+        if (!confirm('¿Rechazar el alta de «' + b.dataset.n + '»? No se crea nada.')) return;
+        tarea(api('POST', '/plataforma/altas/' + encodeURIComponent(b.dataset.re) + '/rechazar').then(function () {
+          msg('Alta rechazada.', 'ok'); }));
       }; });
     }).catch(function () {});
   }
@@ -16882,8 +17180,11 @@ la API (\`https://${TB_DOMAIN:-$SERVE_IP}/cec-api/alta/*\`, CORS para \`$ALTA_OR
 se elige entre las del IDAE, se rellenan los datos de su gestor (con su contraseña) y la API la
 crea como el superusuario (\`plataforma.crear_comunidad\`). Sin cuotas ni pagos: el uso queda bajo
 la responsabilidad del gestor (condiciones de uso de la web). En el panel del superusuario: columna
-*Alta* (online o manual) y tabla *Altas online* (con *Reintentar* si la creación falló).
-Alta online: $( [ "$ALTA_ONLINE" != no ] && echo activa || echo "desactivada (ALTA_ONLINE=no)" ).
+*Alta* (online o manual) y tabla *Altas online* (con *Reintentar* si la creación falló). Con
+\`ALTA_APROBACION=si\` (el email no se verifica) el gestor adjunta un documento que le acredita
+(PDF, JPG o PNG, hasta 5 MB) y el alta queda *en revisión* hasta que el superusuario lo revisa
+(*Documento*) y la aprueba (se crea) o la rechaza en esa tabla.
+Alta online: $( [ "$ALTA_ONLINE" != no ] && echo activa || echo "desactivada (ALTA_ONLINE=no)" )$( [ "$ALTA_APROBACION" != no ] && echo ", con aprobación del superusuario" ).
 
 ### Restaurar después de reinstalar
 
@@ -16958,7 +17259,7 @@ echo "$EJEMPLOS_INFO" | while IFS='|' read -r E_NOM E_MAIL E_PW; do
   if [ -n "$E_MAIL" ]; then echo " Gestor de ejemplo : $E_MAIL / $E_PW  ($E_NOM)"; fi
 done
 if [ "$ALTA_ONLINE" != no ]; then
-  echo " Alta online       : $ALTA_URL_WEB/alta/  (gratuita)"
+  echo " Alta online       : $ALTA_URL_WEB/alta/  (gratuita$( [ "$ALTA_APROBACION" != no ] && echo ", la apruebas en tu panel"))"
 else
   echo " Alta online       : desactivada (ALTA_ONLINE=no)"
 fi
