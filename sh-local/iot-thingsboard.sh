@@ -35,7 +35,7 @@ set -euo pipefail
 # Todo el stack vive en esta carpeta del host (config, datos, copias)
 INSTALL_DIR="$HOME/iot-tb"
 IP="localhost"          # IP wifi: la que usas para administrar
-SERVE_IP="192.168.1.134"    # IP cableada: el router redirige aqui 80/443 (HTTPS de TB y MQTT)
+SERVE_IP="192.168.1.135"    # IP cableada: el router redirige aqui 80/443 (HTTPS de TB y MQTT)
 HOSTNAME_LAN="pkserver"
 TZ="Europe/Madrid"
 
