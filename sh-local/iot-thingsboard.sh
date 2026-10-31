@@ -544,7 +544,8 @@ CREATE TABLE IF NOT EXISTS datadis_consulta (
 
 CREATE TABLE IF NOT EXISTS sync_job (
   id         uuid PRIMARY KEY,
-  origen     text NOT NULL,          -- auto | datadis | comunidad (solo recalcula la comunidad)
+  origen     text NOT NULL,          -- auto | datadis | comunidad (solo recalcula la comunidad) |
+                                     -- thingsboard (tras restaurar: PostgreSQL -> ThingsBoard, sin Datadis)
   desde      text,
   hasta      text,
   forzar     boolean NOT NULL DEFAULT false,
@@ -2206,6 +2207,10 @@ def _ejecutar(j):
     socios = [] if origen == "comunidad" else [so for so in cfg["socios"] if not j["socios"] or so["id"] in j["socios"]]
     if origen == "auto":
         origen = "datadis"
+    # "thingsboard": tras restaurar una copia, ThingsBoard (vacio en una instalacion nueva, o con
+    # los datos de antes de la copia) se recarga entero con lo que hay en PostgreSQL, sin Datadis
+    solo_tb = origen == "thingsboard"
+    forzar = j["forzar"] or solo_tb
     reales = [so for so in socios if not so.get("simulado") and so.get("origen") != "carpeta"]
     desde, hasta = j["desde"], j["hasta"]
     if not (desde and hasta):       # cada CUPS el suyo (ingesta_datadis): historico o desde su ultimo dia
@@ -2222,12 +2227,16 @@ def _ejecutar(j):
         parar()
     if origen == "comunidad":
         nota("Recalculo de los totales de la comunidad (socios habilitados)")
+    elif solo_tb:
+        nota(f"Recarga de ThingsBoard con los datos de PostgreSQL (copia restaurada), {len(socios)} socios")
     else:
         nota(f"API de Datadis ({f'{desde}-{hasta}' if desde else 'por CUPS: histórico completo la primera vez, después desde el último día guardado'}), "
              f"{len(socios)} socios{', forzada' if j['forzar'] else ''}")
 
     api = mapa = None
-    if reales and not datadis_configurado():
+    if solo_tb:
+        pass
+    elif reales and not datadis_configurado():
         nota("AVISO: la comunidad no tiene cuenta de Datadis (el gestor la pone en la pestaña Gestor); "
              "solo se cargan los socios simulados")
     elif reales:
@@ -2244,7 +2253,9 @@ def _ejecutar(j):
         for so in socios:
             try:
                 parar()
-                if so.get("simulado"):
+                if solo_tb:                             # sus datos ya estan en la base: solo se publica
+                    r = None
+                elif so.get("simulado"):
                     r = simular(cx, so, j["forzar"], nota)
                 elif so.get("origen") == "carpeta":     # sus CSV ya estan en la base: solo se publica
                     r = None
@@ -2252,7 +2263,7 @@ def _ejecutar(j):
                     r = None
                 else:
                     r = ingesta_datadis(cx, api, mapa, so, desde, hasta, j["forzar"], nota)
-                p = publicar_socio(cx, so, r and r["rango"], j["forzar"], version)
+                p = publicar_socio(cx, so, r and r["rango"], forzar, version)
                 if p:
                     rangos.append(None if p["completo"] else (p["d0"], p["d1"]))
                     nota(f"{so['nombre']}: ThingsBoard {'recargado entero' if p['completo'] else 'actualizado'} "
@@ -2272,7 +2283,7 @@ def _ejecutar(j):
         for a in (api.avisos if api else []):
             nota(f"AVISO Datadis: {a}")
         try:
-            c = publicar_comunidad(cx, cfg["socios"], rangos, j["forzar"], version)
+            c = publicar_comunidad(cx, cfg["socios"], rangos, forzar, version)
             nota(f"Comunidad: suma horaria de {c['socios']} socios {'recargada' if c['completo'] else 'actualizada'} "
                  f"({c['horas']} horas)" + (f"; sin los deshabilitados: {', '.join(c['excluidos'])}" if c["excluidos"] else "")
                  if c else "Comunidad: sin cambios")
@@ -8287,6 +8298,7 @@ from pathlib import Path
 
 import psycopg
 from psycopg import sql
+from psycopg.rows import dict_row
 
 from . import db
 from .comun import TZL, comunidad, log
@@ -8544,17 +8556,87 @@ def huella(f):
 _SECRETO = re.compile(r"hash|pass|token|secret", re.I)   # columnas que no salen en la exportacion
 LEEME_EXPORTAR = """Datos de la comunidad exportados de la plataforma ({fecha}).
 
-Cada fichero .csv es una tabla de la base de datos de la comunidad, con una fila de cabecera
-(UTF-8, separado por comas): se abre con cualquier hoja de calculo y no depende de la
-plataforma. No incluye contraseñas ni claves de acceso, ni el contenido de los documentos PDF
-(se descargan uno a uno desde Gestion). Para volver a cargar todo en la plataforma, usa una
-copia .dump de la pestaña Base de datos.
+datadis/<CUPS>/   Los datos de cada suministro con los mismos ficheros y el mismo formato que
+                  la descarga web de datadis.es: Consumo_ (curva de carga, con la energia
+                  vertida, generada y autoconsumida), Potencias_ (maximetro), Contrato_ y
+                  Energia_ (reactiva mensual). Punto y coma, coma decimal, campos entre
+                  comillas, fechas AAAA/MM/DD y horas de fin de periodo. Se pueden volver a
+                  cargar en la plataforma (pestaña Socios, Cargar CSV) o abrir con cualquier
+                  herramienta que lea los ficheros de Datadis.
+gestion/          El resto de tablas de la base de la comunidad (socios, reparto, gestion,
+                  documentos...), una por fichero, con cabecera (UTF-8, separado por comas).
+
+No incluye contraseñas ni claves de acceso, ni el contenido de los documentos PDF (se
+descargan uno a uno desde Gestion). Para volver a cargar todo en la plataforma de una vez,
+usa una copia .dump de la pestaña Base de datos.
 """
+# Tablas de Datadis (las de su descarga web): salen en datadis/<CUPS>/ con su formato
+DATADIS_EXPORTAR = ("consumo", "potencias", "energia", "contrato")
+_CONTRATO_COLS = ["cups", "distribuidora", "comercializadora", "tarifaAcceso", "tensionConexion", "potenciaContratadakW",
+                  "modoControlPotencia", "discriminacionHoraria", "fechaInicioVigencia", "fechaFinVigencia", "provincia",
+                  "municipio", "codigoPostal", "potenciaTotalGenerada", "tipoAutoconsumo", "seccion", "subseccion",
+                  "coeficienteReparto", "cau", "potenciaMaximaInstalacion"]
+_CONTRATO_SIN_COMILLAS = {"distribuidora", "modoControlPotencia", "provincia", "municipio"}   # como en Datadis
+
+
+def _dd(v, dec=3):
+    """Numero con el formato de Datadis: entre comillas y con coma decimal (vacio si no hay)."""
+    return "" if v is None else '"' + f"{v:.{dec}f}".replace(".", ",") + '"'
+
+
+def _dn(v):
+    """Numero del contrato como en Datadis: sin ceros de mas, coma decimal y entre comillas."""
+    return "" if v is None else '"' + (f"{v:.3f}".rstrip("0").rstrip(".") or "0").replace(".", ",") + '"'
+
+
+def _dt(v):
+    """Texto entre comillas (vacio si no hay); fechas como AAAA/MM/DD."""
+    if v is None or v == "":
+        return ""
+    if hasattr(v, "strftime"):
+        v = v.strftime("%Y/%m/%d")
+    return '"' + str(v).replace('"', "'") + '"'
+
+
+def _exportar_datadis(cx, z):
+    """Un directorio por CUPS con sus ficheros de la descarga web de Datadis. Devuelve los CUPS."""
+    cx.row_factory = dict_row
+    cupss = [r["cups"] for r in cx.execute(
+        'SELECT DISTINCT "cups" FROM (SELECT "cups" FROM consumo UNION SELECT "cups" FROM potencias '
+        'UNION SELECT "cups" FROM energia UNION SELECT "cups" FROM contrato) t ORDER BY 1').fetchall()]
+    for cups in cupss:
+        d0, d1 = cx.execute('SELECT min("fecha") AS a, max("fecha") AS b FROM consumo WHERE "cups" = %s', (cups,)).fetchone().values()
+        suf = f"_{d0:%d-%m-%Y}_{d1:%d-%m-%Y}" if d0 else ""
+        raiz = f"datadis/{cups}/"
+        with z.open(f"{raiz}Consumo_{cups}{suf}.csv", "w") as f, cx.cursor(name="exp_consumo", row_factory=dict_row) as cur:
+            f.write(b"cups;fecha;hora;consumo_kWh;metodoObtencion;energiaVertida_kWh;energiaGenerada_kWh;energiaAutoconsumida_kWh\n")
+            cur.itersize = 5000
+            cur.execute('SELECT * FROM consumo WHERE "cups" = %s ORDER BY ts', (cups,))
+            for x in cur:
+                f.write((";".join([_dt(x["cups"]), _dt(x["fecha"]), _dt(x["hora"]), _dd(x["consumo_kWh"]),
+                                   x["metodoObtencion"] or "", _dd(x["energiaVertida_kWh"]), _dd(x["energiaGenerada_kWh"]),
+                                   _dd(x["energiaAutoconsumida_kWh"])]) + "\n").encode())
+        pot = cx.execute('SELECT * FROM potencias WHERE "cups" = %s '            # cada mes, por periodo
+                         'ORDER BY date_trunc(\'month\', "fechaMaximo"), "periodo", "fechaMaximo"', (cups,)).fetchall()
+        z.writestr(f"{raiz}Potencias_{cups}{suf}.csv", "cups;fechaMaximo;hora;maximoPotenciaDemandadaKW;periodo\n" + "".join(
+            ";".join([_dt(x["cups"]), _dt(x["fechaMaximo"]), _dt(x["hora"]), _dd(x["maximoPotenciaDemandadaKW"]),
+                      _dt(x["periodo"])]) + "\n" for x in pot))
+        con = cx.execute('SELECT * FROM contrato WHERE "cups" = %s ORDER BY "fechaInicioVigencia"', (cups,)).fetchall()
+        z.writestr(f"{raiz}Contrato_{cups}{suf}.csv", ";".join(_CONTRATO_COLS) + "\n" + "".join(
+            ";".join(_dn(x[k]) if isinstance(x[k], float) else (x[k] or "") if k in _CONTRATO_SIN_COMILLAS else _dt(x[k])
+                     for k in _CONTRATO_COLS) + "\n" for x in con))
+        en = cx.execute('SELECT * FROM energia WHERE "cups" = %s ORDER BY "fecha"', (cups,)).fetchall()
+        z.writestr(f"{raiz}Energia_{cups}{suf}.csv", "cups;fecha;" + ";".join(f"energiaP{p}" for p in range(1, 7)) + "\n" + "".join(
+            ";".join([_dt(x["cups"]), _dt(x["fecha"].strftime("%Y/%m"))] + [_dd(x[f"energiaP{p}"]) for p in range(1, 7)]) + "\n"
+            for x in en))
+    return cupss
 
 
 def exportar(base=None):
-    """Todos los datos de la base en CSV (una tabla por fichero, con cabecera) en un .zip temporal
-    en DIR (lo borra quien lo envia). Sin hashes, contraseñas ni tokens, ni columnas binarias."""
+    """Todos los datos de la base en CSV en un .zip temporal en DIR (lo borra quien lo envia): los
+    de Datadis de cada CUPS con los ficheros y el formato de su descarga web (datadis/<CUPS>/) y
+    las demas tablas una por fichero, con cabecera (gestion/). Sin hashes, contraseñas ni tokens,
+    ni columnas binarias."""
     base = base or _propia()[0]
     tmp = DIR / f".exportar-{secrets.token_hex(8)}.zip"
     try:
@@ -8565,15 +8647,16 @@ def exportar(base=None):
                                    "AND table_name IN (SELECT table_name FROM information_schema.tables "
                                    "WHERE table_schema = 'public' AND table_type = 'BASE TABLE') "
                                    "ORDER BY table_name, ordinal_position").fetchall():
-                if t != "plataforma_registro" and not _SECRETO.search(c):
+                if t != "plataforma_registro" and t not in DATADIS_EXPORTAR and not _SECRETO.search(c):
                     cols.setdefault(t, []).append(c)
             for t, cs in cols.items():
                 q = sql.SQL("COPY (SELECT {} FROM {}) TO STDOUT WITH (FORMAT csv, HEADER)").format(
                     sql.SQL(", ").join(map(sql.Identifier, cs)), sql.Identifier(t))
-                with z.open(f"{t}.csv", "w") as dst, cx.cursor().copy(q) as cp:
+                with z.open(f"gestion/{t}.csv", "w") as dst, cx.cursor().copy(q) as cp:
                     dst.write(b"\xef\xbb\xbf")   # BOM: las hojas de calculo lo abren en UTF-8
                     for trozo in cp:
                         dst.write(trozo)
+            _exportar_datadis(cx, z)
             z.writestr("LEEME.txt", LEEME_EXPORTAR.format(fecha=datetime.now(TZL).strftime("%d/%m/%Y %H:%M")))
     except BaseException:
         tmp.unlink(missing_ok=True)
@@ -8790,9 +8873,10 @@ MES = r"^\d{4}[/-](0[1-9]|1[0-2])$"
 
 
 class PeticionSync(BaseModel):
-    origen: Literal["auto", "datadis", "comunidad"] = Field(
+    origen: Literal["auto", "datadis", "comunidad", "thingsboard"] = Field(
         "auto", description="auto / datadis: API de Datadis con la cuenta de la comunidad (y los socios "
-                            "simulados). comunidad: solo recalcula los totales de la comunidad (socios habilitados)")
+                            "simulados). comunidad: solo recalcula los totales de la comunidad (socios habilitados). "
+                            "thingsboard: recarga ThingsBoard entero con los datos de PostgreSQL (sin Datadis)")
     desde: str | None = Field(None, pattern=MES, description="Primer mes (AAAA/MM), solo API de Datadis")
     hasta: str | None = Field(None, pattern=MES, description="Último mes (AAAA/MM), solo API de Datadis")
     forzar: bool = Field(False, description="Repetir consultas de las últimas 24 h y recargar ThingsBoard entero")
@@ -9361,7 +9445,18 @@ async def copias_restaurar(nombre: str, quien: str = Depends(admin)):
         # ThingsBoard: socios de la copia que no esten (con su contraseña guardada)
         r["thingsboard"] = await asyncio.to_thread(_aprovisionar_tras_restaurar, comunidad())
     log.info("base %s restaurada desde %s por %s (copia previa %s)", comunidad()["base"], nombre, quien, r["previa"]["nombre"])
+    r["recarga"] = await _recargar_tb(quien)
     return r
+
+
+async def _recargar_tb(quien):
+    """Tras restaurar: las lecturas de la copia estan en PostgreSQL, pero los paneles leen las de
+    ThingsBoard. Se lanza la recarga (en segundo plano, se sigue en la pestaña Datos)."""
+    try:
+        return await lanzar("thingsboard", None, None, True, None, f"{quien} (copia restaurada)")
+    except Exception:
+        log.exception("recarga de ThingsBoard tras restaurar %s", comunidad()["id"])
+        return None
 
 
 # ---------------- socios (pestaña "Socios" del gestor) ----------------
@@ -9918,6 +10013,12 @@ async def plat_copias_restaurar(nombre: str, p: PeticionComunidadCopia | None = 
                 lambda: [_aprovisionar_tras_restaurar(x) for x in plataforma.lista()]))
     log.info("base %s restaurada desde %s por %s (copia previa %s)", info["base"], nombre, quien,
              r["previa"]["nombre"] if r["previa"] else "ninguna: comunidad nueva")
+    if c:   # fuera de _LANZAR (lanzar lo coge): las lecturas de la copia, a ThingsBoard
+        tok = COMUNIDAD.set(await asyncio.to_thread(plataforma.por_id, c["id"]) or c)
+        try:
+            r["recarga"] = await _recargar_tb(quien)
+        finally:
+            COMUNIDAD.reset(tok)
     return r
 
 
@@ -12844,8 +12945,10 @@ BD_HTML = """<div class="bd">
   <section class="bd-caja">
    <h3>Exportar todos los datos</h3>
    <div class="bd-ctrl"><button class="bd-b sec bd-exportar">Exportar en CSV</button></div>
-   <p>Un <code>.zip</code> con un fichero CSV por tabla (socios, suministros, lecturas, gestión…), que se abre con cualquier
-    hoja de cálculo y no depende de la plataforma. Sin contraseñas.</p>
+   <p>Un <code>.zip</code> con los datos de cada suministro en los mismos ficheros y formato que la descarga de datadis.es
+    (<code>Consumo_</code>, <code>Potencias_</code>, <code>Contrato_</code> y <code>Energia_</code>, en <code>datadis/&lt;CUPS&gt;/</code>)
+    y el resto de la gestión, un CSV por tabla (<code>gestion/</code>). Se abre con cualquier hoja de cálculo y no depende de la
+    plataforma. Sin contraseñas.</p>
   </section>
  </div>
  <div class="bd-msg"></div>
@@ -12981,7 +13084,9 @@ self.onInit = function () {
     if (!confirm('Se sustituirán TODOS los datos de la comunidad por los de la copia\n' + n +
                  '\n\nAntes se guarda el estado actual como copia previa. ¿Continuar?')) return;
     tarea('Restaurando ' + n + '… (no cierres la página)', api('POST', '/copias/' + encodeURIComponent(n) + '/restaurar'),
-      function (r) { return 'Base de la comunidad restaurada desde ' + r.restaurada + '. Estado anterior guardado en ' + r.previa.nombre + '.'; });
+      function (r) { return 'Base de la comunidad restaurada desde ' + r.restaurada + '. Estado anterior guardado en ' + r.previa.nombre + '.' +
+        (r.recarga ? ' Los consumos se están volviendo a cargar en los paneles (unos minutos): sigue el progreso en la pestaña Datos.' :
+                     ' No se pudo empezar a cargar los consumos en los paneles: lanza una sincronización desde la pestaña Datos.'); });
   }
 
   api('GET', '/copias/bases').then(function (bs) {
@@ -14581,7 +14686,8 @@ self.onInit = function () {
             throw e;
           });
         }, false).then(function () {
-          fin('Restauradas ' + fs.length + (fs.length === 1 ? ' copia' : ' copias') + ' y ThingsBoard actualizado (usuarios con su contraseña).', fs.length, 0);
+          fin('Restauradas ' + fs.length + (fs.length === 1 ? ' copia' : ' copias') + ' y ThingsBoard actualizado (usuarios con su contraseña). ' +
+              'Los consumos de cada comunidad se vuelven a cargar en sus paneles en segundo plano (unos minutos).', fs.length, 0);
         });
       });
     },
@@ -14860,7 +14966,7 @@ self.onInit = function () {
     if (!j) { q('ad-prog').textContent = 'Aún no hay sincronizaciones'; return; }
     var activo = j.estado === 'pendiente' || j.estado === 'en_curso';
     q('ad-prog').innerHTML = '<span class="ad-chip ' + j.estado + '">' + (ESTADOS[j.estado] || j.estado) + '</span> ' +
-      esc(j.origen) + (j.desde ? ' ' + esc(j.desde) + '–' + esc(j.hasta) : '') + ' · ' + fecha(j.inicio || j.creado) +
+      esc(j.origen === 'thingsboard' ? 'recarga tras restaurar' : j.origen) + (j.desde ? ' ' + esc(j.desde) + '–' + esc(j.hasta) : '') + ' · ' + fecha(j.inicio || j.creado) +
       (j.total ? ' · ' + j.hechos + '/' + j.total + ' socios' : '') + (j.errores ? ' · ' + j.errores + ' errores' : '');
     q('ad-barra').firstChild.style.width = (j.total ? Math.round(100 * j.hechos / j.total) : (activo ? 5 : 100)) + '%';
     if (j.log) {
