@@ -10900,12 +10900,13 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     '#vl-alta label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#555}' +
     '#vl-alta .ancho{grid-column:1/-1}' +
     '#vl-alta .req::after{content:" *";color:#c62828}' +
-    '#vl-alta input{font:inherit;padding:5px 7px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#333;width:100%}' +
+    '#vl-alta input,#vl-alta select{font:inherit;padding:5px 7px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#333;width:100%;max-width:100%}' +
+    '#vl-alta select{min-height:30px}' +
     '#vl-alta input[type=checkbox]{width:auto;margin:2px 0 0}' +
-    '#vl-alta input:focus{outline:none;border-color:#7b2fa8}' +
+    '#vl-alta input:focus,#vl-alta select:focus{outline:none;border-color:#7b2fa8}' +
     '#vl-alta small{color:#888;font-size:11.5px}' +
     '#vl-alta a{color:#7b2fa8}' +
-    '#vl-alta .mal input{border-color:#c62828}' +
+    '#vl-alta .mal input,#vl-alta .mal select{border-color:#c62828}' +
     '#vl-alta .err{color:#c62828;font-size:11.5px;display:none}' +
     '#vl-alta .mal .err{display:block}' +
     '#vl-alta .ficha{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 12px;margin-top:8px;padding:8px 10px;background:#faf6fc;border-radius:4px}' +
@@ -10925,14 +10926,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     '#vl-alta .modo label+label{border-left:1px solid #d9c3e8}' +
     '#vl-alta .modo input{position:absolute;opacity:0;width:1px;height:1px}' +
     '#vl-alta .modo label.on{background:#7b2fa8;color:#fff;font-weight:700}' +
-    '#vl-alta .lista{margin-top:4px;max-height:min(260px,45vh);overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid #e3d4ee;border-radius:4px;background:#fff}' +
-    '#vl-alta .lista button{display:block;width:100%;text-align:left;font:inherit;padding:9px 10px;border:0;border-bottom:1px solid #f3edf7;' +
-    'background:#fff;color:#333;cursor:pointer}' +
-    '#vl-alta .lista button:hover,#vl-alta .lista button:focus{background:#faf6fc;outline:none}' +
-    '#vl-alta .lista button small{display:block;color:#888}' +
-    '#vl-alta .lista .nada{padding:9px 10px;color:#888;font-size:12px}' +
-    '#vl-alta .elegida{display:flex;align-items:center;gap:8px}#vl-alta .elegida input{flex:1}' +
-    '@media (max-width:600px){#vl-alta{padding:6px}#vl-alta .vf{padding:12px}#vl-alta input{font-size:16px;padding:8px}' +
+    '@media (max-width:600px){#vl-alta{padding:6px}#vl-alta .vf{padding:12px}#vl-alta input,#vl-alta select{font-size:16px;padding:8px}' +
     '#vl-alta .pie .b{flex:1;padding:10px 12px}}' +
     '#vl-alta [hidden]{display:none!important}';
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); }
@@ -10963,11 +10957,15 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       '<div class="modo" role="radiogroup"><label class="on"><input type="radio" name="modo" value="idae" checked>De la lista del IDAE</label>' +
       '<label><input type="radio" name="modo" value="prueba">Comunidad de prueba</label></div>' +
       '<div data-modo="idae"><div class="campos">' +
-      campo('comunidad', '<span class="req">Comunidad energética</span>', ' type="search" autocomplete="off" autocorrect="off" autocapitalize="off" ' +
-            'spellcheck="false" enterkeyhint="search" placeholder="Cargando la lista del IDAE…"',
-            'Escribe parte de su nombre o de su municipio y pulsa en ella. ¿No aparece? Prueba la plataforma con una ' +
-            '<a href="#" data-a-prueba>comunidad de prueba</a> o <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">escríbenos</a>.', true) +
-      '</div><div class="lista" hidden></div><div class="ficha" hidden></div></div>' +
+      campo('buscar', 'Buscar (opcional)', ' type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" ' +
+            'enterkeyhint="done" placeholder="Parte del nombre o del municipio"') +
+      '<label data-campo="provincia">Provincia<select name="provincia"><option value="">Todas</option></select><span class="err"></span></label>' +
+      '<label class="ancho" data-campo="comunidad"><span class="req">Comunidad energética</span>' +
+      '<select name="comunidad"><option value="">Cargando la lista del IDAE…</option></select>' +
+      '<small>Las registradas en el IDAE. Filtra por provincia o escribe en «Buscar» para acortar la lista. ¿No aparece? Prueba la plataforma con una ' +
+      '<a href="#" data-a-prueba>comunidad de prueba</a> o <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">escríbenos</a>.</small>' +
+      '<span class="err"></span></label>' +
+      '</div><div class="ficha" hidden></div></div>' +
       '<div data-modo="prueba" hidden><div class="campos">' +
       campo('prueba_nombre', '<span class="req">Nombre de la comunidad de prueba</span>', ' maxlength="100" autocomplete="off"', '', true) +
       campo('prueba_municipio', 'Municipio (opcional)', ' maxlength="60" autocomplete="address-level2"') +
@@ -10994,26 +10992,19 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     document.addEventListener('keydown', tecla);
     $('[data-cancelar]').onclick = cerrar;
     var f = $('form');
-    f.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); if (e.target.name === 'comunidad') buscar(); });
-    f.addEventListener('change', function (e) { if (e.target.name) limpiar(e.target.name); if (e.target.name === 'modo') modo(e.target.value); });
-    f.elements.comunidad.addEventListener('focus', function () { if (!ELEGIDA) buscar(); });
-    f.elements.comunidad.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); var b = $('.lista button'); if (b) b.click(); }
-      else if (e.key === 'ArrowDown') { var p = $('.lista button'); if (p) { e.preventDefault(); p.focus(); } }
+    f.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); if (e.target.name === 'buscar') rellenar(); });
+    f.addEventListener('change', function (e) {
+      var n = e.target.name; if (n) limpiar(n);
+      if (n === 'modo') modo(e.target.value);
+      else if (n === 'provincia') rellenar();
+      else if (n === 'comunidad') { limpiar('comunidad'); elegir(e.target.value === '' ? null : LISTA[+e.target.value]); }
     });
-    $('.lista').addEventListener('click', function (e) {
-      var b = e.target.closest('button[data-i]'); if (!b) return;
-      e.preventDefault(); elegir(LISTA[+b.dataset.i]);
-    });
-    $('.lista').addEventListener('keydown', function (e) {
-      var b = e.target.closest('button'); if (!b) return;
-      if (e.key === 'ArrowDown' && b.nextElementSibling) { e.preventDefault(); b.nextElementSibling.focus(); }
-      if (e.key === 'ArrowUp') { e.preventDefault(); (b.previousElementSibling || f.elements.comunidad).focus(); }
-    });
+    f.elements.buscar.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); f.elements.comunidad.focus(); } });
     $('[data-a-prueba]').onclick = function (e) { e.preventDefault(); f.querySelector('[name=modo][value=prueba]').checked = true; modo('prueba'); };
     f.addEventListener('submit', enviar);
     cargar();
-    f.elements.comunidad.focus();
+    // (en el movil no: abriria el teclado nada mas abrir el modal)
+    if (window.matchMedia && matchMedia('(pointer: fine)').matches) f.elements.buscar.focus();
   }
   // Lo que dice la API del alta (activa, si pide documento...) y la lista de comunidades del IDAE
   function cargar() {
@@ -11022,8 +11013,10 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       if (!r[0].ok || !r[1].ok) throw new Error();
       INFO = r[0].c; LISTA = r[1].c;
       LISTA.forEach(function (c) { c._t = norm(c.etiqueta); });
-      $('[name=comunidad]').placeholder = 'Escribe su nombre o su municipio…';
-      if (document.activeElement === $('[name=comunidad]')) buscar();
+      var ps = {}; LISTA.forEach(function (c) { if (c.p) ps[c.p] = 1; });
+      $('[name=provincia]').innerHTML = '<option value="">Todas</option>' + Object.keys(ps).sort(function (x, y) { return x.localeCompare(y, 'es'); })
+        .map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('');
+      rellenar();
       if (INFO.url_condiciones) $('.u-cond').href = INFO.url_condiciones;
       if (INFO.url_privacidad) $('.u-priv').href = INFO.url_privacidad;
       if (INFO.aprobacion === false) $('.cuando').textContent = 'al momento';
@@ -11046,35 +11039,27 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     $('[data-modo=idae]').hidden = MODO !== 'idae';
     $('[data-modo=prueba]').hidden = MODO !== 'prueba';
     $('[data-campo=documento]').hidden = MODO === 'prueba' || (INFO && INFO.documento === false);
-    var i = $(MODO === 'prueba' ? '[name=prueba_nombre]' : '[name=comunidad]'); if (i) i.focus({ preventScroll: true });
+    var i = $(MODO === 'prueba' ? '[name=prueba_nombre]' : '[name=buscar]'); if (i && document.activeElement && document.activeElement.name === 'modo') i.focus({ preventScroll: true });
   }
-  // Lista de coincidencias (todas las palabras escritas, en el nombre, municipio o provincia)
-  function buscar() {
-    var i = $('[name=comunidad]'), l = $('.lista'), MAX = 50;
-    if (ELEGIDA && i.value !== ELEGIDA.etiqueta) { ELEGIDA = null; $('.ficha').hidden = true; }
-    if (!LISTA) { l.hidden = true; return; }
-    var ps = norm(i.value).split(/\s+/).filter(Boolean);
-    if (!ps.length) { l.hidden = true; return; }
-    var hay = [], n = 0;
-    for (var k = 0; k < LISTA.length; k++) {
-      var t = LISTA[k]._t;
-      if (ps.every(function (p) { return t.indexOf(p) >= 0; })) { if (hay.length < MAX) hay.push(k); n++; }
-    }
-    l.innerHTML = hay.length ? hay.map(function (k) {
-      var c = LISTA[k];
-      return '<button type="button" data-i="' + k + '">' + esc(c.n.trim()) + '<small>' + esc(c.m + ' (' + c.p + ')') + '</small></button>';
-    }).join('') + (n > MAX ? '<div class="nada">Y ' + (n - MAX) + ' más: escribe más para afinar.</div>' : '')
-      : '<div class="nada">Ninguna comunidad del IDAE coincide. Si no está registrada, prueba con una ' +
-        '<a href="#" data-a-prueba2>comunidad de prueba</a>.</div>';
-    var a2 = l.querySelector('[data-a-prueba2]');
-    if (a2) a2.onclick = function (e) { e.preventDefault(); $('form').querySelector('[name=modo][value=prueba]').checked = true; modo('prueba'); };
-    l.hidden = false; l.scrollTop = 0;
+  // Opciones del desplegable de comunidades: las de la provincia elegida que tienen todas las
+  // palabras de "Buscar" (sin acentos, en el nombre, municipio o provincia)
+  function rellenar() {
+    var f = $('form'), sel = f.elements.comunidad;
+    if (!LISTA) return;
+    var pr = f.elements.provincia.value, ps = norm(f.elements.buscar.value).split(/\s+/).filter(Boolean), hay = [];
+    LISTA.forEach(function (c, k) {
+      if ((!pr || c.p === pr) && ps.every(function (p) { return c._t.indexOf(p) >= 0; })) hay.push(k);
+    });
+    var antes = ELEGIDA ? LISTA.indexOf(ELEGIDA) : -1;
+    sel.innerHTML = '<option value="">' + (hay.length ? '— Elige tu comunidad (' + hay.length + ') —' : 'Ninguna coincide: cambia el filtro') + '</option>' +
+      hay.map(function (k) { var c = LISTA[k]; return '<option value="' + k + '">' + esc(c.n.trim() + ' — ' + c.m + (pr ? '' : ' (' + c.p + ')')) + '</option>'; }).join('');
+    if (hay.indexOf(antes) >= 0) sel.value = String(antes);
+    else if (antes >= 0) elegir(null);
   }
   function elegir(c) {
-    var fi = $('.ficha'), i = $('[name=comunidad]');
-    ELEGIDA = c || null; fi.hidden = !c; $('.lista').hidden = true;
+    var fi = $('.ficha');
+    ELEGIDA = c || null; fi.hidden = !c;
     if (!c) return;
-    i.value = c.etiqueta; limpiar('comunidad');
     fi.innerHTML = [['Municipio', c.m], ['Provincia', c.p], ['Comunidad autónoma', c.a || '–'],
                     ['Socios', c.s ? Number(c.s).toLocaleString('es-ES') : 'sin datos']].map(function (x) {
       return '<div><b>' + x[0] + '</b><span>' + esc(x[1]) + '</span></div>'; }).join('') +
@@ -11089,7 +11074,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       if (!e) { general(es[k]); return; }
       e.classList.add('mal'); e.querySelector('.err').textContent = es[k]; primero = primero || e;
     });
-    if (primero) { primero.scrollIntoView({ block: 'center' }); var i = primero.querySelector('input'); if (i) i.focus({ preventScroll: true }); }
+    if (primero) { primero.scrollIntoView({ block: 'center' }); var i = primero.querySelector('input,select'); if (i) i.focus({ preventScroll: true }); }
   }
   // Documento acreditativo -> { nombre, datos: base64 } (null si no se pide)
   function leerDocumento() {
@@ -11108,7 +11093,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     var f = $('form'), b = $('[data-enviar]'), TEXTO = 'Crear la plataforma de la comunidad';
     $('[data-general]').hidden = true;
     var prueba = MODO === 'prueba';
-    if (!prueba && !ELEGIDA) { errores({ comunidad: 'Escribe y pulsa en tu comunidad de la lista (comunidades registradas en el IDAE).' }); return; }
+    if (!prueba && !ELEGIDA) { errores({ comunidad: 'Elige tu comunidad en la lista (comunidades registradas en el IDAE).' }); return; }
     if (prueba && f.elements.prueba_nombre.value.trim().length < 3) { errores({ prueba_nombre: 'Pon un nombre a la comunidad de prueba (al menos 3 caracteres).' }); return; }
     if (!prueba && INFO && INFO.documento !== false && !f.elements.documento.files[0]) {
       errores({ documento: 'Adjunta un documento que acredite que eres gestor de la comunidad.' }); return; }
