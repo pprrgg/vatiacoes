@@ -2734,6 +2734,7 @@ COL6 = {1: "#fda38a", 2: "#fdbf9a", 3: "#fddcb0", 4: "#eef0b4", 5: "#cdeec2", 6:
 AUTO = ("auto", "Autoconsumo", "#8fc3f0")
 VERT = ("vert", "Excedentes", "#4caf7d")
 POT_BAJO, POT_ALTO, POT_LINEA = "#fcc265", "#f59a6b", "#f5b942"
+COSTE = "#7b2fa8"     # linea del coste de la energia (color de la plataforma)
 
 
 def es(v, n=2):
@@ -2785,18 +2786,32 @@ def _leyenda(items, ancho, y):
     return out
 
 
-def barras(etiquetas, series, ancho=760, alto=270, unidad="kWh", linea=None, salto=None):
+def _decimales(paso):
+    """Decimales para que las marcas del eje se lean exactas (0,25 -> 2; 2,5 -> 1; 5 -> 0)."""
+    n = 0
+    while n < 4 and abs(paso * 10 ** n - round(paso * 10 ** n)) > 1e-6:
+        n += 1
+    return n
+
+
+def _paso_redondo(bruto):
+    mag = 10 ** math.floor(math.log10(bruto)) if bruto > 0 else 1
+    return next(m * mag for m in (1, 2, 2.5, 5, 10) if m * mag >= bruto - 1e-12)
+
+
+def barras(etiquetas, series, ancho=760, alto=270, unidad="kWh", linea=None, salto=None, coste=None):
     """series: [{"n", "c", "v": [valor o None], "cs": [color por barra, opcional]}] apiladas;
     linea: {"n", "c", "v": [...]} escalonada (potencia contratada); salto: una etiqueta del eje X
-    cada tantas barras (por defecto, las que quepan)."""
+    cada tantas barras (por defecto, las que quepan); coste: {"n", "c", "v": [...], "unidad"}
+    linea con puntos en el eje de la derecha (coste en euros), con las mismas lineas de fondo."""
     n = max(len(etiquetas), 1)
     val = lambda s, i: s["v"][i] or 0
     tops = [sum(max(val(s, i), 0) for s in series) for i in range(len(etiquetas))]
     bots = [sum(min(val(s, i), 0) for s in series) for i in range(len(etiquetas))]
     extra = [v for v in (linea or {}).get("v", []) if v is not None]
     lo, hi, marcas, paso = _escala(min(bots + [0]), max(tops + extra + [0]) * 1.05 or 1)
-    dec = 0 if paso >= 1 else 1 if paso >= 0.1 else 2
-    ml, mr, mt, mb = 70, 12, 12, 52
+    dec = _decimales(paso)
+    ml, mr, mt, mb = 70, 62 if coste else 12, 12, 52
     pw, ph = ancho - ml - mr, alto - mt - mb
     y = lambda v: mt + ph * (hi - v) / (hi - lo)
     out = []
@@ -2818,6 +2833,21 @@ def barras(etiquetas, series, ancho=760, alto=270, unidad="kWh", linea=None, sal
                 y0, y1, abajo = y(abajo), y(abajo + v), abajo + v
             out.append(f'<rect x="{x0:.1f}" y="{y0:.1f}" width="{bw:.1f}" height="{max(y1 - y0, 0.3):.1f}" fill="{c}"/>')
     out.append(f'<line x1="{ml}" x2="{ancho - mr}" y1="{y(0):.1f}" y2="{y(0):.1f}" stroke="{GRIS_EJE}"/>')
+    cv = [v for v in (coste or {}).get("v", []) if v is not None]
+    if cv and hi > 0:   # eje derecho: tantos tramos como el izquierdo por encima de cero
+        k = max(1, round(hi / paso))
+        cpaso = _paso_redondo(max(cv) * 1.05 / k or 1)
+        cmax = cpaso * k
+        cdec = _decimales(cpaso)
+        yc = lambda v: y(v * hi / cmax)
+        for t in marcas:
+            if t >= 0:
+                out.append(_texto(ancho - mr + 6, y(t) + 3.5, f"{es(t / hi * cmax, cdec)} {coste.get('unidad', '€')}", 9.5,
+                                  color=coste["c"]))
+        pts = [(ml + banda * (i + 0.5), yc(v)) for i, v in enumerate(coste["v"]) if v is not None]
+        out.append(f'<path d="{" ".join(("M" if j == 0 else "L") + f"{a:.1f},{b:.1f}" for j, (a, b) in enumerate(pts))}" '
+                   f'fill="none" stroke="{coste["c"]}" stroke-width="1.8"/>')
+        out += [f'<circle cx="{a:.1f}" cy="{b:.1f}" r="2.6" fill="#fff" stroke="{coste["c"]}" stroke-width="1.5"/>' for a, b in pts]
     if linea:   # escalonada: un tramo horizontal por barra con dato (step: 'middle' del panel)
         d, previo = [], None
         for i, v in enumerate(linea["v"]):
@@ -2838,6 +2868,8 @@ def barras(etiquetas, series, ancho=760, alto=270, unidad="kWh", linea=None, sal
     ley = [(s["n"], s["c"]) for s in series if any(s["v"])]
     if linea and extra:
         ley.append((linea["n"], linea["c"]))
+    if cv:
+        ley.append((coste["n"], coste["c"]))
     return _svg(ancho, alto, out + _leyenda(ley, ancho, alto - 10))
 
 
@@ -3063,6 +3095,20 @@ PLANTILLA = r"""
   == #s.titulo_barras
   #figure(image(s.barras, width: 100%), caption: [#s.titulo_barras — #s.nombre])
   #text(8pt, fill: gris)[#s.nota_barras]
+
+  #if s.activa != none [
+    == Energía activa y coste por horas: día laborable y no laborable
+    #text(8pt, fill: gris)[#s.activa.nota_dias]
+    #for f in s.activa.dias [
+      #figure(image(f.svg, width: 100%), caption: [#f.titulo — #s.nombre])
+    ]
+    #ftabla(s.activa.tabla_dias, [Consumo de red y coste de la energía activa del día medio por periodos — #s.nombre], size: 8pt)
+
+    == Energía activa y coste de los doce últimos meses
+    #figure(image(s.activa.anual, width: 100%), caption: [Consumo de red por periodos y coste de la energía activa por meses — #s.nombre])
+    #ftabla(s.activa.tabla_anual, [Consumo de red por periodos y coste por meses — #s.nombre])
+    #text(8pt, fill: gris)[#s.activa.nota]
+  ]
 
   #if s.pot.len() > 0 [
     == Potencias máximas frente a la contratada
@@ -3379,6 +3425,111 @@ def _cifras(t, n, g, hay_gen, previo):
             dict(t, media=media, var=var, n=n))
 
 
+def _es_laborable(d):
+    return d.weekday() < 5 and (d.month, d.day) not in cec.FESTIVOS
+
+
+def _activa(cx, raiz, pref, sums_pj, pj_graf, desde, hasta):
+    """Energia activa de red y su coste (sin potencia ni reactiva): dia laborable y no laborable
+    medios del periodo del informe (por horas) y los doce meses que terminan en el del informe,
+    apilados por los periodos de pj_graf. sums_pj: [(cups, peaje)]; cada suministro se valora
+    con el precio de su peaje y de su periodo (precios de la comunidad, sin impuestos), asi que
+    el coste de la comunidad es la suma del de sus socios aunque sus kWh se pinten como 2.0TD."""
+    PR = _precios()
+    m1 = date(hasta.year, hasta.month, 1)
+    m0 = _mas_meses(m1, -11)
+    meses = [_mas_meses(m0, i) for i in range(12)]
+    im = {(m.year, m.month): i for i, m in enumerate(meses)}
+    C = G.categorias(pj_graf, False)                      # (p3, Valle...), de abajo arriba
+    P = [int(c[0][1:]) for c in C]
+    H = {t: [{p: 0.0 for p in P} for _ in range(24)] for t in ("lab", "fes")}
+    HC = {t: [0.0] * 24 for t in ("lab", "fes")}
+    dias = {"lab": set(), "fes": set()}
+    M, MC, mhay = [{p: 0.0 for p in P} for _ in meses], [0.0] * 12, [False] * 12
+    a0, a1 = min(_local(m0), _local(desde)), max(_local(hasta, 1), _local(_mas_meses(m1, 1)))
+    eper = cper = 0.0
+    for cups, pj in sums_pj:
+        pr = PR.get(_tarifa(pj), ({}, 0, 0))[0]
+        for ts, v in cec.lecturas(cx, [cups], a0, a1):
+            lt = datetime.fromtimestamp(ts / 1000, TZL)
+            k, dentro = im.get((lt.year, lt.month)), desde <= lt.date() <= hasta
+            if k is not None:
+                mhay[k] = True
+            t = "lab" if _es_laborable(lt) else "fes"
+            if dentro:
+                dias[t].add(lt.date())
+            e = v.get("consumo_kwh") or 0.0
+            if not e:
+                continue
+            pg, c = cec.periodo(lt, pj_graf), e * pr.get(cec.periodo(lt, pj), 0.0)
+            if k is not None:
+                M[k][pg] += e
+                MC[k] += c
+            if dentro:
+                H[t][lt.hour][pg] += e
+                HC[t][lt.hour] += c
+                eper += e
+                cper += c
+    if not (dias["lab"] or dias["fes"] or any(mhay)):
+        return None
+    nom = (lambda p: G.NOM3[p]) if pj_graf == "2.0TD" else (lambda p: f"P{p}")
+    eur = lambda v: _es(v) + " €"
+    horas = [f"{h + 1:02d}" for h in range(24)]
+    figs, filas_d = [], []
+    for t, titulo in (("lab", "Día laborable medio"), ("fes", "Día no laborable medio (fines de semana y festivos)")):
+        nd = len(dias[t])
+        if not nd:
+            continue
+        svg = f"{pref}_dia_{t}.svg"
+        Path(raiz, svg).write_text(G.barras(
+            horas, [{"n": c[1], "c": c[2], "v": [H[t][h][int(c[0][1:])] / nd for h in range(24)]} for c in C],
+            ancho=620, alto=250, salto=1,
+            coste={"n": "Coste (€)", "c": G.COSTE, "v": [HC[t][h] / nd for h in range(24)], "unidad": "€"}), encoding="utf-8")
+        figs.append({"svg": svg, "titulo": f"{titulo}: consumo de red por horas y periodos y coste de la energía activa "
+                                           f"(media de {nd} día{'s' if nd > 1 else ''})"})
+        e_p = {p: sum(H[t][h][p] for h in range(24)) / nd for p in P}
+        e, c = sum(e_p.values()), sum(HC[t]) / nd
+        filas_d.append([titulo.split(" (")[0]] + [_es(e_p[p]) for p in reversed(P)] + [_es(e), eur(c),
+                       _es(c / e, 4) if e else "–"])
+    # Doce meses
+    svg_a = f"{pref}_anual.svg"
+    etq = [f"{MESES[m.month - 1]} {m.year % 100:02d}" for m in meses]
+    Path(raiz, svg_a).write_text(G.barras(
+        etq, [{"n": c[1], "c": c[2], "v": [M[i][int(c[0][1:])] if mhay[i] else None for i in range(12)]} for c in C],
+        ancho=620, alto=270, salto=1,
+        coste={"n": "Coste (€)", "c": G.COSTE, "v": [MC[i] if mhay[i] else None for i in range(12)], "unidad": "€"}),
+        encoding="utf-8")
+    filas_a, sp, se, sc = [], {p: 0.0 for p in P}, 0.0, 0.0
+    for i, m in enumerate(meses):
+        if not mhay[i]:
+            continue
+        e = sum(M[i].values())
+        for p in P:
+            sp[p] += M[i][p]
+        se, sc = se + e, sc + MC[i]
+        filas_a.append([f"{MESES_L[m.month - 1]} {m.year}"] + [_es(M[i][p]) for p in reversed(P)] +
+                       [_es(e), eur(MC[i]), _es(MC[i] / e, 4) if e else "–"])
+    if filas_a:
+        filas_a.append(["Total"] + [_es(sp[p]) for p in reversed(P)] + [_es(se), eur(sc), _es(sc / se, 4) if se else "–"])
+    cab = [nom(p) + " (kWh)" for p in reversed(P)] + ["Total (kWh)", "Coste", "€/kWh"]
+    from . import gestion
+    defecto = gestion.precios().get("defecto")
+    varios = len({_tarifa(pj) for _, pj in sums_pj}) > 1
+    return {"dias": figs, "anual": svg_a, "coste": cper, "energia": eper,
+            "tabla_dias": {"cabecera": ["Día medio"] + cab, "texto": 1, "total": False, "filas": filas_d},
+            "tabla_anual": {"cabecera": ["Mes"] + cab, "texto": 1, "total": bool(filas_a), "filas": filas_a},
+            "nota_dias": f"Media de los días del periodo del informe ({_periodo({'desde': desde, 'hasta': hasta})}) por hora de "
+                         "fin (01 = de 0 a 1 h): consumo de red apilado por periodos del peaje (de valle, abajo, a punta) y, en la "
+                         "línea, su coste en el eje de la derecha. Laborables: de lunes a viernes, salvo festivos nacionales.",
+            "nota": "Solo energía activa: el coste es el consumo de red de cada hora por el precio de su periodo "
+                    "(precio fijo por periodos del mercado libre, con peajes y cargos y sin impuestos" +
+                    (", aproximado por defecto: el gestor puede poner los de la comunidad en Consumos → Costes de la energía" if defecto
+                     else ", los de la comunidad en Consumos → Costes de la energía") +
+                    "). No incluye el término de potencia, la energía reactiva, el alquiler del contador ni la compensación "
+                    "de excedentes." + (" Cada socio se valora con los precios de su peaje y sus periodos, aunque la comunidad "
+                                        "se represente con los periodos del 2.0TD." if varios else "")}
+
+
 def _seccion(cx, raiz, pref, nombre, sub, cups, pj, desde, hasta, horaria=False):
     """Un capitulo (comunidad o socio), siempre con la misma estructura: cifras, anillo,
     periodos anteriores, consumo apilado y tabla de energia (potencias y contrato los
@@ -3438,9 +3589,18 @@ def _seccion(cx, raiz, pref, nombre, sub, cups, pj, desde, hasta, horaria=False)
     cifras, num = _cifras(t, n, g, hay_gen, vtot[-2][1])
     return {"nombre": nombre, "corto": nombre.split(": ", 1)[-1], "sub": sub, "cifras": cifras, "num": dict(num, gen_hay=hay_gen),
             "dona": f"{pref}_dona.svg", "vecinos": f"{pref}_vecinos.svg", "barras": f"{pref}_barras.svg",
-            "titulo_barras": titulo, "nota_barras": nota, "pot": [], "contrato": None, "resumen": None,
+            "titulo_barras": titulo, "nota_barras": nota, "pot": [], "contrato": None, "resumen": None, "activa": None,
             "titulo_tabla": "Energía " + {"hora": "horaria", "dia": "diaria", "mes": "mensual"}[g] + " (kWh)",
             "tabla": {"cabecera": cab, "texto": 1, "total": bool(filas_t), "filas": filas_t}}
+
+
+def _con_activa(sec, a):
+    """Graficos de energia activa y coste en el capitulo, y el coste en sus cifras."""
+    sec["activa"] = a
+    sec["num"]["coste"] = a["coste"] if a else None
+    if a and a["energia"]:
+        sec["cifras"]["filas"].append(["Coste de la energía activa de red (sin impuestos ni potencia)",
+                                       f"{_es(a['coste'])} € ({_es(a['coste'] / a['energia'], 4)} €/kWh)"])
 
 
 def _resumen_pdf(D):
@@ -3469,6 +3629,7 @@ GLOSARIO = [
     ("Consumo total", "Consumo de red más autoconsumo: toda la energía que utiliza el suministro."),
     ("CUPS", "Código Universal del Punto de Suministro: identifica cada suministro eléctrico."),
     ("Curva de carga", "Serie de lecturas horarias o cuartohorarias de energía de un contador."),
+    ("Día laborable", "De lunes a viernes, salvo festivos nacionales; el resto (fines de semana y festivos), no laborable."),
     ("Datadis", "Plataforma de las distribuidoras españolas que publica las lecturas de los contadores (con uno o varios días de retraso)."),
     ("Excedentes (vertido)", "Energía generada que no se consume y se entrega a la red."),
     ("Generación FV", "Energía producida por la instalación fotovoltaica."),
@@ -3512,7 +3673,11 @@ def _metodo(cfg, D, socios, g):
             "Energía en kWh y potencia en kW, con coma decimal. Consumo total = consumo de red + autoconsumo. Saldo con la "
             "red = consumo de red − excedentes (+ recibe, − aporta). En los gráficos de consumo, los periodos se apilan de "
             "valle (abajo) a punta (arriba), el autoconsumo encima y los excedentes por debajo de cero; son los mismos "
-            "gráficos que el panel de la comunidad."]},
+            "gráficos que el panel de la comunidad.",
+            "Coste de la energía activa: consumo de red de cada hora por el precio de su periodo (precios de la comunidad, "
+            "sin impuestos); no incluye el término de potencia, la energía reactiva ni la compensación de excedentes. Los "
+            "días medios laborable y no laborable son la media, hora a hora, de los días de cada tipo del periodo; el año "
+            "por meses cubre los doce meses que terminan en el del informe."]},
     ]
 
 
@@ -3533,6 +3698,8 @@ def _resumen(cfg, D, secciones):
         p += (f" y {_es(x['auto'])} kWh ({_es(100 * x['auto'] / x['total'], 1) if x['total'] else '0'} %) se cubrieron con "
               f"autoconsumo. La generación fotovoltaica sumó {_es(x['gen'])} kWh y los excedentes vertidos, {_es(x['vert'])} kWh")
     p += f". El saldo con la red fue de {_es(x['red'] - x['vert'])} kWh."
+    if x.get("coste"):
+        p += f" La energía activa tomada de la red costó {_es(x['coste'])} € (precios por periodos, sin impuestos ni término de potencia)."
     if x["var"] is not None:
         p += f" Respecto al periodo anterior de la misma duración, el consumo {'aumentó' if x['var'] > 0 else 'disminuyó'} un {_es(abs(x['var']), 1)} %."
     out.append(p)
@@ -3580,6 +3747,8 @@ def a_pdf(D):
             # Para un socio (agregado), sin las tablas por socio
             sec["resumen"], sec["resumen_p"] = (None, None) if D.get("agregado") else _resumen_pdf(D)
             sec["titulo_tabla"] += " de la comunidad"
+            _con_activa(sec, _activa(cx, raiz, "com", [(s["cups"], s["peaje"] or "2.0TD") for _, s in sums], "2.0TD",
+                                     D["desde"], D["hasta"]))
             secciones.append(sec)
         for i, (so, s) in enumerate([] if D.get("agregado") else sums):
             c = s["contrato"] or {}
@@ -3589,6 +3758,8 @@ def a_pdf(D):
             sec = _seccion(cx, raiz, f"s{i}", ("Socio: " if D["comunidad"] else "") + so["nombre"], sub, [s["cups"]],
                            s["peaje"] or "2.0TD", D["desde"], D["hasta"])
             sec["pot"] = _potencias(cx, s["cups"], c, D["hasta"], raiz, f"s{i}")
+            _con_activa(sec, _activa(cx, raiz, f"s{i}", [(s["cups"], s["peaje"] or "2.0TD")], s["peaje"] or "2.0TD",
+                                     D["desde"], D["hasta"]))
             sec["contrato"] = _contrato(c) if c else None
             secciones.append(sec)
         if not secciones:
@@ -7078,6 +7249,22 @@ ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento bytea;
 ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento_nombre text;
 ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento_tipo text;
 
+-- Restablecer la contraseña desde el inicio de sesion (app/alta.py, sin email: la plataforma
+-- no envia correos): la persona pide la contraseña nueva y el superusuario, tras comprobar
+-- que es ella, la aplica en su panel. hash: bcrypt de la contraseña nueva (se borra al
+-- aplicarla, rechazarla o caducar a los 7 dias)
+CREATE TABLE IF NOT EXISTS clave (
+  id          text PRIMARY KEY,
+  email       text NOT NULL,
+  nombre      text NOT NULL,
+  telefono    text,
+  mensaje     text,
+  hash        text,
+  estado      text NOT NULL DEFAULT 'revision' CHECK (estado IN ('revision', 'aplicada', 'rechazada', 'caducada')),
+  creada      timestamptz NOT NULL DEFAULT now(),
+  actualizado timestamptz NOT NULL DEFAULT now()
+);
+
 -- Copias de las comunidades que han salido de la plataforma (descargas del gestor): sha256 y
 -- base. El gestor solo puede subir y restaurar copias con una huella de aqui (app/copias.huella)
 CREATE TABLE IF NOT EXISTS copia_huella (
@@ -8645,8 +8832,10 @@ def _idae():
 def comunidades():
     """Comunidades del IDAE para elegir en el formulario de alta del inicio de sesion de
     ThingsBoard (como la pagina de alta de la web): nombre, municipio, provincia, autonomia,
-    socios, web y la etiqueta de la lista."""
+    socios, web, posicion y tipo (para el mapa: t, np proyectos, kw renovable electrica) y la
+    etiqueta de la lista."""
     out = [{"n": c["n"], "m": c["m"], "p": c["p"], "a": c.get("a"), "s": c.get("s"), "w": c.get("w"),
+            "lat": c.get("lat"), "lon": c.get("lon"), "t": c.get("t") or "sin", "np": c.get("np") or 0, "kw": c.get("kw") or 0,
             "etiqueta": f"{c['n'].strip()} — {c['m']} ({c['p']})"} for c in _idae().values()]
     return sorted(out, key=lambda c: c["etiqueta"].lower())
 
@@ -8675,19 +8864,26 @@ def _texto(v, minimo, maximo):
     return t if minimo <= len(t) <= maximo and "|" not in t else None
 
 
-def _comunidad_prueba(sel):
-    """Comunidad de prueba (no esta en el IDAE): solo nombre y municipio del formulario. Su
-    nombre en la plataforma lleva "(prueba)" y no pide documento acreditativo."""
+def _comunidad_virtual(sel):
+    """Comunidad virtual (no esta en el IDAE), para estudios con socios virtuales: nombre,
+    ubicacion pulsada en el mapa (lat, lon) y municipio opcional. Su nombre en la plataforma
+    lleva "(virtual)" y no pide documento acreditativo."""
     sel = sel if isinstance(sel, dict) else {}
     err = {}
     n = _texto(sel.get("nombre"), 3, 100)
     m = _texto(sel.get("municipio"), 0, 60) or ""
     if not n:
-        err["prueba_nombre"] = "Pon un nombre a la comunidad de prueba (de 3 a 100 caracteres)."
+        err["virtual_nombre"] = "Pon un nombre a la comunidad virtual (de 3 a 100 caracteres)."
+    try:
+        lat, lon = float(sel.get("lat")), float(sel.get("lon"))
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            raise ValueError
+    except (TypeError, ValueError):
+        err["virtual_lugar"] = "Pulsa en el mapa dónde está la comunidad."
     if err:
         raise Errores(err)
-    return {"comunidad": f"{n} (prueba)", "idae_nombre": None, "municipio": m, "provincia": "", "autonomia": None,
-            "lat": None, "lon": None, "socios_idae": None, "web": None, "prueba": True}
+    return {"comunidad": f"{n} (virtual)", "idae_nombre": None, "municipio": m, "provincia": "", "autonomia": None,
+            "lat": round(lat, 6), "lon": round(lon, 6), "socios_idae": None, "web": None, "virtual": True}
 
 
 def _documento(v):
@@ -8715,8 +8911,8 @@ def _validar(f):
     de alli); del formulario solo se registra el gestor. Lo de la comunidad y el gestor lo
     comprueba ademas plataforma.validar_comunidad, igual que en el panel del superusuario."""
     err = {}
-    prueba = f.get("prueba") is True
-    d = _comunidad_prueba(f.get("prueba_datos")) if prueba else _comunidad_idae(f.get("idae"))
+    virtual = f.get("virtual") is True
+    d = _comunidad_virtual(f.get("virtual_datos")) if virtual else _comunidad_idae(f.get("idae"))
     d.update(contacto=_texto(f.get("contacto"), 3, 80), email=str(f.get("email") or "").strip().lower(),
              telefono=_texto(f.get("telefono"), 0, 30) or "")
     pw = str(f.get("password") or "")
@@ -8730,7 +8926,7 @@ def _validar(f):
         err["password"] = "La contraseña debe tener al menos 8 caracteres."
     elif pw != str(f.get("password2") or ""):
         err["password2"] = "Las contraseñas no coinciden."
-    doc = None if prueba else _documento(f.get("documento"))
+    doc = None if virtual else _documento(f.get("documento"))
     if isinstance(doc, str):
         err["documento"] = doc
     if f.get("acepta") is not True:
@@ -8743,8 +8939,8 @@ def _validar(f):
     except ValueError as e:
         if "gestor" in str(e) or "Email" in str(e):
             raise Errores({"email": str(e)})
-        raise Errores({"prueba_nombre" if prueba else "comunidad":
-                       "Ya hay una comunidad de prueba con ese nombre: elige otro." if prueba else
+        raise Errores({"virtual_nombre" if virtual else "comunidad":
+                       "Ya hay una comunidad virtual con ese nombre: elige otro." if virtual else
                        "Esta comunidad ya está dada de alta en la plataforma. Si eres su gestor, entra con tu usuario."})
     if plataforma._hashes_tb([d["email"]]):
         raise Errores({"email": "Ese email ya es usuario de la plataforma."})
@@ -8836,7 +9032,7 @@ def lista():
         return [dict(r, creada=r["creada"].isoformat())
                 for r in cx.execute(
                     "SELECT id, comunidad_id, comunidad, datos->>'comunidad' AS nombre, datos->>'municipio' AS municipio, datos->>'provincia' AS provincia, "
-                    "datos->>'contacto' AS contacto, datos->>'email' AS email, (datos->>'prueba') IS NOT NULL AS prueba, socios, estado, error, creada, "
+                    "datos->>'contacto' AS contacto, datos->>'email' AS email, (datos->>'virtual') IS NOT NULL AS virtual, socios, estado, error, creada, "
                     "documento_nombre FROM alta "
                     "ORDER BY creada DESC LIMIT 200").fetchall()]
 
@@ -8889,6 +9085,129 @@ def rechazar(aid):
             raise KeyError(aid)
         raise ValueError("Solo se rechazan las altas en revisión")
     log.info("alta online %s rechazada", aid)
+    return "rechazada"
+
+
+# ---------------- restablecer la contraseña (inicio de sesion) ----------------
+# Como el alta: la plataforma no envia correos, asi que "Solicitar restablecimiento de
+# contraseña" deja la peticion (con el hash de la contraseña nueva que elige la persona) en el
+# panel del superusuario, que comprueba que es ella y la aplica (o la rechaza). La respuesta
+# es la misma exista o no el email (no se revela quien es usuario).
+CLAVE_MAX_DIA = 50       # peticiones en 24 h (todas)
+CLAVE_DIAS = 7           # las que no se atienden caducan (y se borra su hash)
+
+
+def clave_solicitud(f):
+    f = f if isinstance(f, dict) else {}
+    err = {}
+    email = str(f.get("email") or "").strip().lower()
+    nombre = _texto(f.get("nombre"), 3, 80)
+    tel = _texto(f.get("telefono"), 0, 30) or ""
+    mensaje = " ".join(str(f.get("mensaje") or "").split())[:500]
+    pw = str(f.get("password") or "")
+    if not plataforma.EMAIL.match(email) or len(email) > 120:
+        err["email"] = "El email no es válido."
+    if not nombre:
+        err["nombre"] = "Indica tu nombre y apellidos."
+    if tel and not re.match(r"^[+\d][\d\s]{6,19}$", tel):
+        err["telefono"] = "El teléfono no es válido."
+    if len(pw) < 8:
+        err["password"] = "La contraseña debe tener al menos 8 caracteres."
+    elif pw != str(f.get("password2") or ""):
+        err["password2"] = "Las contraseñas no coinciden."
+    if err:
+        raise Errores(err)
+    with _cx() as cx:
+        n = cx.execute("SELECT count(*) AS n FROM clave WHERE creada > now() - interval '1 day'").fetchone()["n"]
+        if n >= CLAVE_MAX_DIA:
+            log.warning("restablecer contraseña: tope de %s peticiones en 24 h alcanzado", CLAVE_MAX_DIA)
+            raise Errores({"general": "Hoy se han recibido muchas peticiones. Inténtalo mañana o escríbenos a info@vatiaco.es."})
+        # una sola pendiente por email: la nueva sustituye a la anterior
+        cx.execute("UPDATE clave SET estado = 'rechazada', hash = NULL, actualizado = now() "
+                   "WHERE email = %s AND estado = 'revision'", (email,))
+        cx.execute("INSERT INTO clave (id, email, nombre, telefono, mensaje, hash) VALUES (%s, %s, %s, %s, %s, %s)",
+                   (secrets.token_urlsafe(12), email, nombre, tel, mensaje, plataforma._hash(pw)))
+    log.info("restablecer contraseña: petición para %s", email)
+    return {"ok": True}
+
+
+def _usuarios_tb(emails):
+    """email -> {authority, tenant_id, tenant} de los usuarios de ThingsBoard."""
+    emails = [e.lower() for e in emails if e]
+    if not emails:
+        return {}
+    with plataforma._tb_cx() as t:
+        return {r["email"]: r for r in t.execute(
+            "SELECT lower(u.email) AS email, u.authority, u.tenant_id::text AS tenant_id, t.title AS tenant "
+            "FROM tb_user u LEFT JOIN tenant t ON t.id = u.tenant_id WHERE lower(u.email) = ANY(%s)", (emails,)).fetchall()}
+
+
+def _quien(u, coms):
+    if not u:
+        return "No es usuario de la plataforma"
+    if u["authority"] == "SYS_ADMIN":
+        return "Administrador del sistema (no se cambia aquí)"
+    c = coms.get(u["tenant_id"])
+    com = c["nombre"] if c else u["tenant"] or "?"
+    if u["email"] == (E.get("SUPER_EMAIL") or "").lower():
+        return "Superusuario"
+    return ("Gestor de " if u["authority"] == "TENANT_ADMIN" else "Socio de ") + com
+
+
+def claves():
+    """Peticiones de restablecer la contraseña (las de los ultimos 90 dias) y quien es cada una."""
+    with _cx() as cx:
+        cx.execute("UPDATE clave SET estado = 'caducada', hash = NULL, actualizado = now() "
+                   "WHERE estado = 'revision' AND creada < now() - make_interval(days => %s)", (CLAVE_DIAS,))
+        filas = cx.execute("SELECT id, email, nombre, telefono, mensaje, estado, creada FROM clave "
+                           "WHERE creada > now() - interval '90 days' ORDER BY creada DESC LIMIT 200").fetchall()
+    us = _usuarios_tb([r["email"] for r in filas])
+    coms = {str(c["tenant_id"]): c for c in plataforma.lista() if c.get("tenant_id")}
+    out = []
+    for r in filas:
+        u = us.get(r["email"])
+        out.append(dict(r, creada=r["creada"].isoformat(), quien=_quien(u, coms),
+                        aplicable=bool(u) and u["authority"] != "SYS_ADMIN"))
+    return out
+
+
+def clave_aplicar(rid):
+    """El superusuario aplica la contraseña nueva: se pone su hash al usuario de ThingsBoard y
+    se copia a PostgreSQL (gestor.hash o socio.hash de su comunidad, superusuario.hash)."""
+    with _cx() as cx:
+        r = cx.execute("SELECT * FROM clave WHERE id = %s", (rid,)).fetchone()
+    if not r:
+        raise KeyError(rid)
+    if r["estado"] != "revision" or not r["hash"]:
+        raise ValueError("Solo se aplican las peticiones en revisión")
+    u = _usuarios_tb([r["email"]]).get(r["email"])
+    if not u:
+        raise ValueError(f"{r['email']} no es usuario de la plataforma: rechaza la petición")
+    if u["authority"] == "SYS_ADMIN":
+        raise ValueError("La contraseña del administrador del sistema no se cambia desde aquí")
+    plataforma._poner_hashes({r["email"]: r["hash"]})
+    with _cx() as cx:
+        cx.execute("UPDATE clave SET estado = 'aplicada', hash = NULL, actualizado = now() WHERE id = %s", (rid,))
+    try:     # el hash viaja en las copias (se copia tambien antes de cada una)
+        if r["email"] == (E.get("SUPER_EMAIL") or "").lower():
+            plataforma.preparar_superusuario()
+        c = next((c for c in plataforma.lista() if str(c.get("tenant_id") or "") == u["tenant_id"]), None)
+        if c:
+            plataforma.guardar_credenciales(c)
+    except Exception:
+        log.exception("restablecer contraseña de %s: copia del hash", r["email"])
+    log.info("restablecer contraseña: aplicada la de %s", r["email"])
+    return "aplicada"
+
+
+def clave_rechazar(rid):
+    with _cx() as cx:
+        r = cx.execute("UPDATE clave SET estado = 'rechazada', hash = NULL, actualizado = now() "
+                       "WHERE id = %s AND estado = 'revision' RETURNING id", (rid,)).fetchone()
+        if not r and not cx.execute("SELECT 1 FROM clave WHERE id = %s", (rid,)).fetchone():
+            raise KeyError(rid)
+    if not r:
+        raise ValueError("Solo se rechazan las peticiones en revisión")
     return "rechazada"
 __FASTAPI_EOF__
 
@@ -9615,12 +9934,7 @@ async def alta_comunidades():
         raise HTTPException(502, "No se puede consultar ahora la lista de comunidades del IDAE")
 
 
-@app.post("/alta/solicitud", summary="Formulario de alta (con el documento del gestor en base64) (pública)")
-async def alta_solicitud(request: Request):
-    ahora, ip = time.time(), request.client.host if request.client else "?"
-    maximo = (alta.DOC_MAX_MB * 4 // 3 + 1) * 1024 * 1024    # el documento en base64 y el formulario
-    if int(request.headers.get("content-length") or 0) > maximo:
-        raise HTTPException(413, f"El documento ocupa más de {alta.DOC_MAX_MB} MB.")
+def _limitar(ip, ahora):
     if len(_INTENTOS) > 5000:
         for k in [k for k, v in _INTENTOS.items() if ahora - v[-1] >= 600]:
             del _INTENTOS[k]
@@ -9628,6 +9942,15 @@ async def alta_solicitud(request: Request):
     if len(lista) >= 10:
         raise HTTPException(429, "Demasiados intentos. Prueba de nuevo en unos minutos.")
     _INTENTOS[ip] = lista + [ahora]
+
+
+@app.post("/alta/solicitud", summary="Formulario de alta (con el documento del gestor en base64) (pública)")
+async def alta_solicitud(request: Request):
+    ahora, ip = time.time(), request.client.host if request.client else "?"
+    maximo = (alta.DOC_MAX_MB * 4 // 3 + 1) * 1024 * 1024    # el documento en base64 y el formulario
+    if int(request.headers.get("content-length") or 0) > maximo:
+        raise HTTPException(413, f"El documento ocupa más de {alta.DOC_MAX_MB} MB.")
+    _limitar(ip, ahora)
     cuerpo = bytearray()
     async for trozo in request.stream():
         cuerpo += trozo
@@ -9654,6 +9977,24 @@ async def alta_estado(alta_id: str = Query(..., alias="alta", pattern=r"^[A-Za-z
         return await asyncio.to_thread(alta.estado, alta_id)
     except KeyError:
         raise HTTPException(404, "Alta no encontrada")
+
+
+@app.post("/alta/clave", summary="Restablecer la contraseña: la petición queda en el panel del superusuario (pública)")
+async def alta_clave(request: Request):
+    _limitar(request.client.host if request.client else "?", time.time())
+    if int(request.headers.get("content-length") or 0) > 8192:
+        raise HTTPException(413, "Formulario demasiado grande")
+    try:
+        datos = json.loads(await request.body())
+    except ValueError:
+        raise HTTPException(400, "Formulario no válido")
+    try:
+        return await asyncio.to_thread(alta.clave_solicitud, datos)
+    except alta.Errores as e:
+        return JSONResponse({"errores": e.errores}, 422)
+    except Exception:
+        log.exception("restablecer contraseña")
+        raise HTTPException(502, "No se ha podido enviar la petición. Inténtalo de nuevo en unos minutos.")
 
 
 # ---------------- acceso de los gestores a la API de ThingsBoard ----------------
@@ -10632,6 +10973,25 @@ async def plataforma_alta_rechazar(aid: str, quien: str = Depends(superusuario))
     return {"estado": r}
 
 
+@app.get("/plataforma/claves", summary="Peticiones de restablecer la contraseña desde el inicio de sesión")
+async def plataforma_claves(_: str = Depends(superusuario)):
+    return await asyncio.to_thread(alta.claves)
+
+
+@app.post("/plataforma/claves/{rid}/aplicar", summary="Pone la contraseña nueva que pidió el usuario")
+async def plataforma_clave_aplicar(rid: str, quien: str = Depends(superusuario)):
+    r = await asyncio.to_thread(_plat, alta.clave_aplicar, rid)
+    log.info("%s aplica la petición de contraseña %s", quien, rid)
+    return {"estado": r}
+
+
+@app.post("/plataforma/claves/{rid}/rechazar", summary="Rechaza una petición de contraseña (no cambia nada)")
+async def plataforma_clave_rechazar(rid: str, quien: str = Depends(superusuario)):
+    r = await asyncio.to_thread(_plat, alta.clave_rechazar, rid)
+    log.info("%s rechaza la petición de contraseña %s", quien, rid)
+    return {"estado": r}
+
+
 @app.post("/plataforma/comunidades/{cid}/entrar",
           summary="Token para entrar en el panel de la comunidad como su gestor")
 async def plataforma_entrar(cid: str, quien: str = Depends(superusuario)):
@@ -10888,14 +11248,21 @@ EOF
 # API de alta (/cec-api/alta/*, la misma que la web) y sigue el alta hasta que esta creada.
 cat > config/branding/VatiaCo-alta.js <<'EOF'
 (function () {
-  var API = '/cec-api', INFO = null, LISTA = null, ELEGIDA = null, ALTA = null, MODO = 'idae';
+  var API = '/cec-api', INFO = null, LISTA = null, ELEGIDA = null, ALTA = null, MODO = 'idae', PUNTO = null;
+  // sin ALTA_ONLINE (data-alta="no") solo se usa lo de restablecer la contraseña
+  var SIN_ALTA = !!(document.currentScript && document.currentScript.getAttribute('data-alta') === 'no');
+  // Mapa de las comunidades (como https://vatiaco.es/comunidades/): Leaflet de cdnjs, la misma
+  // version que la web y los paneles
+  var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/', LF = null, MAPA = null;
+  var TIPOS = { electrica: ['#f5a623', 'Renovable eléctrica'], mixta: ['#2e9d6b', 'Eléctrica y térmica'],
+                termica: ['#e0541f', 'Renovable térmica'], otras: ['#8e44ad', 'Otras actividades'], sin: ['#888c96', 'Sin proyectos registrados'] };
   var CSS = '#vl-alta{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.35);display:flex;align-items:flex-start;' +
     'justify-content:center;padding:16px;overflow:auto;font:13px Roboto,Arial,sans-serif;color:#333}' +
     '#vl-alta *{box-sizing:border-box}' +
     '#vl-alta .vf{background:#fff;border-radius:6px;padding:14px 16px;width:min(720px,100%);box-shadow:0 4px 20px rgba(0,0,0,.25);margin:auto 0}' +
     '#vl-alta h4{margin:0 0 4px;color:#7b2fa8;font-size:15px;font-weight:700}' +
     '#vl-alta .sub{display:block;margin-bottom:10px;color:#888;font-size:12px}' +
-    '#vl-alta .sec{margin:14px 0 6px;padding-top:8px;border-top:1px solid #f0f0f0;font-weight:700;font-size:12px;color:#7b2fa8}' +
+    '#vl-alta div.sec{margin:14px 0 6px;padding-top:8px;border-top:1px solid #f0f0f0;font-weight:700;font-size:12px;color:#7b2fa8}' +
     '#vl-alta .campos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px 12px}' +
     '#vl-alta label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#555}' +
     '#vl-alta .ancho{grid-column:1/-1}' +
@@ -10928,14 +11295,34 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     '#vl-alta .modo label.on{background:#7b2fa8;color:#fff;font-weight:700}' +
     '@media (max-width:600px){#vl-alta{padding:6px}#vl-alta .vf{padding:12px}#vl-alta input,#vl-alta select{font-size:16px;padding:8px}' +
     '#vl-alta .pie .b{flex:1;padding:10px 12px}}' +
+    '#vl-alta .mapa-w{position:relative;height:320px;margin-bottom:6px;border:1px solid #ddd;border-radius:4px;overflow:hidden;isolation:isolate;background:#eef0f3}' +
+    '#vl-alta .mapa-w .m{position:absolute;inset:0}' +
+    '#vl-alta .mapa-w .ca{position:absolute;left:6px;bottom:6px;width:38%;max-width:180px;height:100px;inset:auto auto 6px 6px;z-index:500;' +
+    'border:1px solid #aaa;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.25)}' +
+    '#vl-alta .mapa-w .ca .leaflet-control-attribution{display:none}' +
+    '#vl-alta .mapa-w .cargando{position:absolute;inset:0;display:grid;place-items:center;color:#888;font-size:12px}' +
+    '#vl-alta .ayuda-mapa{display:block;margin:0 0 6px;color:#7b2fa8;font-size:12px}' +
+    '#vl-alta .mapa-w.punto .m{cursor:crosshair}' +
+    '.vl-pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#7b2fa8;border:3px solid #fff;' +
+    'box-shadow:0 2px 6px rgba(0,0,0,.5)}' +
+    '#vl-alta .leyenda{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 8px;font-size:11.5px;color:#666}' +
+    '#vl-alta .leyenda i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:0}' +
+    '.vl-mk{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:2px solid rgba(255,255,255,.9);' +
+    'box-shadow:0 1px 5px rgba(0,0,0,.45);cursor:pointer}' +
+    '.vl-mk.on{width:30px;height:30px;margin:-4px 0 0 -4px;font-size:14px;border:3px solid #7b2fa8;box-shadow:0 0 0 4px rgba(123,47,168,.3)}' +
+    '.vl-grupo{display:grid;place-items:center;border-radius:50%;background:rgba(123,47,168,.85);color:#fff;font:600 12px/1 Roboto,Arial,sans-serif;' +
+    'border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(123,47,168,.25)}' +
+    '.leaflet-tooltip.vl-tip{font:12px Roboto,Arial,sans-serif;max-width:240px;white-space:normal}' +
+    '@media (max-width:600px){#vl-alta .mapa-w{height:min(340px,48vh)}}' +
     '#vl-alta [hidden]{display:none!important}';
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); }
   function json(r) { return r.json().catch(function () { return {}; }).then(function (c) { return { ok: r.ok, c: c }; }); }
   function $(s) { var m = document.getElementById('vl-alta'); return m && m.querySelector(s); }
 
   function cerrar() {
+    if (MAPA) { try { MAPA.m.remove(); MAPA.c.remove(); } catch (e) { /* ya quitado */ } MAPA = null; }
     var m = document.getElementById('vl-alta'); if (m) m.remove();
-    document.removeEventListener('keydown', tecla); ALTA = null;
+    document.removeEventListener('keydown', tecla); ALTA = null; PUNTO = null;
   }
   function tecla(e) { if (e.key === 'Escape') cerrar(); }
   function campo(k, txt, extra, ayuda, ancho) {
@@ -10955,22 +11342,28 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       '<div class="aviso" data-inactiva hidden></div>' +
       '<div class="sec">La comunidad</div>' +
       '<div class="modo" role="radiogroup"><label class="on"><input type="radio" name="modo" value="idae" checked>De la lista del IDAE</label>' +
-      '<label><input type="radio" name="modo" value="prueba">Comunidad de prueba</label></div>' +
+      '<label><input type="radio" name="modo" value="virtual">Comunidad virtual</label></div>' +
+      '<small class="ayuda-mapa" data-modo="virtual" hidden>Pulsa en el mapa dónde está la comunidad (puedes arrastrar la chincheta para afinar).</small>' +
+      '<div class="mapa-w" hidden><div class="m"></div><div class="ca"></div><div class="cargando">Cargando el mapa…</div></div>' +
+      '<div class="leyenda" hidden></div>' +
       '<div data-modo="idae"><div class="campos">' +
       campo('buscar', 'Buscar (opcional)', ' type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" ' +
             'enterkeyhint="done" placeholder="Parte del nombre o del municipio"') +
       '<label data-campo="provincia">Provincia<select name="provincia"><option value="">Todas</option></select><span class="err"></span></label>' +
       '<label class="ancho" data-campo="comunidad"><span class="req">Comunidad energética</span>' +
       '<select name="comunidad"><option value="">Cargando la lista del IDAE…</option></select>' +
-      '<small>Las registradas en el IDAE. Filtra por provincia o escribe en «Buscar» para acortar la lista. ¿No aparece? Prueba la plataforma con una ' +
-      '<a href="#" data-a-prueba>comunidad de prueba</a> o <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">escríbenos</a>.</small>' +
+      '<small>Las registradas en el IDAE: pulsa en ella en el mapa o elígela aquí (filtra por provincia o escribe en «Buscar» para acortar la lista). ¿No aparece? Crea una ' +
+      '<a href="#" data-a-virtual>comunidad virtual</a> o <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">escríbenos</a>.</small>' +
       '<span class="err"></span></label>' +
       '</div><div class="ficha" hidden></div></div>' +
-      '<div data-modo="prueba" hidden><div class="campos">' +
-      campo('prueba_nombre', '<span class="req">Nombre de la comunidad de prueba</span>', ' maxlength="100" autocomplete="off"', '', true) +
-      campo('prueba_municipio', 'Municipio (opcional)', ' maxlength="60" autocomplete="address-level2"') +
-      '</div><small>Para conocer la plataforma: se crea con el nombre que pongas y «(prueba)» al final, sin documento acreditativo. ' +
-      'Puedes añadir socios virtuales con perfiles de consumo y generación simulados.</small></div>' +
+      '<div data-modo="virtual" hidden><div class="campos">' +
+      campo('virtual_nombre', '<span class="req">Nombre de la comunidad virtual</span>', ' maxlength="100" autocomplete="off"', '', true) +
+      '<label data-campo="virtual_lugar"><span class="req">Ubicación</span><input name="virtual_lugar" readonly placeholder="Pulsa en el mapa">' +
+      '<span class="err"></span></label>' +
+      campo('virtual_municipio', 'Municipio (opcional)', ' maxlength="60" autocomplete="address-level2"') +
+      '</div><small>Para estudios con socios virtuales (perfiles de consumo y generación simulados, sin Datadis): se crea con el nombre ' +
+      'que pongas y «(virtual)» al final, en la ubicación del mapa (allí se sitúan la comunidad y sus socios). ' +
+      'No pide documento acreditativo.</small></div>' +
       '<div class="sec">Gestor de la comunidad</div><div class="campos">' +
       campo('contacto', '<span class="req">Nombre y apellidos</span>', ' maxlength="80" autocomplete="name"', '', true) +
       campo('email', '<span class="req">Email</span>', ' type="email" maxlength="120" autocomplete="email"', 'Es tu usuario para entrar en la plataforma.') +
@@ -11000,7 +11393,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       else if (n === 'comunidad') { limpiar('comunidad'); elegir(e.target.value === '' ? null : LISTA[+e.target.value]); }
     });
     f.elements.buscar.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); f.elements.comunidad.focus(); } });
-    $('[data-a-prueba]').onclick = function (e) { e.preventDefault(); f.querySelector('[name=modo][value=prueba]').checked = true; modo('prueba'); };
+    $('[data-a-virtual]').onclick = function (e) { e.preventDefault(); f.querySelector('[name=modo][value=virtual]').checked = true; modo('virtual'); };
     f.addEventListener('submit', enviar);
     cargar();
     // (en el movil no: abriria el teclado nada mas abrir el modal)
@@ -11017,6 +11410,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       $('[name=provincia]').innerHTML = '<option value="">Todas</option>' + Object.keys(ps).sort(function (x, y) { return x.localeCompare(y, 'es'); })
         .map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('');
       rellenar();
+      mapa();
       if (INFO.url_condiciones) $('.u-cond').href = INFO.url_condiciones;
       if (INFO.url_privacidad) $('.u-priv').href = INFO.url_privacidad;
       if (INFO.aprobacion === false) $('.cuando').textContent = 'al momento';
@@ -11032,14 +11426,16 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
   }
   // Sin acentos ni mayusculas, para buscar
   function norm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-  // IDAE o prueba: cada uno con sus campos; la de prueba no pide documento
+  // IDAE o virtual: cada uno con sus campos (el mapa es de los dos: en el de la virtual se
+  // pulsa su ubicacion); la virtual no pide documento
   function modo(v) {
-    MODO = v === 'prueba' ? 'prueba' : 'idae';
+    MODO = v === 'virtual' ? 'virtual' : 'idae';
     [].forEach.call($('form').querySelectorAll('.modo label'), function (l) { l.classList.toggle('on', l.querySelector('input').checked); });
-    $('[data-modo=idae]').hidden = MODO !== 'idae';
-    $('[data-modo=prueba]').hidden = MODO !== 'prueba';
-    $('[data-campo=documento]').hidden = MODO === 'prueba' || (INFO && INFO.documento === false);
-    var i = $(MODO === 'prueba' ? '[name=prueba_nombre]' : '[name=buscar]'); if (i && document.activeElement && document.activeElement.name === 'modo') i.focus({ preventScroll: true });
+    [].forEach.call($('form').querySelectorAll('[data-modo]'), function (e) { e.hidden = e.dataset.modo !== MODO; });
+    $('.mapa-w').classList.toggle('punto', MODO === 'virtual');
+    if (MAPA) setTimeout(function () { MAPA.m.invalidateSize(); MAPA.c.invalidateSize(); MAPA.c.fitBounds(CANARIAS); }, 0);
+    $('[data-campo=documento]').hidden = MODO === 'virtual' || (INFO && INFO.documento === false);
+    var i = $(MODO === 'virtual' ? '[name=virtual_nombre]' : '[name=buscar]'); if (i && document.activeElement && document.activeElement.name === 'modo') i.focus({ preventScroll: true });
   }
   // Opciones del desplegable de comunidades: las de la provincia elegida que tienen todas las
   // palabras de "Buscar" (sin acentos, en el nombre, municipio o provincia)
@@ -11056,9 +11452,115 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     if (hay.indexOf(antes) >= 0) sel.value = String(antes);
     else if (antes >= 0) elegir(null);
   }
-  function elegir(c) {
+  // Leaflet y su agrupacion de marcadores, una vez. Si la pagina ya tiene la de ThingsBoard
+  // (tras cerrar sesion la pagina no se recarga y queda su L 1.9 con markercluster) se usa esa:
+  // mezclar dos Leaflet en la misma pagina rompe los marcadores
+  function leaflet() {
+    if (LF) return LF;
+    function css(u) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = LEAFLET + u; document.head.appendChild(l); }
+    function js(u) { return new Promise(function (ok, mal) { var e = document.createElement('script'); e.src = LEAFLET + u; e.onload = ok; e.onerror = mal; document.head.appendChild(e); }); }
+    var hay = window.L && window.L.map && window.L.divIcon;
+    if (!hay) css('leaflet/1.9.4/leaflet.min.css');
+    if (!(hay && window.L.markerClusterGroup)) css('leaflet.markercluster/1.5.3/MarkerCluster.min.css');
+    LF = (hay ? Promise.resolve() : js('leaflet/1.9.4/leaflet.min.js'))
+      .then(function () { return window.L.markerClusterGroup ? null : js('leaflet.markercluster/1.5.3/leaflet.markercluster.min.js'); })
+      .then(function () { if (!window.L || !window.L.markerClusterGroup) throw new Error('Leaflet'); return window.L; });
+    LF.catch(function () { LF = null; });
+    return LF;
+  }
+  var CANARIAS = [[27.6, -18.2], [29.45, -13.3]];
+  // Mapa con las comunidades del IDAE: peninsula y Baleares (agrupadas) y recuadro de Canarias.
+  // Al pulsar una, queda elegida (y se ponen su provincia y ella en los desplegables). Sin
+  // conexion con cdnjs se queda solo con los desplegables.
+  function mapa() {
+    var w = $('.mapa-w'); if (!w || MAPA) return;
+    w.hidden = false;
+    leaflet().then(function (L) {
+      if (!$('.mapa-w')) return;        // (modal cerrado)
+      var capa = function () { return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }); };
+      var m = L.map(w.querySelector('.m'), { zoomSnap: 0.25 }), c = L.map(w.querySelector('.ca'), {
+        zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+        boxZoom: false, keyboard: false, touchZoom: false, zoomSnap: 0.25 });
+      capa().addTo(m); capa().addTo(c);
+      var grupo = L.markerClusterGroup({ maxClusterRadius: 38, showCoverageOnHover: false, spiderfyOnMaxZoom: true,
+        iconCreateFunction: function (cl) { var n = cl.getChildCount(), d = n < 10 ? 28 : n < 50 ? 34 : 40;
+          return L.divIcon({ html: '<div class="vl-grupo" style="width:' + d + 'px;height:' + d + 'px">' + n + '</div>', className: '', iconSize: [d, d] }); } });
+      var mks = {}, pen = [];
+      LISTA.forEach(function (x, k) {
+        if (x.lat == null || x.lon == null) return;
+        var mk = L.marker([x.lat, x.lon], { icon: icono(L, x, false), title: x.n, keyboard: true });
+        mk.bindTooltip('<b>' + esc(x.n.trim()) + '</b><br>' + esc(x.m + ' · ' + x.p) + (x.s ? '<br>' + Number(x.s).toLocaleString('es-ES') + ' socios' : ''),
+                       { className: 'vl-tip', direction: 'top', offset: [0, -10] });
+        mk.on('click keypress', function () { if (MODO === 'virtual') punto(mk.getLatLng()); else elegirDeMapa(k); });
+        mks[k] = mk;
+        if (x.lat < 30) c.addLayer(mk); else { grupo.addLayer(mk); pen.push([x.lat, x.lon]); }
+      });
+      if (!pen.length) { m.remove(); c.remove(); w.hidden = true; return; }   // (API sin posiciones)
+      m.addLayer(grupo);
+      m.fitBounds(L.latLngBounds(pen).pad(0.03));
+      // el recuadro de Canarias solo con la vista de toda España (de cerca tapa el mapa)
+      var ver = function () { w.querySelector('.ca').style.visibility = m.getZoom() > 7 ? 'hidden' : ''; };
+      m.on('zoomend', ver); ver();
+      c.fitBounds(CANARIAS);
+      MAPA = { L: L, m: m, c: c, grupo: grupo, mks: mks, on: null, pin: null };
+      m.on('click', function (e) { if (MODO === 'virtual') punto(e.latlng); });
+      c.on('click', function (e) { if (MODO === 'virtual') punto(e.latlng); });
+      if (PUNTO) punto(PUNTO);
+      w.querySelector('.cargando').remove();
+      var ley = {}; LISTA.forEach(function (x) { ley[x.t] = (ley[x.t] || 0) + 1; });
+      var lg = $('.leyenda');
+      lg.innerHTML = Object.keys(TIPOS).filter(function (t) { return ley[t]; }).map(function (t) {
+        return '<span><i style="background:' + TIPOS[t][0] + '"></i>' + TIPOS[t][1] + ' (' + ley[t] + ')</span>'; }).join('');
+      lg.hidden = false;
+      resaltar(false);
+    }, function () { var x = $('.mapa-w'); if (x) x.hidden = true; });
+  }
+  function icono(L, x, on) {
+    var col = (TIPOS[x.t] || TIPOS.sin)[0];
+    return L.divIcon({ className: '', html: '<div class="vl-mk' + (on ? ' on' : '') + '" style="background:' + col + '">⚡</div>',
+                       iconSize: [22, 22], iconAnchor: [11, 11] });
+  }
+  // Ubicacion de la comunidad virtual: chincheta (arrastrable) en el mapa principal
+  function punto(ll) {
+    PUNTO = { lat: Math.round(ll.lat * 1e6) / 1e6, lng: Math.round(ll.lng * 1e6) / 1e6 };
+    var i = $('[name=virtual_lugar]');
+    if (i) { i.value = PUNTO.lat.toLocaleString('es-ES', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + ', ' +
+                       PUNTO.lng.toLocaleString('es-ES', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); limpiar('virtual_lugar'); }
+    if (!MAPA) return;
+    var L = MAPA.L;
+    if (!MAPA.pin) {
+      MAPA.pin = L.marker([PUNTO.lat, PUNTO.lng], { draggable: true, zIndexOffset: 2000, title: 'Ubicación de la comunidad virtual',
+        icon: L.divIcon({ className: '', html: '<div class="vl-pin"></div>', iconSize: [26, 26], iconAnchor: [3, 30] }) }).addTo(MAPA.m);
+      MAPA.pin.on('dragend', function () { punto(MAPA.pin.getLatLng()); });
+    } else MAPA.pin.setLatLng([PUNTO.lat, PUNTO.lng]);
+    if (!MAPA.m.getBounds().contains([PUNTO.lat, PUNTO.lng])) MAPA.m.setView([PUNTO.lat, PUNTO.lng], Math.max(MAPA.m.getZoom(), 8));
+  }
+  // La elegida, destacada en el mapa (y, si se eligio en los desplegables, el mapa va hasta ella)
+  function resaltar(desdeMapa) {
+    if (!MAPA) return;
+    var k = ELEGIDA ? LISTA.indexOf(ELEGIDA) : -1;
+    if (MAPA.on != null && MAPA.mks[MAPA.on]) { MAPA.mks[MAPA.on].setIcon(icono(MAPA.L, LISTA[MAPA.on], false)).setZIndexOffset(0); }
+    MAPA.on = k >= 0 && MAPA.mks[k] ? k : null;
+    if (MAPA.on == null) return;
+    var mk = MAPA.mks[k];
+    mk.setIcon(icono(MAPA.L, ELEGIDA, true)).setZIndexOffset(1000);
+    if (desdeMapa || ELEGIDA.lat < 30) return;
+    MAPA.grupo.zoomToShowLayer(mk, function () { MAPA.m.setView(mk.getLatLng(), Math.max(MAPA.m.getZoom(), 10)); });
+  }
+  function elegirDeMapa(k) {
+    var f = $('form'), c = LISTA[k];
+    ELEGIDA = c;
+    f.elements.buscar.value = ''; f.elements.provincia.value = c.p || '';
+    rellenar();
+    f.elements.comunidad.value = String(k);
+    limpiar('comunidad');
+    elegir(c, true);
+  }
+  function elegir(c, desdeMapa) {
     var fi = $('.ficha');
     ELEGIDA = c || null; fi.hidden = !c;
+    resaltar(desdeMapa);
     if (!c) return;
     fi.innerHTML = [['Municipio', c.m], ['Provincia', c.p], ['Comunidad autónoma', c.a || '–'],
                     ['Socios', c.s ? Number(c.s).toLocaleString('es-ES') : 'sin datos']].map(function (x) {
@@ -11074,12 +11576,13 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       if (!e) { general(es[k]); return; }
       e.classList.add('mal'); e.querySelector('.err').textContent = es[k]; primero = primero || e;
     });
+    if (primero && primero.dataset.campo === 'virtual_lugar' && !$('.mapa-w').hidden) { $('.mapa-w').scrollIntoView({ block: 'center' }); return; }
     if (primero) { primero.scrollIntoView({ block: 'center' }); var i = primero.querySelector('input,select'); if (i) i.focus({ preventScroll: true }); }
   }
   // Documento acreditativo -> { nombre, datos: base64 } (null si no se pide)
   function leerDocumento() {
     var f = $('[name=documento]').files[0], max = (INFO && INFO.documento_max_mb) || 5;
-    if (!f || MODO === 'prueba' || (INFO && INFO.documento === false)) return Promise.resolve(null);
+    if (!f || MODO === 'virtual' || (INFO && INFO.documento === false)) return Promise.resolve(null);
     if (f.size > max * 1024 * 1024) return Promise.reject({ documento: 'El documento ocupa más de ' + max + ' MB.' });
     return new Promise(function (ok, mal) {
       var r = new FileReader();
@@ -11092,15 +11595,20 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     e.preventDefault();
     var f = $('form'), b = $('[data-enviar]'), TEXTO = 'Crear la plataforma de la comunidad';
     $('[data-general]').hidden = true;
-    var prueba = MODO === 'prueba';
-    if (!prueba && !ELEGIDA) { errores({ comunidad: 'Elige tu comunidad en la lista (comunidades registradas en el IDAE).' }); return; }
-    if (prueba && f.elements.prueba_nombre.value.trim().length < 3) { errores({ prueba_nombre: 'Pon un nombre a la comunidad de prueba (al menos 3 caracteres).' }); return; }
-    if (!prueba && INFO && INFO.documento !== false && !f.elements.documento.files[0]) {
+    var virtual = MODO === 'virtual';
+    if (!virtual && !ELEGIDA) { errores({ comunidad: 'Elige tu comunidad en la lista (comunidades registradas en el IDAE).' }); return; }
+    if (virtual) {
+      var ev = {};
+      if (f.elements.virtual_nombre.value.trim().length < 3) ev.virtual_nombre = 'Pon un nombre a la comunidad virtual (al menos 3 caracteres).';
+      if (!PUNTO) ev.virtual_lugar = MAPA ? 'Pulsa en el mapa dónde está la comunidad.' : 'No se ha podido cargar el mapa para elegir la ubicación. Inténtalo de nuevo.';
+      if (ev.virtual_nombre || ev.virtual_lugar) { errores(ev); return; }
+    }
+    if (!virtual && INFO && INFO.documento !== false && !f.elements.documento.files[0]) {
       errores({ documento: 'Adjunta un documento que acredite que eres gestor de la comunidad.' }); return; }
     var v = function (k) { return f.elements[k]; };
     var d = { contacto: v('contacto').value, email: v('email').value, telefono: v('telefono').value, password: v('password').value,
               password2: v('password2').value, acepta: v('acepta').checked };
-    if (prueba) { d.prueba = true; d.prueba_datos = { nombre: v('prueba_nombre').value, municipio: v('prueba_municipio').value }; }
+    if (virtual) { d.virtual = true; d.virtual_datos = { nombre: v('virtual_nombre').value, municipio: v('virtual_municipio').value, lat: PUNTO.lat, lon: PUNTO.lng }; }
     else d.idae = { n: ELEGIDA.n, m: ELEGIDA.m };
     b.disabled = true; b.textContent = 'Enviando…';
     leerDocumento().then(function (doc) {
@@ -11166,9 +11674,89 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     b.onclick = abrir;
     r.parentNode.insertBefore(b, r);
   }
-  new MutationObserver(boton).observe(document.documentElement, { childList: true, subtree: true });
-  boton();
-  window.VL_ALTA = abrir;
+  // "Solicitar restablecimiento de contraseña" (/login/resetPasswordRequest): la plataforma no
+  // envia correos, asi que en lugar de la peticion de ThingsBoard se abre un modal donde la
+  // persona elige la contraseña nueva; la peticion queda en el panel del superusuario, que la
+  // aplica tras comprobar que es ella (/cec-api/alta/clave)
+  function abrirClave(email) {
+    if (document.getElementById('vl-alta')) return;
+    if (!document.getElementById('vl-alta-css')) {
+      var st = document.createElement('style'); st.id = 'vl-alta-css'; st.textContent = CSS; document.head.appendChild(st);
+    }
+    var m = document.createElement('div');
+    m.id = 'vl-alta'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-labelledby', 'vl-alta-tit');
+    m.innerHTML = '<form class="vf" novalidate style="width:min(520px,100%)"><h4 id="vl-alta-tit">Restablecer la contraseña</h4>' +
+      '<small class="sub">La plataforma no envía correos: elige aquí tu contraseña nueva y el administrador la pondrá en cuanto ' +
+      'compruebe que eres tú (puede llamarte). Hasta entonces sigue valiendo la actual.</small>' +
+      '<div class="campos">' +
+      campo('email', '<span class="req">Email</span>', ' type="email" maxlength="120" autocomplete="username"', 'Tu usuario de la plataforma.', true) +
+      campo('nombre', '<span class="req">Nombre y apellidos</span>', ' maxlength="80" autocomplete="name"', '', true) +
+      campo('telefono', 'Teléfono (opcional)', ' type="tel" maxlength="20" autocomplete="tel"', 'Para comprobar que eres tú.', true) +
+      campo('password', '<span class="req">Contraseña nueva</span>', ' type="password" autocomplete="new-password"', 'Al menos 8 caracteres.') +
+      campo('password2', '<span class="req">Repite la contraseña</span>', ' type="password" autocomplete="new-password"') +
+      campo('mensaje', 'Mensaje (opcional)', ' maxlength="500" autocomplete="off"', 'Por ejemplo, tu comunidad o cuándo llamarte.', true) +
+      '</div><div class="aviso" data-general hidden></div>' +
+      '<div class="pie"><button type="button" class="b sec" data-cancelar>Cancelar</button>' +
+      '<button type="submit" class="b" data-enviar>Enviar la petición</button></div></form>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function (e) { if (e.target === m) cerrar(); });
+    document.addEventListener('keydown', tecla);
+    $('[data-cancelar]').onclick = cerrar;
+    var f = $('form');
+    f.elements.email.value = email || '';
+    f.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); });
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var b = $('[data-enviar]'), v = function (k) { return f.elements[k].value; }, ev = {};
+      $('[data-general]').hidden = true;
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('email').trim())) ev.email = 'El email no es válido.';
+      if (v('nombre').trim().length < 3) ev.nombre = 'Indica tu nombre y apellidos.';
+      if (v('password').length < 8) ev.password = 'La contraseña debe tener al menos 8 caracteres.';
+      else if (v('password') !== v('password2')) ev.password2 = 'Las contraseñas no coinciden.';
+      if (Object.keys(ev).length) { errores(ev); return; }
+      b.disabled = true; b.textContent = 'Enviando…';
+      fetch(API + '/alta/clave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        email: v('email'), nombre: v('nombre'), telefono: v('telefono'), password: v('password'), password2: v('password2'), mensaje: v('mensaje') }) })
+        .then(json).then(function (x) {
+          if (x.ok) {
+            var correo = v('email').trim();
+            f.innerHTML = '<h4 id="vl-alta-tit">Restablecer la contraseña</h4><div class="aviso ok">Petición enviada. Cuando el administrador ' +
+              'la aplique podrás entrar con <b>' + esc(correo) + '</b> y la contraseña nueva; mientras tanto sigue valiendo la actual. ' +
+              'Si ese email no es usuario de la plataforma, no se cambia nada.</div>' +
+              '<div class="pie"><button type="button" class="b" data-volver>Volver al inicio de sesión</button></div>';
+            $('[data-volver]').onclick = function () {
+              cerrar();
+              var c = document.querySelector('tb-reset-password-request button[routerlink="/login"]');
+              if (c) c.click(); else location.href = '/login';
+            };
+            return;
+          }
+          if (x.c.errores) errores(x.c.errores);
+          else general(x.c.detail || 'No se ha podido enviar la petición. Inténtalo de nuevo.');
+          b.disabled = false; b.textContent = 'Enviar la petición';
+        }).catch(function () {
+          general('No hay conexión con la plataforma. Inténtalo de nuevo en unos minutos.');
+          b.disabled = false; b.textContent = 'Enviar la petición';
+        });
+    });
+    var foco = email ? f.elements.nombre : f.elements.email;
+    if (window.matchMedia && matchMedia('(pointer: fine)').matches) foco.focus();
+  }
+  function interceptar(e) {
+    var r = e.target.closest && e.target.closest('tb-reset-password-request');
+    if (!r || (e.type === 'click' && !e.target.closest('button[type=submit]'))) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    var i = r.querySelector('input[formcontrolname=email]');
+    abrirClave(i ? i.value.trim() : '');
+  }
+  document.addEventListener('submit', interceptar, true);
+  document.addEventListener('click', interceptar, true);
+
+  if (!SIN_ALTA) {
+    new MutationObserver(boton).observe(document.documentElement, { childList: true, subtree: true });
+    boton();
+    window.VL_ALTA = abrir;
+  }
 })();
 EOF
 
@@ -11763,9 +12351,9 @@ login = ("<script>(function(){var T={'username-input':" + json.dumps(txt_usuario
          "new MutationObserver(f).observe(document.documentElement,{childList:true,subtree:true,characterData:true});})();"
          "</script>")
 idioma += login
-# Inicio de sesion: boton "Dar de alta una comunidad" y su modal (config/branding/VatiaCo-alta.js)
-if alta_online != "no":
-    idioma += '<script src="/branding/VatiaCo-alta.js" defer></script>'
+# Inicio de sesion (config/branding/VatiaCo-alta.js): boton "Dar de alta una comunidad" y su
+# modal (con ALTA_ONLINE) y el de restablecer la contraseña (siempre)
+idioma += '<script src="/branding/VatiaCo-alta.js"' + (' data-alta="no"' if alta_online == "no" else '') + ' defer></script>'
 # Paneles a pantalla completa forzada (gestores y socios, encerrados en su panel): sin
 # el boton de editar del panel (ademas, la API no deja guardar cambios a los gestores)
 idioma += ("<script>(function(){function f(){document.querySelectorAll('tb-dashboard-toolbar.is-fullscreen button')"
@@ -15408,7 +15996,13 @@ AYUDA = {
     "<i>en revisión</i> hasta que la apruebas (se crea la comunidad) o la rechazas (no se crea nada, y se borra el "
     "documento). Antes revisa con <i>Documento</i> el que adjuntó el gestor (acta, nombramiento…) y comprueba que es "
     "de esa comunidad; al aprobarla, avísale por email. Si la creación falla, queda en "
-    "<i>error</i>: corrige la causa y pulsa <i>Reintentar</i>."]]],
+    "<i>error</i>: corrige la causa y pulsa <i>Reintentar</i>."],
+   ["¿Qué hago con las peticiones de restablecer la contraseña?",
+    "Llegan desde <i>¿Olvidaste tu contraseña?</i> en el inicio de sesión (la plataforma no envía correos) y se ven en "
+    "<i>Restablecer contraseñas</i>, con quién es en la plataforma (gestor o socio de qué comunidad). Cada una trae la "
+    "contraseña nueva que eligió la persona: comprueba que la pide ella (llámala al teléfono que tenéis de ella) y pulsa "
+    "<i>Aplicar</i>; después avísale de que ya puede entrar. <i>Rechazar</i> no cambia nada. Las que no se atienden "
+    "caducan a los 7 días."]]],
   ["Copias de seguridad", "storage", [
    ["¿Qué se puede copiar?",
     "Cada base de datos por separado: la de los <b>gestores</b> (registro de la plataforma: gestores, comunidades y "
@@ -15520,6 +16114,14 @@ PLAT_HTML = """<div class="al">
    verifica), pulsa <i>Aprobar</i> y avísale por
    email. Al aprobar, la API la crea como si la creara el superusuario. Si la creación falla queda en <i>error</i>:
    corrige la causa y pulsa <i>Reintentar</i>.</p>
+ </section>
+ <section class="al-caja al-claves al-oculto">
+  <h3>Restablecer contraseñas <span class="al-chip al-nclaves"></span></h3>
+  <div class="al-ctabla"></div>
+  <p>Peticiones de <i>¿Olvidaste tu contraseña?</i> en el inicio de sesión (la plataforma no envía correos). Cada una trae la
+   contraseña nueva que eligió la persona. Antes de pulsar <i>Aplicar</i> comprueba que la pide ella (por ejemplo, llámala al
+   teléfono que tenéis de ella, no solo al que ha puesto aquí) y después avísale de que ya puede entrar. <i>Rechazar</i> no
+   cambia nada. Las que no se atienden caducan a los 7 días.</p>
  </section>
  <section class="al-caja al-form">
   <h3 class="al-titulo">Nuevo gestor y su comunidad</h3>
@@ -15637,7 +16239,7 @@ self.onInit = function () {
       q('al-altas').classList.toggle('al-oculto', !filas.length);
       q('al-atabla').innerHTML = '<table><tr><th>Comunidad</th><th>Municipio</th><th>Gestor</th><th class="n">Socios (IDAE)</th><th>Estado</th><th>Fecha</th><th></th></tr>' +
         filas.map(function (a) {
-          return '<tr><td><b>' + esc(a.nombre) + '</b>' + (a.prueba ? ' <span class="al-chip">prueba</span>' : '') + '<br><small>' + esc(a.comunidad_id) + '</small></td><td>' + esc(a.municipio) + '<br><small>' + esc(a.provincia) + '</small></td>' +
+          return '<tr><td><b>' + esc(a.nombre) + '</b>' + (a.virtual ? ' <span class="al-chip">virtual</span>' : '') + '<br><small>' + esc(a.comunidad_id) + '</small></td><td>' + esc(a.municipio) + '<br><small>' + esc(a.provincia) + '</small></td>' +
             '<td>' + esc(a.contacto) + '<br><small>' + esc(a.email) + '</small></td>' +
             '<td class="n">' + a.socios + '</td>' +
             '<td>' + (ALTA_EST[a.estado] || esc(a.estado)) + (a.error ? '<br><small title="' + esc(a.error) + '">' + esc(a.error.slice(-120)) + '</small>' : '') + '</td>' +
@@ -15669,8 +16271,38 @@ self.onInit = function () {
       }; });
     }).catch(function () {});
   }
+  var CLAVE_EST = { revision: '<span class="al-chip">en revisión</span>', aplicada: '<span class="al-chip ok">aplicada</span>',
+                    rechazada: '<span class="al-chip no">rechazada</span>', caducada: '<span class="al-chip no">caducada</span>' };
+  function claves() {
+    api('GET', '/plataforma/claves').then(function (filas) {
+      var pend = filas.filter(function (r) { return r.estado === 'revision'; }).length;
+      q('al-claves').classList.toggle('al-oculto', !filas.length);
+      q('al-nclaves').textContent = pend ? pend + ' por atender' : '';
+      q('al-nclaves').style.display = pend ? '' : 'none';
+      q('al-ctabla').innerHTML = '<table><tr><th>Persona</th><th>Usuario</th><th>Mensaje</th><th>Estado</th><th>Fecha</th><th></th></tr>' +
+        filas.map(function (r) {
+          return '<tr><td><b>' + esc(r.nombre) + '</b><br><small>' + esc(r.email) + '</small>' + (r.telefono ? '<br><small>' + esc(r.telefono) + '</small>' : '') + '</td>' +
+            '<td>' + (r.aplicable ? esc(r.quien) : '<span class="al-chip no">' + esc(r.quien) + '</span>') + '</td>' +
+            '<td>' + (r.mensaje ? '<small>' + esc(r.mensaje) + '</small>' : '–') + '</td>' +
+            '<td>' + (CLAVE_EST[r.estado] || esc(r.estado)) + '</td><td>' + fecha(r.creada) + '</td>' +
+            '<td class="acc">' + (r.estado === 'revision' ? (r.aplicable ? '<button class="al-b peq" data-cap="' + esc(r.id) + '" data-e="' + esc(r.email) + '">Aplicar</button> ' : '') +
+              '<button class="al-b peq sec" data-cre="' + esc(r.id) + '" data-e="' + esc(r.email) + '">Rechazar</button>' : '') + '</td></tr>';
+        }).join('') + '</table>';
+      [].forEach.call(c.querySelectorAll('[data-cap]'), function (b) { b.onclick = function () {
+        if (!confirm('¿Poner a ' + b.dataset.e + ' la contraseña que ha pedido? Comprueba antes que la pide esa persona.')) return;
+        tarea(api('POST', '/plataforma/claves/' + encodeURIComponent(b.dataset.cap) + '/aplicar').then(function () {
+          msg('Contraseña cambiada: avisa a ' + b.dataset.e + ' de que ya puede entrar con la que eligió.', 'ok'); }));
+      }; });
+      [].forEach.call(c.querySelectorAll('[data-cre]'), function (b) { b.onclick = function () {
+        if (!confirm('¿Rechazar la petición de ' + b.dataset.e + '? Su contraseña no cambia.')) return;
+        tarea(api('POST', '/plataforma/claves/' + encodeURIComponent(b.dataset.cre) + '/rechazar').then(function () {
+          msg('Petición rechazada.', 'ok'); }));
+      }; });
+    }).catch(function () {});
+  }
   function lista() {
     altas();
+    claves();
     api('GET', '/plataforma/comunidades').then(function (filas) {
       P.filas = filas;
       if (P.bases.length) pintarBases();   // gestores de la lista de copias
