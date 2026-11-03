@@ -1,0 +1,699 @@
+---
+import { getDocsTree, type DocNode } from '../data/docs.ts';
+
+const docsTree: DocNode[] = await getDocsTree();
+
+function escapeHtml(text: string) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const CARET_SVG =
+  '<svg aria-hidden="true" class="caret" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg>';
+
+function buildMenuHtml(items: DocNode[], level = 0): string {
+  let html = '';
+  for (const item of items) {
+    if (item.type === 'folder') {
+      html += `<li class="folder"><details${level === 0 ? ' open' : ''}><summary><span class="group-label"><span class="${level === 0 ? 'large' : ''}">${escapeHtml(item.title)}</span></span>${CARET_SVG}</summary><ul>${buildMenuHtml(item.children, level + 1)}</ul></details></li>`;
+    } else {
+      html += `<li class="file"><a class="doc-link" href="${escapeHtml(item.url)}"><span>${escapeHtml(item.title)}</span></a></li>`;
+    }
+  }
+  return html;
+}
+
+const docsMenuHtml = `<ul class="top-level">${buildMenuHtml(docsTree)}</ul>`;
+const DEFAULT_DOC_URL = '/docs/home/index.html';
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VatiaCo Blog de un ingeniero jubilado</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, system-ui, sans-serif;
+        --nav-height: 3.5rem;
+
+        --color-accent-low: #17264f;
+        --color-accent: #3369ff;
+        --color-accent-high: #b3c7ff;
+        --color-white: #ffffff;
+        --color-gray-1: #edeef3;
+        --color-gray-2: #c1c3c8;
+        --color-gray-3: #888c96;
+        --color-gray-4: #555962;
+        --color-gray-5: #353841;
+        --color-gray-6: #23262f;
+        --color-black: #17181c;
+
+        --color-text: var(--color-gray-2);
+        --color-text-accent: var(--color-accent-high);
+        --color-bg: var(--color-black);
+        --color-bg-nav: var(--color-gray-6);
+        --color-bg-sidebar: var(--color-gray-6);
+        --color-hairline-shade: var(--color-black);
+
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --color-accent-low: #cfd4fc;
+        --color-accent: #3d50f5;
+        --color-accent-high: #0f1c8a;
+        --color-white: #17181c;
+        --color-gray-1: #23262f;
+        --color-gray-2: #353841;
+        --color-gray-3: #555962;
+        --color-gray-4: #888c96;
+        --color-gray-5: #c1c3c8;
+        --color-gray-6: #edeef3;
+        --color-black: #ffffff;
+      }
+      @media (min-width: 800px) {
+        :root {
+          --nav-height: 4rem;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* ---------- Top nav ---------- */
+      .topnav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 1rem;
+        height: var(--nav-height);
+        padding: 0 1rem;
+        background: var(--color-bg-nav);
+        border-bottom: 1px solid var(--color-hairline-shade);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+      }
+      @media (min-width: 800px) {
+        .topnav {
+          padding: 0 1.5rem;
+        }
+      }
+      .title-wrapper {
+        min-width: 0;
+        overflow: hidden;
+      }
+      .site-title {
+        display: inline-flex;
+        align-items: center;
+        font-size: 1.15rem;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+      }
+      .site-title .brand-paco {
+        color: var(--color-white);
+      }
+      .site-title .brand-roman {
+        color: #ff8c00;
+      }
+      .header-search-group {
+        min-width: 0;
+        display: flex;
+        justify-content: center;
+      }
+      .search-trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        height: 2.5rem;
+        width: 100%;
+        max-width: 22rem;
+        padding-inline: 0.75rem 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--color-gray-5);
+        background: var(--color-bg);
+        color: var(--color-gray-2);
+      }
+      .search-trigger:focus-within {
+        border-color: var(--color-accent);
+      }
+      .search-trigger svg {
+        flex-shrink: 0;
+      }
+      .search-trigger input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: var(--color-white);
+        font: inherit;
+        font-size: 0.875rem;
+      }
+      .search-trigger input:focus {
+        outline: none;
+      }
+      .search-trigger input::placeholder {
+        color: var(--color-gray-3);
+      }
+      .search-trigger kbd {
+        display: inline-flex;
+        gap: 0.25em;
+        flex-shrink: 0;
+      }
+      .search-trigger kbd kbd {
+        font-family: inherit;
+        font-size: 0.7rem;
+        background: var(--color-gray-6);
+        border-radius: 0.25rem;
+        padding-inline: 0.375rem;
+        padding-block: 0.1rem;
+      }
+      @media (max-width: 799px) {
+        .search-trigger kbd {
+          display: none;
+        }
+      }
+      .right-group {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-width: 0;
+      }
+      .theme-select {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: var(--color-gray-2);
+      }
+      .theme-select:hover {
+        color: var(--color-white);
+      }
+      .theme-select svg {
+        pointer-events: none;
+      }
+      .theme-select select {
+        appearance: none;
+        background: transparent;
+        border: 0;
+        color: inherit;
+        font: inherit;
+        font-size: 0.875rem;
+        cursor: pointer;
+        padding: 0.5rem 1.5rem 0.5rem 1.5rem;
+      }
+      .theme-select option {
+        background: var(--color-bg-nav);
+        color: var(--color-gray-1);
+      }
+      .theme-select .theme-icon {
+        position: absolute;
+        left: 0;
+      }
+      .theme-select .theme-caret {
+        position: absolute;
+        right: 0;
+      }
+      @media (max-width: 799px) {
+        .theme-select {
+          display: none;
+        }
+      }
+      .burger {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: var(--color-gray-5);
+        color: var(--color-gray-2);
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+      }
+
+      /* ---------- Layout ---------- */
+      .page {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        min-height: calc(100vh - var(--nav-height));
+      }
+      .sidebar {
+        border-right: 1px solid var(--color-hairline-shade);
+        padding: 0;
+        background: var(--color-bg-sidebar);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - var(--nav-height));
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+      }
+      .sidebar h1 {
+        margin: 0;
+        padding: 1.5rem 1.5rem 0.75rem 1.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-gray-3);
+        letter-spacing: -0.01em;
+        text-transform: uppercase;
+      }
+      .sidebar p {
+        color: var(--color-gray-3);
+        margin: 0;
+        padding: 0 1.5rem 1.5rem 1.5rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+      .menu {
+        --sl-sidebar-item-padding-inline: 0.5rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        flex: 1 1 auto;
+        padding: 0 1.5rem 1.5rem;
+      }
+      .menu :global(ul) {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .menu :global(li) {
+        overflow-wrap: anywhere;
+      }
+      .menu :global(ul ul li) {
+        border-inline-start: 1px solid var(--color-gray-5);
+        margin-inline-start: var(--sl-sidebar-item-padding-inline);
+        padding-inline-start: var(--sl-sidebar-item-padding-inline);
+      }
+      .menu :global(.top-level > li + li) {
+        margin-top: 0.75rem;
+      }
+      @media (min-width: 800px) {
+        .menu :global(.top-level > li + li) {
+          margin-top: 0.5rem;
+        }
+      }
+      .menu :global(a) {
+        display: block;
+        color: var(--color-gray-2);
+        text-decoration: none;
+        padding: 0.3em var(--sl-sidebar-item-padding-inline);
+        border-radius: 0.25rem;
+        line-height: 1.4;
+        font-size: 0.9375rem;
+      }
+      .menu :global(a:hover),
+      .menu :global(a:focus) {
+        color: var(--color-white);
+      }
+      .menu :global(a.active) {
+        color: var(--color-accent-low);
+        background-color: var(--color-text-accent);
+        font-weight: 600;
+      }
+      /* Carpetas */
+      .menu :global(summary) {
+        cursor: pointer;
+        user-select: none;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.2em var(--sl-sidebar-item-padding-inline);
+        line-height: 1.4;
+      }
+      .menu :global(summary::marker),
+      .menu :global(summary::-webkit-details-marker) {
+        display: none;
+      }
+      .menu :global(.group-label) {
+        color: var(--color-gray-2);
+      }
+      .menu :global(.group-label .large) {
+        font-size: 1.125rem;
+        color: var(--color-white);
+        font-weight: 600;
+      }
+      @media (min-width: 800px) {
+        .menu :global(.group-label .large) {
+          font-size: 1rem;
+        }
+        .menu :global(a) {
+          font-size: 0.875rem;
+        }
+      }
+      .menu :global(.caret) {
+        flex-shrink: 0;
+        transition: transform 0.2s ease-in-out;
+        color: var(--color-gray-3);
+      }
+      .menu :global(details[open] > summary .caret) {
+        transform: rotate(90deg);
+      }
+      .content {
+        padding: 0;
+        overflow: hidden;
+        height: calc(100vh - var(--nav-height));
+      }
+      .viewer {
+        height: 100%;
+      }
+      .viewer-frame {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+      .sidebar-overlay {
+        display: none;
+      }
+      @media (max-width: 980px) {
+        .page {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          position: fixed;
+          inset: var(--nav-height) 0 0 auto;
+          left: -100%;
+          width: min(320px, 100%);
+          height: calc(100vh - var(--nav-height));
+          transition: left 0.25s ease;
+          z-index: 40;
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+        }
+        .sidebar.open {
+          left: 0;
+        }
+        .sidebar-overlay {
+          display: none;
+          position: fixed;
+          inset: var(--nav-height) 0 0 0;
+          background: rgba(0, 0, 0, 0.45);
+          z-index: 30;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          pointer-events: none;
+        }
+        .sidebar-overlay.visible {
+          display: block;
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .burger {
+          display: inline-flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topnav">
+      <div class="title-wrapper">
+        <button class="site-title" id="brandButton" type="button" aria-label="Ir a la página de inicio"><span class="brand-paco">Vatia</span> <span class="brand-roman">co</span></button>
+      </div>
+      <div class="header-search-group">
+        <label class="search-trigger">
+          <span class="sr-only">Buscar en el menú</span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>
+          <input id="searchInput" type="search" placeholder="Buscar" aria-keyshortcuts="Control+K" autocomplete="off" />
+          <kbd><kbd>Ctrl</kbd><kbd>K</kbd></kbd>
+        </label>
+      </div>
+      <div class="right-group">
+        <label class="theme-select">
+          <span class="sr-only">Seleccionar tema</span>
+          <svg class="theme-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg>
+          <select id="themeSelect" autocomplete="off">
+            <option value="dark">Oscuro</option>
+            <option value="light">Claro</option>
+            <option value="auto">Auto</option>
+          </select>
+          <svg class="theme-caret" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg>
+        </label>
+        <button id="menuToggleButton" class="burger" type="button" aria-label="Abrir menú" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="page">
+      <aside class="sidebar" id="sidebar">
+        <h1>Blog Interactivo</h1>
+        <p>Selecciona una plantilla, <strong>personalízala</strong> con tus datos y descárgala en PDF.</p>
+        <div class="menu" set:html={docsMenuHtml}></div>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <main class="content">
+        <div class="viewer">
+          <iframe id="docFrame" class="viewer-frame" src="" title="Vista previa del documento"></iframe>
+        </div>
+      </main>
+    </div>
+
+    <script define:vars={{ DEFAULT_DOC_URL }}>
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      const docFrame = document.getElementById('docFrame');
+      const menuToggleButton = document.getElementById('menuToggleButton');
+
+      function toggleMenu() {
+        if (!sidebar) return;
+        const isOpen = sidebar.classList.toggle('open');
+        overlay?.classList.toggle('visible', isOpen);
+        menuToggleButton?.setAttribute('aria-expanded', String(isOpen));
+      }
+
+      function closeMenu() {
+        sidebar?.classList.remove('open');
+        overlay?.classList.remove('visible');
+        menuToggleButton?.setAttribute('aria-expanded', 'false');
+      }
+
+      const SESSION_DOC_KEY = 'VatiaCo-current-doc';
+
+      function markActiveDoc(url) {
+        const menu = document.querySelector('.menu');
+        if (!menu) return;
+
+        menu.querySelectorAll('a.doc-link.active').forEach((link) => {
+          link.classList.remove('active');
+          link.removeAttribute('aria-current');
+        });
+
+        const activeLink = menu.querySelector(`a.doc-link[href="${CSS.escape(url)}"]`);
+        if (!activeLink) return;
+        activeLink.classList.add('active');
+        activeLink.setAttribute('aria-current', 'page');
+
+        let node = activeLink.closest('li')?.parentElement?.closest('details');
+        while (node) {
+          node.open = true;
+          node = node.parentElement?.closest('details');
+        }
+      }
+
+      function openDoc(url) {
+        if (!docFrame) return;
+        docFrame.src = url;
+        history.replaceState({ doc: url }, '', `?doc=${encodeURIComponent(url)}`);
+        sessionStorage.setItem(SESSION_DOC_KEY, url);
+        markActiveDoc(url);
+      }
+
+      function initMenuLinks() {
+        const menu = document.querySelector('.menu');
+        if (!menu) return;
+
+        menu.querySelectorAll('a.doc-link').forEach((link) => {
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            const url = event.currentTarget.getAttribute('href');
+            if (!url) return;
+            closeMenu();
+            // Abre directamente el documento solicitado sin validar autenticación
+            openDoc(url);
+          });
+        });
+      }
+
+      // Accordion behavior: when a <details> is opened at depth >= 1 (i.e. not
+      // the top root level), close sibling <details> so only one stays expanded
+      // at that level.
+      let isFiltering = false;
+
+      function initAccordion() {
+        const menu = document.querySelector('.menu');
+        if (!menu) return;
+
+        menu.querySelectorAll('details').forEach((det) => {
+          det.addEventListener('toggle', () => {
+            // No cerrar hermanos mientras el buscador expande carpetas con
+            // coincidencias por programación (evitaría ocultar resultados válidos).
+            if (isFiltering) return;
+            // Only act when opened
+            if (!det.open) return;
+
+            // Close sibling details under the same parent (<ul> or container)
+            const li = det.parentElement; // <li>
+            const parent = li?.parentElement;
+            if (!parent) return;
+            const siblings = parent.querySelectorAll(':scope > li > details');
+            siblings.forEach((s) => {
+              if (s !== det && s.open) s.open = false;
+            });
+          });
+        });
+      }
+
+      function loadFromQuery() {
+        const params = new URLSearchParams(window.location.search);
+        const doc = params.get('doc');
+        const sanitized = doc && doc.startsWith('/docs/') ? doc : null;
+        const savedDoc = sessionStorage.getItem(SESSION_DOC_KEY);
+        openDoc(sanitized || savedDoc || DEFAULT_DOC_URL);
+      }
+
+      // ---------- Tema (claro / oscuro / auto) ----------
+      const THEME_KEY = 'VatiaCo-theme';
+      const themeSelect = document.getElementById('themeSelect');
+
+      function systemTheme() {
+        return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+
+      function readStoredTheme() {
+        const stored = localStorage.getItem(THEME_KEY);
+        return stored === 'light' || stored === 'dark' ? stored : 'auto';
+      }
+
+      function applyTheme(pref) {
+        document.documentElement.dataset.theme = pref === 'auto' ? systemTheme() : pref;
+        if (themeSelect) themeSelect.value = pref;
+        if (pref === 'auto') {
+          localStorage.removeItem(THEME_KEY);
+        } else {
+          localStorage.setItem(THEME_KEY, pref);
+        }
+      }
+
+      matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+        if (readStoredTheme() === 'auto') applyTheme('auto');
+      });
+
+      themeSelect?.addEventListener('change', (event) => {
+        applyTheme(event.target.value);
+      });
+
+      // ---------- Búsqueda: filtra el árbol del menú lateral en el sitio ----------
+      const searchInput = document.getElementById('searchInput');
+
+      function filterMenu(query) {
+        if (!sidebar) return;
+        const menu = sidebar.querySelector('.menu');
+        if (!menu) return;
+
+        const normalize = (value) => value.trim().toLowerCase();
+        const searchValue = normalize(query);
+
+        function walkList(list) {
+          let anyVisible = false;
+          const items = Array.from(list.children).filter((node) => node.tagName === 'LI');
+
+          for (const item of items) {
+            const details = item.querySelector(':scope > details');
+            const anchor = item.querySelector(':scope > a');
+            const summary = item.querySelector(':scope > details > summary');
+            const label = normalize(anchor?.textContent || summary?.textContent || '');
+            const childUl = item.querySelector(':scope > details > ul');
+
+            let visible;
+            if (childUl) {
+              const childVisible = walkList(childUl);
+              visible = childVisible || (!!searchValue && label.includes(searchValue));
+              if (details) details.open = searchValue ? visible : details.dataset.wasOpen === 'true';
+            } else {
+              visible = !searchValue || label.includes(searchValue);
+            }
+
+            item.style.display = visible ? '' : 'none';
+            if (visible) anyVisible = true;
+          }
+
+          return anyVisible;
+        }
+
+        if (searchValue) {
+          menu.querySelectorAll('details').forEach((det) => {
+            if (det.dataset.wasOpen === undefined) det.dataset.wasOpen = String(det.open);
+          });
+        }
+
+        isFiltering = true;
+        walkList(menu.querySelector(':scope > ul.top-level') || menu);
+
+        if (!searchValue) {
+          menu.querySelectorAll('details[data-was-open]').forEach((det) => {
+            det.open = det.dataset.wasOpen === 'true';
+            delete det.dataset.wasOpen;
+          });
+        }
+        isFiltering = false;
+      }
+
+      searchInput?.addEventListener('input', (event) => filterMenu(event.target.value));
+
+      document.addEventListener('keydown', (event) => {
+        const isSearchShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+        if (isSearchShortcut) {
+          event.preventDefault();
+          searchInput?.focus();
+          searchInput?.select();
+        }
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        applyTheme(readStoredTheme());
+        initMenuLinks();
+        initAccordion();
+        loadFromQuery();
+        window.addEventListener('popstate', () => {
+          loadFromQuery();
+        });
+        document.getElementById('brandButton')?.addEventListener('click', (event) => {
+          event.preventDefault();
+          openDoc(DEFAULT_DOC_URL);
+          closeMenu();
+        });
+        menuToggleButton?.addEventListener('click', toggleMenu);
+        document.getElementById('sidebarOverlay')?.addEventListener('click', closeMenu);
+      });
+    </script>
+  </body>
+</html>

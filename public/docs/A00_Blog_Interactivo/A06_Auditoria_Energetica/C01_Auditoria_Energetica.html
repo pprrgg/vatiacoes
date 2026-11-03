@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría Energética ISO 50002 · Metodología VATIACOScreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:820px;}
+  section .lede{color:var(--text-dim); max-width:700px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:820px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:660px; font-size:15.5px;}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:150px; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--amber);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .field select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238FA3B8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center;}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc352;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.small{padding:7px 12px; font-size:11.5px;}
+
+  .calculator{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:16px 0;}
+  .calc-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:16px;}
+  .result-chip{background:var(--panel2); border:1px solid var(--amber); border-radius:var(--radius); padding:16px; text-align:center;}
+  .result-chip .v{font-family:var(--font-mono); font-size:22px; color:var(--amber);}
+  .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+
+  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
+  .example-table{width:100%; font-size:12px; border-collapse:collapse;}
+  .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
+  .example-table .label{color:var(--text-dim); width:45%;}
+  .example-table .value{color:var(--text); font-family:var(--font-mono);}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+  .comp-card .rng{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); margin-top:8px;}
+  .comp-card .rng b{color:var(--amber);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 9px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:8px 9px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+
+  .slider-row{display:flex; align-items:center; gap:12px;}
+  .slider-row input[type=range]{flex:1; accent-color:var(--amber);}
+  .slider-row .slider-val{font-family:var(--font-mono); font-size:13px; color:var(--amber); width:60px; text-align:right; flex-shrink:0;}
+
+  .tooltip-text{font-size:11px; color:var(--text-dimmer); margin-top:4px;}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--amber); text-decoration:none;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* Benchmark gauge */
+  .bench-track{position:relative; height:12px; background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); margin:34px 0 8px;}
+  .bench-zone{position:absolute; top:0; bottom:0;}
+  .bench-zone.z-good{background:rgba(22,163,74,0.30);}
+  .bench-zone.z-mid{background:rgba(255,176,32,0.30);}
+  .bench-zone.z-bad{background:rgba(220,38,38,0.30);}
+  .bench-marker{position:absolute; top:-7px; width:2px; height:26px; background:var(--text); z-index:2;}
+  .bench-marker .mk-label{position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:10.5px; color:var(--text); white-space:nowrap; background:var(--bg2); padding:1px 5px; border:1px solid var(--line); border-radius:var(--radius);}
+  .bench-scale{display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer); margin-bottom:18px;}
+
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:11px; padding:4px 11px; border-radius:var(--radius); text-transform:uppercase; letter-spacing:0.05em;}
+  .badge.good{background:rgba(22,163,74,0.15); color:var(--green); border:1px solid var(--green);}
+  .badge.mid{background:rgba(255,176,32,0.15); color:var(--amber); border:1px solid var(--amber);}
+  .badge.bad{background:rgba(220,38,38,0.15); color:var(--red); border:1px solid var(--red);}
+
+  .stack-bar{display:flex; height:28px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); margin:12px 0;}
+  .stack-seg{display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; color:#0A121C; white-space:nowrap; overflow:hidden;}
+  .stack-legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:8px;}
+  .stack-legend .li{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
+  .stack-legend .sw{width:10px; height:10px; border-radius:2px; flex-shrink:0;}
+
+  .measure-row{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 14px; background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); margin-bottom:8px; font-size:12.5px;}
+  .measure-row .mname{color:var(--text); font-weight:600;}
+  .measure-row .mvals{font-family:var(--font-mono); color:var(--text-dim); font-size:11.5px;}
+
+  .report-sheet{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:36px 40px;}
+  .report-sheet h3{font-size:16px; color:var(--amber); margin:26px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .report-sheet h3:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .report-sheet p{font-size:13px; color:var(--text-dim); margin-bottom:8px;}
+  .report-sheet .rmeta{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    .calc-row{grid-template-columns:1fr;}
+    .report-sheet{padding:24px 20px;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+    <div class="tabbar-brand">AUDITORÍA ENERGÉTICA</div>
+    <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <nav class="tabbar" id="sidenav">
+      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
+      <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
+      <a href="#marco" data-sec="marco"><span class="tag">02</span>Marco ISO 50002 / VATIACOScreen</a>
+      <a href="#sectores" data-sec="sectores"><span class="tag">03</span>Consumo de referencia por sectores</a>
+      <a href="#datos" data-sec="datos"><span class="tag">04</span>Recogida de datos</a>
+      <a href="#diagnostico" data-sec="diagnostico"><span class="tag">05</span>Diagnóstico energético</a>
+      <a href="#medidas" data-sec="medidas"><span class="tag">06</span>Medidas de ahorro (ECM)</a>
+      <a href="#informe" data-sec="informe"><span class="tag">07</span>Informe final</a>
+    </nav>
+    <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var wrap = document.getElementById('tabbarWrap');
+    var bar = document.getElementById('sidenav');
+    var btnL = document.getElementById('tabScrollLeft');
+    var btnR = document.getElementById('tabScrollRight');
+    function update(){
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+      wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+    }
+    btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+    btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    setTimeout(update, 0);
+  })();
+  </script>
+
+  <main>
+
+    <!-- SECCIÓN 00: RESUMEN -->
+    <section id="resumen">
+      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
+      <h2>Auditoría energética: de la norma ISO al informe final, con benchmarks sectoriales y análisis VATIACOScreen.</h2>
+      <p class="lede">Herramienta interactiva para planificar y ejecutar una auditoría energética siguiendo la estructura de la norma ISO 50002 (alineada con EN 16247), comparar el consumo real frente a valores de referencia por sector de actividad, evaluar medidas de ahorro con la metodología de caso base / caso propuesto de VATIACOScreen, y generar un informe final.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del consumo <em>real</em> al ahorro <em>demostrable</em>.</h1>
+            <p class="sub">Introduce los datos de tu instalación una sola vez: el sector, la superficie y el consumo por vector energético alimentan automáticamente el diagnóstico, la comparativa sectorial, el análisis económico de medidas y el informe final descargable.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">ISO 50002 · EN 16247</div><div class="l">estructura y fases de la auditoría</div></div>
+          <div class="stat"><div class="v">10 sectores</div><div class="l">de referencia con rangos bajo / medio / alto</div></div>
+          <div class="stat"><div class="v">Caso base / caso propuesto</div><div class="l">metodología VATIACOScreen (NRCan)</div></div>
+          <div class="stat"><div class="v">VAN · TIR · Payback</div><div class="l">análisis financiero de medidas de ahorro</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
+      <h2 style="font-size:18px;">Un flujo de trabajo, siete pasos.</h2>
+      <div class="grid4">
+        <div class="comp-card"><h4>01 · Marco normativo</h4><p>Repasa las fases de una auditoría según ISO 50002 y los conceptos clave (EnB, EnPI, SEU).</p></div>
+        <div class="comp-card"><h4>02 · Referencias sectoriales</h4><p>Consulta los rangos de consumo (kWh/m²·año) orientativos de cada sector de actividad.</p></div>
+        <div class="comp-card"><h4>03 · Datos de la instalación</h4><p>Registra superficie, sector y consumo anual por vector energético (electricidad, gas, gasóleo, biomasa...).</p></div>
+        <div class="comp-card"><h4>04 · Diagnóstico</h4><p>Calcula el EnPI, compáralo con el benchmark del sector y estima el potencial de ahorro y las emisiones.</p></div>
+      </div>
+      <div class="grid3" style="margin-top:16px;">
+        <div class="comp-card"><h4>05 · Medidas de ahorro</h4><p>Evalúa cada medida (ECM) con inversión, ahorro, payback, VAN y TIR, y añádela al informe.</p></div>
+        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera automáticamente el informe con los datos, el diagnóstico y las medidas evaluadas, listo para imprimir.</p></div>
+        <div class="comp-card"><h4>07 · Seguimiento</h4><p>Recomendaciones para el seguimiento periódico del EnPI y la posible implantación de un SGEn ISO 50001.</p></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 01: DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">01 · Datos del proyecto</div>
+      <h2>¿Para quién y por quién se realiza esta auditoría?</h2>
+      <p class="lede">Estos datos aparecen en la portada y en los encabezados del informe de auditoría en PDF (sección 07).</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / instalación auditada</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto / instalación</label><input type="text" id="p_proyecto" value="Auditoría energética"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Auditor energético</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización auditora</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente de la instalación auditada</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección de la instalación auditada</label><input type="text" id="p_dest_dir" placeholder="Dirección donde se realiza la auditoría"></div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
+    </section>
+
+    <!-- SECCIÓN 02: MARCO ISO 50002 / VATIACOScreen -->
+    <section id="marco">
+      <div class="eyebrow kicker">02 · Marco ISO 50002 / VATIACOScreen</div>
+      <h2>Qué es una auditoría energética y cómo se estructura.</h2>
+      <p class="lede">La norma ISO 50002:2014 <em>"Energy audits — Requirements with guidance for use"</em> define los requisitos de un proceso de auditoría energética, en línea con la norma europea EN 16247 y con el sistema de gestión de la energía ISO 50001. El análisis energético y financiero de las medidas sigue la lógica de <b>caso base / caso propuesto</b> popularizada por VATIACOScreen (Natural Resources Canada).</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Conceptos clave (terminología ISO 50001 / 50002)</div>
+      <div class="grid2">
+        <div class="theory-card">
+          <h3>Línea base energética (EnB)</h3>
+          <p>Referencia cuantitativa del consumo de energía de un periodo determinado, frente a la cual se comparan los resultados tras aplicar medidas de mejora.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Indicador de desempeño energético (EnPI)</h3>
+          <p>Valor o medida cuantitativa del desempeño energético, definido por la organización. Ejemplos: kWh/m²·año, kWh/unidad producida, kWh/empleado.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Usos significativos de la energía (SEU)</h3>
+          <p>Usos que representan un consumo sustancial de energía y/o que ofrecen un potencial considerable de mejora del desempeño energético.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Oportunidad de mejora energética (ECM)</h3>
+          <p>Medida técnica u organizativa identificada durante la auditoría con potencial de reducir el consumo o el coste energético, evaluable técnica y económicamente.</p>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Fases de la auditoría (ISO 50002 / EN 16247)</div>
+      <div class="grid3" id="fasesGrid"></div>
+
+      <div class="fieldset-title">Metodología VATIACOScreen: caso base vs. caso propuesto</div>
+      <div class="theory-card" style="background:linear-gradient(135deg, rgba(255,176,32,0.10) 0%, rgba(37,99,235,0.10) 100%);">
+        <h3 style="color:var(--amber);">La lógica central del análisis energético-financiero</h3>
+        <p style="margin:10px 0;">VATIACOScreen (software de Recursos Naturales de Canadá para el análisis de proyectos de eficiencia y energías limpias) compara dos escenarios de modelización energética:</p>
+        <div class="grid2" style="margin-top:14px;">
+          <div>
+            <p><b style="color:var(--text);">Caso base (Base Case)</b></p>
+            <ul style="padding-left:18px; font-size:12.5px; color:var(--text-dim);">
+              <li>Consumo energético real/actual de la instalación (la línea base, EnB)</li>
+              <li>Se obtiene de facturas, contadores y datos históricos recogidos in situ</li>
+            </ul>
+          </div>
+          <div>
+            <p><b style="color:var(--text);">Caso propuesto (Proposed Case)</b></p>
+            <ul style="padding-left:18px; font-size:12.5px; color:var(--text-dim);">
+              <li>Consumo estimado tras implantar una o varias medidas (ECM)</li>
+              <li>Se modeliza con los ahorros esperados de cada medida</li>
+            </ul>
+          </div>
+        </div>
+        <div class="formula-box" style="margin-top:16px;">
+          <div class="f">Ahorro energético = Consumo caso base − Consumo caso propuesto</div>
+        </div>
+        <p style="margin-top:10px;">A partir del ahorro anual se deriva el análisis financiero (VAN, TIR, periodo de retorno) y el análisis de emisiones de gases de efecto invernadero (GEI) evitadas, replicados en las secciones 04 y 05 de esta herramienta.</p>
+      </div>
+
+      <div class="fieldset-title">Niveles de profundidad habituales</div>
+      <p class="lede" style="margin-bottom:16px;">EN 16247/ISO 50002 no fijan niveles numerados de forma obligatoria, pero en la práctica del sector (con influencia de la clasificación ASHRAE) suele diferenciarse la profundidad del trabajo según el alcance y el presupuesto disponibles:</p>
+      <div class="grid3">
+        <div class="comp-card">
+          <h4>Nivel I · Análisis preliminar</h4>
+          <p>Revisión de facturas, visita breve, identificación de medidas de bajo coste y estimación de ahorros con datos existentes.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Nivel II · Auditoría detallada</h4>
+          <p>Levantamiento de datos in situ, medición puntual, balance energético desglosado por usos y análisis económico de cada ECM.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Nivel III · Análisis de inversión</h4>
+          <p>Monitorización de variables clave, simulación energética detallada y análisis financiero de grado inversión para medidas de alto coste de capital.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 02: CONSUMO DE REFERENCIA POR SECTORES -->
+    <section id="sectores">
+      <div class="eyebrow kicker">03 · Consumo de referencia por sectores</div>
+      <h2>Valores orientativos de consumo energético (kWh/m²·año) por sector de actividad.</h2>
+      <p class="lede">Rangos de referencia elaborados a partir de fuentes públicas habituales en auditoría energética (IDAE, estudios sectoriales, benchmarks tipo ASHRAE/VATIACOScreen). Son valores <b>orientativos para una primera comparación</b>: el diagnóstico definitivo siempre debe basarse en la medición real de la instalación.</p>
+
+      <div class="calculator">
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; margin-bottom:16px;">Comparador rápido: ¿cómo se sitúa tu consumo frente al sector?</div>
+        <div class="calc-row">
+          <div class="field">
+            <label>Sector de actividad</label>
+            <select id="s_sector"></select>
+          </div>
+          <div class="field">
+            <label>Superficie útil (m²)</label>
+            <input type="number" id="s_area" value="500" min="10" max="500000" step="10">
+          </div>
+          <div class="field">
+            <label>Consumo energético anual total (kWh)</label>
+            <input type="number" id="s_consumo" value="75000" min="0" max="500000000" step="500">
+            <div class="tooltip-text">Suma de todos los vectores energéticos (eléctrico + térmico) en kWh/año</div>
+          </div>
+        </div>
+        <button class="btn primary" onclick="compararSector()" style="width:100%; margin-bottom:8px;">Comparar con el sector</button>
+        <div id="s_resultado"></div>
+      </div>
+
+      <div class="fieldset-title">Tabla de referencia por sector</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="tablaSectores">
+          <thead>
+            <tr>
+              <th>Sector</th>
+              <th>Eficiente (≤)</th>
+              <th>Medio</th>
+              <th>Ineficiente (&gt;)</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Unidad: kWh/m²·año de energía final (eléctrica + térmica). Fuentes de referencia: IDAE (informes de consumos del sector residencial y terciario en España), guías de auditoría tipo ASHRAE Level I-III y documentación de modelización VATIACOScreen. Úsense como primera aproximación, no como valor normativo vinculante.</p>
+    </section>
+
+    <!-- SECCIÓN 03: RECOGIDA DE DATOS -->
+    <section id="datos">
+      <div class="eyebrow kicker">04 · Recogida de datos</div>
+      <h2>Datos generales y consumo energético de la instalación.</h2>
+      <p class="lede">Introduce aquí los datos de la instalación auditada, siguiendo el mismo esquema de recogida de datos que utiliza VATIACOScreen para construir el caso base (EnB). Estos campos alimentan automáticamente el diagnóstico (sección 04), el análisis de medidas (sección 05) y el informe final (sección 06).</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Datos generales</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Nombre de la instalación / proyecto</label>
+            <input type="text" id="d_nombre" value="Instalación ejemplo" placeholder="Ej. Nave industrial, edificio de oficinas...">
+          </div>
+          <div class="field">
+            <label>Sector de actividad</label>
+            <select id="d_sector"></select>
+          </div>
+          <div class="field">
+            <label>Superficie útil (m²)</label>
+            <input type="number" id="d_area" value="500" min="10" max="500000" step="10">
+          </div>
+          <div class="field">
+            <label>Nº ocupantes / empleados (opcional)</label>
+            <input type="number" id="d_ocupacion" value="20" min="0" max="100000" step="1">
+          </div>
+          <div class="field">
+            <label>Ubicación / zona climática (opcional)</label>
+            <input type="text" id="d_ubicacion" value="" placeholder="Ej. Madrid, zona D3">
+          </div>
+          <div class="field">
+            <label>Periodo de referencia</label>
+            <input type="text" id="d_periodo" value="2025" placeholder="Ej. 2025 o últimos 12 meses">
+          </div>
+        </div>
+
+        <div class="fieldset-title">Consumo energético anual por vector (línea base, EnB)</div>
+        <div class="grid3">
+          <div class="field">
+            <label>Electricidad (kWh/año)</label>
+            <input type="number" id="d_elec" value="60000" min="0" max="500000000" step="100">
+          </div>
+          <div class="field">
+            <label>Gas natural (kWh/año)</label>
+            <input type="number" id="d_gas" value="10000" min="0" max="500000000" step="100">
+            <div class="tooltip-text">Si tu factura viene en Nm³, multiplica aprox. ×10,55 para pasar a kWh (PCI)</div>
+          </div>
+          <div class="field">
+            <label>Gasóleo C (litros/año)</label>
+            <input type="number" id="d_gasoleo" value="0" min="0" max="10000000" step="10">
+            <div class="tooltip-text">Conversión aplicada: 1 L ≈ 9,98 kWh (PCI)</div>
+          </div>
+          <div class="field">
+            <label>Biomasa / pellet (kg/año)</label>
+            <input type="number" id="d_biomasa" value="0" min="0" max="10000000" step="10">
+            <div class="tooltip-text">Conversión aplicada: 1 kg ≈ 4,80 kWh (PCI, pellet estándar)</div>
+          </div>
+          <div class="field">
+            <label>GLP / propano (kg/año)</label>
+            <input type="number" id="d_glp" value="0" min="0" max="10000000" step="10">
+            <div class="tooltip-text">Conversión aplicada: 1 kg ≈ 12,80 kWh (PCI)</div>
+          </div>
+          <div class="field">
+            <label>Otros vectores (kWh/año equivalentes)</label>
+            <input type="number" id="d_otros" value="0" min="0" max="500000000" step="100">
+          </div>
+        </div>
+
+        <div class="fieldset-title">Precio de la energía y factor de emisión</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Precio medio ponderado de la energía (€/kWh)</label>
+            <input type="number" id="d_precio" value="0.16" min="0.01" max="2" step="0.01">
+            <div class="tooltip-text">Se usa para estimar el valor económico del potencial de ahorro</div>
+          </div>
+          <div class="field">
+            <label>Factor de emisión eléctrico de red (kgCO₂/kWh)</label>
+            <input type="number" id="d_fe_elec" value="0.212" min="0" max="1" step="0.001">
+            <div class="tooltip-text">Ajusta según el mix eléctrico de tu país/año de referencia</div>
+          </div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos datos quedan disponibles en el navegador (no se envían a ningún servidor) y se reutilizan directamente en las secciones "Diagnóstico energético", "Medidas de ahorro" e "Informe final".</p>
+    </section>
+
+    <!-- SECCIÓN 04: DIAGNÓSTICO ENERGÉTICO -->
+    <section id="diagnostico">
+      <div class="eyebrow kicker">05 · Diagnóstico energético</div>
+      <h2>Balance energético, EnPI y comparativa con el benchmark sectorial.</h2>
+      <p class="lede">A partir de los datos introducidos en la sección anterior, se calcula el consumo total en kWh, el indicador de desempeño energético (EnPI) y su posición respecto al rango de referencia del sector, además de las emisiones de GEI asociadas.</p>
+
+      <button class="btn primary" onclick="calcularDiagnostico()" style="margin-bottom:24px;">Calcular diagnóstico con los datos de la sección 04</button>
+
+      <div id="diag_aviso" class="tooltip-text" style="margin-bottom:16px;"></div>
+
+      <div id="diag_resultado" style="display:none;">
+        <div class="grid4" id="diag_chips"></div>
+
+        <div class="fieldset-title">Balance energético por vector</div>
+        <div class="stack-bar" id="diag_stack"></div>
+        <div class="stack-legend" id="diag_legend"></div>
+
+        <div class="fieldset-title">Posición del EnPI frente al sector "<span id="diag_sector_nombre"></span>"</div>
+        <div class="bench-scale" id="diag_scale"></div>
+        <div class="bench-track" id="diag_track"></div>
+        <p style="text-align:center; margin-top:26px;"><span class="badge" id="diag_badge">—</span></p>
+
+        <div class="fieldset-title">Potencial de ahorro estimado</div>
+        <div class="grid2">
+          <div class="example-card">
+            <h4>Hasta alcanzar el nivel medio del sector</h4>
+            <table class="example-table">
+              <tr><td class="label">Ahorro potencial (kWh/año)</td><td class="value" id="diag_ahorro_mid_kwh">—</td></tr>
+              <tr><td class="label">Ahorro potencial (€/año)</td><td class="value" id="diag_ahorro_mid_eur">—</td></tr>
+            </table>
+          </div>
+          <div class="example-card">
+            <h4>Hasta alcanzar el nivel eficiente del sector</h4>
+            <table class="example-table">
+              <tr><td class="label">Ahorro potencial (kWh/año)</td><td class="value" id="diag_ahorro_low_kwh">—</td></tr>
+              <tr><td class="label">Ahorro potencial (€/año)</td><td class="value" id="diag_ahorro_low_eur">—</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 05: MEDIDAS DE AHORRO (ECM) -->
+    <section id="medidas">
+      <div class="eyebrow kicker">06 · Medidas de ahorro (ECM)</div>
+      <h2>Catálogo de medidas típicas y análisis financiero VATIACOScreen (VAN · TIR · Payback).</h2>
+      <p class="lede">Evalúa cada oportunidad de mejora energética (Energy Conservation Measure) con el mismo criterio financiero de VATIACOScreen: inversión, ahorro anual, vida útil y tasa de descuento, para obtener el periodo de retorno simple, el Valor Actual Neto (VAN) y la Tasa Interna de Retorno (TIR) aproximada.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Catálogo orientativo de medidas por sector</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="tablaECM">
+          <thead>
+            <tr><th>Medida (ECM)</th><th>Sector típico</th><th>Ahorro energético típico</th><th>Payback típico</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="calculator" style="margin-top:32px;">
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; margin-bottom:16px;">Calculadora de viabilidad de una medida</div>
+        <div class="calc-row">
+          <div class="field">
+            <label>Nombre de la medida</label>
+            <input type="text" id="e_nombre" value="Sustitución de iluminación por LED">
+          </div>
+          <div class="field">
+            <label>Inversión inicial (€)</label>
+            <input type="number" id="e_inversion" value="8000" min="0" max="100000000" step="100">
+          </div>
+          <div class="field">
+            <label>Ahorro energético anual (kWh)</label>
+            <input type="number" id="e_ahorro_kwh" value="9000" min="0" max="500000000" step="100">
+          </div>
+          <div class="field">
+            <label>Ahorro económico anual (€, opcional)</label>
+            <input type="number" id="e_ahorro_eur" value="0" min="0" max="100000000" step="10">
+            <div class="tooltip-text">Si se deja en 0, se calcula con el precio medio de la sección "Datos" (€/kWh)</div>
+          </div>
+          <div class="field">
+            <label>Vida útil de la medida (años)</label>
+            <input type="number" id="e_vida" value="15" min="1" max="50" step="1">
+          </div>
+          <div class="field">
+            <label>Tasa de descuento (%)</label>
+            <input type="number" id="e_tasa" value="6" min="0" max="30" step="0.5">
+          </div>
+          <div class="field">
+            <label>Factor de emisión evitado (kgCO₂/kWh)</label>
+            <input type="number" id="e_fe" value="0.212" min="0" max="1" step="0.001">
+          </div>
+        </div>
+        <button class="btn primary" onclick="calcularMedida()" style="width:100%; margin-bottom:12px;">Evaluar medida</button>
+        <div id="e_resultado" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:16px;"></div>
+        <button class="btn ghost" onclick="anadirMedidaInforme()" style="width:100%;">+ Añadir esta medida al informe final</button>
+      </div>
+
+      <div class="fieldset-title">Medidas añadidas al informe</div>
+      <div id="medidas_lista"><p class="tooltip-text">Todavía no se ha añadido ninguna medida.</p></div>
+      <div class="grid3" id="medidas_totales" style="margin-top:16px; display:none;"></div>
+    </section>
+
+    <!-- SECCIÓN 07: INFORME FINAL -->
+    <section id="informe">
+      <div class="eyebrow kicker">07 · Informe final</div>
+      <h2>Informe de auditoría energética, generado a partir de tus datos.</h2>
+      <p class="lede">Estructura orientada a los requisitos de ISO 50002 / EN 16247: alcance y metodología, línea base energética, diagnóstico frente al sector, medidas evaluadas, conclusiones y próximos pasos. Rellena las secciones 01 (datos del proyecto), 04, 05 y 06 antes de generar el informe.</p>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px;">
+        <button class="btn primary" onclick="generarInforme()">Generar / actualizar vista previa</button>
+        <button class="btn ghost" id="btnPdf">&#8681; Descargar informe en PDF</button>
+      </div>
+
+      <div class="report-sheet" id="reportOutput">
+        <p class="tooltip-text">Pulsa "Generar / actualizar vista previa" para componer el documento con los datos introducidos, y "Descargar informe en PDF" para obtener el informe formal descargable.</p>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta interactiva de auditoría energética (marco ISO 50002 / EN 16247, metodología caso base–caso propuesto de VATIACOScreen) integrada en el blog de VatiaCo. Los valores de referencia por sector son orientativos y los cálculos, estimativos; para un dictamen vinculante consulta a un auditor energético certificado. Última actualización: 2026.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'resumen';
+
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+// ===================== UTILIDADES =====================
+function fmtNum(n, d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600); }
+
+// ===================== DATOS DE REFERENCIA SECTORIAL =====================
+// Valores orientativos kWh/m2.año (energía final, electrica + termica). low = eficiente, mid = medio, high = ineficiente (por encima)
+const SECTORES = [
+  {id:'residencial', label:'Residencial (vivienda)', low:70, mid:115, high:170, desc:'Viviendas unifamiliares y plurifamiliares, uso doméstico estándar.'},
+  {id:'oficinas', label:'Terciario · Oficinas', low:120, mid:190, high:260, desc:'Edificios de oficinas con climatización y equipos ofimáticos.'},
+  {id:'comercial', label:'Terciario · Comercio / gran superficie', low:200, mid:320, high:460, desc:'Retail, supermercados y grandes superficies con refrigeración e iluminación intensiva.'},
+  {id:'hosteleria', label:'Terciario · Hostelería / hotel', low:230, mid:360, high:520, desc:'Hoteles y restauración, con climatización, ACS y cocinas.'},
+  {id:'educativo', label:'Terciario · Educativo', low:70, mid:130, high:190, desc:'Colegios, institutos y centros universitarios.'},
+  {id:'sanitario', label:'Terciario · Sanitario', low:280, mid:420, high:620, desc:'Hospitales y centros de salud, uso continuo 24h y equipos críticos.'},
+  {id:'industrial_ligera', label:'Industrial · Manufactura ligera', low:180, mid:420, high:750, desc:'Naves de fabricación y montaje sin procesos térmicos intensivos.'},
+  {id:'industrial_intensiva', label:'Industrial · Intensiva en energía', low:700, mid:1400, high:3000, desc:'Cerámica, metal, química, alimentación con procesos de alta temperatura.'},
+  {id:'agrario', label:'Agrario · Invernaderos / granjas', low:60, mid:160, high:380, desc:'Explotaciones agrarias con climatización, riego o ventilación forzada.'},
+  {id:'logistica', label:'Logística · Almacenes / naves', low:35, mid:85, high:150, desc:'Almacenes y naves logísticas con climatización mínima.'},
+];
+
+function poblarSelectSectores(selectId){
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = SECTORES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+}
+poblarSelectSectores('s_sector');
+poblarSelectSectores('d_sector');
+
+function getSector(id){ return SECTORES.find(s=>s.id===id) || SECTORES[0]; }
+
+function clasificar(enpi, sector){
+  if(enpi <= sector.low) return {cls:'good', txt:'Eficiente'};
+  if(enpi <= sector.high) return {cls:'mid', txt:'Normal / en rango medio'};
+  return {cls:'bad', txt:'Ineficiente'};
+}
+
+// ===================== SECCIÓN 01: FASES ISO 50002 =====================
+const FASES = [
+  {n:'01', t:'Contacto inicial y alcance', d:'Se definen los límites físicos y organizativos, los objetivos y los criterios de la auditoría junto con el cliente.'},
+  {n:'02', t:'Reunión de apertura', d:'Se acuerda el calendario, el acceso a instalaciones, datos disponibles y personal de contacto.'},
+  {n:'03', t:'Recopilación de datos', d:'Facturas, planos, horarios de funcionamiento, inventario de equipos y datos históricos de consumo (línea base).'},
+  {n:'04', t:'Trabajo de campo / visita in situ', d:'Inspección física, mediciones puntuales, entrevistas con el personal y verificación de los usos significativos (SEU).'},
+  {n:'05', t:'Análisis y modelización', d:'Balance energético, cálculo del EnPI, comparación con benchmarks sectoriales y modelización caso base / caso propuesto.'},
+  {n:'06', t:'Identificación de medidas (ECM)', d:'Se listan oportunidades de mejora con su ahorro estimado, inversión y análisis coste-beneficio.'},
+  {n:'07', t:'Informe final y cierre', d:'Entrega del informe de auditoría y reunión de cierre con las conclusiones y recomendaciones priorizadas.'},
+];
+document.getElementById('fasesGrid').innerHTML = FASES.map(f=>`
+  <div class="comp-card"><h4>${f.n} · ${f.t}</h4><p>${f.d}</p></div>
+`).join('');
+
+// ===================== SECCIÓN 02: COMPARADOR Y TABLA SECTORIAL =====================
+function compararSector(){
+  const sector = getSector(document.getElementById('s_sector').value);
+  const area = parseFloat(document.getElementById('s_area').value) || 0;
+  const consumo = parseFloat(document.getElementById('s_consumo').value) || 0;
+  const enpi = area > 0 ? consumo / area : 0;
+  const c = clasificar(enpi, sector);
+  const scaleMax = sector.high * 1.4;
+  const pos = Math.min(100, (enpi / scaleMax) * 100);
+  const pLow = (sector.low / scaleMax) * 100;
+  const pHigh = (sector.high / scaleMax) * 100;
+
+  document.getElementById('s_resultado').innerHTML = `
+    <div class="bench-scale"><span>0</span><span>${fmtNum(sector.low,0)}</span><span>${fmtNum(sector.mid,0)}</span><span>${fmtNum(sector.high,0)}</span><span>${fmtNum(scaleMax,0)} kWh/m²·año</span></div>
+    <div class="bench-track">
+      <div class="bench-zone z-good" style="left:0; width:${pLow}%;"></div>
+      <div class="bench-zone z-mid" style="left:${pLow}%; width:${pHigh-pLow}%;"></div>
+      <div class="bench-zone z-bad" style="left:${pHigh}%; width:${100-pHigh}%;"></div>
+      <div class="bench-marker" style="left:${pos}%;"><span class="mk-label">${fmtNum(enpi,0)}</span></div>
+    </div>
+    <p style="text-align:center; margin:30px 0 0;"><span class="badge ${c.cls}">${c.txt}</span> &nbsp; <span class="tooltip-text">EnPI = ${fmtNum(enpi,1)} kWh/m²·año frente al sector "${sector.label}" (medio: ${fmtNum(sector.mid,0)})</span></p>
+  `;
+  showToast('Comparativa sectorial calculada.');
+}
+
+const tbodySectores = document.querySelector('#tablaSectores tbody');
+tbodySectores.innerHTML = SECTORES.map(s=>`
+  <tr><td>${s.label}</td><td>≤ ${fmtNum(s.low,0)}</td><td>${fmtNum(s.mid,0)}</td><td>&gt; ${fmtNum(s.high,0)}</td><td>${s.desc}</td></tr>
+`).join('');
+
+compararSector();
+
+// ===================== SECCIÓN 04: DIAGNÓSTICO =====================
+const CONV = { gas:1, gasoleo:9.98, biomasa:4.80, glp:12.80, otros:1 }; // a kWh
+const FE = { elec:null, gas:0.202, gasoleo:0.267, biomasa:0.018, glp:0.231, otros:0.200 }; // kgCO2/kWh
+
+let diag = null; // resultado compartido con el informe
+
+function textoConclusion(cls){
+  if(cls === 'bad'){
+    return 'El indicador de desempeño energético (EnPI) de la instalación se sitúa por encima del rango de referencia de su sector, lo que indica un potencial de mejora relevante. Se recomienda priorizar la implantación de las medidas de ahorro identificadas y profundizar el análisis (auditoría de Nivel II/III) en los usos significativos de energía (SEU).';
+  } else if(cls === 'mid'){
+    return 'El EnPI de la instalación se encuentra dentro del rango medio de su sector. Existe margen de mejora: se recomienda implementar las medidas de ahorro de menor periodo de retorno y establecer un seguimiento periódico del indicador.';
+  }
+  return 'El EnPI de la instalación se sitúa en el rango eficiente de su sector. Se recomienda mantener las buenas prácticas actuales, formalizar el seguimiento del indicador y valorar la implantación de un sistema de gestión de la energía conforme a ISO 50001 para consolidar los resultados.';
+}
+
+function calcularDiagnostico(){
+  const nombre = document.getElementById('d_nombre').value || 'Instalación sin nombre';
+  const sector = getSector(document.getElementById('d_sector').value);
+  const area = parseFloat(document.getElementById('d_area').value) || 0;
+  const precio = parseFloat(document.getElementById('d_precio').value) || 0;
+  const feElec = parseFloat(document.getElementById('d_fe_elec').value) || 0;
+
+  const elec = parseFloat(document.getElementById('d_elec').value) || 0;
+  const gasKwh = (parseFloat(document.getElementById('d_gas').value) || 0) * CONV.gas;
+  const gasoleoKwh = (parseFloat(document.getElementById('d_gasoleo').value) || 0) * CONV.gasoleo;
+  const biomasaKwh = (parseFloat(document.getElementById('d_biomasa').value) || 0) * CONV.biomasa;
+  const glpKwh = (parseFloat(document.getElementById('d_glp').value) || 0) * CONV.glp;
+  const otrosKwh = (parseFloat(document.getElementById('d_otros').value) || 0) * CONV.otros;
+
+  const total = elec + gasKwh + gasoleoKwh + biomasaKwh + glpKwh + otrosKwh;
+
+  if(total <= 0 || area <= 0){
+    document.getElementById('diag_aviso').textContent = 'Introduce primero la superficie y al menos un vector de consumo en la sección "Recogida de datos".';
+    document.getElementById('diag_resultado').style.display = 'none';
+    diag = null;
+    return;
+  }
+  document.getElementById('diag_aviso').textContent = '';
+
+  const enpi = total / area;
+  const co2 = (elec*feElec + gasKwh*FE.gas + gasoleoKwh*FE.gasoleo + biomasaKwh*FE.biomasa + glpKwh*FE.glp + otrosKwh*FE.otros) / 1000; // tCO2/año
+
+  const c = clasificar(enpi, sector);
+  const ahorroMidKwh = Math.max(0, (enpi - sector.mid) * area);
+  const ahorroLowKwh = Math.max(0, (enpi - sector.low) * area);
+
+  diag = { nombre, sector, area, total, enpi, co2, clasificacion:c, ahorroMidKwh, ahorroLowKwh, ahorroMidEur: ahorroMidKwh*precio, ahorroLowEur: ahorroLowKwh*precio,
+    vectores: [
+      {l:'Electricidad', v:elec, color:'var(--amber)'},
+      {l:'Gas natural', v:gasKwh, color:'var(--cyan)'},
+      {l:'Gasóleo C', v:gasoleoKwh, color:'#DC2626'},
+      {l:'Biomasa', v:biomasaKwh, color:'#16A34A'},
+      {l:'GLP', v:glpKwh, color:'#8B5CF6'},
+      {l:'Otros', v:otrosKwh, color:'#5B7086'},
+    ].filter(v=>v.v>0)
+  };
+
+  document.getElementById('diag_resultado').style.display = 'block';
+  document.getElementById('diag_chips').innerHTML = `
+    <div class="result-chip"><div class="l">Consumo total anual</div><div class="v">${fmtNum(total,0)} kWh</div></div>
+    <div class="result-chip"><div class="l">EnPI (kWh/m²·año)</div><div class="v">${fmtNum(enpi,1)}</div></div>
+    <div class="result-chip"><div class="l">Emisiones GEI</div><div class="v">${fmtNum(co2,2)} tCO₂/año</div></div>
+    <div class="result-chip"><div class="l">Coste energético estimado</div><div class="v">${fmtNum(total*precio,0)} €/año</div></div>
+  `;
+
+  const stackTotal = diag.vectores.reduce((a,v)=>a+v.v,0);
+  document.getElementById('diag_stack').innerHTML = diag.vectores.map(v=>{
+    const pct = (v.v/stackTotal*100);
+    return `<div class="stack-seg" style="width:${pct}%; background:${v.color};">${pct>=8 ? fmtNum(pct,0)+'%' : ''}</div>`;
+  }).join('');
+  document.getElementById('diag_legend').innerHTML = diag.vectores.map(v=>`
+    <div class="li"><span class="sw" style="background:${v.color};"></span>${v.l}: ${fmtNum(v.v,0)} kWh (${fmtNum(v.v/stackTotal*100,1)}%)</div>
+  `).join('');
+
+  document.getElementById('diag_sector_nombre').textContent = sector.label;
+  const scaleMax = sector.high * 1.4;
+  const pos = Math.min(100, (enpi/scaleMax)*100);
+  const pLow = (sector.low/scaleMax)*100;
+  const pHigh = (sector.high/scaleMax)*100;
+  document.getElementById('diag_scale').innerHTML = `<span>0</span><span>${fmtNum(sector.low,0)}</span><span>${fmtNum(sector.mid,0)}</span><span>${fmtNum(sector.high,0)}</span><span>${fmtNum(scaleMax,0)} kWh/m²·año</span>`;
+  document.getElementById('diag_track').innerHTML = `
+    <div class="bench-zone z-good" style="left:0; width:${pLow}%;"></div>
+    <div class="bench-zone z-mid" style="left:${pLow}%; width:${pHigh-pLow}%;"></div>
+    <div class="bench-zone z-bad" style="left:${pHigh}%; width:${100-pHigh}%;"></div>
+    <div class="bench-marker" style="left:${pos}%;"><span class="mk-label">${fmtNum(enpi,0)}</span></div>
+  `;
+  const badge = document.getElementById('diag_badge');
+  badge.className = 'badge ' + c.cls;
+  badge.textContent = c.txt;
+
+  document.getElementById('diag_ahorro_mid_kwh').textContent = fmtNum(ahorroMidKwh,0) + ' kWh';
+  document.getElementById('diag_ahorro_mid_eur').textContent = fmtNum(ahorroMidKwh*precio,0) + ' €';
+  document.getElementById('diag_ahorro_low_kwh').textContent = fmtNum(ahorroLowKwh,0) + ' kWh';
+  document.getElementById('diag_ahorro_low_eur').textContent = fmtNum(ahorroLowKwh*precio,0) + ' €';
+
+  showToast('Diagnóstico energético calculado.');
+}
+
+// ===================== SECCIÓN 05: MEDIDAS (ECM) =====================
+const CATALOGO_ECM = [
+  {m:'Sustitución de iluminación por LED', s:'Todos los sectores', a:'50–70% en el uso de iluminación', p:'1–3 años'},
+  {m:'Variadores de frecuencia (VFD) en motores', s:'Industrial', a:'15–30% en fuerza motriz', p:'1–2 años'},
+  {m:'Aislamiento térmico de la envolvente', s:'Residencial / Terciario', a:'10–25% en climatización', p:'4–8 años'},
+  {m:'Recuperación de calor residual', s:'Industrial', a:'10–20% del consumo térmico', p:'2–5 años'},
+  {m:'Sistema de gestión y automatización (BMS/SCADA)', s:'Terciario / Industrial', a:'5–15% del consumo global', p:'2–4 años'},
+  {m:'Climatización de alta eficiencia (bomba de calor)', s:'Todos los sectores', a:'20–40% en climatización', p:'3–7 años'},
+  {m:'Energía solar fotovoltaica de autoconsumo', s:'Todos los sectores', a:'20–60% del consumo eléctrico', p:'5–9 años'},
+  {m:'Optimización de tarifa y factor de potencia', s:'Industrial / Terciario', a:'3–10% de la factura', p:'&lt; 1 año'},
+  {m:'Renovación de equipos de frío comercial', s:'Comercial', a:'15–30% en refrigeración', p:'3–6 años'},
+  {m:'Mejora del aislamiento de invernaderos', s:'Agrario', a:'10–20% en climatización', p:'3–6 años'},
+];
+document.querySelector('#tablaECM tbody').innerHTML = CATALOGO_ECM.map(e=>`
+  <tr><td>${e.m}</td><td>${e.s}</td><td>${e.a}</td><td>${e.p}</td></tr>
+`).join('');
+
+let medidaActual = null;
+const medidasEvaluadas = [];
+
+function tirBiseccion(inversion, ahorroAnual, vida){
+  // Resuelve NPV(r)=0 para un flujo constante: inversion = ahorro * [(1-(1+r)^-n)/r]
+  function npv(r){
+    if(Math.abs(r) < 1e-9) return -inversion + ahorroAnual*vida;
+    return -inversion + ahorroAnual * (1 - Math.pow(1+r, -vida)) / r;
+  }
+  let lo = -0.5, hi = 5.0;
+  if(npv(lo) * npv(hi) > 0) return null; // sin solución en el rango (ahorro insuficiente o inversión nula)
+  for(let i=0;i<100;i++){
+    const mid = (lo+hi)/2;
+    const v = npv(mid);
+    if(Math.abs(v) < 1e-6) return mid;
+    if(npv(lo) * v <= 0) hi = mid; else lo = mid;
+  }
+  return (lo+hi)/2;
+}
+
+function calcularMedida(){
+  const precioMedio = parseFloat(document.getElementById('d_precio').value) || 0.16;
+  const nombre = document.getElementById('e_nombre').value || 'Medida sin nombre';
+  const inversion = parseFloat(document.getElementById('e_inversion').value) || 0;
+  const ahorroKwh = parseFloat(document.getElementById('e_ahorro_kwh').value) || 0;
+  let ahorroEur = parseFloat(document.getElementById('e_ahorro_eur').value) || 0;
+  if(ahorroEur <= 0) ahorroEur = ahorroKwh * precioMedio;
+  const vida = parseFloat(document.getElementById('e_vida').value) || 1;
+  const tasaPct = parseFloat(document.getElementById('e_tasa').value) || 0;
+  const tasa = tasaPct/100;
+  const fe = parseFloat(document.getElementById('e_fe').value) || 0;
+
+  const payback = ahorroEur > 0 ? inversion/ahorroEur : Infinity;
+  const van = -inversion + (Math.abs(tasa)<1e-9 ? ahorroEur*vida : ahorroEur*(1-Math.pow(1+tasa,-vida))/tasa);
+  const tirCalc = tirBiseccion(inversion, ahorroEur, vida);
+  const co2anual = ahorroKwh * fe / 1000;
+  const co2total = co2anual * vida;
+
+  medidaActual = { nombre, inversion, ahorroKwh, ahorroEur, vida, tasaPct, payback, van, tir: tirCalc, co2anual, co2total };
+
+  document.getElementById('e_resultado').innerHTML = `
+    <div class="result-chip"><div class="l">Payback simple</div><div class="v">${isFinite(payback) ? fmtNum(payback,1)+' años' : '—'}</div></div>
+    <div class="result-chip"><div class="l">VAN</div><div class="v">${fmtNum(van,0)} €</div></div>
+    <div class="result-chip"><div class="l">TIR aprox.</div><div class="v">${tirCalc!==null ? fmtNum(tirCalc*100,1)+'%' : 'N/D'}</div></div>
+    <div class="result-chip"><div class="l">CO₂ evitado/año</div><div class="v">${fmtNum(co2anual,2)} t</div></div>
+    <div class="result-chip"><div class="l">CO₂ evitado (vida útil)</div><div class="v">${fmtNum(co2total,1)} t</div></div>
+  `;
+  showToast('Medida evaluada.');
+}
+
+calcularMedida();
+
+function anadirMedidaInforme(){
+  if(!medidaActual){ showToast('Evalúa la medida antes de añadirla.'); return; }
+  medidasEvaluadas.push(Object.assign({}, medidaActual));
+  renderMedidasLista();
+  showToast('Medida añadida al informe.');
+}
+
+function eliminarMedida(idx){
+  medidasEvaluadas.splice(idx,1);
+  renderMedidasLista();
+}
+
+function renderMedidasLista(){
+  const cont = document.getElementById('medidas_lista');
+  if(medidasEvaluadas.length === 0){
+    cont.innerHTML = '<p class="tooltip-text">Todavía no se ha añadido ninguna medida.</p>';
+    document.getElementById('medidas_totales').style.display = 'none';
+    return;
+  }
+  cont.innerHTML = medidasEvaluadas.map((m,i)=>`
+    <div class="measure-row">
+      <div><div class="mname">${m.nombre}</div><div class="mvals">Inversión ${fmtNum(m.inversion,0)} € · Ahorro ${fmtNum(m.ahorroEur,0)} €/año · Payback ${isFinite(m.payback)?fmtNum(m.payback,1)+' a':'—'} · VAN ${fmtNum(m.van,0)} €</div></div>
+      <button class="btn ghost small" onclick="eliminarMedida(${i})">Quitar</button>
+    </div>
+  `).join('');
+
+  const totInv = medidasEvaluadas.reduce((a,m)=>a+m.inversion,0);
+  const totAhorro = medidasEvaluadas.reduce((a,m)=>a+m.ahorroEur,0);
+  const totCo2 = medidasEvaluadas.reduce((a,m)=>a+m.co2anual,0);
+  document.getElementById('medidas_totales').style.display = 'grid';
+  document.getElementById('medidas_totales').innerHTML = `
+    <div class="result-chip"><div class="l">Inversión total</div><div class="v">${fmtNum(totInv,0)} €</div></div>
+    <div class="result-chip"><div class="l">Ahorro económico total/año</div><div class="v">${fmtNum(totAhorro,0)} €</div></div>
+    <div class="result-chip"><div class="l">CO₂ evitado total/año</div><div class="v">${fmtNum(totCo2,2)} t</div></div>
+  `;
+}
+
+// ===================== SECCIÓN 06: INFORME FINAL =====================
+function generarInforme(){
+  if(!diag){ calcularDiagnostico(); }
+  if(!diag){
+    document.getElementById('reportOutput').innerHTML = '<p class="tooltip-text">Completa primero la sección "Recogida de datos" (superficie y al menos un vector de consumo) y vuelve a intentarlo.</p>';
+    return;
+  }
+  const fecha = new Date().toLocaleDateString('es-ES', {year:'numeric', month:'long', day:'numeric'});
+  const ocupacion = document.getElementById('d_ocupacion').value;
+  const ubicacion = document.getElementById('d_ubicacion').value || 'No especificada';
+  const periodo = document.getElementById('d_periodo').value || 'No especificado';
+
+  const filasVectores = diag.vectores.map(v=>`<tr><td class="label">${v.l}</td><td class="value">${fmtNum(v.v,0)} kWh</td></tr>`).join('');
+
+  let filasMedidas = '<p class="tooltip-text">No se ha evaluado ninguna medida de ahorro todavía.</p>';
+  let totalesMedidas = '';
+  if(medidasEvaluadas.length){
+    filasMedidas = `<table class="data-table"><thead><tr><th>Medida</th><th>Inversión</th><th>Ahorro €/año</th><th>Payback</th><th>VAN</th><th>TIR</th><th>CO₂ evitado/año</th></tr></thead><tbody>` +
+      medidasEvaluadas.map(m=>`<tr><td>${m.nombre}</td><td>${fmtNum(m.inversion,0)} €</td><td>${fmtNum(m.ahorroEur,0)} €</td><td>${isFinite(m.payback)?fmtNum(m.payback,1)+' a':'—'}</td><td>${fmtNum(m.van,0)} €</td><td>${m.tir!==null?fmtNum(m.tir*100,1)+'%':'N/D'}</td><td>${fmtNum(m.co2anual,2)} t</td></tr>`).join('') +
+      `</tbody></table>`;
+    const totInv = medidasEvaluadas.reduce((a,m)=>a+m.inversion,0);
+    const totAhorro = medidasEvaluadas.reduce((a,m)=>a+m.ahorroEur,0);
+    const totCo2 = medidasEvaluadas.reduce((a,m)=>a+m.co2anual,0);
+    totalesMedidas = `<p style="margin-top:12px;"><b style="color:var(--text);">Totales del paquete de medidas:</b> inversión ${fmtNum(totInv,0)} €, ahorro económico ${fmtNum(totAhorro,0)} €/año, ${fmtNum(totCo2,2)} tCO₂ evitadas/año.</p>`;
+  }
+
+  const conclusion = textoConclusion(diag.clasificacion.cls);
+
+  document.getElementById('reportOutput').innerHTML = `
+    <h3>1 · Datos generales y alcance</h3>
+    <p class="rmeta">Informe generado el ${fecha}</p>
+    <table class="example-table">
+      <tr><td class="label">Instalación / proyecto</td><td class="value">${diag.nombre}</td></tr>
+      <tr><td class="label">Sector de actividad</td><td class="value">${diag.sector.label}</td></tr>
+      <tr><td class="label">Superficie útil</td><td class="value">${fmtNum(diag.area,0)} m²</td></tr>
+      <tr><td class="label">Nº ocupantes / empleados</td><td class="value">${ocupacion || '—'}</td></tr>
+      <tr><td class="label">Ubicación / zona climática</td><td class="value">${ubicacion}</td></tr>
+      <tr><td class="label">Periodo de referencia</td><td class="value">${periodo}</td></tr>
+    </table>
+
+    <h3>2 · Alcance y metodología</h3>
+    <p>Auditoría energética realizada conforme a la estructura de la norma ISO 50002:2014 (alineada con EN 16247), cubriendo la recopilación de datos históricos, el análisis del balance energético y el cálculo del indicador de desempeño energético (EnPI). El análisis de medidas de mejora sigue la metodología de caso base / caso propuesto de VATIACOScreen, con evaluación financiera mediante Valor Actual Neto (VAN), Tasa Interna de Retorno (TIR) y periodo de retorno simple.</p>
+
+    <h3>3 · Línea base energética (EnB): consumo por vector</h3>
+    <table class="example-table">
+      ${filasVectores}
+      <tr><td class="label"><b style="color:var(--text);">Total</b></td><td class="value"><b>${fmtNum(diag.total,0)} kWh/año</b></td></tr>
+    </table>
+
+    <h3>4 · Indicador de desempeño energético (EnPI) y comparativa sectorial</h3>
+    <table class="example-table">
+      <tr><td class="label">EnPI de la instalación</td><td class="value">${fmtNum(diag.enpi,1)} kWh/m²·año</td></tr>
+      <tr><td class="label">Rango eficiente del sector</td><td class="value">≤ ${fmtNum(diag.sector.low,0)} kWh/m²·año</td></tr>
+      <tr><td class="label">Valor medio del sector</td><td class="value">${fmtNum(diag.sector.mid,0)} kWh/m²·año</td></tr>
+      <tr><td class="label">Umbral ineficiente del sector</td><td class="value">&gt; ${fmtNum(diag.sector.high,0)} kWh/m²·año</td></tr>
+      <tr><td class="label">Clasificación</td><td class="value">${diag.clasificacion.txt}</td></tr>
+      <tr><td class="label">Ahorro potencial hasta el nivel medio</td><td class="value">${fmtNum(diag.ahorroMidKwh,0)} kWh/año (${fmtNum(diag.ahorroMidEur,0)} €/año)</td></tr>
+      <tr><td class="label">Ahorro potencial hasta el nivel eficiente</td><td class="value">${fmtNum(diag.ahorroLowKwh,0)} kWh/año (${fmtNum(diag.ahorroLowEur,0)} €/año)</td></tr>
+    </table>
+
+    <h3>5 · Emisiones de gases de efecto invernadero (GEI)</h3>
+    <p>Emisiones asociadas al consumo energético actual: <b style="color:var(--text);">${fmtNum(diag.co2,2)} tCO₂/año</b> (estimación según factores de emisión por vector energético introducidos en la sección de datos).</p>
+
+    <h3>6 · Medidas de eficiencia energética evaluadas</h3>
+    ${filasMedidas}
+    ${totalesMedidas}
+
+    <h3>7 · Conclusiones y recomendaciones</h3>
+    <p>${conclusion}</p>
+
+    <h3>8 · Próximos pasos</h3>
+    <p>Se recomienda: (1) verificar los datos de consumo mediante medición y verificación (M&amp;V) del ahorro real tras implementar las medidas; (2) priorizar las medidas con menor periodo de retorno y mayor VAN; (3) establecer un seguimiento periódico del EnPI; (4) valorar la implantación progresiva de un sistema de gestión de la energía conforme a ISO 50001 para institucionalizar la mejora continua.</p>
+  `;
+  showToast('Informe generado.');
+}
+
+// ===================== DESCARGAR INFORME EN PDF =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(!diag){ calcularDiagnostico(); }
+  if(!diag){ showToast('Completa primero la sección "Recogida de datos" (superficie y consumo).'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Auditoria energetica';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const orgTel = document.getElementById('p_org_tel').value || '-';
+  const orgCorreo = document.getElementById('p_org_correo').value || '-';
+  const destNombre = document.getElementById('p_dest_nombre').value || '-';
+  const destCif = document.getElementById('p_dest_cif').value || '-';
+  const destDir = document.getElementById('p_dest_dir').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const periodo = document.getElementById('d_periodo').value || 'No especificado';
+  const ocupacion = document.getElementById('d_ocupacion').value;
+  const ubicacion = document.getElementById('d_ubicacion').value || 'No especificada';
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+  const eur = n => fmtNum(n,0)+' €';
+
+  const CLASIF_LABEL = {good:'Eficiente', mid:'Normal / en rango medio', bad:'Ineficiente'};
+
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+
+  function checkPage(yy, needed=12){
+    if(yy > bottomY-needed){ doc.addPage(); return topY; }
+    return yy;
+  }
+  function sectionTitle(yy, numText, text){
+    yy = checkPage(yy, 18);
+    doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+    doc.text(numText+'  '+text, marginX, yy);
+    doc.setDrawColor(230,150,20); doc.setLineWidth(0.6);
+    doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+    doc.setLineWidth(0.2);
+    return yy+11;
+  }
+  function kv(yy, k, v, indent=0){
+    yy = checkPage(yy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+    doc.text(k, marginX+indent, yy);
+    doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+    const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+70));
+    doc.text(vLines[0], marginX+indent+70, yy);
+    let extra = 0;
+    for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+70, yy+extra); }
+    return yy+5.6+extra;
+  }
+  function paragraph(yy, text, opts={}){
+    const size = opts.size || 9;
+    const width = opts.width || (pageW-2*marginX);
+    doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+    const linesArr = doc.splitTextToSize(text, width);
+    linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+    return yy+3;
+  }
+  function tabla(yy, headers, colX, aligns, rows){
+    yy = checkPage(yy, 16);
+    doc.setFillColor(245,245,247);
+    doc.rect(marginX, yy-4.5, pageW-2*marginX, 6.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(100,108,120);
+    headers.forEach((h,i)=>{ doc.text(h, colX[i], yy, aligns[i]==='right'?{align:'right'}:undefined); });
+    yy += 4; doc.setDrawColor(210,210,215); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(30,35,45);
+    rows.forEach(r=>{
+      yy = checkPage(yy, 6);
+      r.forEach((c,i)=>{ doc.text(String(c), colX[i], yy, aligns[i]==='right'?{align:'right'}:undefined); });
+      yy += 6;
+    });
+    return yy+4;
+  }
+
+  // ===================== PORTADA =====================
+  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(230,150,20);
+  doc.text('INFORME DE AUDITORÍA ENERGÉTICA', marginX, 42);
+  doc.setDrawColor(230,150,20); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 66;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  cy += 4;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Conforme a ISO 50002 / EN 16247 — Sector: '+diag.sector.label, marginX, cy); cy+=14;
+
+  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 68, 1.5, 1.5, 'S');
+  let by = cy+9;
+  doc.setFontSize(9.5);
+  [['Titular / cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],
+   ['Dirección de la instalación', destDir],
+   ['Superficie útil', fmtNum(diag.area,0)+' m²'],
+   ['Auditor energético', autor+' ('+registro+')'],
+   ['Organización auditora', orgNombre+' — '+orgCif],
+   ['Contacto', orgTel+' / '+orgCorreo],
+   ['Periodo de referencia', periodo],
+   ['Fecha del informe', fecha]]
+   .forEach(([k,v])=>{
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
+    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-66);
+    doc.text(vLines[0], marginX+58, by);
+    by += 7.3;
+  });
+
+  cy += 80;
+  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 24, 1.5, 1.5, 'F');
+  doc.setFont('times','bold'); doc.setFontSize(10); doc.setTextColor(10,18,28);
+  doc.text('INDICADOR DE DESEMPEÑO ENERGÉTICO (EnPI) — '+CLASIF_LABEL[diag.clasificacion.cls].toUpperCase(), marginX+8, cy+9);
+  doc.setFontSize(16);
+  doc.text(fmtNum(diag.enpi,1)+' kWh/m²·año', marginX+8, cy+18);
+
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Diagnóstico, línea base energética, medidas evaluadas y recomendaciones: ver páginas siguientes', marginX, 274);
+
+  // ===================== CUERPO =====================
+  doc.addPage();
+  let y = topY;
+
+  y = sectionTitle(y, '1.', 'Alcance y metodología');
+  y = paragraph(y, 'Auditoría energética realizada conforme a la estructura de la norma ISO 50002:2014 (alineada con EN 16247), sobre la instalación "'+proyecto+'" ('+diag.sector.label+'), cubriendo la recopilación de datos históricos, el análisis del balance energético y el cálculo del indicador de desempeño energético (EnPI).');
+  y = paragraph(y, 'El análisis de medidas de mejora sigue la metodología de caso base / caso propuesto empleada por VATIACOScreen (Natural Resources Canada), con evaluación financiera mediante Valor Actual Neto (VAN), Tasa Interna de Retorno (TIR) y periodo de retorno simple.');
+
+  y = sectionTitle(y, '2.', 'Datos generales');
+  y = kv(y, 'Instalación / proyecto', proyecto);
+  y = kv(y, 'Sector de actividad', diag.sector.label);
+  y = kv(y, 'Superficie útil', fmtNum(diag.area,0)+' m²');
+  if(ocupacion) y = kv(y, 'Nº ocupantes / empleados', ocupacion);
+  y = kv(y, 'Ubicación / zona climática', ubicacion);
+  y = kv(y, 'Periodo de referencia', periodo);
+
+  y = sectionTitle(y, '3.', 'Línea base energética (EnB): consumo por vector');
+  y = paragraph(y, 'Desglose del consumo energético anual de la instalación por vector energético, convertido a kWh según los factores de conversión estándar.');
+  y = tabla(y, ['Vector energético','Consumo (kWh/año)','% del total'], [marginX, marginX+95, marginX+150], ['left','right','right'],
+    diag.vectores.map(v=>[v.l, fmtNum(v.v,0), fmtNum(v.v/diag.total*100,1)+'%']));
+  y = checkPage(y, 10);
+  doc.setDrawColor(210,210,215); doc.line(marginX,y-3,pageW-marginX,y-3);
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,24,32);
+  doc.text('Total', marginX, y);
+  doc.text(fmtNum(diag.total,0)+' kWh/año', pageW-marginX, y, {align:'right'});
+  y += 12;
+
+  y = sectionTitle(y, '4.', 'Indicador de desempeño energético (EnPI) y comparativa sectorial');
+  y = kv(y, 'EnPI de la instalación', fmtNum(diag.enpi,1)+' kWh/m²·año');
+  y = kv(y, 'Rango eficiente del sector', '≤ '+fmtNum(diag.sector.low,0)+' kWh/m²·año');
+  y = kv(y, 'Valor medio del sector', fmtNum(diag.sector.mid,0)+' kWh/m²·año');
+  y = kv(y, 'Umbral ineficiente del sector', '> '+fmtNum(diag.sector.high,0)+' kWh/m²·año');
+  y = kv(y, 'Clasificación', CLASIF_LABEL[diag.clasificacion.cls]);
+  y = kv(y, 'Ahorro potencial hasta nivel medio', fmtNum(diag.ahorroMidKwh,0)+' kWh/año ('+eur(diag.ahorroMidEur)+'/año)');
+  y = kv(y, 'Ahorro potencial hasta nivel eficiente', fmtNum(diag.ahorroLowKwh,0)+' kWh/año ('+eur(diag.ahorroLowEur)+'/año)');
+
+  y = sectionTitle(y, '5.', 'Emisiones de gases de efecto invernadero (GEI)');
+  y = paragraph(y, 'Emisiones asociadas al consumo energético actual: '+fmtNum(diag.co2,2)+' tCO₂/año (estimación según los factores de emisión por vector energético introducidos en la recogida de datos).');
+
+  y = sectionTitle(y, '6.', 'Medidas de eficiencia energética evaluadas');
+  if(medidasEvaluadas.length){
+    y = paragraph(y, 'Evaluación financiera de las medidas de ahorro (ECM) analizadas, según la metodología caso base / caso propuesto.');
+    y = tabla(y, ['Medida','Inversión','Ahorro €/año','Payback','VAN','TIR'],
+      [marginX, marginX+62, marginX+90, marginX+120, marginX+140, marginX+165], ['left','right','right','right','right','right'],
+      medidasEvaluadas.map(m=>[m.nombre.length>32?m.nombre.slice(0,32)+'…':m.nombre, eur(m.inversion), eur(m.ahorroEur), isFinite(m.payback)?fmtNum(m.payback,1)+' a':'—', eur(m.van), m.tir!==null?fmtNum(m.tir*100,1)+'%':'N/D']));
+    const totInv = medidasEvaluadas.reduce((a,m)=>a+m.inversion,0);
+    const totAhorro = medidasEvaluadas.reduce((a,m)=>a+m.ahorroEur,0);
+    const totCo2 = medidasEvaluadas.reduce((a,m)=>a+m.co2anual,0);
+    y = checkPage(y, 40);
+    const boxW = pageW-2*marginX, boxX = marginX;
+    doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(boxX, y, boxW, 30, 1.5, 1.5, 'S');
+    let ry = y+9;
+    [['Inversión total del paquete de medidas', eur(totInv)], ['Ahorro económico total estimado', eur(totAhorro)+'/año'], ['CO₂ evitado total estimado', fmtNum(totCo2,2)+' t/año']]
+      .forEach(([k,v])=>{
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(90,96,106); doc.text(k, boxX+8, ry);
+        doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45); doc.text(v, boxX+boxW-8, ry, {align:'right'});
+        ry += 7;
+      });
+    y = y+30+10;
+  } else {
+    y = paragraph(y, 'No se ha evaluado ninguna medida de ahorro en la sección "Medidas de ahorro (ECM)".');
+  }
+
+  y = sectionTitle(y, '7.', 'Conclusiones y recomendaciones');
+  y = paragraph(y, textoConclusion(diag.clasificacion.cls));
+
+  y = sectionTitle(y, '8.', 'Próximos pasos');
+  y = paragraph(y, 'Se recomienda: (1) verificar los datos de consumo mediante medición y verificación (M&V) del ahorro real tras implementar las medidas; (2) priorizar las medidas con menor periodo de retorno y mayor VAN; (3) establecer un seguimiento periódico del EnPI; (4) valorar la implantación progresiva de un sistema de gestión de la energía conforme a ISO 50001 para institucionalizar la mejora continua.');
+
+  y = sectionTitle(y, '9.', 'Validación del informe');
+  y = checkPage(y, 40);
+  y += 10;
+  doc.setDrawColor(180,185,192); doc.setLineWidth(0.3);
+  doc.line(marginX, y+20, marginX+70, y+20);
+  doc.line(pageW-marginX-70, y+20, pageW-marginX, y+20);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Por el auditor — '+(orgNombre!=='-'?orgNombre:autor), marginX, y+25);
+  doc.text('Por el titular — '+(destNombre&&destNombre!=='-'?destNombre:''), pageW-marginX-70, y+25);
+  doc.text('Fecha:', marginX, y+34);
+  doc.text('Fecha:', pageW-marginX-70, y+34);
+
+  // ===================== CABECERA / PIE =====================
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (proyecto!=='-'?proyecto:'auditoria').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-auditoria-energetica-'+safeName+'.pdf');
+  showToast('Informe en PDF generado y descargado.');
+});
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
+     compartida entre todos los documentos de esta familia a través de localStorage. -->
+<script>
+(function(){
+  var DOC_KEY = 'auditoria_energetica_iso_VATIACOScreen';
+  var LS_KEY = 'VatiaCo';
+
+  function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function guardarVatiaco(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+
+  function valorCampo(el){ return el.type==='checkbox' ? el.checked : el.value; }
+  function fijarCampo(el, val){ if(el.type==='checkbox') el.checked = !!val; else el.value = val; }
+
+  var TIPOS_IGNORADOS = {file:1, button:1, submit:1, reset:1, image:1};
+
+  function sincronizarCampos(campos, leerContenedor, obtenerContenedorParaGuardar){
+    campos.forEach(function(el){
+      if(!el.id || TIPOS_IGNORADOS[el.type]) return;
+      var guardado = leerContenedor(leerVatiaco());
+      if(guardado && guardado[el.id]!==undefined && guardado[el.id]!==null && guardado[el.id]!==''){
+        fijarCampo(el, guardado[el.id]);
+      } else {
+        var v0 = leerVatiaco();
+        var c0 = obtenerContenedorParaGuardar(v0);
+        c0[el.id] = valorCampo(el);
+        guardarVatiaco(v0);
+      }
+      var evento = (el.tagName==='SELECT' || el.type==='checkbox' || el.type==='radio') ? 'change' : 'input';
+      el.addEventListener(evento, function(){
+        var v = leerVatiaco();
+        var c = obtenerContenedorParaGuardar(v);
+        c[el.id] = valorCampo(el);
+        guardarVatiaco(v);
+      });
+    });
+  }
+
+  function registrarSalida(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    v[DOC_KEY].outputs.ultimaGeneracionPdf = new Date().toISOString();
+    guardarVatiaco(v);
+  }
+
+  function instalarBotonesExportarImportar(){
+    var barra = document.createElement('div');
+    barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
+    function crearBoton(texto){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = texto;
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      return b;
+    }
+    var btnExp = crearBoton('⬇');
+    btnExp.addEventListener('click', function(){
+      var blob = new Blob([JSON.stringify(leerVatiaco(), null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'VatiaCo.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    var btnImp = crearBoton('⬆');
+    var inputFile = document.createElement('input');
+    inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
+    inputFile.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          var v = JSON.parse(ev.target.result);
+          guardarVatiaco(v);
+          location.reload();
+        }catch(err){
+          alert('El archivo no es un JSON valido.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    btnImp.addEventListener('click', function(){ inputFile.click(); });
+
+    barra.appendChild(btnExp);
+    barra.appendChild(btnImp);
+    barra.appendChild(inputFile);
+    document.body.appendChild(barra);
+  }
+
+  function inicializarVatiaco(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].inputs = v[DOC_KEY].inputs || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    guardarVatiaco(v);
+
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]')),
+      function(vv){ return vv.proyecto; },
+      function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
+    );
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input:not([id^="p_"]), select:not([id^="p_"]), textarea:not([id^="p_"])')),
+      function(vv){ return vv[DOC_KEY] && vv[DOC_KEY].inputs; },
+      function(vv){ vv[DOC_KEY] = vv[DOC_KEY] || {}; vv[DOC_KEY].inputs = vv[DOC_KEY].inputs || {}; return vv[DOC_KEY].inputs; }
+    );
+
+    var btnPdf = document.getElementById('btnPdf');
+    if(btnPdf) btnPdf.addEventListener('click', registrarSalida);
+
+    instalarBotonesExportarImportar();
+  }
+
+  setTimeout(inicializarVatiaco, 0);
+})();
+</script>
+</body>
+</html>

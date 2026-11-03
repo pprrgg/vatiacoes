@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Rehabilitación Energética de Edificios · España</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:820px;}
+  section .lede{color:var(--text-dim); max-width:700px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:820px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:660px; font-size:15.5px;}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:150px; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--amber);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .field select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238FA3B8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center;}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .check-row{display:flex; align-items:flex-start; gap:10px; background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin-bottom:12px;}
+  .check-row input[type=checkbox]{margin-top:3px; accent-color:var(--amber); width:16px; height:16px; flex-shrink:0;}
+  .check-row .cr-body{flex:1;}
+  .check-row .cr-title{font-size:13px; color:var(--text); font-weight:600; margin-bottom:3px;}
+  .check-row .cr-meta{font-size:11.5px; color:var(--text-dim);}
+  .check-row .cr-inputs{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;}
+  .check-row .cr-inputs .field{margin-bottom:0; min-width:160px; flex:1;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc352;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.small{padding:7px 12px; font-size:11.5px;}
+
+  .calculator{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:16px 0;}
+  .calc-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:16px;}
+  .result-chip{background:var(--panel2); border:1px solid var(--amber); border-radius:var(--radius); padding:16px; text-align:center;}
+  .result-chip .v{font-family:var(--font-mono); font-size:22px; color:var(--amber);}
+  .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+  .result-chip.compare .v2{font-family:var(--font-mono); font-size:13px; color:var(--text-dim); margin-top:4px;}
+  .result-chip.good{border-color:var(--green);}
+  .result-chip.good .v{color:var(--green);}
+
+  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
+  .example-table{width:100%; font-size:12px; border-collapse:collapse;}
+  .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
+  .example-table .label{color:var(--text-dim); width:45%;}
+  .example-table .value{color:var(--text); font-family:var(--font-mono);}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+  .comp-card .rng{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); margin-top:8px;}
+  .comp-card .rng b{color:var(--amber);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 9px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:8px 9px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+
+  .tooltip-text{font-size:11px; color:var(--text-dimmer); margin-top:4px;}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--amber); text-decoration:none;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:11px; padding:4px 11px; border-radius:var(--radius); text-transform:uppercase; letter-spacing:0.05em;}
+  .badge.good{background:rgba(22,163,74,0.15); color:var(--green); border:1px solid var(--green);}
+  .badge.mid{background:rgba(255,176,32,0.15); color:var(--amber); border:1px solid var(--amber);}
+  .badge.bad{background:rgba(220,38,38,0.15); color:var(--red); border:1px solid var(--red);}
+
+  .rating-pill{display:inline-flex; align-items:center; justify-content:center; width:38px; height:32px; font-family:var(--font-display); font-weight:700; font-size:16px; border-radius:4px 0 0 4px; color:#0A121C;}
+  .rating-row{display:flex; align-items:center; gap:0; margin:10px 0;}
+  .rating-arrow{font-family:var(--font-mono); font-size:12px; color:var(--text-dimmer); padding:0 10px;}
+
+  .stack-bar{display:flex; height:28px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); margin:12px 0;}
+  .stack-seg{display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; color:#0A121C; white-space:nowrap; overflow:hidden;}
+  .stack-legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:8px;}
+  .stack-legend .li{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
+  .stack-legend .sw{width:10px; height:10px; border-radius:2px; flex-shrink:0;}
+  .bar-label{font-family:var(--font-mono); font-size:10.5px; color:var(--text-dimmer); margin:14px 0 4px;}
+
+  .report-sheet{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:36px 40px;}
+  .report-sheet h3{font-size:16px; color:var(--amber); margin:26px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .report-sheet h3:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .report-sheet p{font-size:13px; color:var(--text-dim); margin-bottom:8px;}
+  .report-sheet .rmeta{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    .calc-row{grid-template-columns:1fr;}
+    .report-sheet{padding:24px 20px;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+    <div class="tabbar-brand">SIMULADOR REHABILITACIÓN</div>
+    <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <nav class="tabbar" id="sidenav">
+      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
+      <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
+      <a href="#marco" data-sec="marco"><span class="tag">02</span>Marco y metodología</a>
+      <a href="#zonas" data-sec="zonas"><span class="tag">03</span>Zonas climáticas de España</a>
+      <a href="#edificio" data-sec="edificio"><span class="tag">04</span>Datos del edificio</a>
+      <a href="#rehabilitacion" data-sec="rehabilitacion"><span class="tag">05</span>Escenario de rehabilitación</a>
+      <a href="#resultados" data-sec="resultados"><span class="tag">06</span>Resultados de la simulación</a>
+      <a href="#informe" data-sec="informe"><span class="tag">07</span>Informe final</a>
+    </nav>
+    <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var wrap = document.getElementById('tabbarWrap');
+    var bar = document.getElementById('sidenav');
+    var btnL = document.getElementById('tabScrollLeft');
+    var btnR = document.getElementById('tabScrollRight');
+    function update(){
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+      wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+    }
+    btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+    btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    setTimeout(update, 0);
+  })();
+  </script>
+
+  <main>
+
+    <!-- SECCIÓN 00: RESUMEN -->
+    <section id="resumen">
+      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
+      <h2>Simulador de rehabilitación energética de edificios, para cualquier punto de España.</h2>
+      <p class="lede">Herramienta interactiva  de rehabilitación de edificios construida sobre el sistema de <b>zonas climáticas del CTE DB-HE</b>, válido para las 12 zonas climáticas peninsulares y de referencia para todo el territorio nacional. Introduce las características de tu edificio, elige las medidas de rehabilitación que te interesan y compara al instante la demanda, el consumo, el coste y las emisiones antes y después, con un informe final descargable.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del edificio <em>actual</em> al edificio <em>rehabilitado</em>.</h1>
+            <p class="sub">Un único flujo de datos: el tipo de edificio, la zona climática, el año de construcción y los sistemas instalados alimentan automáticamente la comparativa de escenarios, el análisis económico de las medidas y el informe final descargable en PDF.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">12 zonas climáticas</div><div class="l">sistema CTE DB-HE, válido en toda España</div></div>
+          <div class="stat"><div class="v">3 tipologías</div><div class="l">unifamiliar, bloque de viviendas, oficina</div></div>
+          <div class="stat"><div class="v">Envolvente + sistemas + FV</div><div class="l">fachada, cubierta, ventanas, calefacción, ACS, fotovoltaica</div></div>
+          <div class="stat"><div class="v">Calificación A–G</div><div class="l">estimación simplificada, no oficial</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
+      <h2 style="font-size:18px;">Un flujo de trabajo, seis pasos.</h2>
+      <div class="grid4">
+        <div class="comp-card"><h4>01 · Marco y zonas</h4><p>Repasa el método de cálculo simplificado y localiza tu zona climática CTE entre las 12 de España.</p></div>
+        <div class="comp-card"><h4>02 · Datos del edificio</h4><p>Tipo de edificio, superficie, año de construcción y sistemas de calefacción, refrigeración y ACS actuales.</p></div>
+        <div class="comp-card"><h4>03 · Escenario de rehabilitación</h4><p>Marca las medidas de envolvente y sistemas que quieres simular: aislamiento, ventanas, bomba de calor, solar térmica, fotovoltaica.</p></div>
+        <div class="comp-card"><h4>04 · Resultados</h4><p>Compara demanda, consumo, coste, emisiones y calificación estimada entre el estado actual y el rehabilitado.</p></div>
+      </div>
+      <div class="grid2" style="margin-top:16px;">
+        <div class="comp-card"><h4>05 · Análisis económico</h4><p>Inversión total de las medidas seleccionadas, ahorro anual y periodo de retorno simple.</p></div>
+        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera automáticamente el informe con los datos, la comparativa y las medidas evaluadas, listo para imprimir en PDF.</p></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 01: DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">01 · Datos del proyecto</div>
+      <h2>¿Para quién y por quién se realiza esta simulación?</h2>
+      <p class="lede">Estos datos aparecen en la portada y en los encabezados del informe en PDF (sección 07).</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / edificio simulado</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto / edificio</label><input type="text" id="p_proyecto" value="Simulación de rehabilitación energética"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Técnico / autor de la simulación</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente del edificio simulado</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección del edificio</label><input type="text" id="p_dest_dir" placeholder="Dirección del edificio simulado"></div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
+    </section>
+
+    <!-- SECCIÓN 02: MARCO Y METODOLOGÍA -->
+    <section id="marco">
+      <div class="eyebrow kicker">02 · Marco y metodología</div>
+      <h2>Cómo se estima el ahorro de una rehabilitación energética.</h2>
+      <p class="lede">Esta herramienta usa un modelo <b>simplificado de sensibilización</b>, similar en espíritu a los simuladores de rehabilitación de edificios que publican algunas comunidades autónomas (como el simulador del ICAEN en Cataluña), pero referenciado al sistema de <b>zonas climáticas del Código Técnico de la Edificación (CTE DB-HE)</b>, que cubre toda España. No sustituye a un certificado de eficiencia energética oficial (procedimientos CE3, CE3X o CERMA/HULC) ni a un proyecto de rehabilitación firmado por un técnico competente.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Lógica del cálculo</div>
+      <div class="grid2">
+        <div class="theory-card">
+          <h3>1 · Demanda de referencia</h3>
+          <p>Cada tipología de edificio tiene una demanda energética específica de referencia (kWh/m²·año), repartida entre calefacción, refrigeración, ACS y otros usos (iluminación, equipos).</p>
+        </div>
+        <div class="theory-card">
+          <h3>2 · Ajuste por antigüedad y clima</h3>
+          <p>Esa demanda se ajusta con un factor según el periodo constructivo (a peor envolvente térmica, mayor factor) y con un factor de severidad climática según la zona CTE del edificio (invierno y verano).</p>
+        </div>
+        <div class="theory-card">
+          <h3>3 · De demanda a consumo</h3>
+          <p>La demanda de cada uso se transforma en consumo de energía final dividiendo por el rendimiento (o COP/EER) del sistema que la cubre: calefacción, refrigeración y ACS.</p>
+        </div>
+        <div class="theory-card">
+          <h3>4 · Medidas de rehabilitación</h3>
+          <p>Cada medida (aislamiento, ventanas, cambio de sistema, solar térmica, fotovoltaica) reduce la demanda o mejora el rendimiento, generando el "escenario reformado" que se compara con el estado actual.</p>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Factores de severidad climática (simplificados, no oficiales)</div>
+      <p class="lede" style="margin-bottom:16px;">El CTE DB-HE define 12 zonas climáticas peninsulares combinando una letra (severidad de invierno, de A a E) y un número (severidad de verano, de 1 a 4). Esta herramienta usa un índice relativo simplificado —no los coeficientes oficiales del CTE— para escalar la demanda de calefacción y refrigeración según la zona.</p>
+      <div class="grid2">
+        <div class="theory-card">
+          <h3>Severidad de invierno (letra)</h3>
+          <p>A: invierno muy suave · B: suave · C: moderado · D: frío · E: muy frío. A mayor letra, más peso relativo de la calefacción en la demanda total.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Severidad de verano (número)</h3>
+          <p>1: verano suave · 2: moderado · 3: caluroso · 4: muy caluroso. A mayor número, más peso relativo de la refrigeración en la demanda total.</p>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Escala de calificación energética simplificada (A–G)</div>
+      <div class="formula-box">
+        <div class="f">Calificación ≈ f(emisiones de CO₂ totales / superficie útil), por tipo de edificio</div>
+      </div>
+      <p class="tooltip-text">Escala orientativa de sensibilización con la misma forma que la escala oficial de certificación energética (A a G), pero con umbrales aproximados propios de esta herramienta. Para un certificado válido a efectos legales (compraventa, alquiler, ayudas), es necesario un procedimiento reconocido (CE3, CE3X, CERMA, HULC) realizado por un técnico competente.</p>
+
+      <div class="fieldset-title">Guías técnicas IDAE de referencia (rehabilitación de la envolvente)</div>
+      <p class="lede" style="margin-bottom:16px;">Las soluciones de aislamiento y acristalamiento que se pueden elegir en la sección 05 "Escenario de rehabilitación" están inspiradas en la colección de <b>Guías Técnicas para la Rehabilitación de la Envolvente Térmica de los Edificios</b> del IDAE (Instituto para la Diversificación y Ahorro de la Energía). Los porcentajes de ahorro y los costes de esta herramienta son estimaciones propias orientativas; las guías originales no fijan un porcentaje de ahorro único, sino criterios de diseño, ejecución y detalles constructivos.</p>
+      <div class="grid3">
+        <div class="comp-card"><h4>SATE — aislamiento térmico exterior</h4><p>Guías IDAE 002: "Sistemas de Aislamiento Térmico Exterior (SATE) para la Rehabilitación de la Envolvente Térmica de los Edificios" (2012). Aislamiento continuo por el exterior, elimina puentes térmicos.</p></div>
+        <div class="comp-card"><h4>Acristalamiento y cerramientos</h4><p>"Soluciones de acristalamiento y cerramiento acristalado" (2019). Tipos de vidrio (doble, bajo emisivo, triple), carpinterías y rotura de puente térmico.</p></div>
+        <div class="comp-card"><h4>Aislamiento con lana mineral</h4><p>"Soluciones de aislamiento con lana mineral" (2008). Paneles y rollos de lana de vidrio o roca para fachada, cubierta y cámaras.</p></div>
+        <div class="comp-card"><h4>Poliestireno expandido (EPS)</h4><p>"Soluciones de aislamiento con poliestireno expandido (EPS)" (2008). Paneles rígidos para trasdosados, cubiertas y SATE.</p></div>
+        <div class="comp-card"><h4>Poliestireno extruido (XPS)</h4><p>"Soluciones de aislamiento con poliestireno extruido (XPS)" (2008). Mayor resistencia a la humedad; cubiertas invertidas y soleras.</p></div>
+        <div class="comp-card"><h4>Poliuretano proyectado</h4><p>"Soluciones de aislamiento con poliuretano" (2008). Espuma rígida proyectada in situ, menor conductividad térmica del grupo.</p></div>
+        <div class="comp-card"><h4>Espumas flexibles</h4><p>"Soluciones de aislamiento con espumas flexibles" (2008). Aislamiento de tuberías y conductos de ACS y climatización, reduce pérdidas de distribución.</p></div>
+      </div>
+
+      <div class="fieldset-title">Limitaciones del modelo</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>No es un cálculo horario</h4><p>No simula hora a hora ni usa un archivo climático real; usa factores anuales agregados por zona y periodo constructivo.</p></div>
+        <div class="comp-card"><h4>Geometría simplificada</h4><p>No calcula superficies de fachada, cubierta y huecos a partir de planos; se introducen como estimaciones directas.</p></div>
+        <div class="comp-card"><h4>Para decidir, no para certificar</h4><p>Sirve para comparar órdenes de magnitud entre medidas y priorizar inversiones, no como justificación técnica ni administrativa.</p></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 03: ZONAS CLIMÁTICAS -->
+    <section id="zonas">
+      <div class="eyebrow kicker">03 · Zonas climáticas de España</div>
+      <h2>Las 12 zonas climáticas del CTE DB-HE, con ejemplos orientativos de localización.</h2>
+      <p class="lede">El Apéndice B del CTE DB-HE asigna una zona climática a cada municipio en función de la provincia y la altitud sobre el nivel del mar. Los ejemplos de esta tabla son aproximados (referidos a la capital de provincia habitual); un municipio de la misma provincia a mayor altitud puede pertenecer a una zona más fría. En Canarias se usan además zonas "α", de invierno extremadamente suave: si tu municipio está allí, aproxímalo con la zona A3 o A4 que más se parezca, o consulta el Apéndice B para tu término municipal exacto.</p>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="tablaZonas">
+          <thead>
+            <tr><th>Zona</th><th>Invierno</th><th>Verano</th><th>Ejemplos orientativos</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Fuente del sistema de zonificación: CTE DB-HE (Código Técnico de la Edificación, Documento Básico de Ahorro de Energía), Apéndice B. Los índices de severidad relativa y los ejemplos de municipios son una simplificación de esta herramienta con fines de comparación, no los coeficientes oficiales del CTE.</p>
+    </section>
+
+    <!-- SECCIÓN 04: DATOS DEL EDIFICIO -->
+    <section id="edificio">
+      <div class="eyebrow kicker">04 · Datos del edificio</div>
+      <h2>Características generales, envolvente y sistemas actuales.</h2>
+      <p class="lede">Introduce aquí los datos del edificio en su estado actual. Estos campos alimentan automáticamente el escenario de rehabilitación (sección 05), los resultados (sección 06) y el informe final (sección 07).</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Datos generales</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Nombre del edificio</label>
+            <input type="text" id="d_nombre" value="Edificio ejemplo" placeholder="Ej. Vivienda unifamiliar, bloque de pisos...">
+          </div>
+          <div class="field">
+            <label>Tipo de edificio</label>
+            <select id="d_tipo"></select>
+          </div>
+          <div class="field">
+            <label>Zona climática (CTE DB-HE)</label>
+            <select id="d_zona"></select>
+          </div>
+          <div class="field">
+            <label>Periodo de construcción</label>
+            <select id="d_periodo"></select>
+          </div>
+          <div class="field">
+            <label>Superficie útil (m²)</label>
+            <input type="number" id="d_area" value="150" min="20" max="200000" step="5">
+          </div>
+          <div class="field">
+            <label>Nº de plantas / viviendas (opcional)</label>
+            <input type="number" id="d_plantas" value="2" min="1" max="200" step="1">
+          </div>
+        </div>
+
+        <div class="fieldset-title">Envolvente térmica (estimaciones directas)</div>
+        <div class="grid3">
+          <div class="field">
+            <label>Superficie de fachada (m²)</label>
+            <input type="number" id="d_fachada" value="180" min="0" max="500000" step="5">
+          </div>
+          <div class="field">
+            <label>Superficie de cubierta (m²)</label>
+            <input type="number" id="d_cubierta" value="90" min="0" max="500000" step="5">
+            <div class="tooltip-text">En bloques de pisos, solo aplica a la última planta; puedes poner 0 si no es responsabilidad de tu vivienda</div>
+          </div>
+          <div class="field">
+            <label>Superficie de huecos / ventanas (m²)</label>
+            <input type="number" id="d_huecos" value="25" min="0" max="500000" step="1">
+          </div>
+        </div>
+
+        <div class="fieldset-title">Sistemas actuales</div>
+        <div class="grid3">
+          <div class="field">
+            <label>Calefacción actual</label>
+            <select id="d_sist_calef"></select>
+          </div>
+          <div class="field">
+            <label>Refrigeración actual</label>
+            <select id="d_sist_refrig"></select>
+          </div>
+          <div class="field">
+            <label>Agua caliente sanitaria (ACS) actual</label>
+            <select id="d_sist_acs"></select>
+          </div>
+        </div>
+
+        <div class="fieldset-title">Precios de la energía (€/kWh) y factor de emisión eléctrico</div>
+        <div class="grid4">
+          <div class="field">
+            <label>Electricidad (€/kWh)</label>
+            <input type="number" id="d_precio_elec" value="0.18" min="0.01" max="2" step="0.01">
+          </div>
+          <div class="field">
+            <label>Gas natural (€/kWh)</label>
+            <input type="number" id="d_precio_gas" value="0.065" min="0.01" max="2" step="0.005">
+          </div>
+          <div class="field">
+            <label>Gasóleo C (€/kWh equiv.)</label>
+            <input type="number" id="d_precio_gasoleo" value="0.11" min="0.01" max="2" step="0.005">
+            <div class="tooltip-text">Precio €/litro ÷ 9,98 (PCI aprox.)</div>
+          </div>
+          <div class="field">
+            <label>Biomasa / pellet (€/kWh equiv.)</label>
+            <input type="number" id="d_precio_biomasa" value="0.06" min="0.01" max="2" step="0.005">
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Factor de emisión eléctrico de red (kgCO₂/kWh)</label>
+            <input type="number" id="d_fe_elec" value="0.212" min="0" max="1" step="0.001">
+            <div class="tooltip-text">Ajusta según el mix eléctrico de tu año de referencia</div>
+          </div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos datos quedan disponibles en el navegador (no se envían a ningún servidor) y se reutilizan directamente en las secciones "Escenario de rehabilitación", "Resultados" e "Informe final".</p>
+    </section>
+
+    <!-- SECCIÓN 05: ESCENARIO DE REHABILITACIÓN -->
+    <section id="rehabilitacion">
+      <div class="eyebrow kicker">05 · Escenario de rehabilitación</div>
+      <h2>Marca las medidas que quieres simular sobre el edificio.</h2>
+      <p class="lede">Cada medida activa modifica el escenario "reformado" que se compara con el estado actual en la sección de resultados. Los costes son orientativos (rangos de mercado habituales en España) y no sustituyen a un presupuesto real.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Envolvente térmica</div>
+
+      <div class="check-row">
+        <input type="checkbox" id="r_fachada" checked>
+        <div class="cr-body">
+          <div class="cr-title">Aislamiento de fachada</div>
+          <div class="cr-meta">Reduce la demanda de calefacción y refrigeración según el sistema elegido, inspirado en las guías técnicas del IDAE. Coste por m² de fachada.</div>
+          <div class="cr-inputs">
+            <div class="field"><label>Sistema de aislamiento de fachada</label><select id="r_fachada_tipo"></select></div>
+          </div>
+          <div class="tooltip-text" id="r_fachada_meta"></div>
+        </div>
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="r_cubierta">
+        <div class="cr-body">
+          <div class="cr-title">Aislamiento de cubierta</div>
+          <div class="cr-meta">Reduce la demanda de calefacción y refrigeración según el material aislante elegido. Coste por m² de cubierta.</div>
+          <div class="cr-inputs">
+            <div class="field"><label>Material aislante de cubierta</label><select id="r_cubierta_tipo"></select></div>
+          </div>
+          <div class="tooltip-text" id="r_cubierta_meta"></div>
+        </div>
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="r_ventanas" checked>
+        <div class="cr-body">
+          <div class="cr-title">Sustitución de ventanas</div>
+          <div class="cr-meta">Reduce la demanda de calefacción y refrigeración según el tipo de acristalamiento elegido. Coste por m² de hueco.</div>
+          <div class="cr-inputs">
+            <div class="field"><label>Tipo de acristalamiento</label><select id="r_ventanas_tipo"></select></div>
+          </div>
+          <div class="tooltip-text" id="r_ventanas_meta"></div>
+        </div>
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="r_tuberias">
+        <div class="cr-body">
+          <div class="cr-title">Aislamiento de tuberías de ACS y climatización (espumas flexibles)</div>
+          <div class="cr-meta">Reduce las pérdidas de distribución de ACS y climatización un ~6%. Coste orientativo según tipo de edificio.</div>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Sistemas</div>
+      <div class="field">
+        <label>Nuevo sistema de calefacción / refrigeración (sustituye al actual)</label>
+        <select id="r_sistema"></select>
+        <div class="tooltip-text" id="r_sistema_meta"></div>
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="r_solar">
+        <div class="cr-body">
+          <div class="cr-title">Solar térmica para ACS</div>
+          <div class="cr-meta">Cubre en torno al 55% de la demanda de ACS con energía solar gratuita; el resto lo sigue cubriendo el sistema de apoyo. Coste orientativo según tipo de edificio.</div>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Energía renovable</div>
+      <div class="check-row">
+        <input type="checkbox" id="r_fv">
+        <div class="cr-body">
+          <div class="cr-title">Instalación fotovoltaica de autoconsumo</div>
+          <div class="cr-meta">Genera electricidad en la propia cubierta para autoconsumo instantáneo; se estima un aprovechamiento del 70% de la producción. Coste orientativo: 1.100 €/kWp instalado.</div>
+          <div class="cr-inputs">
+            <div class="field"><label>Potencia a instalar (kWp)</label><input type="number" id="r_fv_kwp" value="4" min="0.5" max="5000" step="0.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn primary" onclick="calcularSimulacion(); showToast('Escenario recalculado. Ve a Resultados de la simulación.');" style="width:100%; margin-top:12px;">Recalcular escenario de rehabilitación</button>
+    </section>
+
+    <!-- SECCIÓN 06: RESULTADOS -->
+    <section id="resultados">
+      <div class="eyebrow kicker">06 · Resultados de la simulación</div>
+      <h2>Comparativa entre el estado actual y el escenario rehabilitado.</h2>
+      <p class="lede">Resultados calculados a partir de los datos del edificio (sección 04) y las medidas marcadas en el escenario de rehabilitación (sección 05).</p>
+
+      <button class="btn primary" onclick="calcularSimulacion()" style="margin-bottom:24px;">Calcular / actualizar resultados</button>
+      <div id="res_aviso" class="tooltip-text" style="margin-bottom:16px;"></div>
+
+      <div id="res_resultado" style="display:none;">
+        <div class="fieldset-title" style="margin-top:0;">Indicadores comparados</div>
+        <div class="grid4" id="res_chips"></div>
+
+        <div class="fieldset-title">Calificación energética estimada (escala simplificada, no oficial)</div>
+        <div class="rating-row" id="res_rating"></div>
+
+        <div class="fieldset-title">Demanda por uso · estado actual</div>
+        <div class="stack-bar" id="res_stack_actual"></div>
+        <div class="stack-legend" id="res_legend_actual"></div>
+
+        <div class="bar-label">Demanda por uso · escenario rehabilitado</div>
+        <div class="stack-bar" id="res_stack_reforma"></div>
+        <div class="stack-legend" id="res_legend_reforma"></div>
+
+        <div class="fieldset-title">Medidas incluidas en el escenario rehabilitado</div>
+        <div id="res_medidas"></div>
+
+        <div class="fieldset-title">Análisis económico del paquete de medidas</div>
+        <div class="grid3" id="res_economico"></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 07: INFORME FINAL -->
+    <section id="informe">
+      <div class="eyebrow kicker">07 · Informe final</div>
+      <h2>Informe de simulación de rehabilitación energética, generado a partir de tus datos.</h2>
+      <p class="lede">Estructura orientativa: datos generales, metodología, estado actual, escenario propuesto, resultados comparativos, análisis económico y conclusiones. Rellena las secciones 01 (datos del proyecto), 04 y 05 antes de generar el informe.</p>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px;">
+        <button class="btn primary" onclick="generarInforme()">Generar / actualizar vista previa</button>
+        <button class="btn ghost" id="btnPdf">&#8681; Descargar informe en PDF</button>
+      </div>
+
+      <div class="report-sheet" id="reportOutput">
+        <p class="tooltip-text">Pulsa "Generar / actualizar vista previa" para componer el documento con los datos introducidos, y "Descargar informe en PDF" para obtener el informe descargable.</p>
+      </div>
+    </section>
+
+    <footer>
+      Simulador orientativo de rehabilitación energética de edificios, basado en las zonas climáticas del CTE DB-HE (España). Los factores de demanda, los rendimientos de sistemas y los costes de medidas son estimaciones simplificadas con fines de sensibilización y comparación; no sustituyen a un certificado de eficiencia energética oficial ni a un proyecto de rehabilitación firmado por un técnico competente. Integrado en el blog de VatiaCo. Última actualización: 2026.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'resumen';
+
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+// ===================== UTILIDADES =====================
+function fmtNum(n, d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600); }
+
+// ===================== DATOS DE REFERENCIA =====================
+const INVIERNO_DESC = {A:'muy suave', B:'suave', C:'moderado', D:'frío', E:'muy frío'};
+const VERANO_DESC = {1:'suave', 2:'moderado', 3:'caluroso', 4:'muy caluroso'};
+const F_INVIERNO = {A:0.55, B:0.75, C:0.95, D:1.15, E:1.35};
+const F_VERANO = {1:0.60, 2:0.80, 3:1.00, 4:1.25};
+
+const ZONAS = [
+  {id:'A3', invierno:'A', verano:3, ejemplos:'Almería, litoral de Málaga'},
+  {id:'A4', invierno:'A', verano:4, ejemplos:'Cádiz, Huelva capital'},
+  {id:'B3', invierno:'B', verano:3, ejemplos:'Alicante, Murcia'},
+  {id:'B4', invierno:'B', verano:4, ejemplos:'Sevilla, Córdoba'},
+  {id:'C1', invierno:'C', verano:1, ejemplos:'A Coruña, Bilbao, San Sebastián, Santander, Gijón'},
+  {id:'C2', invierno:'C', verano:2, ejemplos:'Barcelona, Castellón de la Plana'},
+  {id:'C3', invierno:'C', verano:3, ejemplos:'Valencia, Palma de Mallorca'},
+  {id:'C4', invierno:'C', verano:4, ejemplos:'Badajoz, Cáceres'},
+  {id:'D1', invierno:'D', verano:1, ejemplos:'Vitoria-Gasteiz, prepirineo leridano'},
+  {id:'D2', invierno:'D', verano:2, ejemplos:'Zaragoza, Logroño, Girona interior'},
+  {id:'D3', invierno:'D', verano:3, ejemplos:'Madrid, Toledo, Ciudad Real, Albacete, Guadalajara'},
+  {id:'E1', invierno:'E', verano:1, ejemplos:'Burgos, Ávila, Segovia, Soria, León, Teruel'},
+];
+function getZona(id){ return ZONAS.find(z=>z.id===id) || ZONAS[10]; }
+
+const TIPOS = [
+  {id:'unifamiliar', label:'Vivienda unifamiliar (aislada o adosada)', base:150, shareCalef:0.60, shareRefrig:0.08, shareAcs:0.17, shareOtros:0.15, califMult:1.0, costeSistema:{mantener:0,condensacion:4500,bdc:9000,biomasa:8000}, costeSolar:3200, costeFvKwp:1100, costeTuberias:350},
+  {id:'bloque', label:'Vivienda en bloque de pisos', base:120, shareCalef:0.55, shareRefrig:0.07, shareAcs:0.20, shareOtros:0.18, califMult:1.0, costeSistema:{mantener:0,condensacion:7000,bdc:14000,biomasa:12000}, costeSolar:5000, costeFvKwp:1100, costeTuberias:900},
+  {id:'oficina', label:'Oficina / terciario administrativo', base:100, shareCalef:0.35, shareRefrig:0.25, shareAcs:0.05, shareOtros:0.35, califMult:1.35, costeSistema:{mantener:0,condensacion:10000,bdc:20000,biomasa:16000}, costeSolar:6000, costeFvKwp:1050, costeTuberias:1200},
+];
+function getTipo(id){ return TIPOS.find(t=>t.id===id) || TIPOS[0]; }
+
+const PERIODOS = [
+  {id:'antes1940', label:'Antes de 1940', factor:1.35},
+  {id:'1941-1960', label:'1941–1960', factor:1.30},
+  {id:'1961-1980', label:'1961–1980 (sin normativa térmica)', factor:1.22},
+  {id:'1981-2006', label:'1981–2006 (NBE-CT-79)', factor:0.95},
+  {id:'2007-2013', label:'2007–2013 (CTE DB-HE 2006)', factor:0.70},
+  {id:'post2013', label:'Después de 2013 (CTE DB-HE 2013/2019)', factor:0.45},
+];
+function getPeriodo(id){ return PERIODOS.find(p=>p.id===id) || PERIODOS[3]; }
+
+const FE = { elec:null, gas:0.202, gasoleo:0.267, biomasa:0.018, ninguno:0 }; // kgCO2/kWh, elec se lee del campo editable
+
+const SIST_CALEF = [
+  {id:'gasoleo_antigua', label:'Caldera de gasóleo antigua', rend:0.72, comb:'gasoleo'},
+  {id:'gas_estandar', label:'Caldera de gas natural estándar', rend:0.85, comb:'gas'},
+  {id:'gas_condensacion', label:'Caldera de gas de condensación', rend:0.97, comb:'gas'},
+  {id:'electrico', label:'Radiadores / acumuladores eléctricos', rend:1.00, comb:'elec'},
+  {id:'bdc', label:'Bomba de calor de aerotermia', rend:3.00, comb:'elec'},
+  {id:'biomasa', label:'Caldera de biomasa (pellet)', rend:0.82, comb:'biomasa'},
+  {id:'ninguno', label:'Sin calefacción', rend:1.00, comb:'ninguno'},
+];
+const SIST_REFRIG = [
+  {id:'ninguno', label:'Sin refrigeración', rend:0, comb:'ninguno'},
+  {id:'split_estandar', label:'Splits aire-aire estándar', rend:2.60, comb:'elec'},
+  {id:'split_eficiente', label:'Splits aire-aire eficientes (Inverter A++)', rend:3.60, comb:'elec'},
+  {id:'bdc', label:'Bomba de calor reversible (aerotermia)', rend:3.40, comb:'elec'},
+];
+const SIST_ACS = [
+  {id:'gas', label:'Caldera de gas', rend:0.80, comb:'gas'},
+  {id:'gasoleo', label:'Caldera de gasóleo', rend:0.75, comb:'gasoleo'},
+  {id:'electrico', label:'Termo eléctrico', rend:0.95, comb:'elec'},
+  {id:'bdc', label:'Bomba de calor para ACS (aerotermia)', rend:2.50, comb:'elec'},
+  {id:'biomasa', label:'Caldera de biomasa (pellet)', rend:0.80, comb:'biomasa'},
+];
+
+const SIST_NUEVO = [
+  {id:'mantener', label:'Mantener sistema actual', comb:'—'},
+  {id:'condensacion', label:'Caldera de gas de condensación (calefacción + ACS)', rendCalef:0.97, rendAcs:0.90, comb:'gas', meta:'Sustituye calefacción y ACS por una caldera mixta de condensación. No cambia el sistema de refrigeración.'},
+  {id:'bdc', label:'Bomba de calor de aerotermia (calefacción + refrigeración + ACS)', rendCalef:3.20, rendRefrig:3.20, rendAcs:2.80, comb:'elec', meta:'Sistema integral: sustituye calefacción, refrigeración y ACS por equipos de aerotermia.'},
+  {id:'biomasa', label:'Caldera de biomasa (calefacción + ACS)', rendCalef:0.85, rendAcs:0.80, comb:'biomasa', meta:'Sustituye calefacción y ACS por caldera de pellets. No cambia el sistema de refrigeración.'},
+];
+
+// Sistemas de aislamiento de fachada, inspirados en las guías técnicas del IDAE
+// (Guías IDAE 002 - SATE, y las guías "Soluciones de aislamiento con..." de 2008).
+const FACHADA_TIPOS = [
+  {id:'sate', label:'SATE — aislamiento térmico exterior (Guía IDAE 002)', reduceCalef:22, reduceRefrig:9, costeM2:85, meta:'Aislamiento continuo por el exterior; elimina puentes térmicos. Guías IDAE 002 (2012).'},
+  {id:'camara_lana', label:'Aislamiento en cámara con lana mineral insuflada', reduceCalef:15, reduceRefrig:6, costeM2:38, meta:'Solo aplicable si la fachada tiene cámara de aire. "Soluciones de aislamiento con lana mineral" (IDAE, 2008).'},
+  {id:'trasdosado_eps', label:'Trasdosado interior con poliestireno (EPS/XPS)', reduceCalef:13, reduceRefrig:5, costeM2:50, meta:'Reduce ligeramente la superficie útil interior. "Soluciones de aislamiento con EPS/XPS" (IDAE, 2008).'},
+  {id:'poliuretano', label:'Poliuretano proyectado (cámara o interior)', reduceCalef:19, reduceRefrig:7, costeM2:62, meta:'Menor conductividad térmica del grupo. "Soluciones de aislamiento con poliuretano" (IDAE, 2008).'},
+];
+// Materiales de aislamiento de cubierta, mismas guías IDAE de soluciones de aislamiento (2008).
+const CUBIERTA_TIPOS = [
+  {id:'lana_mineral', label:'Lana mineral (rollos o paneles)', reduceCalef:10, reduceRefrig:5, costeM2:40, meta:'"Soluciones de aislamiento con lana mineral" (IDAE, 2008).'},
+  {id:'eps', label:'Poliestireno expandido (EPS)', reduceCalef:9, reduceRefrig:4, costeM2:38, meta:'"Soluciones de aislamiento con poliestireno expandido (EPS)" (IDAE, 2008).'},
+  {id:'xps', label:'Poliestireno extruido (XPS)', reduceCalef:11, reduceRefrig:5, costeM2:48, meta:'Mayor resistencia a la humedad; habitual en cubiertas invertidas. "Soluciones de aislamiento con XPS" (IDAE, 2008).'},
+  {id:'poliuretano', label:'Poliuretano proyectado', reduceCalef:13, reduceRefrig:6, costeM2:55, meta:'"Soluciones de aislamiento con poliuretano" (IDAE, 2008).'},
+];
+// Tipos de acristalamiento, inspirados en "Soluciones de acristalamiento y cerramiento acristalado" (IDAE, 2019).
+const VENTANA_TIPOS = [
+  {id:'doble_estandar', label:'Doble acristalamiento estándar (4/12/4)', reduceCalef:8, reduceRefrig:5, costeM2:280, meta:'Mejora básica frente al vidrio simple. "Soluciones de acristalamiento y cerramiento acristalado" (IDAE, 2019).'},
+  {id:'doble_bajo_emisivo', label:'Doble bajo emisivo + cámara de argón', reduceCalef:14, reduceRefrig:9, costeM2:420, meta:'Solución habitual en rehabilitación con rotura de puente térmico. IDAE (2019).'},
+  {id:'triple', label:'Triple acristalamiento bajo emisivo', reduceCalef:18, reduceRefrig:11, costeM2:560, meta:'Máximo rendimiento térmico; recomendable en zonas climáticas D/E. IDAE (2019).'},
+];
+
+// Producción FV específica (kWh/kWp·año) orientativa según severidad de verano de la zona (más sol/calor => más producción)
+const FV_YIELD = {1:1250, 2:1400, 3:1550, 4:1650};
+
+// Umbrales de calificación simplificada (kgCO2/m²·año) — escala propia, no oficial
+const UMBRALES_CALIF = [
+  {letra:'A', max:7}, {letra:'B', max:12}, {letra:'C', max:20}, {letra:'D', max:34},
+  {letra:'E', max:54}, {letra:'F', max:80}, {letra:'G', max:Infinity},
+];
+const COLOR_CALIF = {A:'#16A34A', B:'#65C466', C:'#B7D944', D:'#FFB020', E:'#F08A3C', F:'#E0602E', G:'#DC2626'};
+function calificar(kgco2m2, mult){
+  const ajustado = kgco2m2 / mult;
+  return UMBRALES_CALIF.find(u=>ajustado<=u.max) || UMBRALES_CALIF[UMBRALES_CALIF.length-1];
+}
+
+// ===================== POBLAR SELECTS =====================
+function poblarSelect(id, arr, labelFn){
+  const sel = document.getElementById(id);
+  sel.innerHTML = arr.map(x=>`<option value="${x.id}">${labelFn(x)}</option>`).join('');
+}
+poblarSelect('d_tipo', TIPOS, t=>t.label);
+poblarSelect('d_zona', ZONAS, z=>`${z.id} · invierno ${INVIERNO_DESC[z.invierno]}, verano ${VERANO_DESC[z.verano]}`);
+poblarSelect('d_periodo', PERIODOS, p=>p.label);
+poblarSelect('d_sist_calef', SIST_CALEF, s=>s.label);
+poblarSelect('d_sist_refrig', SIST_REFRIG, s=>s.label);
+poblarSelect('d_sist_acs', SIST_ACS, s=>s.label);
+poblarSelect('r_sistema', SIST_NUEVO, s=>s.label);
+poblarSelect('r_fachada_tipo', FACHADA_TIPOS, s=>s.label);
+poblarSelect('r_cubierta_tipo', CUBIERTA_TIPOS, s=>s.label);
+poblarSelect('r_ventanas_tipo', VENTANA_TIPOS, s=>s.label);
+document.getElementById('d_zona').value = 'D3';
+document.getElementById('d_sist_calef').value = 'gas_estandar';
+document.getElementById('d_sist_refrig').value = 'split_estandar';
+document.getElementById('d_sist_acs').value = 'gas';
+document.getElementById('r_sistema').value = 'bdc';
+document.getElementById('r_fachada_tipo').value = 'sate';
+document.getElementById('r_cubierta_tipo').value = 'lana_mineral';
+document.getElementById('r_ventanas_tipo').value = 'doble_bajo_emisivo';
+
+function actualizarMetaSistemaNuevo(){
+  const s = SIST_NUEVO.find(x=>x.id===document.getElementById('r_sistema').value);
+  document.getElementById('r_sistema_meta').textContent = s.meta || 'No se sustituye ningún equipo.';
+}
+document.getElementById('r_sistema').addEventListener('change', actualizarMetaSistemaNuevo);
+actualizarMetaSistemaNuevo();
+
+function actualizarMetaEnvolvente(selectId, metaId, arr){
+  const s = arr.find(x=>x.id===document.getElementById(selectId).value);
+  document.getElementById(metaId).textContent = s ? s.meta : '';
+}
+[['r_fachada_tipo','r_fachada_meta',FACHADA_TIPOS],['r_cubierta_tipo','r_cubierta_meta',CUBIERTA_TIPOS],['r_ventanas_tipo','r_ventanas_meta',VENTANA_TIPOS]].forEach(([selectId,metaId,arr])=>{
+  document.getElementById(selectId).addEventListener('change', ()=>actualizarMetaEnvolvente(selectId,metaId,arr));
+  actualizarMetaEnvolvente(selectId,metaId,arr);
+});
+
+// ===================== TABLA DE ZONAS (SECCIÓN 03) =====================
+document.querySelector('#tablaZonas tbody').innerHTML = ZONAS.map(z=>`
+  <tr><td><b style="color:var(--text);">${z.id}</b></td><td>${INVIERNO_DESC[z.invierno]} (${z.invierno})</td><td>${VERANO_DESC[z.verano]} (${z.verano})</td><td>${z.ejemplos}</td></tr>
+`).join('');
+
+// ===================== FUEL: COSTE Y CO2 =====================
+function precioFuel(comb){
+  if(comb==='elec') return parseFloat(document.getElementById('d_precio_elec').value)||0;
+  if(comb==='gas') return parseFloat(document.getElementById('d_precio_gas').value)||0;
+  if(comb==='gasoleo') return parseFloat(document.getElementById('d_precio_gasoleo').value)||0;
+  if(comb==='biomasa') return parseFloat(document.getElementById('d_precio_biomasa').value)||0;
+  return 0;
+}
+function feFuel(comb){
+  if(comb==='elec') return parseFloat(document.getElementById('d_fe_elec').value)||0;
+  return FE[comb]||0;
+}
+
+// ===================== MOTOR DE CÁLCULO =====================
+let sim = null; // resultado compartido con el informe
+
+function calcularEscenario(area, tipo, periodo, zona, sistCalefActual, sistRefrigActual, sistAcsActual, medidas){
+  const base = tipo.base * periodo.factor;
+  let demCalefM2 = base * tipo.shareCalef * F_INVIERNO[zona.invierno];
+  let demRefrigM2 = base * tipo.shareRefrig * F_VERANO[zona.verano];
+  const demAcsM2 = base * tipo.shareAcs;
+  const demOtrosM2 = base * tipo.shareOtros;
+
+  let multCalef = 1, multRefrig = 1, multAcs = 1;
+  let acsCubiertaSolar = 0;
+  if(medidas){
+    if(medidas.fachadaTipo){ multCalef *= (1-medidas.fachadaTipo.reduceCalef/100); multRefrig *= (1-medidas.fachadaTipo.reduceRefrig/100); }
+    if(medidas.cubiertaTipo){ multCalef *= (1-medidas.cubiertaTipo.reduceCalef/100); multRefrig *= (1-medidas.cubiertaTipo.reduceRefrig/100); }
+    if(medidas.ventanaTipo){ multCalef *= (1-medidas.ventanaTipo.reduceCalef/100); multRefrig *= (1-medidas.ventanaTipo.reduceRefrig/100); }
+    if(medidas.tuberias){ multAcs *= (1-0.06); }
+    if(medidas.solar){ acsCubiertaSolar = 0.55; }
+  }
+  demCalefM2 *= multCalef;
+  demRefrigM2 *= multRefrig;
+  const demAcsM2Ajustada = demAcsM2 * multAcs;
+
+  let sistCalef = sistCalefActual, sistRefrig = sistRefrigActual, sistAcs = sistAcsActual;
+  if(medidas && medidas.sistemaNuevo && medidas.sistemaNuevo.id !== 'mantener'){
+    const sn = medidas.sistemaNuevo;
+    sistCalef = {rend: sn.rendCalef, comb: sn.comb};
+    if(sn.rendRefrig) sistRefrig = {rend: sn.rendRefrig, comb: sn.comb};
+    if(sn.rendAcs) sistAcs = {rend: sn.rendAcs, comb: sn.comb};
+  }
+
+  const demCalef = demCalefM2 * area;
+  const demRefrig = demRefrigM2 * area;
+  const demAcs = demAcsM2Ajustada * area;
+  const demOtros = demOtrosM2 * area;
+
+  const consCalef = sistCalef.rend>0 ? demCalef/sistCalef.rend : 0;
+  const consRefrig = sistRefrig.rend>0 ? demRefrig/sistRefrig.rend : 0;
+  const demAcsRestante = demAcs * (1-acsCubiertaSolar);
+  const consAcs = sistAcs.rend>0 ? demAcsRestante/sistAcs.rend : 0;
+  const consOtros = demOtros; // rendimiento 1, siempre eléctrico
+
+  const porComb = {elec:0, gas:0, gasoleo:0, biomasa:0, ninguno:0};
+  porComb[sistCalef.comb] += consCalef;
+  porComb[sistRefrig.comb] += consRefrig;
+  porComb[sistAcs.comb] += consAcs;
+  porComb.elec += consOtros;
+
+  let fvProduccionUtil = 0, fvInversion = 0;
+  if(medidas && medidas.fv && medidas.fvKwp>0){
+    const yieldEspecifico = FV_YIELD[zona.verano] || 1400;
+    const produccion = medidas.fvKwp * yieldEspecifico;
+    fvProduccionUtil = Math.min(produccion*0.70, porComb.elec);
+    porComb.elec -= fvProduccionUtil;
+    fvInversion = medidas.fvKwp * tipo.costeFvKwp;
+  }
+
+  let coste = 0, co2 = 0;
+  ['elec','gas','gasoleo','biomasa'].forEach(c=>{
+    coste += porComb[c] * precioFuel(c);
+    co2 += porComb[c] * feFuel(c);
+  });
+
+  const consumoTotal = porComb.elec+porComb.gas+porComb.gasoleo+porComb.biomasa;
+  const demandaTotal = demCalef+demRefrig+demAcs+demOtros;
+  const calif = calificar(co2/area, tipo.califMult);
+
+  return {
+    demanda: { calef:demCalefM2, refrig:demRefrigM2, acsTotal:demAcsM2Ajustada, otros:demOtrosM2, totalM2: demandaTotal/area, total: demandaTotal },
+    consumo: { elec:porComb.elec, gas:porComb.gas, gasoleo:porComb.gasoleo, biomasa:porComb.biomasa, total: consumoTotal },
+    coste, co2Kg: co2, co2Ton: co2/1000, calif, fvProduccionUtil, fvInversion,
+  };
+}
+
+function calcularSimulacion(){
+  const nombre = document.getElementById('d_nombre').value || 'Edificio sin nombre';
+  const tipo = getTipo(document.getElementById('d_tipo').value);
+  const zona = getZona(document.getElementById('d_zona').value);
+  const periodo = getPeriodo(document.getElementById('d_periodo').value);
+  const area = parseFloat(document.getElementById('d_area').value) || 0;
+  const fachadaArea = parseFloat(document.getElementById('d_fachada').value) || 0;
+  const cubiertaArea = parseFloat(document.getElementById('d_cubierta').value) || 0;
+  const huecosArea = parseFloat(document.getElementById('d_huecos').value) || 0;
+
+  if(area<=0){
+    document.getElementById('res_aviso').textContent = 'Introduce primero la superficie útil en la sección "Datos del edificio".';
+    document.getElementById('res_resultado').style.display = 'none';
+    sim = null;
+    return;
+  }
+  document.getElementById('res_aviso').textContent = '';
+
+  const sistCalefActual = SIST_CALEF.find(s=>s.id===document.getElementById('d_sist_calef').value);
+  const sistRefrigActual = SIST_REFRIG.find(s=>s.id===document.getElementById('d_sist_refrig').value);
+  const sistAcsActual = SIST_ACS.find(s=>s.id===document.getElementById('d_sist_acs').value);
+
+  const medFachada = document.getElementById('r_fachada').checked;
+  const medCubierta = document.getElementById('r_cubierta').checked;
+  const medVentanas = document.getElementById('r_ventanas').checked;
+  const medTuberias = document.getElementById('r_tuberias').checked;
+  const medSolar = document.getElementById('r_solar').checked;
+  const medFv = document.getElementById('r_fv').checked;
+  const fvKwp = parseFloat(document.getElementById('r_fv_kwp').value) || 0;
+  const sistemaNuevo = SIST_NUEVO.find(s=>s.id===document.getElementById('r_sistema').value);
+  const fachadaTipo = medFachada ? FACHADA_TIPOS.find(s=>s.id===document.getElementById('r_fachada_tipo').value) : null;
+  const cubiertaTipo = medCubierta ? CUBIERTA_TIPOS.find(s=>s.id===document.getElementById('r_cubierta_tipo').value) : null;
+  const ventanaTipo = medVentanas ? VENTANA_TIPOS.find(s=>s.id===document.getElementById('r_ventanas_tipo').value) : null;
+
+  const actual = calcularEscenario(area, tipo, periodo, zona, sistCalefActual, sistRefrigActual, sistAcsActual, null);
+  const reforma = calcularEscenario(area, tipo, periodo, zona, sistCalefActual, sistRefrigActual, sistAcsActual, {
+    fachadaTipo, cubiertaTipo, ventanaTipo, tuberias:medTuberias, solar:medSolar, fv:medFv, fvKwp, sistemaNuevo,
+  });
+
+  let inversion = 0;
+  const medidasResumen = [];
+  if(fachadaTipo){ const c = fachadaArea*fachadaTipo.costeM2; inversion += c; medidasResumen.push({n:'Aislamiento de fachada — '+fachadaTipo.label, c}); }
+  if(cubiertaTipo){ const c = cubiertaArea*cubiertaTipo.costeM2; inversion += c; medidasResumen.push({n:'Aislamiento de cubierta — '+cubiertaTipo.label, c}); }
+  if(ventanaTipo){ const c = huecosArea*ventanaTipo.costeM2; inversion += c; medidasResumen.push({n:'Sustitución de ventanas — '+ventanaTipo.label, c}); }
+  if(medTuberias){ inversion += tipo.costeTuberias; medidasResumen.push({n:'Aislamiento de tuberías de ACS y climatización (espumas flexibles)', c:tipo.costeTuberias}); }
+  if(sistemaNuevo.id!=='mantener'){ const c = tipo.costeSistema[sistemaNuevo.id]||0; inversion += c; medidasResumen.push({n:sistemaNuevo.label, c}); }
+  if(medSolar){ inversion += tipo.costeSolar; medidasResumen.push({n:'Solar térmica ACS', c:tipo.costeSolar}); }
+  if(medFv){ inversion += reforma.fvInversion; medidasResumen.push({n:`Fotovoltaica autoconsumo (${fmtNum(fvKwp,1)} kWp)`, c:reforma.fvInversion}); }
+
+  const ahorroEur = actual.coste - reforma.coste;
+  const ahorroCo2 = actual.co2Ton - reforma.co2Ton;
+  const payback = ahorroEur>0 ? inversion/ahorroEur : Infinity;
+
+  sim = { nombre, tipo, zona, periodo, area, fachadaArea, cubiertaArea, huecosArea, actual, reforma, inversion, ahorroEur, ahorroCo2, payback, medidasResumen,
+    sistCalefActual, sistRefrigActual, sistAcsActual, sistemaNuevo, fachadaTipo, cubiertaTipo, ventanaTipo, medTuberias, medSolar, medFv, fvKwp };
+
+  renderResultados();
+  showToast('Simulación calculada.');
+}
+
+function chipCompare(label, vActual, vReforma, unidad, decimals){
+  const mejor = vReforma < vActual;
+  return `<div class="result-chip ${mejor?'good':''} compare">
+    <div class="l">${label}</div>
+    <div class="v">${fmtNum(vReforma,decimals)} ${unidad}</div>
+    <div class="v2">Actual: ${fmtNum(vActual,decimals)} ${unidad}</div>
+  </div>`;
+}
+
+function renderResultados(){
+  if(!sim) return;
+  document.getElementById('res_resultado').style.display = 'block';
+
+  const ahorroPct = sim.actual.co2Ton>0 ? (sim.ahorroCo2/sim.actual.co2Ton*100) : 0;
+  document.getElementById('res_chips').innerHTML =
+    chipCompare('Demanda energética', sim.actual.demanda.totalM2, sim.reforma.demanda.totalM2, 'kWh/m²·año', 1) +
+    chipCompare('Consumo de energía final', sim.actual.consumo.total, sim.reforma.consumo.total, 'kWh/año', 0) +
+    chipCompare('Coste energético', sim.actual.coste, sim.reforma.coste, '€/año', 0) +
+    chipCompare('Emisiones de CO₂', sim.actual.co2Ton, sim.reforma.co2Ton, 't/año', 2);
+
+  const califActual = sim.actual.calif, califReforma = sim.reforma.calif;
+  document.getElementById('res_rating').innerHTML = `
+    <div class="rating-pill" style="background:${COLOR_CALIF[califActual.letra]};">${califActual.letra}</div>
+    <span class="rating-arrow">estado actual &rarr; rehabilitado</span>
+    <div class="rating-pill" style="background:${COLOR_CALIF[califReforma.letra]};">${califReforma.letra}</div>
+  `;
+
+  function stackFor(escenario){
+    const items = [
+      {l:'Calefacción', v:escenario===sim.actual?sim.actual.demanda.calef:sim.reforma.demanda.calef, color:'var(--amber)'},
+      {l:'Refrigeración', v:escenario===sim.actual?sim.actual.demanda.refrig:sim.reforma.demanda.refrig, color:'var(--cyan)'},
+      {l:'ACS', v:escenario===sim.actual?sim.actual.demanda.acsTotal:sim.reforma.demanda.acsTotal, color:'#8B5CF6'},
+      {l:'Otros usos', v:escenario===sim.actual?sim.actual.demanda.otros:sim.reforma.demanda.otros, color:'#5B7086'},
+    ].filter(i=>i.v>0);
+    const total = items.reduce((a,i)=>a+i.v,0) || 1;
+    return { items, total };
+  }
+  function renderStack(prefix, escenario){
+    const {items, total} = stackFor(escenario);
+    document.getElementById('res_stack_'+prefix).innerHTML = items.map(i=>{
+      const pct = i.v/total*100;
+      return `<div class="stack-seg" style="width:${pct}%; background:${i.color};">${pct>=8?fmtNum(pct,0)+'%':''}</div>`;
+    }).join('');
+    document.getElementById('res_legend_'+prefix).innerHTML = items.map(i=>`
+      <div class="li"><span class="sw" style="background:${i.color};"></span>${i.l}: ${fmtNum(i.v,1)} kWh/m²·año</div>
+    `).join('');
+  }
+  renderStack('actual', sim.actual);
+  renderStack('reforma', sim.reforma);
+
+  if(sim.medidasResumen.length){
+    document.getElementById('res_medidas').innerHTML = `<table class="data-table"><thead><tr><th>Medida</th><th>Coste orientativo</th></tr></thead><tbody>` +
+      sim.medidasResumen.map(m=>`<tr><td>${m.n}</td><td>${fmtNum(m.c,0)} €</td></tr>`).join('') + `</tbody></table>`;
+  } else {
+    document.getElementById('res_medidas').innerHTML = '<p class="tooltip-text">No se ha marcado ninguna medida en el escenario de rehabilitación: el escenario "reformado" coincide con el estado actual.</p>';
+  }
+
+  document.getElementById('res_economico').innerHTML = `
+    <div class="result-chip"><div class="l">Inversión total estimada</div><div class="v">${fmtNum(sim.inversion,0)} €</div></div>
+    <div class="result-chip good"><div class="l">Ahorro económico anual</div><div class="v">${fmtNum(sim.ahorroEur,0)} €/año</div></div>
+    <div class="result-chip"><div class="l">Periodo de retorno simple</div><div class="v">${isFinite(sim.payback)?fmtNum(sim.payback,1)+' años':'—'}</div></div>
+  `;
+}
+
+calcularSimulacion();
+
+// ===================== SECCIÓN 07: INFORME FINAL =====================
+const CALIF_TEXTO = {
+  A:'muy eficiente', B:'eficiente', C:'bastante eficiente', D:'medio', E:'poco eficiente', F:'ineficiente', G:'muy ineficiente',
+};
+
+function generarInforme(){
+  if(!sim) calcularSimulacion();
+  if(!sim){
+    document.getElementById('reportOutput').innerHTML = '<p class="tooltip-text">Completa primero la sección "Datos del edificio" (superficie útil) y vuelve a intentarlo.</p>';
+    return;
+  }
+  const fecha = new Date().toLocaleDateString('es-ES', {year:'numeric', month:'long', day:'numeric'});
+
+  let filasMedidas = '<p class="tooltip-text">No se ha marcado ninguna medida de rehabilitación.</p>';
+  if(sim.medidasResumen.length){
+    filasMedidas = `<table class="example-table">` + sim.medidasResumen.map(m=>`<tr><td class="label">${m.n}</td><td class="value">${fmtNum(m.c,0)} €</td></tr>`).join('') +
+      `<tr><td class="label"><b style="color:var(--text);">Inversión total</b></td><td class="value"><b>${fmtNum(sim.inversion,0)} €</b></td></tr></table>`;
+  }
+
+  document.getElementById('reportOutput').innerHTML = `
+    <h3>1 · Datos generales</h3>
+    <p class="rmeta">Informe generado el ${fecha}</p>
+    <table class="example-table">
+      <tr><td class="label">Edificio</td><td class="value">${sim.nombre}</td></tr>
+      <tr><td class="label">Tipo de edificio</td><td class="value">${sim.tipo.label}</td></tr>
+      <tr><td class="label">Zona climática (CTE DB-HE)</td><td class="value">${sim.zona.id} (invierno ${INVIERNO_DESC[sim.zona.invierno]}, verano ${VERANO_DESC[sim.zona.verano]})</td></tr>
+      <tr><td class="label">Periodo de construcción</td><td class="value">${sim.periodo.label}</td></tr>
+      <tr><td class="label">Superficie útil</td><td class="value">${fmtNum(sim.area,0)} m²</td></tr>
+    </table>
+
+    <h3>2 · Metodología</h3>
+    <p>Simulación simplificada basada en demandas de referencia por tipología de edificio, ajustadas por periodo constructivo y por la severidad climática de la zona CTE DB-HE del edificio. La demanda se transforma en consumo de energía final según el rendimiento de los sistemas de calefacción, refrigeración y ACS. No sustituye a un certificado de eficiencia energética oficial.</p>
+
+    <h3>3 · Estado actual</h3>
+    <table class="example-table">
+      <tr><td class="label">Demanda energética</td><td class="value">${fmtNum(sim.actual.demanda.totalM2,1)} kWh/m²·año</td></tr>
+      <tr><td class="label">Consumo de energía final</td><td class="value">${fmtNum(sim.actual.consumo.total,0)} kWh/año</td></tr>
+      <tr><td class="label">Coste energético</td><td class="value">${fmtNum(sim.actual.coste,0)} €/año</td></tr>
+      <tr><td class="label">Emisiones de CO₂</td><td class="value">${fmtNum(sim.actual.co2Ton,2)} t/año</td></tr>
+      <tr><td class="label">Calificación estimada (escala simplificada)</td><td class="value">${sim.actual.calif.letra} (${CALIF_TEXTO[sim.actual.calif.letra]})</td></tr>
+    </table>
+
+    <h3>4 · Escenario de rehabilitación propuesto</h3>
+    ${filasMedidas}
+
+    <h3>5 · Resultados comparativos</h3>
+    <table class="example-table">
+      <tr><td class="label">Demanda energética rehabilitada</td><td class="value">${fmtNum(sim.reforma.demanda.totalM2,1)} kWh/m²·año</td></tr>
+      <tr><td class="label">Consumo de energía final rehabilitado</td><td class="value">${fmtNum(sim.reforma.consumo.total,0)} kWh/año</td></tr>
+      <tr><td class="label">Coste energético rehabilitado</td><td class="value">${fmtNum(sim.reforma.coste,0)} €/año</td></tr>
+      <tr><td class="label">Ahorro económico anual</td><td class="value">${fmtNum(sim.ahorroEur,0)} €/año</td></tr>
+      <tr><td class="label">Emisiones de CO₂ rehabilitadas</td><td class="value">${fmtNum(sim.reforma.co2Ton,2)} t/año</td></tr>
+      <tr><td class="label">CO₂ evitado</td><td class="value">${fmtNum(sim.ahorroCo2,2)} t/año</td></tr>
+      <tr><td class="label">Calificación estimada rehabilitada</td><td class="value">${sim.reforma.calif.letra} (${CALIF_TEXTO[sim.reforma.calif.letra]})</td></tr>
+    </table>
+
+    <h3>6 · Análisis económico</h3>
+    <p>Inversión total estimada del paquete de medidas: <b style="color:var(--text);">${fmtNum(sim.inversion,0)} €</b>. Ahorro económico anual estimado: <b style="color:var(--text);">${fmtNum(sim.ahorroEur,0)} €/año</b>. Periodo de retorno simple: <b style="color:var(--text);">${isFinite(sim.payback)?fmtNum(sim.payback,1)+' años':'no calculable con los datos actuales'}</b>.</p>
+
+    <h3>7 · Conclusiones y recomendaciones</h3>
+    <p>El escenario de rehabilitación simulado reduciría la demanda energética del edificio en un ${fmtNum((1-sim.reforma.demanda.totalM2/Math.max(sim.actual.demanda.totalM2,0.001))*100,0)}% y las emisiones de CO₂ en un ${fmtNum((sim.actual.co2Ton>0?sim.ahorroCo2/sim.actual.co2Ton*100:0),0)}%, mejorando la calificación estimada de ${sim.actual.calif.letra} a ${sim.reforma.calif.letra}. Se recomienda priorizar las medidas de menor periodo de retorno, verificar los datos con un levantamiento real de la envolvente y solicitar presupuestos detallados antes de ejecutar la rehabilitación.</p>
+
+    <h3>8 · Aviso</h3>
+    <p>Este informe es una estimación simplificada con fines de comparación y sensibilización. No constituye un certificado de eficiencia energética oficial ni un proyecto técnico de rehabilitación.</p>
+  `;
+  showToast('Informe generado.');
+}
+
+// ===================== DESCARGAR INFORME EN PDF =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(!sim) calcularSimulacion();
+  if(!sim){ showToast('Completa primero la sección "Datos del edificio" (superficie útil).'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Simulacion de rehabilitacion energetica';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const orgTel = document.getElementById('p_org_tel').value || '-';
+  const orgCorreo = document.getElementById('p_org_correo').value || '-';
+  const destNombre = document.getElementById('p_dest_nombre').value || '-';
+  const destCif = document.getElementById('p_dest_cif').value || '-';
+  const destDir = document.getElementById('p_dest_dir').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+  const eur = n => fmtNum(n,0)+' €';
+
+  const GLOSARIO = [
+    ['CTE','Código Técnico de la Edificación (España)','-'],
+    ['DB-HE','Documento Básico de Ahorro de Energía del CTE','-'],
+    ['Zona climática','Letra (severidad de invierno, A–E) y número (verano, 1–4) del CTE DB-HE','-'],
+    ['U','Transmitancia térmica: a menor valor, mejor aislamiento','W/m²K'],
+    ['Demanda energética','Energía que necesita el edificio para mantener condiciones de confort','kWh/m²·año'],
+    ['Consumo de energía final','Energía que hay que aportar realmente, según el rendimiento del sistema','kWh/año'],
+    ['ACS','Agua Caliente Sanitaria','-'],
+    ['SATE','Sistema de Aislamiento Térmico por el Exterior','-'],
+    ['EPS','Poliestireno expandido (aislamiento térmico)','-'],
+    ['XPS','Poliestireno extruido (aislamiento térmico)','-'],
+    ['COP','Coeficiente de rendimiento de una bomba de calor en modo calefacción','-'],
+    ['EER','Ratio de eficiencia energética de un equipo en modo refrigeración','-'],
+    ['kWp','Potencia pico de una instalación fotovoltaica','kWp'],
+    ['Payback','Periodo de retorno simple de una inversión','años'],
+    ['Calificación energética','Escala orientativa de A (más eficiente) a G (menos eficiente)','A–G'],
+  ];
+
+  function makeHelpers(doc){
+    function checkPage(yy, needed=12){
+      if(yy > bottomY-needed){ doc.addPage(); return topY; }
+      return yy;
+    }
+    function sectionTitle(yy, numText, text, collect){
+      yy = checkPage(yy, 18);
+      doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+      doc.text(numText+'  '+text, marginX, yy);
+      doc.setDrawColor(230,150,20); doc.setLineWidth(0.6);
+      doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+      doc.setLineWidth(0.2);
+      if(collect) collect.toc.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+11;
+    }
+    function kv(yy, k, v, indent=0){
+      yy = checkPage(yy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+      doc.text(k, marginX+indent, yy);
+      doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+      const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+70));
+      doc.text(vLines[0], marginX+indent+70, yy);
+      let extra = 0;
+      for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+70, yy+extra); }
+      return yy+5.6+extra;
+    }
+    function paragraph(yy, text, opts={}){
+      const size = opts.size || 9;
+      const width = opts.width || (pageW-2*marginX);
+      doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+      const linesArr = doc.splitTextToSize(text, width);
+      linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+      return yy+3;
+    }
+    function tableCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      doc.text(numText+': '+text, marginX, yy);
+      if(collect) collect.tables.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+6;
+    }
+    function figureCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      const lines = doc.splitTextToSize(numText+': '+text, pageW-2*marginX);
+      lines.forEach((l,i)=>{ doc.text(l, marginX, yy+i*4.5); });
+      if(collect) collect.figures.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+lines.length*4.5+3;
+    }
+    function tabla(yy, headers, colX, aligns, rows){
+      yy = checkPage(yy, 16);
+      doc.setFillColor(245,245,247);
+      doc.rect(marginX, yy-4.5, pageW-2*marginX, 6.5, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(100,108,120);
+      headers.forEach((h,i)=>{ doc.text(h, colX[i], yy, aligns[i]==='right'?{align:'right'}:undefined); });
+      yy += 4; doc.setDrawColor(210,210,215); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy += 5;
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(30,35,45);
+      rows.forEach(r=>{
+        yy = checkPage(yy, 6);
+        r.forEach((c,i)=>{ doc.text(String(c), colX[i], yy, aligns[i]==='right'?{align:'right'}:undefined); });
+        yy += 6;
+      });
+      return yy+4;
+    }
+    function barChartComparativo(yy, items, unidad){
+      const rowH = 15, labelW = 34, maxBarW = pageW-2*marginX-labelW-46;
+      const maxVal = Math.max(...items.flatMap(i=>[i.actual,i.reforma]), 0.001);
+      yy = checkPage(yy, items.length*rowH+10);
+      items.forEach(it=>{
+        yy = checkPage(yy, rowH);
+        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(40,46,56);
+        doc.text(it.label, marginX, yy+3);
+        const wA = Math.max(2,(it.actual/maxVal)*maxBarW);
+        doc.setFillColor(185,190,197); doc.rect(marginX+labelW, yy-2.4, wA, 4.6, 'F');
+        doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(100,106,116);
+        doc.text('Actual: '+fmtNum(it.actual,1)+' '+unidad, marginX+labelW+wA+2, yy+1);
+        const wR = Math.max(2,(it.reforma/maxVal)*maxBarW);
+        doc.setFillColor(255,176,32); doc.rect(marginX+labelW, yy+3, wR, 4.6, 'F');
+        doc.setTextColor(150,105,10);
+        doc.text('Rehabilitado: '+fmtNum(it.reforma,1)+' '+unidad, marginX+labelW+wR+2, yy+6.4);
+        yy += rowH;
+      });
+      return yy+4;
+    }
+    return {checkPage, sectionTitle, kv, paragraph, tableCaption, figureCaption, tabla, barChartComparativo};
+  }
+
+  function renderBody(doc, collect){
+    const H = makeHelpers(doc);
+    let y = topY;
+    let figN = 0, tabN = 1;
+    const FIG = ()=>{ figN++; return 'Figura '+figN; };
+    const TAB = ()=>{ tabN++; return 'Tabla '+tabN; };
+
+    y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
+    y = H.paragraph(y, 'Este informe recoge la simulación de rehabilitación energética del edificio "'+proyecto+'" ('+sim.tipo.label+', zona climática '+sim.zona.id+' del CTE DB-HE), comparando el estado actual con un escenario de rehabilitación definido por el usuario.');
+    y = H.paragraph(y, 'Resultado principal: el escenario rehabilitado reduciría la demanda energética en un '+fmtNum((1-sim.reforma.demanda.totalM2/Math.max(sim.actual.demanda.totalM2,0.001))*100,0)+'%, con un ahorro económico estimado de '+eur(sim.ahorroEur)+'/año y una mejora de calificación estimada de '+sim.actual.calif.letra+' a '+sim.reforma.calif.letra+', para una inversión orientativa de '+eur(sim.inversion)+'.');
+
+    y = H.sectionTitle(y, '2.', 'Metodología y marco normativo', collect);
+    y = H.paragraph(y, 'Simulación simplificada basada en demandas de referencia por tipología de edificio, ajustadas por periodo constructivo y por la severidad climática de la zona '+sim.zona.id+' del CTE DB-HE (invierno '+INVIERNO_DESC[sim.zona.invierno]+', verano '+VERANO_DESC[sim.zona.verano]+'). La demanda de cada uso (calefacción, refrigeración, ACS) se transforma en consumo de energía final dividiendo por el rendimiento del sistema que la cubre.');
+    y = H.paragraph(y, 'Los principios de cálculo de la envolvente y las necesidades energéticas de un edificio, en un proyecto real, se rigen por normas como ISO 52016-1 (necesidades energéticas de calefacción y refrigeración), ISO 6946 (transmitancia térmica de elementos constructivos) e ISO 52000-1 (marco general de evaluación energética de edificios), junto con el CTE DB-HE en España. Esta herramienta se inspira en esos principios con un modelo agregado y simplificado, y no implementa el cálculo detallado (hora a hora o por elemento constructivo) que exigen dichas normas.');
+    y = H.paragraph(y, 'Las soluciones de aislamiento de fachada y cubierta, y los tipos de acristalamiento disponibles en el escenario de rehabilitación, están inspirados en la colección de Guías Técnicas para la Rehabilitación de la Envolvente Térmica de los Edificios del IDAE (ver Referencias, sección 8): Guías IDAE 002 (SATE), y las guías de soluciones de aislamiento con lana mineral, EPS, XPS, poliuretano y espumas flexibles (para tuberías y conductos).');
+    y = H.paragraph(y, 'Este informe no sustituye a un certificado de eficiencia energética oficial (procedimientos CE3, CE3X, CERMA/HULC) ni a un proyecto de rehabilitación firmado por un técnico competente.');
+
+    y = H.sectionTitle(y, '3.', 'Datos del edificio', collect);
+    y = H.kv(y, 'Edificio', proyecto);
+    y = H.kv(y, 'Tipo de edificio', sim.tipo.label);
+    y = H.kv(y, 'Zona climática (CTE DB-HE)', sim.zona.id);
+    y = H.kv(y, 'Periodo de construcción', sim.periodo.label);
+    y = H.kv(y, 'Superficie útil', fmtNum(sim.area,0)+' m²');
+    y = H.kv(y, 'Calefacción actual', sim.sistCalefActual.label);
+    y = H.kv(y, 'Refrigeración actual', sim.sistRefrigActual.label);
+    y = H.kv(y, 'ACS actual', sim.sistAcsActual.label);
+
+    y = H.sectionTitle(y, '4.', 'Estado actual vs. escenario rehabilitado', collect);
+    y = H.tableCaption(y, TAB(), 'Comparativa de indicadores: estado actual vs. rehabilitado', collect);
+    y = H.tabla(y, ['Indicador','Estado actual','Rehabilitado'], [marginX, marginX+95, marginX+145], ['left','right','right'], [
+      ['Demanda energética (kWh/m²·año)', fmtNum(sim.actual.demanda.totalM2,1), fmtNum(sim.reforma.demanda.totalM2,1)],
+      ['Consumo de energía final (kWh/año)', fmtNum(sim.actual.consumo.total,0), fmtNum(sim.reforma.consumo.total,0)],
+      ['Coste energético (€/año)', fmtNum(sim.actual.coste,0), fmtNum(sim.reforma.coste,0)],
+      ['Emisiones de CO2 (t/año)', fmtNum(sim.actual.co2Ton,2), fmtNum(sim.reforma.co2Ton,2)],
+      ['Calificación estimada', sim.actual.calif.letra, sim.reforma.calif.letra],
+    ]);
+    y = H.figureCaption(y, FIG(), 'Demanda energética por uso (kWh/m²·año): estado actual vs. rehabilitado', collect);
+    y = H.barChartComparativo(y, [
+      {label:'Calefacción', actual:sim.actual.demanda.calef, reforma:sim.reforma.demanda.calef},
+      {label:'Refrigeración', actual:sim.actual.demanda.refrig, reforma:sim.reforma.demanda.refrig},
+      {label:'ACS', actual:sim.actual.demanda.acsTotal, reforma:sim.reforma.demanda.acsTotal},
+      {label:'Otros usos', actual:sim.actual.demanda.otros, reforma:sim.reforma.demanda.otros},
+    ], 'kWh/m²·a');
+
+    y = H.sectionTitle(y, '5.', 'Medidas de rehabilitación incluidas', collect);
+    if(sim.medidasResumen.length){
+      y = H.tableCaption(y, TAB(), 'Medidas de rehabilitación y coste orientativo', collect);
+      y = H.tabla(y, ['Medida','Coste orientativo'], [marginX, pageW-marginX], ['left','right'],
+        sim.medidasResumen.map(m=>[m.n, eur(m.c)]));
+      y = H.checkPage(y, 10);
+      doc.setDrawColor(210,210,215); doc.line(marginX,y-3,pageW-marginX,y-3);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,24,32);
+      doc.text('Inversión total', marginX, y);
+      doc.text(eur(sim.inversion), pageW-marginX, y, {align:'right'});
+      y += 12;
+    } else {
+      y = H.paragraph(y, 'No se ha marcado ninguna medida de rehabilitación en la sección correspondiente.');
+    }
+
+    y = H.sectionTitle(y, '6.', 'Análisis económico', collect);
+    y = H.kv(y, 'Inversión total estimada', eur(sim.inversion));
+    y = H.kv(y, 'Ahorro económico anual estimado', eur(sim.ahorroEur)+'/año');
+    y = H.kv(y, 'Periodo de retorno simple', isFinite(sim.payback)?fmtNum(sim.payback,1)+' años':'no calculable');
+    y = H.kv(y, 'CO2 evitado estimado', fmtNum(sim.ahorroCo2,2)+' t/año');
+
+    y = H.sectionTitle(y, '7.', 'Conclusiones y recomendaciones', collect);
+    y = H.paragraph(y, 'El escenario de rehabilitación simulado reduciría la demanda energética en un '+fmtNum((1-sim.reforma.demanda.totalM2/Math.max(sim.actual.demanda.totalM2,0.001))*100,0)+'% y las emisiones de CO2 en un '+fmtNum((sim.actual.co2Ton>0?sim.ahorroCo2/sim.actual.co2Ton*100:0),0)+'%, mejorando la calificación estimada de '+sim.actual.calif.letra+' a '+sim.reforma.calif.letra+'. Se recomienda priorizar las medidas de menor periodo de retorno, verificar los datos con un levantamiento real de la envolvente térmica y solicitar presupuestos detallados antes de ejecutar la rehabilitación.');
+
+    y = H.sectionTitle(y, '8.', 'Referencias', collect);
+    const refs = [
+      'Código Técnico de la Edificación (CTE), Documento Básico de Ahorro de Energía (DB-HE). Ministerio de Transportes, Movilidad y Agenda Urbana.',
+      'ISO 52016-1:2017 — Energy performance of buildings — Energy needs for heating and cooling, internal temperatures and sensible and latent heat loads.',
+      'ISO 6946:2017 — Building components and building elements — Thermal resistance and thermal transmittance — Calculation methods.',
+      'ISO 52000-1:2017 — Energy performance of buildings — Overarching EPB assessment — General framework and procedures.',
+      'IDAE. Guías IDAE 002 — Sistemas de Aislamiento Térmico Exterior (SATE) para la Rehabilitación de la Envolvente Térmica de los Edificios (2012).',
+      'IDAE. Soluciones de acristalamiento y cerramiento acristalado (2019).',
+      'IDAE. Soluciones de aislamiento con lana mineral (2008).',
+      'IDAE. Soluciones de aislamiento con poliestireno expandido (EPS) (2008).',
+      'IDAE. Soluciones de aislamiento con poliestireno extruido (XPS) (2008).',
+      'IDAE. Soluciones de aislamiento con poliuretano (2008).',
+      'IDAE. Soluciones de aislamiento con espumas flexibles (2008).',
+    ];
+    refs.forEach((r,i)=>{ y = H.paragraph(y, (i+1)+'. '+r); });
+
+    y = H.sectionTitle(y, '9.', 'Aviso', collect);
+    y = H.paragraph(y, 'Este informe es una estimación simplificada con fines de comparación y sensibilización, basada en factores de demanda y rendimientos de sistemas orientativos. No constituye un certificado de eficiencia energética oficial ni un proyecto técnico de rehabilitación.');
+
+    y = H.sectionTitle(y, '10.', 'Validación del informe', collect);
+    y = H.checkPage(y, 40);
+    y += 10;
+    doc.setDrawColor(180,185,192); doc.setLineWidth(0.3);
+    doc.line(marginX, y+20, marginX+70, y+20);
+    doc.line(pageW-marginX-70, y+20, pageW-marginX, y+20);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+    doc.text('Por el técnico — '+(orgNombre!=='-'?orgNombre:autor), marginX, y+25);
+    doc.text('Por el titular — '+(destNombre&&destNombre!=='-'?destNombre:''), pageW-marginX-70, y+25);
+    doc.text('Fecha:', marginX, y+34);
+    doc.text('Fecha:', pageW-marginX-70, y+34);
+  }
+
+  // ===================== PASE 1: MEDICIÓN =====================
+  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
+  const collectMeasure = {toc:[], tables:[], figures:[]};
+  renderBody(measureDoc, collectMeasure);
+
+  // ===================== PORTADA Y PRELIMINARES (fijas: 5 páginas) =====================
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const FRONT_PAGES = 5;
+
+  function drawIndexPage(title, entries){
+    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+    doc.text(title, marginX, 32);
+    doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+    let y=50;
+    doc.setFontSize(10);
+    entries.forEach(e=>{
+      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
+      const label = e.num+'  '+e.text;
+      const pageStr = String(e.page);
+      const pageX = pageW-marginX;
+      const labelLines = doc.splitTextToSize(label, 140);
+      doc.text(labelLines[0], marginX, y);
+      doc.text(pageStr, pageX, y, {align:'right'});
+      const labelW = doc.getTextWidth(labelLines[0]);
+      const pageStrW = doc.getTextWidth(pageStr);
+      const dotsStartX = marginX+labelW+2;
+      const dotsEndX = pageX-pageStrW-2;
+      if(dotsEndX>dotsStartX){
+        doc.setTextColor(190,192,198);
+        const dotW = doc.getTextWidth('.');
+        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
+        doc.text('.'.repeat(n), dotsStartX, y);
+      }
+      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
+    });
+    if(entries.length===0){
+      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
+      doc.text('Sin elementos.', marginX, y);
+    }
+  }
+
+  // ---- Página 1: portada ----
+  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(230,150,20);
+  doc.text('INFORME DE SIMULACIÓN DE REHABILITACIÓN ENERGÉTICA', marginX, 42);
+  doc.setDrawColor(230,150,20); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 66;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  cy += 4;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Zona climática CTE DB-HE: '+sim.zona.id+' — '+sim.tipo.label, marginX, cy); cy+=14;
+
+  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 68, 1.5, 1.5, 'S');
+  let by = cy+9;
+  doc.setFontSize(9.5);
+  [['Titular / cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],
+   ['Dirección del edificio', destDir],
+   ['Superficie útil', fmtNum(sim.area,0)+' m²'],
+   ['Técnico', autor+' ('+registro+')'],
+   ['Organización', orgNombre+' — '+orgCif],
+   ['Contacto', orgTel+' / '+orgCorreo],
+   ['Periodo de construcción', sim.periodo.label],
+   ['Fecha del informe', fecha]]
+   .forEach(([k,v])=>{
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
+    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-66);
+    doc.text(vLines[0], marginX+58, by);
+    by += 7.3;
+  });
+
+  cy += 80;
+  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 24, 1.5, 1.5, 'F');
+  doc.setFont('times','bold'); doc.setFontSize(10); doc.setTextColor(10,18,28);
+  doc.text('CALIFICACIÓN ESTIMADA — ACTUAL '+sim.actual.calif.letra+'  →  REHABILITADO '+sim.reforma.calif.letra, marginX+8, cy+9);
+  doc.setFontSize(13);
+  doc.text('Ahorro energético: '+fmtNum((1-sim.reforma.demanda.totalM2/Math.max(sim.actual.demanda.totalM2,0.001))*100,0)+'%   ·   Ahorro económico: '+eur(sim.ahorroEur)+'/año', marginX+8, cy+18);
+
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Índice, índice de figuras, índice de tablas y glosario: ver páginas siguientes', marginX, 274);
+
+  // ---- Página 2: índice ----
+  doc.addPage();
+  drawIndexPage('Índice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  // ---- Página 3: índice de figuras ----
+  doc.addPage();
+  drawIndexPage('Índice de figuras', collectMeasure.figures.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  // ---- Página 4: índice de tablas ----
+  doc.addPage();
+  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y términos', page:5}]
+    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+  drawIndexPage('Índice de tablas', tablesForList);
+
+  // ---- Página 5: glosario ----
+  doc.addPage();
+  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+  doc.text('Glosario de siglas y términos', marginX, 32);
+  doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+  let gy=48;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+48, gy); doc.text('Unidad', marginX+150, gy);
+  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
+  GLOSARIO.forEach(row=>{
+    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(180,120,10);
+    doc.text(row[0], marginX, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
+    const dLines = doc.splitTextToSize(row[1], 98);
+    doc.text(dLines[0], marginX+48, gy);
+    doc.setTextColor(100,108,120);
+    doc.text(row[2], marginX+150, gy);
+    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Tabla 1: Glosario de siglas y términos', marginX, gy+6);
+
+  // ---- Página 6 en adelante: cuerpo del informe ----
+  doc.addPage();
+  const collectReal = {toc:[], tables:[], figures:[]};
+  renderBody(doc, collectReal);
+
+  // ===================== CABECERA / PIE =====================
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (proyecto!=='-'?proyecto:'rehabilitacion').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-rehabilitacion-energetica-'+safeName+'.pdf');
+  showToast('Informe en PDF generado y descargado.');
+});
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
+     compartida entre todos los documentos de esta familia a través de localStorage. -->
+<script>
+(function(){
+  var DOC_KEY = 'simulador_rehabilitacion_energetica_edificios_espana';
+  var LS_KEY = 'VatiaCo';
+
+  function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function guardarVatiaco(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+
+  function valorCampo(el){ return el.type==='checkbox' ? el.checked : el.value; }
+  function fijarCampo(el, val){ if(el.type==='checkbox') el.checked = !!val; else el.value = val; }
+
+  var TIPOS_IGNORADOS = {file:1, button:1, submit:1, reset:1, image:1};
+
+  function sincronizarCampos(campos, leerContenedor, obtenerContenedorParaGuardar){
+    campos.forEach(function(el){
+      if(!el.id || TIPOS_IGNORADOS[el.type]) return;
+      var guardado = leerContenedor(leerVatiaco());
+      if(guardado && guardado[el.id]!==undefined && guardado[el.id]!==null && guardado[el.id]!==''){
+        fijarCampo(el, guardado[el.id]);
+      } else {
+        var v0 = leerVatiaco();
+        var c0 = obtenerContenedorParaGuardar(v0);
+        c0[el.id] = valorCampo(el);
+        guardarVatiaco(v0);
+      }
+      var evento = (el.tagName==='SELECT' || el.type==='checkbox' || el.type==='radio') ? 'change' : 'input';
+      el.addEventListener(evento, function(){
+        var v = leerVatiaco();
+        var c = obtenerContenedorParaGuardar(v);
+        c[el.id] = valorCampo(el);
+        guardarVatiaco(v);
+      });
+    });
+  }
+
+  function registrarSalida(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    v[DOC_KEY].outputs.ultimaGeneracionPdf = new Date().toISOString();
+    guardarVatiaco(v);
+  }
+
+  function instalarBotonesExportarImportar(){
+    var barra = document.createElement('div');
+    barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
+    function crearBoton(texto){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = texto;
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      return b;
+    }
+    var btnExp = crearBoton('⬇');
+    btnExp.addEventListener('click', function(){
+      var blob = new Blob([JSON.stringify(leerVatiaco(), null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'VatiaCo.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    var btnImp = crearBoton('⬆');
+    var inputFile = document.createElement('input');
+    inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
+    inputFile.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          var v = JSON.parse(ev.target.result);
+          guardarVatiaco(v);
+          location.reload();
+        }catch(err){
+          alert('El archivo no es un JSON valido.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    btnImp.addEventListener('click', function(){ inputFile.click(); });
+
+    barra.appendChild(btnExp);
+    barra.appendChild(btnImp);
+    barra.appendChild(inputFile);
+    document.body.appendChild(barra);
+  }
+
+  function inicializarVatiaco(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].inputs = v[DOC_KEY].inputs || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    guardarVatiaco(v);
+
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]')),
+      function(vv){ return vv.proyecto; },
+      function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
+    );
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input:not([id^="p_"]), select:not([id^="p_"]), textarea:not([id^="p_"])')),
+      function(vv){ return vv[DOC_KEY] && vv[DOC_KEY].inputs; },
+      function(vv){ vv[DOC_KEY] = vv[DOC_KEY] || {}; vv[DOC_KEY].inputs = vv[DOC_KEY].inputs || {}; return vv[DOC_KEY].inputs; }
+    );
+
+    var btnPdf = document.getElementById('btnPdf');
+    if(btnPdf) btnPdf.addEventListener('click', registrarSalida);
+
+    instalarBotonesExportarImportar();
+  }
+
+  setTimeout(inicializarVatiaco, 0);
+})();
+</script>
+</body>
+</html>

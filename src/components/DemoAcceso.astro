@@ -1,0 +1,40 @@
+---
+// Acceso a la comunidad de demostracion: credenciales a la vista y boton que abre la
+// plataforma en el visor comun (data-plataforma, /js/plataforma.js cargado por TopNav).
+//   <DemoAcceso />          caja completa (alta, servicios)
+//   <DemoAcceso compacto /> una linea, para el hero de la pagina principal
+interface Props { compacto?: boolean }
+const { compacto = false } = Astro.props;
+const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
+const DEMO = { usuario: 'demo@vatiaco.es', clave: 'demo' };
+---
+<div class:list={['demo', { compacto }]} role="note">
+  <div class="demo-texto">
+    <strong class="demo-titulo">Pruébala ya con una comunidad de ejemplo</strong>
+    {!compacto && <p>Entra como gestor en una comunidad de demostración y recorre los paneles, el reparto y los informes, sin darte de alta.</p>}
+    <dl class="demo-cred">
+      <div><dt>Usuario</dt><dd><code>{DEMO.usuario}</code></dd></div>
+      <div><dt>Contraseña</dt><dd><code>{DEMO.clave}</code></dd></div>
+    </dl>
+  </div>
+  <a class="btn principal demo-btn" href={PORTAL_URL} data-plataforma="Demo de VatiaCo">Entrar en la demo</a>
+</div>
+
+<style is:global>
+  .demo { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem 2rem; flex-wrap: wrap; margin: 0 0 1.5rem;
+    padding: 1.3rem 1.5rem; border-radius: 0.9rem; border: 1px solid rgba(255, 213, 79, 0.55);
+    background: linear-gradient(135deg, rgba(255, 213, 79, 0.12), rgba(255, 213, 79, 0.03)); box-shadow: 0 8px 28px rgba(255, 213, 79, 0.08); }
+  .demo.compacto { margin: 1.5rem 0 0; padding: 0.9rem 1.2rem; max-width: 46rem; }
+  .demo-texto { flex: 1 1 22rem; min-width: 0; }
+  .demo-titulo { display: inline-flex; align-items: center; gap: 0.55rem; color: var(--bolt); font-size: 1.05rem; }
+  .demo-titulo::before { content: ''; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--bolt);
+    box-shadow: 0 0 0 4px rgba(255, 213, 79, 0.2); }
+  .demo p { margin: 0.4rem 0 0.8rem; font-size: 0.95rem; color: var(--gray-1); }
+  .demo.compacto .demo-cred { margin-top: 0.5rem; }
+  .demo-cred { display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; margin: 0; }
+  .demo-cred dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-3); }
+  .demo-cred dd { margin: 0.15rem 0 0; }
+  .demo-cred code { font-size: 1rem; color: var(--white); background: var(--black); border: 1px solid var(--gray-5); border-radius: 0.4rem;
+    padding: 0.2rem 0.55rem; user-select: all; }
+  .demo-btn { flex: none; }
+</style>

@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compensación de energía reactiva · Batería de condensadores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--cyan); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1400px; margin:0 auto; position:relative; z-index:1;}
+  /* Barra de pestanas horizontal (sustituye al antiguo sidebar vertical): igual en
+     pantallas grandes y pequenas. En pequenas, si las pestanas no caben, la fila hace
+     scroll horizontal y aparecen flechas para desplazarla; las flechas se muestran u
+     ocultan por JS segun haya o no contenido oculto a cada lado. */
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--cyan); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--cyan); border-bottom-color:var(--cyan);}
+  .tabbar a.active .tag{color:var(--cyan);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--cyan); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px; border-bottom:1px solid var(--line-soft);}
+  section.tab-active{display:block;}
+  #teoria{padding-top:0;}
+  #teoria > .hero{margin:0 -56px 48px;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
+  section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--cyan);}
+  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .hero-meta{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer); display:flex; flex-direction:column; gap:6px; text-align:right; padding-top:6px;}
+  .hero-meta span{color:var(--text-dim);}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
+  .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--cyan); font-size:17px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+
+  .theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:900px){.theory-grid{grid-template-columns:1fr;}}
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--cyan);}
+  .formula-box .f small{font-size:10px; color:var(--text-dimmer); display:block; margin-top:4px; font-family:var(--font-mono);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dimmer); padding:9px 11px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:10px 11px; border-bottom:1px solid var(--line-soft);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  .cellnum{font-family:var(--font-mono); color:var(--cyan);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=email], .field input[type=tel], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--cyan);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(55,207,255,0.1);}
+  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
+  .btn.primary:hover{background:#7fe1ff;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+  .seg{display:inline-flex; background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px; margin-bottom:16px;}
+  .seg button{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.02em; border:none; background:transparent; color:var(--text-dim); padding:7px 14px; border-radius:3px; cursor:pointer; transition:.15s;}
+  .seg button.active{background:var(--cyan); color:#0A121C; font-weight:700;}
+
+  .line-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden;}
+  .line-head{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; cursor:pointer; gap:16px; flex-wrap:wrap;}
+  .line-head:hover{background:var(--panel2);}
+  .line-head .lh-left{display:flex; align-items:center; gap:12px; min-width:0;}
+  .line-head .lh-idx{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); flex-shrink:0;}
+  .line-head .lh-title{font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .line-head .lh-right{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+  .line-body{padding:0 20px 20px; border-top:1px solid var(--line-soft); display:none;}
+  .line-body.open{display:block;}
+  .calc-steps{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:16px 18px; margin:16px 0; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);}
+  .calc-steps .step{padding:6px 0; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; gap:16px;}
+  .calc-steps .step:last-child{border-bottom:none;}
+  .calc-steps .step .k{color:var(--text-dimmer);}
+  .calc-steps .step .v{color:var(--text); text-align:right;}
+  .remove-btn{font-family:var(--font-mono); font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:4px 8px;}
+  .remove-btn:hover{text-decoration:underline;}
+  .empty-state{text-align:center; padding:36px 20px; color:var(--text-dimmer); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--radius);}
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
+
+  .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
+  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
+  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
+  .pill.bad{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
+
+  table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
+  table.summary td{padding:10px 10px; border-bottom:1px solid var(--line-soft); font-family:var(--font-mono); color:var(--text-dim);}
+  table.summary tr:hover td{background:var(--panel2);}
+
+  .stat-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 18px; flex:1; min-width:140px;}
+  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--cyan);}
+  .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--cyan); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--cyan); text-decoration:none;}
+
+  .chart-svg-wrap, .scheme-svg-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:14px 0; overflow-x:auto;}
+  .chart-svg-wrap svg, .scheme-svg-wrap svg{display:block; margin:0 auto;}
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:18px 0 6px;}
+
+  table.cf-table{width:100%; border-collapse:collapse; font-size:11px; margin-top:8px;}
+  table.cf-table th{font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; color:var(--text-dimmer); padding:6px 8px; text-align:right; border-bottom:1px solid var(--line);}
+  table.cf-table th:first-child{text-align:left;}
+  table.cf-table td{font-family:var(--font-mono); padding:6px 8px; text-align:right; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.cf-table td:first-child{text-align:left; color:var(--text);}
+  table.cf-table td.neg{color:var(--red);}
+  table.cf-table td.pos{color:var(--green);}
+
+  table.per-table{width:100%; border-collapse:collapse; font-size:10.5px; margin-top:6px;}
+  table.per-table th{font-family:var(--font-mono); font-size:9px; text-transform:uppercase; color:var(--text-dimmer); padding:5px 6px; text-align:right; border-bottom:1px solid var(--line);}
+  table.per-table th:first-child{text-align:left;}
+  table.per-table td{font-family:var(--font-mono); padding:5px 6px; text-align:right; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.per-table td:first-child{text-align:left; color:var(--text);}
+  table.per-table select, table.per-table input{background:var(--panel2); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:10.5px; padding:4px 5px; width:100%; text-align:right; border-radius:2px;}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    #teoria > .hero{margin:0 -24px 32px;}
+    .hero-top{flex-direction:column;}
+    .hero-meta{text-align:left;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+  <div class="tabbar-brand">REACTIVA · CAPACITORES</div>
+  <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <nav class="tabbar" id="sidenav">
+    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
+    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco normativo</a>
+    <a href="#proyecto" data-sec="proyecto"><span class="tag">02</span>Datos del proyecto</a>
+    <a href="#economicos" data-sec="economicos"><span class="tag">03</span>Parámetros económicos</a>
+    <a href="#informe" data-sec="informe"><span class="tag">04</span>Puntos e informe</a>
+  </nav>
+  <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+</div>
+<script>
+(function(){
+  var wrap = document.getElementById('tabbarWrap');
+  var bar = document.getElementById('sidenav');
+  var btnL = document.getElementById('tabScrollLeft');
+  var btnR = document.getElementById('tabScrollRight');
+  function update(){
+    var maxScroll = bar.scrollWidth - bar.clientWidth;
+    wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+    wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+  }
+  btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+  btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+  bar.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+  setTimeout(update, 0);
+})();
+</script>
+
+  <main>
+
+    <!-- 00 TEORIA -->
+    <section id="teoria">
+      <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Energía reactiva · Batería de condensadores</div>
+          <h1>Evitar la penalización<br>por reactiva sale <em>a cuenta</em>.</h1>
+          <p class="sub">Calculadora y generador de informes técnico-económicos para el dimensionado de baterías de condensadores. Calcula la potencia reactiva de compensación necesaria — a partir de datos teóricos o de las lecturas del contador —, construye el flujo de caja con financiación, y evalúa la rentabilidad (VAN, TIR, Payback, IR) de cada punto de suministro, con informe en PDF listo para presentar.</p>
+        </div>
+        <div class="hero-meta">
+          <span>Basado en</span>
+          <span style="color:var(--cyan)">Circular 3/2020 · CNMC</span>
+          <span>Apdo. 6.4 · Facturación por energía reactiva</span>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="v">Qc = P·(tanφ1−tanφ2)</div><div class="l">potencia reactiva de compensación (kVAr)</div></div>
+        <div class="stat"><div class="v">VAN · TIR · Payback</div><div class="l">rentabilidad con financiación e IPC</div></div>
+        <div class="stat"><div class="v">33% / 20% · cos φ</div><div class="l">umbrales de facturación de reactiva, apdo. 6.4</div></div>
+      </div>
+    </header>
+
+      <div class="eyebrow kicker">00 · Fundamento teórico</div>
+      <h2>Del triángulo de potencias a la rentabilidad de la batería.</h2>
+      <p class="lede">El informe técnico-económico de una batería de condensadores tiene dos mitades: cuánta potencia reactiva hay que compensar (evaluación técnica), y si compensa económicamente instalarla frente al coste actual de la penalización por reactiva (evaluación económica).</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Triángulo de potencias</h3>
+          <p>La potencia activa P, la reactiva Q y la aparente S se relacionan mediante el ángulo de desfase φ entre tensión y corriente:</p>
+          <div class="formula-box">
+            <div class="f">S² = P² + Q² &nbsp;·&nbsp; Q = P · tan φ &nbsp;·&nbsp; cos φ = P / S</div>
+            <small>P: potencia activa (kW) · Q: potencia reactiva (kVAr) · S: potencia aparente (kVA)</small>
+          </div>
+          <div class="scheme-svg-wrap" id="triSvgHolder"></div>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Potencia reactiva de compensación</h3>
+          <p>La batería debe aportar la diferencia entre la reactiva actual y la reactiva admisible al factor de potencia objetivo:</p>
+          <div class="formula-box">
+            <div class="f">Qc = P · (tan φ₁ − tan φ₂)</div>
+            <small>φ₁: ángulo actual · φ₂: ángulo objetivo · Qc: potencia de la batería (kVAr)</small>
+          </div>
+          <p style="margin-top:8px;">A partir de lecturas del contador, P y φ₁ se obtienen de la energía activa y reactiva registradas por periodo horario.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Facturación por energía reactiva (apdo. 6.4)</h3>
+          <p>Se factura el exceso de reactiva inductiva sobre el 33% de la activa en los periodos 1 a 5, y el exceso de reactiva capacitiva por debajo de cos φ 0,98 (20%) en el periodo 6 (valle):</p>
+          <div class="formula-box">
+            <div class="f">F = (Er − Ea·límite) · precio</div>
+            <small>límite = 33% (periodos 1-5, inductiva) ó 20% (periodo 6, capacitiva) · precio según tramo de cos φ</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Indicadores de rentabilidad</h3>
+          <p>El coste de la reactiva evitado cada año se compara con la inversión mediante los indicadores estándar de evaluación de proyectos:</p>
+          <div class="formula-box">
+            <div class="f">VAN = Σ Flujo_t /(1+r)^t &nbsp;·&nbsp; TIR: VAN=0 &nbsp;·&nbsp; IR = (VAN+Inversión)/Inversión·100</div>
+            <small>r: tasa de descuento · Payback: primer año con flujo acumulado ≥ 0</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 01 MARCO NORMATIVO -->
+    <section id="marco">
+      <div class="eyebrow kicker">01 · Marco normativo</div>
+      <h2>Circular 3/2020 de la CNMC, apartado 6.4.</h2>
+      <p class="lede">La metodología de facturación por energía reactiva se mantiene, con carácter general, según lo establecido en el artículo 9.3 del Real Decreto 1164/2001, con la salvedad de la disposición transitoria segunda relativa a la reactiva capacitiva en el periodo de valle.</p>
+      <div class="card">
+        <div class="fieldset-title">Condiciones de facturación</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li>Se aplica a todos los consumidores conectados en baja tensión con potencia contratada superior a 15 kW y a los consumidores en alta tensión.</li>
+          <li>Se factura sobre todos los periodos horarios excepto el periodo 6, siempre que el consumo de reactiva exceda el 33% del consumo de activa. Únicamente afecta a ese exceso.</li>
+          <li>En el periodo de valle (6), todos los consumidores conectados en niveles de tensión superior a 1 kV deben mantener un factor de potencia superior a 0,98 capacitivo. Fuera de ese rango se aplica una penalización.</li>
+        </ul>
+        <div class="fieldset-title">Tramos de precio (Orden ITC/688/2011)</div>
+        <table class="data-table">
+          <thead><tr><th>Tramo de cos φ</th><th>Precio (€/kVArh)</th></tr></thead>
+          <tbody>
+            <tr><td>0,80 ≤ cos φ &lt; 0,95</td><td class="cellnum">0,041554</td></tr>
+            <tr><td>cos φ &lt; 0,80</td><td class="cellnum">0,062332</td></tr>
+            <tr><td>Capacitiva, periodo 6 (cos φ &lt; 0,98)</td><td class="cellnum">0,05 (transitoriamente 0 €/kVArh)</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">Estos precios son editables en la sección de parámetros económicos, ya que se actualizan anualmente en la Resolución de precios de la CNMC.</p>
+      </div>
+    </section>
+
+    <!-- 02 DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">02 · Datos del proyecto</div>
+      <h2>Identificación del proyecto, del autor y del destinatario del informe.</h2>
+      <p class="lede">Estos datos se usan únicamente para componer la portada y los encabezados del informe en PDF.</p>
+      <div class="card">
+        <div class="fieldset-title">Proyecto</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Compensación de energía reactiva mediante batería de condensadores"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+        <div class="fieldset-title">Autor</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+        </div>
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
+        </div>
+        <div class="fieldset-title">Destinatario</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 PARAMETROS ECONOMICOS -->
+    <section id="economicos">
+      <div class="eyebrow kicker">03 · Parámetros económicos</div>
+      <h2>Los supuestos financieros, compartidos por todos los puntos de compensación.</h2>
+      <p class="lede">Coste de la batería, financiación opcional y precios regulados de la reactiva. Se usan para calcular el flujo de caja de cada punto que añadas en la sección siguiente.</p>
+      <div class="card">
+        <div class="fieldset-title">Inversión y financiación</div>
+        <div class="grid3">
+          <div class="field"><label>Coste unitario batería (€/kVAr)</label><input type="number" id="e_coste_kvar" value="32" min="0" step="0.5"></div>
+          <div class="field"><label>Coste fijo de instalación (€)</label><input type="number" id="e_coste_fijo" value="450" min="0" step="10"></div>
+          <div class="field"><label>Mantenimiento anual (% inversión)</label><input type="number" id="e_mantenimiento" value="1.5" min="0" step="0.1"></div>
+          <div class="field"><label>Porcentaje financiado (%)</label><input type="number" id="e_pct_financiado" value="0" min="0" max="100" step="1"></div>
+          <div class="field"><label>Años de financiación</label><input type="number" id="e_anos_financiacion" value="0" min="0" step="1"></div>
+          <div class="field"><label>Interés anual (%)</label><input type="number" id="e_interes" value="6.5" min="0" step="0.1"></div>
+          <div class="field"><label>IPC / actualización anual (%)</label><input type="number" id="e_ipc" value="2" min="0" step="0.1"></div>
+          <div class="field"><label>Tasa de descuento (%)</label><input type="number" id="e_tasa_descuento" value="8" min="0" step="0.1"></div>
+        </div>
+        <div class="fieldset-title">Precios regulados de energía reactiva (apdo. 6.4)</div>
+        <div class="grid3">
+          <div class="field"><label>Precio · 0,80 ≤ cos φ &lt; 0,95 (€/kVArh)</label><input type="number" id="s_precio_medio" value="0.041554" min="0" step="0.000001"></div>
+          <div class="field"><label>Precio · cos φ &lt; 0,80 (€/kVArh)</label><input type="number" id="s_precio_alto" value="0.062332" min="0" step="0.000001"></div>
+          <div class="field"><label>Precio capacitiva periodo 6 (€/kVArh)</label><input type="number" id="s_precio_cap" value="0.00" min="0" step="0.000001"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 PUNTOS E INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">04 · Puntos de compensación e informe</div>
+      <h2>Añade cada punto de suministro a compensar, y genera el informe.</h2>
+      <p class="lede">Cada punto calcula su propia potencia reactiva de compensación, flujo de caja e indicadores de rentabilidad, usando los parámetros económicos compartidos de la sección anterior.</p>
+
+      <div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir punto de compensación</div>
+        <div class="field"><label>Nombre / ubicación</label><input type="text" id="i_nombre" placeholder="Ej: CT Nave 2 — cuadro general"></div>
+
+        <div class="fieldset-title">Origen de los datos</div>
+        <div class="seg" id="modeSegAdd">
+          <button type="button" class="active" data-modo="teorico">Datos teóricos</button>
+          <button type="button" data-modo="medido">Lecturas del contador</button>
+        </div>
+        <input type="hidden" id="i_modo" value="teorico">
+
+        <div id="addTeorico">
+          <div class="grid3">
+            <div class="field"><label>Potencia activa media, P (kW)</label><input type="number" id="i_p" value="80" min="0" step="0.1"></div>
+            <div class="field"><label>cos φ actual</label><input type="number" id="i_cos1" value="0.80" min="0.05" max="0.999" step="0.01"></div>
+            <div class="field"><label>Horas de funcionamiento (h/año)</label><input type="number" id="i_horas" value="8760" min="0" max="8760" step="1"></div>
+          </div>
+        </div>
+
+        <div id="addMedido" style="display:none;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+            <div class="seg" id="perSegAdd" style="margin-bottom:0;">
+              <button type="button" class="active" data-per="mes">Valores mensuales</button>
+              <button type="button" data-per="anio">Valores ya anuales</button>
+            </div>
+            <input type="hidden" id="i_periodicidad" value="mes">
+            <span style="font-size:11px; color:var(--text-dimmer);">Metodología del apdo. 6.4 (Cuadro 14 del anexo CNS/DE/1467/20)</span>
+          </div>
+          <div style="overflow-x:auto;">
+          <table class="per-table" id="addPerTable">
+            <thead><tr><th>Periodo</th><th>E. activa (kWh)</th><th>E. reactiva (kVArh)</th><th>Tipo</th></tr></thead>
+            <tbody id="addPerBody"></tbody>
+          </table>
+          </div>
+          <div class="field" style="margin-top:14px;"><label>Horas totales del periodo analizado</label><input type="number" id="i_horas_medido" value="730" min="1" step="1"></div>
+        </div>
+
+        <div class="fieldset-title">Objetivo y duración</div>
+        <div class="grid3">
+          <div class="field"><label>cos φ objetivo</label><input type="number" id="i_cos2" value="0.98" min="0.05" max="0.999" step="0.01"></div>
+          <div class="field"><label>Duración de la actuación, D_i (años)</label><input type="number" id="i_di" value="15" min="1" step="1"></div>
+        </div>
+        <div class="field"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Calcular y añadir al informe</button>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:10px;">Puntos de compensación del proyecto</div>
+      <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún punto de compensación. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div></div>
+
+      <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
+        <table class="summary" id="summaryTable"></table>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
+        <button class="btn ghost" id="btnClearInst">Vaciar todos los puntos</button>
+      </div>
+    </section>
+
+    <footer>
+      Herramienta no oficial de apoyo al dimensionado y a la redacción de informes técnico-económicos de baterías de condensadores para compensación de energía reactiva, basada en el apartado 6.4 del anexo CNS/DE/1467/20 de la CNMC (Circular 3/2020). Consulta siempre <a href="https://www.cnmc.es" target="_blank" rel="noopener">la normativa oficial de la CNMC</a> y la Resolución anual de precios de peajes antes de presentar un informe.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV / SCROLLSPY =====================
+// ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'teoria';
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+document.getElementById('p_fecha').valueAsDate = new Date();
+
+// ===================== HELPERS NUMÉRICOS =====================
+function fmtEur(n){ return n.toLocaleString('es-ES',{maximumFractionDigits:0})+' €'; }
+function fmtNum(n,d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function step(k,v,sub){ return '<div class="step'+(sub?' sub':'')+'"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'...' : (s||''); }
+function tanFromCos(c){ c=Math.min(0.999,Math.max(0.01,c)); return Math.sqrt(Math.max(0,1-c*c))/c; }
+function roundStandard(qc){
+  const steps = [2.5,5,7.5,10,12.5,15,20,25,30,40,50,60,75,100,125,150,200,250,300,400,500,600,750,1000];
+  for(const s of steps){ if(qc <= s*1.001) return s; }
+  return Math.ceil(qc/50)*50;
+}
+
+// ===================== MOTOR FINANCIERO (reutilizable) =====================
+function pmt(rate, nper, pv){
+  if(nper<=0) return 0;
+  if(rate===0) return pv/nper;
+  return pv * rate / (1 - Math.pow(1+rate, -nper));
+}
+function calcNPV(rate, flows){
+  return flows.reduce((acc,cf,i)=> acc + cf/Math.pow(1+rate,i), 0);
+}
+function calcIRR(flows){
+  let rate = 0.1;
+  for(let iter=0; iter<80; iter++){
+    const npv = calcNPV(rate, flows);
+    const dnpv = flows.reduce((acc,cf,i)=> i===0?acc: acc - i*cf/Math.pow(1+rate,i+1), 0);
+    if(Math.abs(dnpv)<1e-10) break;
+    const newRate = rate - npv/dnpv;
+    if(!isFinite(newRate) || newRate<-0.99){ rate = NaN; break; }
+    if(Math.abs(newRate-rate)<1e-8){ rate=newRate; break; }
+    rate = newRate;
+  }
+  if(!isFinite(rate) || isNaN(rate) || Math.abs(calcNPV(rate,flows))>Math.max(1,Math.abs(flows[0])*0.001)){
+    let lo=-0.9, hi=10;
+    let flo = calcNPV(lo,flows), fhi=calcNPV(hi,flows);
+    if(flo*fhi>0) return NaN;
+    for(let i=0;i<200;i++){
+      const mid=(lo+hi)/2;
+      const fmid=calcNPV(mid,flows);
+      if(Math.abs(fmid)<1e-5) return mid;
+      if(flo*fmid<0){ hi=mid; fhi=fmid; } else { lo=mid; flo=fmid; }
+    }
+    return (lo+hi)/2;
+  }
+  return rate;
+}
+function diagnosticar(tipo, valor, tasaRef){
+  if(valor===null || valor===undefined || isNaN(valor)) return 'Datos insuficientes';
+  if(tipo==='VAN'){
+    if(valor>10000) return 'Excelente; el proyecto genera un alto valor neto.';
+    if(valor>0) return 'Viable; creación de valor positiva.';
+    return 'No viable; no recupera el valor del capital.';
+  }
+  if(tipo==='TIR'){
+    const tRef = tasaRef*100;
+    if(valor>tRef+10) return 'Muy atractivo; rentabilidad muy superior al coste.';
+    if(valor>tRef) return 'Rentable; retorno superior al coste de capital.';
+    return 'Riesgo alto; rentabilidad insuficiente.';
+  }
+  if(tipo==='IR'){
+    if(valor>110) return 'Excelente; beneficio extra relevante.';
+    if(valor>100) return 'Rentable; ingresos superan la inversión.';
+    if(valor===100) return 'Punto de equilibrio.';
+    return 'Rechazable; valor insuficiente.';
+  }
+  if(tipo==='Payback'){
+    if(valor<=3) return 'Excelente; recuperación rápida.';
+    if(valor<=6) return 'Plazo moderado.';
+    return 'Recuperación lenta.';
+  }
+  return '';
+}
+
+function getEconomicos(){
+  return {
+    costeKvar: parseFloat(document.getElementById('e_coste_kvar').value)||0,
+    costeFijo: parseFloat(document.getElementById('e_coste_fijo').value)||0,
+    mantPct: parseFloat(document.getElementById('e_mantenimiento').value)||0,
+    pctFinanciado: parseFloat(document.getElementById('e_pct_financiado').value)||0,
+    anosFinanciacion: parseInt(document.getElementById('e_anos_financiacion').value)||0,
+    interesAnual: (parseFloat(document.getElementById('e_interes').value)||0)/100,
+    ipcAnual: (parseFloat(document.getElementById('e_ipc').value)||0)/100,
+    tasaDescuento: (parseFloat(document.getElementById('e_tasa_descuento').value)||0)/100,
+    precioMedio: parseFloat(document.getElementById('s_precio_medio').value)||0,
+    precioAlto: parseFloat(document.getElementById('s_precio_alto').value)||0,
+    precioCap: parseFloat(document.getElementById('s_precio_cap').value)||0,
+  };
+}
+
+// ===================== TOGGLES DEL FORMULARIO DE ALTA =====================
+document.querySelectorAll('#modeSegAdd button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('#modeSegAdd button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('i_modo').value = b.dataset.modo;
+    document.getElementById('addTeorico').style.display = b.dataset.modo==='teorico' ? '' : 'none';
+    document.getElementById('addMedido').style.display = b.dataset.modo==='medido' ? '' : 'none';
+  });
+});
+document.querySelectorAll('#perSegAdd button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('#perSegAdd button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('i_periodicidad').value = b.dataset.per;
+  });
+});
+
+const PERIODOS_DEFECTO = [
+  {ea:21124, er:8122, tipo:'inductiva'},
+  {ea:15235, er:4437, tipo:'inductiva'},
+  {ea:0, er:0, tipo:'inductiva'},
+  {ea:0, er:0, tipo:'inductiva'},
+  {ea:0, er:0, tipo:'inductiva'},
+  {ea:12792, er:3123, tipo:'capacitiva'},
+];
+const addPerBody = document.getElementById('addPerBody');
+PERIODOS_DEFECTO.forEach((p,i)=>{
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td>Periodo '+(i+1)+'</td>'+
+    '<td><input type="number" class="ap_ea" data-i="'+i+'" value="'+p.ea+'" step="1"></td>'+
+    '<td><input type="number" class="ap_er" data-i="'+i+'" value="'+p.er+'" step="1"></td>'+
+    '<td><select class="ap_tipo" data-i="'+i+'">'+
+      '<option value="inductiva"'+(p.tipo==='inductiva'?' selected':'')+'>Inductiva</option>'+
+      '<option value="capacitiva"'+(p.tipo==='capacitiva'?' selected':'')+'>Capacitiva</option>'+
+    '</select></td>';
+  addPerBody.appendChild(tr);
+});
+
+// ===================== CÁLCULO TÉCNICO DE UN PUNTO =====================
+function calcTecnicoTeorico(){
+  const P = parseFloat(document.getElementById('i_p').value)||0;
+  const c1 = Math.min(0.999, Math.max(0.05, parseFloat(document.getElementById('i_cos1').value)||0.8));
+  const horas = parseFloat(document.getElementById('i_horas').value)||0;
+  return {modo:'teorico', P, c1, horas, periods:null};
+}
+function calcTecnicoMedido(econ){
+  const horas = parseFloat(document.getElementById('i_horas_medido').value)||1;
+  const periodicidad = document.getElementById('i_periodicidad').value;
+  let totalFacturacion = 0;
+  let sumEaInd=0, sumErInd=0;
+  const periods = [];
+  for(let i=0;i<6;i++){
+    const ea = parseFloat(document.querySelector('.ap_ea[data-i="'+i+'"]').value)||0;
+    const er = parseFloat(document.querySelector('.ap_er[data-i="'+i+'"]').value)||0;
+    const tipo = document.querySelector('.ap_tipo[data-i="'+i+'"]').value;
+    let cosphi = ea>0 ? ea/Math.sqrt(ea*ea+er*er) : NaN;
+    let exceso=0, precio=0, limite;
+    if(i<5){
+      limite = 0.33;
+      if(tipo==='inductiva'){
+        exceso = Math.max(0, er-ea*limite);
+        if(exceso>0) precio = (cosphi<0.80) ? econ.precioAlto : econ.precioMedio;
+        sumEaInd += ea; sumErInd += er;
+      } else { sumEaInd += ea; }
+    } else {
+      limite = 0.2035;
+      if(tipo==='capacitiva'){
+        exceso = Math.max(0, er-ea*limite);
+        precio = econ.precioCap;
+      }
+      sumEaInd += ea;
+    }
+    const facturacion = exceso*precio;
+    totalFacturacion += facturacion;
+    periods.push({periodo:i+1, ea, er, tipo, cosphi, limite, exceso, precio, facturacion});
+  }
+  const factorAnual = periodicidad==='mes' ? 12 : 1;
+  const costeAnualActual = totalFacturacion*factorAnual;
+  const cosAgr = sumEaInd>0 ? sumEaInd/Math.sqrt(sumEaInd*sumEaInd+sumErInd*sumErInd) : 0.95;
+  const Pmed = sumEaInd/Math.max(1,horas);
+  return {modo:'medido', P:Pmed, c1:Math.min(0.999,Math.max(0.05,cosAgr)), periods, totalFacturacion, factorAnual, costeAnualActual, horas, periodicidad};
+}
+
+function calcPunto(tech, econ){
+  let P, c1, c2, costeAnualActual;
+  c2 = tech.cos2;
+  if(tech.modo==='teorico'){
+    P = tech.P; c1 = tech.c1;
+    costeAnualActual = Math.max(0,P*(tanFromCos(c1)-tanFromCos(c2))) * tech.horas * (c1<0.80?econ.precioAlto:econ.precioMedio);
+  } else {
+    P = tech.P; c1 = tech.c1;
+    costeAnualActual = tech.costeAnualActual;
+  }
+  const Qc = Math.max(0, P*(tanFromCos(c1)-tanFromCos(c2)));
+  const QcStd = roundStandard(Qc);
+  const costeInversion = QcStd*econ.costeKvar + econ.costeFijo;
+  const montoFinanciado = costeInversion*(econ.pctFinanciado/100);
+  const capitalPropio = costeInversion-montoFinanciado;
+  const cuotaPrestamo = (econ.anosFinanciacion>0 && montoFinanciado>0) ? pmt(econ.interesAnual, econ.anosFinanciacion, montoFinanciado) : 0;
+
+  const filas = [];
+  filas.push({año:0, ahorro:0, mantenimiento:0, cuota:0, flujoNeto:-capitalPropio, acumulado:-capitalPropio});
+  for(let año=1; año<=tech.di; año++){
+    const factorIpc = Math.pow(1+econ.ipcAnual, año-1);
+    const ahorroActual = costeAnualActual*factorIpc;
+    const mantoActual = -(costeInversion*econ.mantPct/100)*factorIpc;
+    const pagoBanco = año<=econ.anosFinanciacion ? cuotaPrestamo : 0;
+    const flujoNeto = ahorroActual+mantoActual-pagoBanco;
+    const prevAcum = filas[filas.length-1].acumulado;
+    filas.push({año, ahorro:ahorroActual, mantenimiento:mantoActual, cuota:pagoBanco, flujoNeto, acumulado:prevAcum+flujoNeto});
+  }
+  const flujos = filas.map(f=>f.flujoNeto);
+  const invInicial = Math.abs(flujos[0]) || 1;
+  const van = calcNPV(econ.tasaDescuento, flujos);
+  const tir = calcIRR(flujos);
+  const irRatio = ((van+invInicial)/invInicial)*100;
+  const paybackFila = filas.find(f=>f.acumulado>=0);
+  const payback = paybackFila ? paybackFila.año : NaN;
+
+  const indicadores = [
+    {indicador:'VAN', valor:van, unidad:'€', diagnostico:diagnosticar('VAN',van)},
+    {indicador:'TIR', valor:(tir!==null&&!isNaN(tir))?tir*100:NaN, unidad:'%', diagnostico:diagnosticar('TIR',(tir!==null&&!isNaN(tir))?tir*100:NaN,econ.tasaDescuento)},
+    {indicador:'Payback', valor:payback, unidad:'año', diagnostico:diagnosticar('Payback',payback)},
+    {indicador:'Rentabilidad (IR)', valor:irRatio, unidad:'%', diagnostico:diagnosticar('IR',irRatio)},
+  ];
+
+  return { P, c1, c2, Qc, QcStd, costeInversion, montoFinanciado, capitalPropio, cuotaPrestamo, costeAnualActual, filas, van, tir, payback, irRatio, indicadores };
+}
+
+// ===================== SVG: TRIÁNGULO DE POTENCIAS (teoría, web) =====================
+function buildTriangleSVG(){
+  const W=420,H=210, ox=48, oy=176;
+  const P=100, Q1=75, Q2=20; // valores ilustrativos, no atados a datos
+  const scale = Math.min((W-90)/P, (H-40)/Math.max(Q1,Q2));
+  const px = ox+P*scale, q1y = oy-Q1*scale, q2y = oy-Q2*scale;
+  let s = '';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+(W-14)+'" y2="'+oy+'" stroke="#213348" stroke-width="1"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+ox+'" y2="14" stroke="#213348" stroke-width="1"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+oy+'" stroke="#37CFFF" stroke-width="2.5"/>';
+  s += '<line x1="'+px+'" y1="'+oy+'" x2="'+px+'" y2="'+q1y+'" stroke="#FFB020" stroke-width="1.6" stroke-dasharray="4,3"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+q1y+'" stroke="#FFB020" stroke-width="1.6" stroke-dasharray="4,3"/>';
+  s += '<line x1="'+px+'" y1="'+oy+'" x2="'+px+'" y2="'+q2y+'" stroke="#57D9A3" stroke-width="2.5"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+q2y+'" stroke="#57D9A3" stroke-width="2.5"/>';
+  s += '<text x="'+((ox+px)/2)+'" y="'+(oy+16)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#37CFFF">P</text>';
+  s += '<text x="'+(px+6)+'" y="'+((oy+q1y)/2)+'" font-family="IBM Plex Mono" font-size="9.5" fill="#FFB020">Q₁ (antes)</text>';
+  s += '<text x="'+(px-6)+'" y="'+((oy+q2y)/2-4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="9.5" fill="#57D9A3">Q₂ (tras Qc)</text>';
+  s += '<text x="'+(W-16)+'" y="'+(oy+16)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086">eje P</text>';
+  s += '<text x="'+(ox-8)+'" y="20" text-anchor="end" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086">eje Q</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:420px;">'+s+'</svg>';
+}
+document.getElementById('triSvgHolder').innerHTML = buildTriangleSVG();
+
+// ===================== SVG: FLUJO DE CAJA (web) =====================
+function buildCashFlowSVG(filas){
+  const W=700, padL=50, padR=20, padT=20, padB=30, rowH=180;
+  const H = rowH+padT+padB;
+  const n = filas.length;
+  const barW = Math.min(28, (W-padL-padR)/n*0.6);
+  const stp = (W-padL-padR)/n;
+  const maxFlujo = Math.max(...filas.map(f=>Math.abs(f.flujoNeto)), 1);
+  const maxAcum = Math.max(...filas.map(f=>Math.abs(f.acumulado)), 1);
+  const maxAll = Math.max(maxFlujo, maxAcum);
+  const zeroY = padT + rowH/2;
+  const scale = (rowH/2-10)/maxAll;
+
+  let s = '';
+  s += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="#213348" stroke-width="1"/>';
+  filas.forEach((f,i)=>{
+    const cx = padL + stp*i + stp/2;
+    const bh = Math.abs(f.flujoNeto)*scale;
+    const by = f.flujoNeto>=0 ? zeroY-bh : zeroY;
+    s += '<rect x="'+(cx-barW/2)+'" y="'+by+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="'+(f.flujoNeto>=0?'#57D9A3':'#FF6B6B')+'" opacity="0.75" rx="1"/>';
+    s += '<text x="'+cx+'" y="'+(H-padB+14)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086">'+f.año+'</text>';
+  });
+  let pts = filas.map((f,i)=>{
+    const cx = padL + stp*i + stp/2;
+    const cy = zeroY - f.acumulado*scale;
+    return cx+','+cy;
+  });
+  s += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#37CFFF" stroke-width="2"/>';
+  filas.forEach((f,i)=>{
+    const cx = padL + stp*i + stp/2;
+    const cy = zeroY - f.acumulado*scale;
+    s += '<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#37CFFF"/>';
+  });
+  s += '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="9" fill="#8FA3B8">Barras: flujo neto anual (verde/rojo) &nbsp;·&nbsp; Línea: flujo acumulado (cian)</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:700px;">'+s+'</svg>';
+}
+
+// ===================== ALTA / LISTADO DE PUNTOS =====================
+let installations = [];
+let instNextId = 1;
+
+document.getElementById('btnAddInst').addEventListener('click', ()=>{
+  const modo = document.getElementById('i_modo').value;
+  const econ = getEconomicos();
+  const tech = {
+    nombre: document.getElementById('i_nombre').value.trim() || ('Punto '+instNextId),
+    modo,
+    cos2: Math.min(0.999, Math.max(0.05, parseFloat(document.getElementById('i_cos2').value)||0.98)),
+    di: parseInt(document.getElementById('i_di').value)||1,
+    notas: document.getElementById('i_notas').value.trim(),
+  };
+  let base;
+  if(modo==='teorico'){
+    base = calcTecnicoTeorico();
+    if(base.P<=0){ showToast('Introduce una potencia activa mayor que 0.'); return; }
+  } else {
+    base = calcTecnicoMedido(econ);
+    if(base.P<=0){ showToast('Introduce lecturas de energía activa en al menos un periodo.'); return; }
+  }
+  Object.assign(tech, base);
+  if(tech.cos2<=tech.c1 && tech.modo==='teorico' && false){} // objetivo puede ser igual o mayor sin restricción estricta
+  const result = calcPunto(tech, econ);
+  tech.id = instNextId++;
+  installations.push({...tech, econSnapshot:econ, result});
+  renderInstallations();
+  showToast('Punto añadido: '+tech.nombre);
+  document.getElementById('i_nombre').value='';
+  document.getElementById('i_notas').value='';
+});
+
+document.getElementById('btnClearInst').addEventListener('click', ()=>{
+  if(installations.length===0) return;
+  if(confirm('¿Vaciar todos los puntos de compensación del informe?')){ installations=[]; renderInstallations(); }
+});
+
+function renderInstallations(){
+  const container = document.getElementById('instContainer');
+  const statsRow = document.getElementById('statsRow');
+  const btnPdf = document.getElementById('btnPdf');
+  const summaryWrap = document.getElementById('summaryTableWrap');
+
+  if(installations.length===0){
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún punto de compensación. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div>';
+    statsRow.style.display='none';
+    btnPdf.disabled = true;
+    summaryWrap.style.display='none';
+    document.getElementById('summaryTable').innerHTML='';
+    return;
+  }
+  btnPdf.disabled = false;
+  summaryWrap.style.display='block';
+
+  const totalQc = installations.reduce((a,i)=>a+i.result.QcStd,0);
+  const totalInv = installations.reduce((a,i)=>a+i.result.costeInversion,0);
+  const okCount = installations.filter(i=>i.result.van>0).length;
+  statsRow.style.display='flex';
+  statsRow.innerHTML =
+    '<div class="stat-chip"><div class="v">'+installations.length+'</div><div class="l">puntos de compensación</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtNum(totalQc,1)+'</div><div class="l">kVAr instalados en total</div></div>'+
+    '<div class="stat-chip"><div class="v">'+fmtEur(totalInv)+'</div><div class="l">inversión total</div></div>'+
+    '<div class="stat-chip"><div class="v" style="color:'+(okCount===installations.length?'var(--green)':'var(--amber)')+'">'+okCount+'/'+installations.length+'</div><div class="l">con VAN positivo</div></div>';
+
+  container.innerHTML = installations.map((inst,idx)=>{
+    const r = inst.result;
+    const vanOk = r.van>0;
+    const pillClass = vanOk ? 'ok' : 'bad';
+    const pillText = vanOk ? 'VAN POSITIVO' : 'VAN NEGATIVO';
+    let stepsHtml = '';
+    stepsHtml += step('Modo de cálculo', inst.modo==='teorico'?'Datos teóricos':'Lecturas del contador (apdo. 6.4)');
+    stepsHtml += step('Potencia media considerada (P)', fmtNum(r.P,1)+' kW');
+    stepsHtml += step('cos φ actual → objetivo', fmtNum(r.c1,3)+' → '+fmtNum(r.c2,3));
+    stepsHtml += step('Potencia reactiva necesaria (Qc)', fmtNum(r.Qc,1)+' kVAr');
+    stepsHtml += step('Batería normalizada', fmtNum(r.QcStd,1)+' kVAr');
+    stepsHtml += step('Coste anual actual de reactiva evitado', fmtEur(r.costeAnualActual));
+    stepsHtml += step('Coste total de la inversión', fmtEur(r.costeInversion));
+    stepsHtml += step('Monto financiado', fmtEur(r.montoFinanciado), true);
+    stepsHtml += step('Capital propio (año 0)', fmtEur(r.capitalPropio), true);
+    stepsHtml += step('Cuota anual del préstamo', fmtEur(r.cuotaPrestamo), true);
+    r.indicadores.forEach(ind=>{
+      stepsHtml += step(ind.indicador+' ('+ind.unidad+')', fmtNum(ind.valor, ind.unidad==='año'?1:2)+' — '+ind.diagnostico);
+    });
+    if(inst.notas) stepsHtml += step('Notas', inst.notas);
+
+    const chartSvg = buildCashFlowSVG(r.filas);
+    let cfRows = r.filas.map(f=>{
+      return '<tr><td>'+f.año+'</td><td>'+fmtNum(f.ahorro,0)+'</td><td>'+fmtNum(f.mantenimiento,0)+'</td><td>'+fmtNum(f.cuota,0)+'</td>'+
+        '<td class="'+(f.flujoNeto>=0?'pos':'neg')+'">'+fmtNum(f.flujoNeto,0)+'</td><td class="'+(f.acumulado>=0?'pos':'neg')+'">'+fmtNum(f.acumulado,0)+'</td></tr>';
+    }).join('');
+
+    let perTable = '';
+    if(inst.modo==='medido' && inst.periods){
+      perTable = '<div class="subsection-title">Lecturas del contador por periodo</div>'+
+        '<table class="per-table"><thead><tr><th>Periodo</th><th>Ea (kWh)</th><th>Er (kVArh)</th><th>Tipo</th><th>cos φ</th><th>Exceso (kVArh)</th><th>Facturación (€)</th></tr></thead><tbody>'+
+        inst.periods.map(p=>'<tr><td>'+p.periodo+'</td><td>'+fmtNum(p.ea,0)+'</td><td>'+fmtNum(p.er,0)+'</td><td>'+p.tipo+'</td><td>'+(isFinite(p.cosphi)?fmtNum(p.cosphi,3):'—')+'</td><td>'+fmtNum(p.exceso,1)+'</td><td>'+fmtNum(p.facturacion,2)+'</td></tr>').join('')+
+        '</tbody></table>';
+    }
+
+    return '<div class="line-card">'+
+      '<div class="line-head" onclick="toggleInst('+inst.id+')">'+
+        '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title">'+esc(inst.nombre)+'</span></div>'+
+        '<div class="lh-right"><span class="badge">'+fmtNum(r.QcStd,1)+' kVAr</span>'+
+        '<span class="pill '+pillClass+'">'+pillText+'</span>'+
+        '<button class="remove-btn" onclick="event.stopPropagation(); removeInst('+inst.id+')">eliminar</button></div>'+
+      '</div>'+
+      '<div class="line-body" id="ib-'+inst.id+'"><div class="calc-steps">'+stepsHtml+'</div>'+
+        perTable+
+        '<div class="subsection-title">Flujo de caja anual y acumulado</div>'+
+        '<div class="chart-svg-wrap">'+chartSvg+'</div>'+
+        '<table class="cf-table"><thead><tr><th>Año</th><th>Ahorro</th><th>Manto.</th><th>Cuota</th><th>Flujo neto</th><th>Acumulado</th></tr></thead><tbody>'+cfRows+'</tbody></table>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  const summaryTable = document.getElementById('summaryTable');
+  summaryTable.innerHTML =
+    '<thead><tr><th>Punto</th><th>Qc (kVAr)</th><th>Inversión</th><th>VAN</th><th>TIR</th><th>Payback</th></tr></thead><tbody>'+
+    installations.map(inst=>{
+      const r=inst.result;
+      const tir = r.indicadores[1].valor;
+      const pb = r.indicadores[2].valor;
+      return '<tr><td>'+esc(inst.nombre)+'</td><td>'+fmtNum(r.QcStd,1)+'</td><td>'+fmtEur(r.costeInversion)+'</td>'+
+        '<td style="color:'+(r.van>0?'var(--green)':'var(--red)')+'">'+fmtEur(r.van)+'</td>'+
+        '<td>'+fmtNum(tir,1)+'%</td><td>'+(isFinite(pb)?fmtNum(pb,1)+' a':'—')+'</td></tr>';
+    }).join('')+'</tbody>';
+}
+
+window.toggleInst = function(id){ document.getElementById('ib-'+id).classList.toggle('open'); };
+window.removeInst = function(id){ installations = installations.filter(i=>i.id!==id); renderInstallations(); };
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ===================== GENERAR PDF (mismo estilo: portada, TOC, glosario, memoria) =====================
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(installations.length===0) return;
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 22, topY = 30, bottomY = 275;
+
+  const proyecto = document.getElementById('p_proyecto').value || 'Compensacion de energia reactiva mediante bateria de condensadores';
+  const autor = document.getElementById('p_autor').value || '-';
+  const registro = document.getElementById('p_registro').value || '-';
+  const orgNombre = document.getElementById('p_org_nombre').value || '-';
+  const orgCif = document.getElementById('p_org_cif').value || '-';
+  const orgDir = document.getElementById('p_org_dir').value || '-';
+  const orgTel = document.getElementById('p_org_tel').value || '-';
+  const orgCorreo = document.getElementById('p_org_correo').value || '-';
+  const destNombre = document.getElementById('p_dest_nombre').value || '-';
+  const destCif = document.getElementById('p_dest_cif').value || '-';
+  const destDir = document.getElementById('p_dest_dir').value || '-';
+  const fechaVal = document.getElementById('p_fecha').value;
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+  const econGlobal = getEconomicos();
+  const docTitleShort = proyecto;
+  const authorShort = autor;
+
+  const GLOSARIO = [
+    ['cos φ','Factor de potencia','-'],
+    ['Qc','Potencia reactiva de compensacion necesaria','kVAr'],
+    ['P','Potencia activa media','kW'],
+    ['Q','Potencia reactiva','kVAr'],
+    ['S','Potencia aparente','kVA'],
+    ['Ea','Energia activa','kWh'],
+    ['Er','Energia reactiva','kVArh'],
+    ['CNMC','Comision Nacional de los Mercados y la Competencia','-'],
+    ['VAN','Valor Actual Neto','EUR'],
+    ['TIR','Tasa Interna de Retorno','%'],
+    ['IR','Indice de rentabilidad','%'],
+    ['IPC','Indice de Precios al Consumo','%'],
+    ['kVAr','Kilovoltiamperio reactivo','-'],
+    ['kVArh','Kilovoltiamperio reactivo hora','-'],
+  ];
+
+  function makeHelpers(doc){
+    function checkPage(yy, needed=12){
+      if(yy > bottomY-needed){ doc.addPage(); return topY; }
+      return yy;
+    }
+    function sectionTitle(yy, numText, text, collect){
+      yy = checkPage(yy, 18);
+      doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+      doc.text(numText+'  '+text, marginX, yy);
+      doc.setDrawColor(55,207,255); doc.setLineWidth(0.6);
+      doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+      doc.setLineWidth(0.2);
+      if(collect) collect.toc.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+11;
+    }
+    function subTitle(yy, numText, text){
+      yy = checkPage(yy, 12);
+      doc.setFont('times','bold'); doc.setFontSize(10.5); doc.setTextColor(40,48,60);
+      doc.text(numText+'  '+text, marginX, yy);
+      return yy+7;
+    }
+    function kv(yy, k, v, indent=0){
+      yy = checkPage(yy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+      doc.text(k, marginX+indent, yy);
+      doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+      const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+74));
+      doc.text(vLines[0], marginX+indent+74, yy);
+      let extra = 0;
+      for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+74, yy+extra); }
+      return yy+5.6+extra;
+    }
+    function paragraph(yy, text, opts={}){
+      const size = opts.size || 9;
+      const width = opts.width || (pageW-2*marginX);
+      doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+      const linesArr = doc.splitTextToSize(text, width);
+      linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+      return yy+3;
+    }
+    function formulaBlock(yy, formulaLines, caption){
+      yy = checkPage(yy, 10+formulaLines.length*7);
+      const boxH = 8+formulaLines.length*7;
+      doc.setDrawColor(205,205,212); doc.setFillColor(250,250,251); doc.setLineWidth(0.25);
+      doc.roundedRect(marginX, yy-5, pageW-2*marginX, boxH, 1, 1, 'FD');
+      let ly = yy+2;
+      formulaLines.forEach(f=>{
+        doc.setFont('courier','bold'); doc.setFontSize(9.5); doc.setTextColor(20,140,180);
+        doc.text(f, pageW/2, ly, {align:'center'});
+        ly += 7;
+      });
+      if(caption){
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(125,132,142);
+        const capLines = doc.splitTextToSize(caption, pageW-2*marginX-10);
+        capLines.forEach(cl=>{ doc.text(cl, pageW/2, ly, {align:'center'}); ly+=4; });
+      }
+      return ly+4;
+    }
+    function tableCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      doc.text(numText+': '+text, marginX, yy);
+      if(collect) collect.tables.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+6;
+    }
+    function figureCaption(yy, numText, text, collect){
+      yy = checkPage(yy,8);
+      doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
+      const lines = doc.splitTextToSize(numText+': '+text, pageW-2*marginX);
+      lines.forEach((l,i)=>{ doc.text(l, marginX, yy+i*4.5); });
+      if(collect) collect.figures.push({num:numText, text, page: doc.internal.getNumberOfPages()});
+      return yy+lines.length*4.5+3;
+    }
+    function simpleTable(yy, headers, rows, colX){
+      yy = checkPage(yy, 10+rows.length*6.5);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(100,108,120);
+      headers.forEach((h,i)=>doc.text(h, colX[i], yy));
+      yy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5.5;
+      doc.setFont('helvetica','normal');
+      rows.forEach(row=>{
+        yy = checkPage(yy,7);
+        doc.setFontSize(7.6); doc.setTextColor(30,35,45);
+        row.forEach((cell,i)=>doc.text(String(cell), colX[i], yy));
+        yy+=6;
+      });
+      return yy+3;
+    }
+    function drawTriangleFigure(yy){
+      yy = checkPage(yy, 62);
+      const x0=marginX, w=pageW-2*marginX, h=52, y0=yy;
+      doc.setDrawColor(215,215,220); doc.setLineWidth(0.25); doc.rect(x0,y0,w,h);
+      const ox=x0+16, oy=y0+h-10, Pl=70, Q1l=32, Q2l=10;
+      doc.setDrawColor(150,150,158); doc.setLineWidth(0.3);
+      doc.line(ox,oy,ox+w-40,oy); doc.line(ox,oy,ox,y0+6);
+      doc.setDrawColor(20,140,180); doc.setLineWidth(0.6);
+      doc.line(ox,oy,ox+Pl,oy);
+      doc.setDrawColor(230,150,30); doc.setLineWidth(0.45);
+      doc.line(ox+Pl,oy,ox+Pl,oy-Q1l); doc.line(ox,oy,ox+Pl,oy-Q1l);
+      doc.setDrawColor(60,160,120); doc.setLineWidth(0.6);
+      doc.line(ox+Pl,oy,ox+Pl,oy-Q2l); doc.line(ox,oy,ox+Pl,oy-Q2l);
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(20,140,180);
+      doc.text('P', ox+Pl/2, oy+5, {align:'center'});
+      doc.setTextColor(230,150,30); doc.text('Q1 (antes)', ox+Pl+2, oy-Q1l/2);
+      doc.setTextColor(60,160,120); doc.text('Q2 (tras Qc)', ox+Pl+2, oy-Q2l-2);
+      doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(150,155,163);
+      doc.text('(esquema, no a escala)', x0+w/2, y0+h-3, {align:'center'});
+      return y0+h+7;
+    }
+    function drawCashFlowChart(yy, filas){
+      const chartH = 62, chartW = pageW-2*marginX;
+      yy = checkPage(yy, chartH+10);
+      const x0 = marginX, y0 = yy;
+      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,chartW,chartH);
+      const n = filas.length;
+      const padL=4, padR=4;
+      const usableW = chartW-padL-padR;
+      const stp = usableW/n;
+      const barW = Math.min(4.2, stp*0.55);
+      const zeroY = y0+chartH/2;
+      const maxFlujo = Math.max(...filas.map(f=>Math.abs(f.flujoNeto)),1);
+      const maxAcum = Math.max(...filas.map(f=>Math.abs(f.acumulado)),1);
+      const maxAll = Math.max(maxFlujo,maxAcum);
+      const scale = (chartH/2-4)/maxAll;
+      doc.setDrawColor(210,210,215); doc.setLineWidth(0.15);
+      doc.line(x0,zeroY,x0+chartW,zeroY);
+      filas.forEach((f,i)=>{
+        const cx = x0+padL+stp*i+stp/2;
+        const bh = Math.abs(f.flujoNeto)*scale;
+        const by = f.flujoNeto>=0 ? zeroY-bh : zeroY;
+        doc.setFillColor(...(f.flujoNeto>=0?[87,217,163]:[255,107,107]));
+        doc.rect(cx-barW/2, by, barW, Math.max(bh,0.3), 'F');
+      });
+      let pts = filas.map((f,i)=>{
+        const cx = x0+padL+stp*i+stp/2;
+        const cy = zeroY-f.acumulado*scale;
+        return [cx,cy];
+      });
+      doc.setDrawColor(20,140,180); doc.setLineWidth(0.5);
+      for(let i=0;i<pts.length-1;i++){ doc.line(pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]); }
+      doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(150,155,163);
+      const labelStep = n>25?5:(n>12?2:1);
+      filas.forEach((f,i)=>{ if(i%labelStep===0){ const cx=x0+padL+stp*i+stp/2; doc.text(String(f.año), cx, y0+chartH+4, {align:'center'}); } });
+      doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(150,155,163);
+      doc.text('Barras: flujo neto anual (verde/rojo). Linea: flujo acumulado (azul).', x0, y0+chartH+9);
+      return y0+chartH+13;
+    }
+    return {checkPage, sectionTitle, subTitle, kv, paragraph, formulaBlock, tableCaption, figureCaption, simpleTable, drawTriangleFigure, drawCashFlowChart};
+  }
+
+  function renderBody(doc, collect){
+    const H = makeHelpers(doc);
+    let y = topY;
+    let figN = 0, tabN = 1;
+    const FIG = ()=>{ figN++; return 'Figura '+figN; };
+    const TAB = ()=>{ tabN++; return 'Tabla '+tabN; };
+
+    const totalQc = installations.reduce((a,i)=>a+i.result.QcStd,0);
+    const totalInv = installations.reduce((a,i)=>a+i.result.costeInversion,0);
+    const okCount = installations.filter(i=>i.result.van>0).length;
+
+    y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
+    y = H.paragraph(y, 'La actuacion analizada consiste en la instalacion de '+(installations.length>1?installations.length+' baterias de condensadores':'una bateria de condensadores')+' dentro del proyecto "'+proyecto+'", con el objetivo de compensar la energia reactiva y evitar su facturacion segun el apartado 6.4 de la Circular 3/2020 de la CNMC.');
+    y = H.paragraph(y, 'El analisis tecnico determina una potencia reactiva de compensacion normalizada conjunta de '+fmtNum(totalQc,1)+' kVAr, con una inversion total asociada de '+fmtEur(totalInv)+'. De los '+installations.length+' punto(s) evaluados, '+okCount+' presentan VAN positivo.');
+
+    y = H.sectionTitle(y, '2.', 'Introduccion', collect);
+    y = H.paragraph(y, 'El presente informe tecnico se elabora para justificar el dimensionado y la rentabilidad de baterias de condensadores destinadas a la correccion del factor de potencia, evitando la facturacion por energia reactiva establecida en el articulo 9.3 del Real Decreto 1164/2001 y desarrollada en el apartado 6.4 del anexo CNS/DE/1467/20 de la Comision Nacional de los Mercados y la Competencia (Circular 3/2020).');
+    y = H.paragraph(y, 'La normativa establece que se factura el exceso de energia reactiva inductiva por encima del 33% de la energia activa en los periodos horarios 1 a 5, y el exceso de energia reactiva capacitiva por debajo de un factor de potencia de 0,98 en el periodo 6 (valle). Los precios aplicables a cada tramo se publican anualmente en la Resolucion de precios de la CNMC.');
+
+    y = H.sectionTitle(y, '3.', 'Fundamento teorico', collect);
+    y = H.subTitle(y, '3.1', 'Triangulo de potencias');
+    y = H.paragraph(y, 'La figura siguiente ilustra el triangulo de potencias: la potencia reactiva Q1 asociada al factor de potencia actual, y la potencia reactiva Q2 tras aplicar la compensacion Qc de la bateria de condensadores.');
+    y = H.drawTriangleFigure(y);
+    y = H.figureCaption(y, FIG(), 'Triangulo de potencias antes y despues de la compensacion', collect);
+
+    y = H.subTitle(y, '3.2', 'Calculo de la potencia reactiva de compensacion');
+    y = H.paragraph(y, 'La potencia de la bateria de condensadores se calcula a partir de la potencia activa media y de los angulos de desfase actual y objetivo:');
+    y = H.formulaBlock(y, ['Qc = P x (tan(phi1) - tan(phi2))'], 'P: potencia activa media (kW) - phi1/phi2: angulo actual/objetivo - Qc: potencia de la bateria (kVAr)');
+
+    y = H.subTitle(y, '3.3', 'Facturacion por energia reactiva (apartado 6.4)');
+    y = H.paragraph(y, 'El exceso de energia reactiva facturable se determina comparando la energia reactiva registrada con el limite aplicable a cada periodo horario:');
+    y = H.formulaBlock(y, ['F = (Er - Ea x limite) x precio'], 'limite = 33% (periodos 1-5, inductiva) o 20% (periodo 6, capacitiva) - precio segun tramo de cos phi');
+
+    y = H.subTitle(y, '3.4', 'Indicadores de rentabilidad');
+    y = H.formulaBlock(y, ['VAN = suma [ Flujo_t / (1+r)^t ]','TIR: tasa r que hace VAN = 0','IR = (VAN + Inversion) / Inversion x 100'], 'r: tasa de descuento. Payback: primer anio con flujo acumulado >= 0');
+
+    y = H.sectionTitle(y, '4.', 'Datos de partida del proyecto', collect);
+    y = H.kv(y, 'Proyecto', proyecto);
+    y = H.kv(y, 'Autor', autor+' ('+registro+')');
+    y = H.kv(y, 'Organizacion', orgNombre+' - '+orgCif);
+    y = H.kv(y, 'Direccion organizacion', orgDir);
+    y = H.kv(y, 'Contacto', orgTel+' / '+orgCorreo);
+    y = H.kv(y, 'Destinatario', destNombre+' - '+destCif);
+    y = H.kv(y, 'Direccion destinatario', destDir);
+    y = H.kv(y, 'Fecha del informe', fecha);
+    y = H.tableCaption(y, TAB(), 'Parametros economicos compartidos', collect);
+    y = H.simpleTable(y, ['Parametro','Valor'], [
+      ['Coste unitario de la bateria', econGlobal.costeKvar+' EUR/kVAr'],
+      ['Coste fijo de instalacion', econGlobal.costeFijo+' EUR'],
+      ['Mantenimiento anual', econGlobal.mantPct+' % de la inversion'],
+      ['Porcentaje financiado', econGlobal.pctFinanciado+' %'],
+      ['Anios de financiacion', econGlobal.anosFinanciacion+' anios'],
+      ['Interes anual', (econGlobal.interesAnual*100).toFixed(2)+' %'],
+      ['IPC / actualizacion anual', (econGlobal.ipcAnual*100).toFixed(2)+' %'],
+      ['Tasa de descuento', (econGlobal.tasaDescuento*100).toFixed(2)+' %'],
+      ['Precio reactiva 0,80<=cos phi<0,95', econGlobal.precioMedio+' EUR/kVArh'],
+      ['Precio reactiva cos phi<0,80', econGlobal.precioAlto+' EUR/kVArh'],
+      ['Precio capacitiva periodo 6', econGlobal.precioCap+' EUR/kVArh'],
+    ], [marginX, marginX+95]);
+
+    y = H.sectionTitle(y, '5.', 'Resultados - resumen de puntos de compensacion', collect);
+    y = H.tableCaption(y, TAB(), 'Resumen de puntos calculados', collect);
+    const colX = [marginX, marginX+48, marginX+82, marginX+112, marginX+138, marginX+160];
+    y = H.checkPage(y,10);
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.4); doc.setTextColor(100,108,120);
+    ['Punto','Qc (kVAr)','Inversion','VAN','TIR','Payback'].forEach((h,i)=>doc.text(h,colX[i],y));
+    y+=2.5; doc.setDrawColor(205,205,212); doc.line(marginX,y,pageW-marginX,y); y+=5.5;
+    doc.setFont('helvetica','normal');
+    installations.forEach(inst=>{
+      y = H.checkPage(y,7);
+      const r=inst.result;
+      const tir = r.indicadores[1].valor, pb = r.indicadores[2].valor;
+      doc.setFontSize(7.2); doc.setTextColor(30,35,45);
+      doc.text(trunc(inst.nombre,22),colX[0],y);
+      doc.text(fmtNum(r.QcStd,1),colX[1],y);
+      doc.text(fmtEur(r.costeInversion),colX[2],y);
+      doc.setTextColor(...(r.van>0?[50,140,100]:[190,60,60]));
+      doc.text(fmtEur(r.van),colX[3],y);
+      doc.setTextColor(30,35,45);
+      doc.text(fmtNum(tir,1)+'%',colX[4],y);
+      doc.text(isFinite(pb)?fmtNum(pb,1)+'a':'-',colX[5],y);
+      y+=6;
+    });
+    y+=4;
+
+    y = H.sectionTitle(y, '6.', 'Memoria de calculo por punto de compensacion', collect);
+    installations.forEach((inst,i)=>{
+      const r = inst.result;
+      y = H.checkPage(y, 70);
+      y = H.subTitle(y, '6.'+(i+1), inst.nombre);
+      y = H.kv(y,'Modo de calculo', inst.modo==='teorico'?'Datos teoricos':'Lecturas del contador');
+      y = H.kv(y,'Potencia activa media (P)', fmtNum(r.P,1)+' kW');
+      y = H.kv(y,'cos phi actual / objetivo', fmtNum(r.c1,3)+' / '+fmtNum(r.c2,3));
+      y = H.kv(y,'Duracion de la actuacion (D_i)', inst.di+' anios');
+      y = H.kv(y,'Potencia reactiva necesaria (Qc)', fmtNum(r.Qc,1)+' kVAr');
+      y = H.kv(y,'Bateria normalizada', fmtNum(r.QcStd,1)+' kVAr');
+      y = H.kv(y,'Coste anual actual de reactiva evitado', fmtEur(r.costeAnualActual));
+      y = H.kv(y,'Coste total de la inversion', fmtEur(r.costeInversion));
+      y = H.kv(y,'Monto financiado / capital propio', fmtEur(r.montoFinanciado)+' / '+fmtEur(r.capitalPropio));
+      y = H.kv(y,'Cuota anual del prestamo', fmtEur(r.cuotaPrestamo));
+      if(inst.notas) y = H.kv(y,'Notas', inst.notas);
+
+      if(inst.modo==='medido' && inst.periods){
+        y = H.tableCaption(y, TAB(), 'Lecturas del contador por periodo - '+inst.nombre, collect);
+        y = H.simpleTable(y, ['Periodo','Ea (kWh)','Er (kVArh)','Tipo','Exceso (kVArh)','Facturacion (EUR)'],
+          inst.periods.map(p=>[p.periodo, fmtNum(p.ea,0), fmtNum(p.er,0), p.tipo, fmtNum(p.exceso,1), fmtNum(p.facturacion,2)]),
+          [marginX, marginX+22, marginX+50, marginX+78, marginX+104, marginX+134]);
+      }
+
+      y = H.paragraph(y, 'Flujo de caja anual y acumulado a lo largo de la duracion de la actuacion:');
+      y = H.drawCashFlowChart(y, r.filas);
+      y = H.figureCaption(y, FIG(), 'Flujo de caja anual y acumulado - '+inst.nombre, collect);
+
+      y = H.tableCaption(y, TAB(), 'Indicadores de rentabilidad - '+inst.nombre, collect);
+      y = H.simpleTable(y, ['Indicador','Valor','Diagnostico'], r.indicadores.map(ind=>[ind.indicador, fmtNum(ind.valor, ind.unidad==='año'?1:2)+' '+ind.unidad, ind.diagnostico]), [marginX, marginX+38, marginX+70]);
+
+      y = H.checkPage(y,10);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.setTextColor(...(r.van>0?[50,140,100]:[190,60,60]));
+      doc.text('Veredicto: '+(r.van>0?'VAN positivo, punto economicamente viable.':'VAN negativo, revisar hipotesis economicas.'), marginX, y);
+      y+=12;
+    });
+
+    y = H.sectionTitle(y, '7.', 'Conclusiones', collect);
+    y = H.paragraph(y, 'De los '+installations.length+' punto(s) evaluados, '+okCount+' presentan VAN positivo y se consideran economicamente viables en las condiciones analizadas, y '+(installations.length-okCount)+' requieren revision de sus hipotesis economicas o del dimensionado de la bateria.');
+    y = H.paragraph(y, 'Este informe se ha generado con una herramienta de calculo no oficial, basada en el apartado 6.4 del anexo CNS/DE/1467/20 de la CNMC (Circular 3/2020). El autor es responsable de verificar los resultados y la documentacion justificativa antes de su presentacion.');
+
+    y = H.sectionTitle(y, '8.', 'Referencias', collect);
+    const refs = [
+      'Circular 3/2020, de 15 de enero, de la Comision Nacional de los Mercados y la Competencia, por la que se establece la metodologia para el calculo de los peajes de transporte y distribucion de energia electrica.',
+      'Acuerdo CNS/DE/1467/20, Anexo, apartado 6.4 - Facturacion por energia reactiva.',
+      'Orden ITC/688/2011, de 30 de marzo, por la que se establecen los peajes de acceso a partir de 1 de abril de 2011 y determinadas tarifas y primas de las instalaciones del regimen especial.',
+      'Real Decreto 1164/2001, de 26 de octubre, por el que se establecen tarifas de acceso a las redes de transporte y distribucion de energia electrica.',
+    ];
+    refs.forEach((r,i)=>{ y = H.paragraph(y, (i+1)+'. '+r); });
+  }
+
+  // ===================== PASE 1: MEDICION =====================
+  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
+  const collectMeasure = {toc:[], tables:[], figures:[]};
+  renderBody(measureDoc, collectMeasure);
+
+  // ===================== PORTADA Y PRELIMINARES (fijas: 5 paginas) =====================
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const FRONT_PAGES = 5;
+
+  function drawIndexPage(title, entries){
+    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+    doc.text(title, marginX, 32);
+    doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+    let y=50;
+    doc.setFontSize(10);
+    entries.forEach(e=>{
+      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
+      const label = e.num+'  '+e.text;
+      const pageStr = String(e.page);
+      const pageX = pageW-marginX;
+      const labelLines = doc.splitTextToSize(label, 140);
+      doc.text(labelLines[0], marginX, y);
+      doc.text(pageStr, pageX, y, {align:'right'});
+      const labelW = doc.getTextWidth(labelLines[0]);
+      const pageStrW = doc.getTextWidth(pageStr);
+      const dotsStartX = marginX+labelW+2;
+      const dotsEndX = pageX-pageStrW-2;
+      if(dotsEndX>dotsStartX){
+        doc.setTextColor(190,192,198);
+        const dotW = doc.getTextWidth('.');
+        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
+        doc.text('.'.repeat(n), dotsStartX, y);
+      }
+      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
+    });
+    if(entries.length===0){
+      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
+      doc.text('Sin elementos.', marginX, y);
+    }
+  }
+
+  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 92;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
+  cy+=16;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Informe tecnico-economico - Compensacion de energia reactiva', marginX, cy); cy+=16;
+  doc.setFontSize(10.5);
+  [['Organizacion', orgNombre],['CIF', orgCif],['Destinatario', destNombre],['Autor', autor],['Fecha', fecha]].forEach(([k,v])=>{
+    doc.setFont('times','italic'); doc.setTextColor(130,136,146); doc.text(k+':', marginX, cy);
+    doc.setFont('times','normal'); doc.setTextColor(40,46,56); doc.text(String(v), marginX+40, cy);
+    cy+=7.5;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(150,155,163);
+  doc.text('Circular 3/2020 CNMC - Apartado 6.4, facturacion por energia reactiva', marginX, 274);
+
+  doc.addPage();
+  drawIndexPage('Indice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  doc.addPage();
+  drawIndexPage('Indice de figuras', collectMeasure.figures.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+
+  doc.addPage();
+  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y terminos', page:5}]
+    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
+  drawIndexPage('Indice de tablas', tablesForList);
+
+  doc.addPage();
+  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
+  doc.text('Glosario de siglas y terminos', marginX, 32);
+  doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+  let gy=48;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
+  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+32, gy); doc.text('Unidad', marginX+152, gy);
+  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
+  GLOSARIO.forEach(row=>{
+    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(20,140,180);
+    doc.text(row[0], marginX, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
+    const dLines = doc.splitTextToSize(row[1], 116);
+    doc.text(dLines[0], marginX+32, gy);
+    doc.setTextColor(100,108,120);
+    doc.text(row[2], marginX+152, gy);
+    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
+  });
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Tabla 1: Glosario de siglas y terminos', marginX, gy+6);
+
+  doc.addPage();
+  const collectReal = {toc:[], tables:[], figures:[]};
+  renderBody(doc, collectReal);
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pageW-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(docTitleShort, marginX, 11);
+    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
+    doc.line(marginX, 281, pageW-marginX, 281);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pageW/2, 287, {align:'center'});
+  }
+
+  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-reactiva-'+safeName+'.pdf');
+  showToast('PDF generado y descargado.');
+});
+</script>
+</body>
+</html>

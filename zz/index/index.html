@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<script>
+    // Configuración de Idiomas
+    const translations = {
+        es: {
+            heroVideo: "mp_.mp4", // Tu video original
+            heroTag: "Control de la Energía",
+            heroSub: "Optimización de Activos y Estabilidad de Red en Tiempo Real",
+            contactTitle: "Contacto",
+            fName: "Nombre Completo",
+            fPhone: "Teléfono de Contacto",
+            fCompany: "Empresa / Institución",
+            fRole: "Cargo / Departamento",
+            fEmail: "Email Corporativo",
+            fSubject: "Motivo de la consulta",
+            fMsg: "Describa su proyecto o requerimiento técnico...",
+            fLoc: "Ubicación del proyecto (Opcional - Haga clic en el mapa)",
+            fBtn: "Transmitir Solicitud Técnica",
+            fStatus: "TRANSMITIENDO...",
+            fSuccess: "✓ TRANSMISIÓN COMPLETADA",
+            fError: "ERROR DE CONEXIÓN",
+            fForbidden: "SE REQUIERE CORREO CORPORATIVO",
+            newsLabel: "NUEVA HERRAMIENTA",
+            newsSuffix: "ACCESO INMEDIATO",
+            authTitle: "Acceso Terminal",
+            authBtn: "Establecer Vínculo",
+            communityTitle: "Gestión de Comunidades Energéticas"
+        },
+        en: {
+            heroVideo: "bg_en.mp4",
+            heroTag: "Energy  Control",
+            heroSub: "Asset Optimization and Grid Stability in Real Time",
+            contactTitle: "Contact Us",
+            fName: "Full Name",
+            fPhone: "Contact Phone",
+            fCompany: "Company / Institution",
+            fRole: "Position / Department",
+            fEmail: "Corporate Email",
+            fSubject: "Subject of inquiry",
+            fMsg: "Describe your project or technical requirement...",
+            fLoc: "Project Location (Optional - Click on the map)",
+            fBtn: "Transmit Technical Request",
+            fStatus: "TRANSMITTING...",
+            fSuccess: "✓ TRANSMISSION COMPLETED",
+            fError: "CONNECTION ERROR",
+            fForbidden: "CORPORATE EMAIL REQUIRED",
+            newsLabel: "NEW TOOL",
+            newsSuffix: "IMMEDIATE ACCESS",
+            authTitle: "Terminal Access",
+            authBtn: "Establish Link",
+            communityTitle: "Energy Communities Management"
+        },
+        it: {
+            heroVideo: "bg_it.mp4",
+            heroTag: "Controllo dell'Energia",
+            heroSub: "Ottimizzazione degli Asset e Stabilità della Rete in Tempo Reale",
+            contactTitle: "Contatto",
+            fName: "Nome Completo",
+            fPhone: "Telefono di Contatto",
+            fCompany: "Azienda / Istituzione",
+            fRole: "Posizione / Dipartimento",
+            fEmail: "Email Aziendale",
+            fSubject: "Motivo della richiesta",
+            fMsg: "Descriva il suo progetto o requisito tecnico...",
+            fLoc: "Posizione del progetto (Opzionale - Clicca sulla mappa)",
+            fBtn: "Trasmettere Richiesta Tecnica",
+            fStatus: "TRASMETTENDO...",
+            fSuccess: "✓ TRASMISSIONE COMPLETATA",
+            fError: "ERRORE DI CONNESSIONE",
+            fForbidden: "RICHIESTA EMAIL AZIENDALE",
+            newsLabel: "NUOVO STRUMENTO",
+            newsSuffix: "ACCESSO IMMEDIATO",
+            authTitle: "Accesso Terminale",
+            authBtn: "Stabilire Collegamento",
+            communityTitle: "Gestione delle Comunità Energetiche"
+        },
+        fr: {
+            heroVideo: "bg_fr.mp4",
+            heroTag: "Contrôle de l'Énergie",
+            heroSub: "Optimisation des Actifs et Stabilité du Réseau en Temps Réel",
+            contactTitle: "Contact",
+            fName: "Nom Complet",
+            fPhone: "Téléphone de Contact",
+            fCompany: "Entreprise / Institution",
+            fRole: "Poste / Département",
+            fEmail: "E-mail Professionnel",
+            fSubject: "Objet de la demande",
+            fMsg: "Décrivez votre projet ou besoin technique...",
+            fLoc: "Emplacement du projet (Optionnel - Cliquez sur la carte)",
+            fBtn: "Transmettre la Demande Technique",
+            fStatus: "TRANSMISSION EN COURS...",
+            fSuccess: "✓ TRANSMISSION TERMINÉE",
+            fError: "ERREUR DE CONNEXION",
+            fForbidden: "E-MAIL PROFESSIONNEL REQUIS",
+            newsLabel: "NOUVEL OUTIL",
+            newsSuffix: "ACCÈS IMMÉDIAT",
+            authTitle: "Accès Terminal",
+            authBtn: "Établir la Liaison",
+            communityTitle: "Gestion des Communautés Énergétiques"
+        },
+        de: {
+            heroVideo: "bg_de.mp4",
+            heroTag: "Energiemanagement & -steuerung",
+            heroSub: "Asset-Optimierung und Netzstabilität in Echtzeit",
+            contactTitle: "Kontakt",
+            fName: "Vollständiger Name",
+            fPhone: "Kontakttelefon",
+            fCompany: "Unternehmen / Institution",
+            fRole: "Position / Abteilung",
+            fEmail: "Geschäftliche E-Mail",
+            fSubject: "Betreff der Anfrage",
+            fMsg: "Beschreiben Sie Ihr Projekt oder Ihre technischen Anforderungen...",
+            fLoc: "Projektstandort (Optional - Auf der Karte anklicken)",
+            fBtn: "Technische Anfrage Senden",
+            fStatus: "ÜBERTRAGUNG...",
+            fSuccess: "✓ ÜBERTRAGUNG ABGESCHLOSSEN",
+            fError: "VERBINDUNGSFEHLER",
+            fForbidden: "GESCHÄFTLICHE E-MAIL ERFORDERLICH",
+            newsLabel: "NEUES TOOL",
+            newsSuffix: "SOFORTIGER ZUGRIFF",
+            authTitle: "Terminal-Zugriff",
+            authBtn: "Verbindung Herstellen",
+            communityTitle: "Management von Energiegemeinschaften"
+        }
+    };
+
+    let currentLang = 'es';
+    const localized = (es, en = es, it = es, fr = es, de = es) => ({ es, en, it, fr, de });
+    const docApp = ({ id, title, subtitle, description, btnLink, image = "v12.webm", isNew = false }) => ({
+        id,
+        title: localized(title),
+        subtitle: localized(subtitle),
+        description: localized(description),
+        image,
+        btnText: localized("Abrir herramienta", "Open tool", "Apri strumento", "Ouvrir l'outil", "Tool öffnen"),
+        btnLink,
+        ...(isNew && { isNew })
+    });
+
+    const appData = [
+        {
+            category: localized("Sistemas fotovoltaicos", "Photovoltaic systems", "Sistemi fotovoltaici", "Systèmes photovoltaïques", "Photovoltaiksysteme"),
+            items: [
+                docApp({ id: "diseno-sistemas-fv", title: "Diseño de Sistemas FV", subtitle: "Superficies y sombras", description: "Dimensiona superficies disponibles y analiza sombras para instalaciones fotovoltaicas.", btnLink: "/docs/A00_Blog_Interactivo/A03_FV/C01_Diseno_Sistemas_FV.html", image: "v13.webm" })
+            ]
+        },
+        {
+            category: localized("Contratos eléctricos", "Electricity contracts", "Contratti elettrici", "Contrats d'électricité", "Stromverträge"),
+            navGroups: [
+                { title: localized("Hasta 50 kW"), itemIds: ["facturacion-potencia-50", "optimizacion-potencia-50"] },
+                { title: localized("Mayor de 50 kW"), itemIds: ["facturacion-potencia-mas-50", "optimizacion-potencia-mas-50"] }
+            ],
+            items: [
+                docApp({ id: "optimizacion-potencia-50", title: "Optimización de Potencia hasta 50 kW", subtitle: "Potencia contratada", description: "Optimiza la potencia contratada para suministros de hasta 50 kW.", btnLink: "/docs/A00_Blog_Interactivo/A02_Contratos/B01_Hasta_50_kW/C02_Optimizacion_Potencia.html", image: "vl2.webm" }),
+                docApp({ id: "facturacion-potencia-50", title: "Facturación por Potencia hasta 50 kW", subtitle: "FPC + FPD", description: "Calcula y analiza la facturación por potencia en suministros de hasta 50 kW.", btnLink: "/docs/A00_Blog_Interactivo/A02_Contratos/B01_Hasta_50_kW/C01_Facturacion_Potencia.html", image: "vl3.webm" }),
+                docApp({ id: "optimizacion-potencia-mas-50", title: "Optimización de Potencia mayor de 50 kW", subtitle: "Potencia contratada", description: "Optimiza la potencia contratada para suministros de más de 50 kW.", btnLink: "/docs/A00_Blog_Interactivo/A02_Contratos/B02_Mayor_de_50_kW/C02_Optimizacion_Potencia_50_kW.html", image: "vl2.webm" }),
+                docApp({ id: "facturacion-potencia-mas-50", title: "Facturación por Potencia mayor de 50 kW", subtitle: "Coste de potencia", description: "Calcula y analiza la facturación por potencia en suministros de más de 50 kW.", btnLink: "/docs/A00_Blog_Interactivo/A02_Contratos/B02_Mayor_de_50_kW/C01_Facturacion_Potencia_50_kW.html", image: "vl3.webm" })
+            ]
+        },
+        {
+            category: localized("Certificados de Ahorro Energético", "Energy Savings Certificates", "Certificati di risparmio energetico", "Certificats d'économies d'énergie", "Energieeinsparzertifikate"),
+            navGroups: [
+                { title: localized("Agrario"), itemIds: ["cae-pantallas-termicas"] },
+                { title: localized("Industrial"), itemIds: ["cae-compresor", "cae-recuperacion-industrial", "cae-sai-industrial", "cae-variador"] },
+                { title: localized("Residencial"), itemIds: ["cae-hibridacion-caldera-bdc", "cae-caldera-bdc"] },
+                { title: localized("Terciario"), itemIds: ["cae-bomba-calor", "cae-bomba-hidraulica", "cae-recuperacion-terciario", "cae-sai-terciario"] }
+            ],
+            items: [
+                docApp({ id: "cae-variador", title: "CAE · Variador de Velocidad", subtitle: "Sector industrial", description: "Calcula el ahorro de energía por la implantación de un variador de velocidad.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B02_Industrial/C04_CAE_Variador_De_Velocidad.html", image: "v1.webm" }),
+                docApp({ id: "cae-compresor", title: "CAE · Compresor de Aire", subtitle: "Sector industrial", description: "Calcula el ahorro por sustituir un compresor de aire por uno más eficiente.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B02_Industrial/C01_CAE_Compresor.html", image: "v12.webm" }),
+                docApp({ id: "cae-sai-industrial", title: "CAE · Sistema SAI", subtitle: "Sector industrial", description: "Calcula el ahorro por sustituir sistemas de alimentación ininterrumpida.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B02_Industrial/C03_CAE_SAI.html", image: "v13.webm" }),
+                docApp({ id: "cae-recuperacion-industrial", title: "CAE · Recuperación de Calor", subtitle: "Sector industrial", description: "Calcula el ahorro por recuperar calor en un circuito frigorífico.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B02_Industrial/C02_CAE_Recuperacion_Calor.html", image: "v2.webm" }),
+                docApp({ id: "cae-bomba-calor", title: "CAE · Bomba de Calor", subtitle: "Sector terciario", description: "Calcula el ahorro por sustituir un generador de climatización por una bomba de calor.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B04_Terciario/C01_CAE_Bomba_Calor.html", image: "v1.webm" }),
+                docApp({ id: "cae-sai-terciario", title: "CAE · Sistema SAI", subtitle: "Sector terciario", description: "Calcula el ahorro por sustituir sistemas de alimentación ininterrumpida.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B04_Terciario/C04_CAE_SAI.html", image: "v12.webm" }),
+                docApp({ id: "cae-recuperacion-terciario", title: "CAE · Recuperación de Calor", subtitle: "Sector terciario", description: "Calcula el ahorro por recuperar calor en un circuito frigorífico.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B04_Terciario/C03_CAE_Recuperacion_Calor.html", image: "v13.webm" }),
+                docApp({ id: "cae-bomba-hidraulica", title: "CAE · Bomba Hidráulica", subtitle: "Sector terciario", description: "Calcula el ahorro por sustituir una bomba por otra más eficiente.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B04_Terciario/C02_CAE_Bomba_Hidraulica.html", image: "v2.webm" }),
+                docApp({ id: "cae-caldera-bdc", title: "CAE · Caldera por Bomba de Calor", subtitle: "Sector residencial", description: "Calcula el ahorro por sustituir una caldera de combustión por una bomba de calor.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B03_Residencial/C02_CAE_Sustitucion_Caldera_BDC.html", image: "v1.webm" }),
+                docApp({ id: "cae-hibridacion-caldera-bdc", title: "CAE · Hibridación Caldera + Bomba de Calor", subtitle: "Sector residencial", description: "Calcula el ahorro de la hibridación de caldera y bomba de calor.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B03_Residencial/C01_CAE_Hibridacion_Caldera_BDC.html", image: "v12.webm" }),
+                docApp({ id: "cae-pantallas-termicas", title: "CAE · Pantallas Térmicas", subtitle: "Sector agrario", description: "Calcula el ahorro por instalar pantallas térmicas en invernaderos.", btnLink: "/docs/A00_Blog_Interactivo/A01_CAEs/B01_Agrario/C01_CAE_Pantallas_Termicas.html", image: "v13.webm" })
+            ]
+        },
+        {
+            category: localized("Instalaciones y normativa", "Installations and regulations", "Impianti e normativa", "Installations et réglementation", "Anlagen und Vorschriften"),
+            navGroups: [
+                { title: localized("IDAE"), itemIds: ["tramitacion-autoconsumo", "bombeo-fv"] },
+                { title: localized("REBT"), itemIds: ["calculadora-bt-anexo-2", "guia-bt-40", "guia-bt-52"] }
+            ],
+            items: [
+                docApp({ id: "comunidades-energeticas", title: "Comunidades Energéticas", subtitle: "Constitución y gestión", description: "Guía para la constitución de comunidades energéticas.", btnLink: "/docs/A00_Blog_Interactivo/A04_Instalaciones/C01_Comunidades_Energeticas.html", image: "v2.webm", isNew: true }),
+                docApp({ id: "calculadora-bt-anexo-2", title: "Calculadora BT Anexo 2", subtitle: "Sección de conductor", description: "Calcula la sección de conductor según la Guía BT Anexo 2.", btnLink: "/docs/A00_Blog_Interactivo/A04_Instalaciones/B02_REBT/C01_Calculadora_BT_Anexo_2.html", image: "v1.webm" }),
+                docApp({ id: "guia-bt-52", title: "Guía BT-52", subtitle: "Recarga de vehículos eléctricos", description: "Consulta la guía para infraestructuras de recarga de vehículos eléctricos.", btnLink: "/docs/A00_Blog_Interactivo/A04_Instalaciones/B02_REBT/C03_Guia_BT_52.html", image: "v12.webm" }),
+                docApp({ id: "guia-bt-40", title: "Guía BT-40", subtitle: "Instalaciones generadoras", description: "Consulta la guía de instalaciones generadoras de baja tensión.", btnLink: "/docs/A00_Blog_Interactivo/A04_Instalaciones/B02_REBT/C02_Guia_BT_40.html", image: "v13.webm" }),
+                docApp({ id: "tramitacion-autoconsumo", title: "Tramitación de Autoconsumo", subtitle: "Guía IDAE", description: "Consulta los pasos para tramitar instalaciones de autoconsumo.", btnLink: "/docs/A00_Blog_Interactivo/A04_Instalaciones/B01_IDAE/C01_Autoconsumo_Tramitacion.html", image: "v2.webm" }),
+                docApp({ id: "bombeo-fv", title: "Bombeo Fotovoltaico", subtitle: "Instalaciones aisladas FV", description: "Dimensiona sistemas fotovoltaicos aislados para bombeo de agua.", btnLink: "/docs/A00_Blog_Interactivo/A04_Instalaciones/B01_IDAE/C02_Bombeo_FV.html", image: "v1.webm" })
+            ]
+        }
+    ];
+
+</script>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Proposal Software for Installers | PV Design, ROI & Self-Consumption Tools | VatiaCo.es</title>
+    <meta name="description"
+        content="Professional solar design software for engineers and installers. Generate PV self-consumption reports, ROI analysis, contract optimization and energy studies without complex simulation tools.">
+    <meta name="keywords"
+        content="solar design software, PV design tool, photovoltaic proposal software, solar ROI calculator, self consumption analysis, energy modeling tool, autoconsumo fotovoltaico, informe solar automático">
+    <link rel="canonical" href="https://VatiaCo.es/">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="VatiaCo">
+    <meta property="og:title" content="Solar Design Software for Engineers | VatiaCo.es">
+    <meta property="og:description"
+        content="Generate solar proposals, ROI analysis and PV self-consumption reports in seconds. Built for installers and engineers.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://VatiaCo.es/">
+    <meta property="og:image" content="https://VatiaCo.es/preview.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Solar Design Software | VatiaCo.es">
+    <meta name="twitter:description" content="PV design, ROI and self-consumption tools for solar professionals.">
+    <meta name="twitter:image" content="https://VatiaCo.es/preview.png">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦉</text></svg>">
+    <meta name="theme-color" content="#050a18">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            scroll-behavior: smooth;
+            background-color: #050a18;
+            color: white;
+            margin: 0;
+            padding-bottom: 15px;
+        }
+
+        .fixed-video-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            filter: brightness(0.7) contrast(1.05) saturate(1.1);
+        }
+
+
+        #iframe-viewer {
+            display: none;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 64px);
+            background: white;
+            z-index: 9999;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .iframe-close-button {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 1;
+        }
+
+        #main-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: inherit;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            padding: 2.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 10, 24, 0.9);
+            backdrop-filter: blur(12px);
+            z-index: 100005;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 50px;
+        }
+
+        .login-card {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+            border-radius: 4px;
+            transform: translateY(50px);
+            transition: 0.3s;
+        }
+
+        .login-overlay.active .login-card {
+            transform: translateY(0);
+        }
+
+
+        #map {
+            height: 350px;
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .btn-action {
+            background: #003399;
+            color: white;
+            padding: 14px 28px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 4px;
+            border: none;
+        }
+
+        .footer-link {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.4);
+            transition: 0.3s;
+            display: block;
+            margin-bottom: 0.75rem;
+            text-decoration: none;
+        }
+
+        .footer-link:hover {
+            color: #ffd700;
+            transform: translateX(5px);
+        }
+
+        .mobile-frame {
+            aspect-ratio: 9 / 16;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            object-fit: cover;
+            border-radius: 2.5rem;
+            border: 8px solid #1a1a1a;
+            background-color: #000;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .group:hover .mobile-frame {
+            transform: scale(1.02);
+        }
+
+        .img-container-mobile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .ticker-wrap {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            overflow: hidden;
+            height: 15px;
+            background-color: #e74c3c;
+            z-index: 100002;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .ticker-move {
+            display: inline-block;
+            white-space: nowrap;
+            padding-right: 100%;
+            animation: ticker 45s linear infinite;
+        }
+
+        .ticker-item {
+            display: inline-block;
+            padding: 0 1.5rem;
+            font-size: 9px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 25px;
+        }
+
+        .ticker-label {
+            background: white;
+            color: #e74c3c;
+            padding: 0 1px;
+            margin-right: 8px;
+            font-weight: 900;
+            font-size: 8px;
+        }
+
+        @keyframes ticker {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(-100%, 0, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <video autoplay muted loop playsinline class="fixed-video-bg">
+        <source src="mp_.mp4" type="video/mp4">
+    </video>
+
+    <div id="login-modal" class="login-overlay" onclick="closeLogin(event)">
+        <!-- ... modal code ... -->
+    </div>
+
+    <div id="iframe-viewer">
+        <button onclick="closeIframe()"
+            class="iframe-close-button bg-black/50 text-white rounded-full p-2 hover:bg-black transition">
+            <i class="material-icons">close</i>
+        </button>
+        <iframe id="main-iframe" class="w-full h-full border-none bg-white"></iframe>
+    </div>
+
+    <header class="h-[75vh] flex flex-col items-center justify-center px-10 text-center">
+        <h1 class="flex flex-col items-center mb-12">
+            <div class="text-7xl md:text-9xl font-black tracking-tighter leading-none">
+                <span class="text-white">Vatia</span><span class="text-[#ff8c00]">co</span>
+            </div>
+            <span
+                class="block text-2xl md:text-3xl font-extralight uppercase tracking-[-0.02em] text-slate-300 mt-6 inline-block origin-center scale-y-[1.6]">
+                Blog de un ingeniero jubilado
+            </span>
+            <span id="hero-tag"
+                class="block text-white text-[10px] md:text-xs font-light uppercase tracking-[-0.01em] mt-4 inline-block origin-center scale-y-[1.4] opacity-80">
+                Advanced Power Solutions
+            </span>
+        </h1>
+
+        <div class="flex flex-col items-center max-w-3xl">
+            <div class="w-12 h-[2px] bg-[#ffd700] mb-8"></div>
+            <p id="hero-sub"
+                class="text-white text-sm md:text-lg font-medium uppercase tracking-[0.4em] leading-relaxed opacity-90">
+                Resiliencia Energética y Control Predictivo en AC/DC
+            </p>
+        </div>
+
+        <!-- 🔹 SECCIÓN DE CONTACTO CON LOGO WHATSAPP (SVG) EN CABECERA 🔹 -->
+        <div class="mt-12 flex flex-col sm:flex-row items-center gap-6 text-sm">
+            <a href="tel:951733491"
+                class="text-white/90 hover:text-[#ffd700] font-bold flex items-center gap-2 transition">
+                <i class="material-icons text-lg">phone</i> 951 733 491
+            </a>
+            <a href="mailto:info@VatiaCo.es"
+                class="text-white/90 hover:text-[#ffd700] font-bold flex items-center gap-2 transition">
+                <i class="material-icons text-lg">email</i> info@VatiaCo.es
+            </a>
+            <a href="https://wa.me/34600366211" target="_blank"
+                class="text-white/90 hover:text-[#ffd700] font-bold flex items-center gap-2 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor"
+                    class="w-5 h-5 text-[#25D366]">
+                    <path
+                        d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" />
+                </svg>
+                WhatsApp
+            </a>
+        </div>
+    </header>
+
+    <main id="main-content" class="space-y-16"></main>
+
+    <div id="VatiaCo.es-contact-root"></div>
+
+    <div class="ticker-wrap" id="news-ticker">
+        <div class="ticker-move" id="ticker-content"></div>
+    </div>
+
+    <footer class="bg-black/90 border-t border-white/5 pt-20 pb-10">
+        <div class="max-w-7xl mx-auto px-10 grid md:grid-cols-4 gap-12">
+            <div>
+                <span class="text-xl font-black italic tracking-tighter text-white">VatiaCo.es</span>
+                <p id="footer-desc"
+                    class="text-white/20 text-[9px] uppercase font-bold mt-4 tracking-widest leading-relaxed">Control
+                    avanzado de microredes y activos energéticos.</p>
+            </div>
+
+            <div id="footer-links-dynamic" class="md:col-span-2 grid grid-cols-2 gap-8"></div>
+
+            <!-- 🔹 SECCIÓN DE CONTACTO CON LOGO WHATSAPP (SVG) EN FOOTER 🔹 -->
+            <div>
+                <h4 class="text-[10px] font-black uppercase text-[#003399] mb-6 tracking-widest">Contacto</h4>
+                <a href="tel:951733491" class="footer-link flex items-center gap-2 hover:text-[#ffd700]"><i
+                        class="material-icons text-[14px]">phone</i> 951 733 491</a>
+                <a href="mailto:info@VatiaCo.es" class="footer-link flex items-center gap-2 hover:text-[#ffd700]"><i
+                        class="material-icons text-[14px]">email</i> info@VatiaCo.es</a>
+                <a href="https://wa.me/34600366211" target="_blank"
+                    class="footer-link flex items-center gap-2 hover:text-[#ffd700]">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor"
+                        class="w-4 h-4 text-[#25D366]">
+                        <path
+                            d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" />
+                    </svg>
+                    WhatsApp
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+        const renderApp = () => {
+            const t = translations[currentLang];
+            const bgVideo = document.querySelector('.fixed-video-bg');
+            if (bgVideo) {
+                const source = bgVideo.querySelector('source');
+                if (source.src !== window.location.origin + '/' + t.heroVideo) {
+                    source.src = t.heroVideo;
+                    bgVideo.load();
+                    bgVideo.play();
+                }
+            }
+
+            document.getElementById('hero-tag').innerText = t.heroTag;
+            document.getElementById('hero-sub').innerText = t.heroSub;
+            document.getElementById('footer-desc').innerText = t.heroSub;
+
+            const footer = document.getElementById('footer-links-dynamic');
+            const main = document.getElementById('main-content');
+
+            if (footer) footer.innerHTML = '';
+            if (main) main.innerHTML = '';
+
+            appData.forEach((cat) => {
+                const catName = cat.category[currentLang];
+
+                if (main) {
+                    const sectionGroup = document.createElement('div');
+                    sectionGroup.className = "pt-24 pb-10";
+                    sectionGroup.innerHTML = `
+                        <div class="max-w-7xl mx-auto px-6 mb-10 text-center">
+                            <h3 class="text-3xl font-black uppercase italic text-[#ffffff] opacity-80 tracking-tighter">${catName}</h3>
+                            <div class="w-12 h-[2px] bg-[#ffffff] mx-auto mt-2 opacity-50"></div>
+                        </div>`;
+                    cat.items.forEach((sec, idx) => {
+                        const layout = idx % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse';
+                        const section = document.createElement('section');
+                        section.id = sec.id;
+                        section.className = 'py-16 scroll-mt-24';
+                        section.innerHTML = `
+                            <div class="max-w-7xl mx-auto px-6">
+                                <div class="flex flex-col-reverse ${layout} items-center gap-12">
+                                    <div class="w-full md:w-1/2 img-container-mobile group">
+                                        ${sec.isNew ? '<div class="absolute -top-3 -left-3 z-10 bg-[#e74c3c] text-white px-3 py-1 font-black italic text-xs shadow-2xl rotate-[-5deg]">NEW</div>' : ''}
+                                            <video class="mobile-frame video-strict-loop" autoplay muted playsinline preload="auto" onloadeddata="this.playbackRate = 3.0; this.play();" onended="this.currentTime = 0; this.play();">
+                                                <source src="${sec.image}" type="video/mp4">
+                                            </video>
+                                    </div>
+                                    <div class="w-full md:w-1/2">
+                                        <h2 class="text-4xl md:text-5xl font-black mb-4 italic uppercase text-white">${sec.title[currentLang]}</h2>
+                                        <div class="text-[#ffd700] font-black uppercase text-sm tracking-[0.2em] mb-6 border-b-2 border-[#ffd700] inline-block pb-1">${sec.subtitle[currentLang]}</div>
+                                        <p class="text-white/70 text-lg mb-8 font-light">${sec.description[currentLang]}</p>
+                                        <button class="btn-action flex items-center gap-3" onclick="openIframe('${sec.btnLink}')">
+                                            <span>${sec.btnText[currentLang]}</span><i class="material-icons text-sm">open_in_new</i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>`;
+                        sectionGroup.appendChild(section);
+                    });
+                    main.appendChild(sectionGroup);
+                }
+
+                if (footer) {
+                    const fCat = document.createElement('div');
+                    fCat.innerHTML = `<h4 class="text-[10px] font-black uppercase text-[#000000] mb-4 text-center md:text-left">${catName}</h4>`;
+                    cat.items.forEach(item => {
+                        fCat.innerHTML += `<a href="#${item.id}" onclick="closeIframe()" class="footer-link">${item.title[currentLang]}</a>`;
+                    });
+                    footer.appendChild(fCat);
+                }
+            });
+
+            initContact();
+            initTicker();
+            initVideoFix();
+        };
+
+        window.setLang = (lang) => {
+            if (document.activeElement) document.activeElement.blur();
+            currentLang = lang;
+            renderApp();
+        };
+
+        const initContact = () => {
+            const t = translations[currentLang];
+            const root = document.getElementById('VatiaCo.es-contact-root');
+            root.innerHTML = `
+                <section id="contacto" class="py-24">
+                    <div class="max-w-7xl mx-auto px-6">
+                        <div class="glass-panel">
+                            <h2 class="text-5xl font-black mb-8 italic uppercase text-[#ffd700]">${t.contactTitle}</h2>
+                            <form id="mainContactForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <input type="text" name="nombre" placeholder="${t.fName}" required class="bg-white/10 p-4 outline-none border border-white/10 focus:border-[#ffd700] transition text-white">
+                                <input type="tel" name="telefono" placeholder="${t.fPhone}" required class="bg-white/10 p-4 outline-none border border-white/10 focus:border-[#ffd700] transition text-white">
+                                <input type="text" name="empresa" placeholder="${t.fCompany}" class="bg-white/10 p-4 outline-none border border-white/10 focus:border-[#ffd700] transition text-white">
+                                <input type="text" name="cargo" placeholder="${t.fRole}" class="bg-white/10 p-4 outline-none border border-white/10 focus:border-[#ffd700] transition text-white">
+                                <input type="email" name="email" placeholder="${t.fEmail}" required class="md:col-span-2 bg-white/10 p-4 outline-none border border-white/10 focus:border-[#ffd700] transition text-white">
+                                <div class="md:col-span-2 flex flex-col gap-2">
+                                    <label class="text-[10px] uppercase font-black tracking-widest text-[#ffd700]">${t.fSubject}</label>
+                                    <select name="asunto" id="subjectSelector" class="w-full bg-white p-4 text-slate-900 font-bold appearance-none cursor-pointer"></select>
+                                </div>
+                                <textarea name="mensaje" placeholder="${t.fMsg}" rows="4" class="md:col-span-2 bg-white/10 p-4 outline-none border border-white/10 focus:border-[#ffd700] transition text-white resize-none"></textarea>
+                                <div class="md:col-span-2">
+                                    <label class="text-[10px] uppercase font-black tracking-widest text-white/4 mb-2 block">${t.fLoc}</label>
+                                    <div id="map" style="height: 400px;"></div>
+                                </div>
+                                <input type="hidden" name="lat" id="lat"><input type="hidden" name="lng" id="lng">
+                                <button type="submit" class="btn-action md:col-span-2 py-5 text-xl tracking-[0.2em]">${t.fBtn}</button>
+                                <p id="formStatus" class="md:col-span-2 text-center text-xs font-black uppercase mt-4"></p>
+                            </form>
+                        </div>
+                    </div>
+                </section>`;
+
+            const sel = document.getElementById('subjectSelector');
+            appData.forEach(cat => {
+                const group = document.createElement('optgroup');
+                group.label = cat.category[currentLang];
+                cat.items.forEach(item => { group.innerHTML += `<option value="${item.title[currentLang]}">${item.title[currentLang]}</option>`; });
+                sel.appendChild(group);
+            });
+
+            const map = L.map('map').setView([41.6, 1.8], 4);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+            let marker;
+            map.on('click', e => {
+                if (marker) marker.setLatLng(e.latlng);
+                else marker = L.marker(e.latlng, { draggable: true }).addTo(map);
+                document.getElementById('lat').value = e.latlng.lat;
+                document.getElementById('lng').value = e.latlng.lng;
+            });
+
+            document.getElementById('mainContactForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const status = document.getElementById('formStatus');
+                status.innerText = t.fStatus;
+                status.style.color = "#ffd700";
+                try {
+                    const response = await fetch("http://127.0.0.1:8888/contacto", { method: "POST", body: new FormData(e.target) });
+                    const data = await response.json();
+                    if (response.ok && data.status === 'ok') {
+                        status.innerText = t.fSuccess; status.style.color = "#22c55e"; e.target.reset();
+                    } else {
+                        status.innerText = data.message || t.fError; status.style.color = "#ef4444";
+                    }
+                } catch (err) {
+                    status.innerText = t.fError; status.style.color = "#ef4444";
+                }
+            };
+        };
+
+        const initTicker = () => {
+            const t = translations[currentLang];
+            const ticker = document.getElementById('ticker-content');
+            let content = "";
+            appData.forEach(cat => {
+                cat.items.forEach(item => {
+                    if (item.isNew) content += `<div class="ticker-item"><span class="ticker-label">${t.newsLabel}</span> SISTEMA ${item.title[currentLang]}: ${item.subtitle[currentLang]} — ${t.newsSuffix} —</div>`;
+                });
+            });
+            ticker.innerHTML = content + content;
+        };
+
+        const initVideoFix = () => {
+            document.querySelectorAll('.video-strict-loop').forEach(v => {
+                v.playbackRate = 8.0;
+                v.onended = () => { const s = v.currentSrc; v.src = ""; v.src = s; v.load(); v.playbackRate = 8.0; v.play(); };
+            });
+        };
+
+        window.openIframe = (url) => { document.getElementById('main-iframe').src = url; document.getElementById('iframe-viewer').style.display = 'block'; document.body.style.overflow = 'hidden'; };
+        window.closeIframe = () => { document.getElementById('iframe-viewer').style.display = 'none'; document.getElementById('main-iframe').src = ""; document.body.style.overflow = 'auto'; };
+        window.openLogin = () => { const m = document.getElementById('login-modal'); m.style.display = 'flex'; setTimeout(() => m.classList.add('active'), 10); };
+        window.closeLogin = (e) => { if (!e || e.target.id === 'login-modal') { const m = document.getElementById('login-modal'); m.classList.remove('active'); setTimeout(() => m.style.display = 'none', 300); } };
+
+        renderApp();
+    </script>
+</body>
+
+</html>

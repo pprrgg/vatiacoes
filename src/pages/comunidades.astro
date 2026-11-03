@@ -1,0 +1,272 @@
+---
+// Mapa de las comunidades energeticas registradas en el IDAE (antes en
+// public/docs/.../index/comunidades.html, dentro del visor del blog).
+// Al pulsar una comunidad se abre la plataforma de socios en el visor comun
+// (/js/plataforma.js, cargado por TopNav): mismo inicio de sesion que "Acceso socios".
+// Datos: src/data/comunidades-idae.json (tambien los usan el formulario de alta y la API,
+// que los lee publicados en /data/comunidades-idae.json).
+import TopNav from '../components/TopNav.astro';
+import IDAE from '../data/comunidades-idae.json';
+const { comunidades, actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Comunidades energéticas · VatiaCo</title>
+<meta name="description" content="Mapa de las comunidades energéticas de España registradas en el IDAE." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" />
+<style is:global>
+  :root {
+    color-scheme: dark;
+    font-family: Inter, system-ui, sans-serif;
+    --nav-height: 3.5rem;
+    --color-accent: #3369ff;
+    --color-white: #ffffff;
+    --color-gray-1: #edeef3;
+    --color-gray-2: #c1c3c8;
+    --color-gray-3: #888c96;
+    --color-gray-5: #353841;
+    --color-gray-6: #23262f;
+    --color-black: #17181c;
+  }
+  @media (min-width: 800px) { :root { --nav-height: 4rem; } }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-black);
+    color: var(--color-gray-2);
+    display: flex;
+    flex-direction: column;
+  }
+  .intro { padding: 1.25rem 1rem 0.75rem; max-width: 72rem; width: 100%; margin: 0 auto; }
+  h1 { margin: 0 0 0.35rem; font-size: clamp(1.3rem, 3vw, 1.8rem); color: var(--color-white); }
+  .intro p { margin: 0; font-size: 0.95rem; color: var(--color-gray-3); }
+  .stats { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  .stats strong { color: var(--color-white); font-variant-numeric: tabular-nums; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.6rem; font-size: 0.85rem; }
+  .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .dot { width: 0.8rem; height: 0.8rem; border-radius: 50%; display: inline-block; }
+  .map-wrap {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1rem 1rem;
+    display: flex;
+  }
+  #mapa {
+    flex: 1;
+    min-height: 420px;
+    height: calc(100vh - var(--nav-height) - var(--tab-bar-height, 0px) - 11rem);
+    isolation: isolate;   /* los controles de Leaflet no tapan la barra inferior del movil */
+    border-radius: 0.6rem;
+    border: 1px solid var(--color-gray-5);
+    background: #1b1d22;
+  }
+  /* Recuadro de Canarias (como en los mapas de España) */
+  #canarias {
+    position: absolute;
+    left: 1.6rem;
+    bottom: 1.6rem;
+    width: min(240px, 42%);
+    height: 150px;
+    border: 1px solid var(--color-gray-3);
+    border-radius: 0.4rem;
+    background: #1b1d22;
+    z-index: 500;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+  #canarias .leaflet-control-attribution { display: none; }
+  /* Teselas de OpenStreetMap oscurecidas para el tema del sitio */
+  .mapa-oscuro { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6); }
+  .ce-marker {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .ce-marker:hover { transform: scale(1.15); }
+  .ce-grupo {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(51, 105, 255, 0.85);
+    color: #fff;
+    font: 600 13px/1 Inter, system-ui, sans-serif;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 0 5px rgba(51, 105, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+  .intro p a { color: var(--color-gray-1); }
+  .cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.35rem; }
+  .cabecera h1 { margin: 0; }
+  .btn-alta { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1rem; border-radius: 0.5rem;
+    background: var(--color-accent); color: var(--color-white); font-size: 0.9rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .btn-alta:hover, .btn-alta:focus-visible { background: #4a7bff; outline: none; }
+  .legend small { color: var(--color-gray-3); }
+  .leaflet-tooltip.ce-tip {
+    background: var(--color-gray-6);
+    color: var(--color-gray-1);
+    border: 1px solid var(--color-gray-5);
+    border-radius: 0.4rem;
+    font: 13px/1.4 Inter, system-ui, sans-serif;
+    padding: 0.5rem 0.65rem;
+  }
+  .leaflet-tooltip.ce-tip::before { display: none; }
+  .ce-tip b { color: var(--color-white); }
+  .ce-tip small { color: var(--color-gray-3); }
+  noscript { display: block; padding: 1rem; }
+  @media (max-width: 600px) {
+    .map-wrap { padding: 0; }
+    #mapa { border-radius: 0; border-left: 0; border-right: 0; height: calc(100vh - 16rem - var(--tab-bar-height, 0px)); }
+    #canarias { left: 0.6rem; bottom: 0.6rem; height: 110px; }
+  }
+</style>
+</head>
+<body>
+  <TopNav />
+
+  <section class="intro">
+    <div class="cabecera">
+      <h1>Comunidades energéticas en España</h1>
+      <a class="btn-alta" href="/alta/">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M19 8v6M16 11h6"/></svg>
+        Da de alta tu comunidad
+      </a>
+    </div>
+    <p>Comunidades energéticas registradas en el <a href={FUENTE.url} target="_blank" rel="noopener" title={FUENTE.nombre}>IDAE</a>
+      (Oficina de Transformación Comunitaria y CE Implementa), actualizado el <span id="actualizado">–</span>.
+      Pulsa una para entrar en su plataforma.</p>
+    <div class="stats">
+      <span><strong id="nComunidades">–</strong> comunidades</span>
+      <span><strong id="nSocios">–</strong> socios</span>
+      <span><strong id="nProyectos">–</strong> proyectos</span>
+      <span><strong id="nKw">–</strong> kW de renovable eléctrica</span>
+    </div>
+    <div class="legend" id="leyenda" aria-label="Leyenda"></div>
+  </section>
+
+  <div class="map-wrap">
+    <div id="mapa" role="region" aria-label="Mapa de comunidades energéticas"></div>
+    <div id="canarias" role="region" aria-label="Canarias"></div>
+  </div>
+  <noscript>El mapa necesita JavaScript.</noscript>
+
+  <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+  <script is:inline define:vars={{ comunidades, ACTUALIZADO }}>
+    // Comunidades energeticas publicadas por el IDAE (informe Power BI de la Oficina de
+    // Transformacion Comunitaria / CE Implementa, actualizado 06/10/2026). Campos:
+    //   n nombre · m municipio · p provincia · a comunidad autonoma · lat, lon · s socios
+    //   kw potencia renovable electrica de sus proyectos (kW) · np proyectos · imp implementados
+    //   t tipo (electrica | mixta | termica | otras | sin) · act actividades (indices de ACTIVIDADES) · w web
+    // Regenerar: scratchpad idae/scripts (pbi.py + construir.py) -> src/data/comunidades-idae.json
+    const TIPOS = {
+      electrica: { color: '#f5a623', texto: 'Renovable eléctrica' },
+      mixta: { color: '#2e9d6b', texto: 'Eléctrica y térmica' },
+      termica: { color: '#e0541f', texto: 'Renovable térmica' },
+      otras: { color: '#8e44ad', texto: 'Otras actividades' },
+      sin: { color: '#888c96', texto: 'Sin proyectos registrados' },
+    };
+    const ACTIVIDADES = ['renovable eléctrica', 'renovable térmica', 'almacenamiento', 'puntos de recarga',
+                         'vehículo eléctrico', 'eficiencia energética', 'gestión de la demanda'];
+    const fmt = (n) => n.toLocaleString('es-ES');
+    const suma = (k) => comunidades.reduce((a, c) => a + c[k], 0);
+
+    document.getElementById('nComunidades').textContent = fmt(comunidades.length);
+    document.getElementById('nSocios').textContent = fmt(suma('s'));
+    document.getElementById('nProyectos').textContent = fmt(suma('np'));
+    document.getElementById('nKw').textContent = fmt(suma('kw'));
+    document.getElementById('actualizado').textContent = ACTUALIZADO;
+    const leyenda = document.getElementById('leyenda');
+    for (const [k, v] of Object.entries(TIPOS)) {
+      const n = comunidades.filter((c) => c.t === k).length;
+      if (!n) continue;
+      const span = document.createElement('span');
+      span.innerHTML = `<i class="dot" style="background:${v.color}"></i>${v.texto} <small>(${n})</small>`;
+      leyenda.appendChild(span);
+    }
+
+    // Al pulsar una comunidad: acceso de socios a la plataforma (visor comun con la
+    // pagina principal, /js/plataforma.js), con el mismo inicio de sesion.
+
+    // ---- Mapa ----
+    const capa = () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      className: 'mapa-oscuro',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+    });
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+    function ficha(c) {
+      const lugar = [c.m, c.p].filter(Boolean).join(' · ');
+      let h = `<b>${esc(c.n)}</b><br><small>${esc(lugar)}${c.a && c.a !== c.p ? ' (' + esc(c.a) + ')' : ''}</small><br>`;
+      h += `${fmt(c.s)} socios`;
+      if (c.np) {
+        h += ` · ${c.np} proyecto${c.np > 1 ? 's' : ''}${c.imp ? ' (' + c.imp + ' implementado' + (c.imp > 1 ? 's' : '') + ')' : ''}`;
+        if (c.kw) h += `<br>${fmt(c.kw)} kW de renovable eléctrica`;
+        if (c.act.length) h += `<br><small>${c.act.map((i) => ACTIVIDADES[i]).join(' · ')}</small>`;
+      } else {
+        h += '<br><small>Sin proyectos registrados</small>';
+      }
+      return h;
+    }
+
+    // Marcadores de 'lista' en 'capa' (mapa o grupo de agrupacion); al pulsar, a la plataforma
+    function marcar(capaDestino, lista) {
+      for (const c of lista) {
+        const icono = L.divIcon({
+          className: '',
+          html: `<div class="ce-marker" style="background:${TIPOS[c.t].color}" role="link" aria-label="${esc(c.n)}">⚡</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+        });
+        const mk = L.marker([c.lat, c.lon], { icon: icono, title: c.n, keyboard: true });
+        mk.bindTooltip(ficha(c), { className: 'ce-tip', direction: 'top', offset: [0, -12] });
+        mk.on('click keypress', () => VatiaCoPlataforma.abrir(c.n));
+        capaDestino.addLayer(mk);
+      }
+    }
+
+    const enCanarias = (c) => c.lat < 30;
+    const peninsula = comunidades.filter((c) => !enCanarias(c));
+    const canarias = comunidades.filter(enCanarias);
+
+    // Mapa principal: peninsula y Baleares
+    // Agrupadas: con 300 comunidades muchas se solapan (se separan al acercarse)
+    const mapa = L.map('mapa', { zoomSnap: 0.25 });
+    capa().addTo(mapa);
+    const grupo = L.markerClusterGroup({
+      maxClusterRadius: 38, showCoverageOnHover: false, spiderfyOnMaxZoom: true,
+      iconCreateFunction: (cl) => {
+        const n = cl.getChildCount();
+        const d = n < 10 ? 30 : n < 50 ? 36 : 42;
+        return L.divIcon({ html: `<div class="ce-grupo" style="width:${d}px;height:${d}px">${n}</div>`, className: '', iconSize: [d, d] });
+      },
+    });
+    marcar(grupo, peninsula);
+    mapa.addLayer(grupo);
+    mapa.fitBounds(L.latLngBounds(peninsula.map((c) => [c.lat, c.lon])).pad(0.05));
+
+    // Recuadro de Canarias, fijo
+    const recuadro = L.map('canarias', {
+      zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false,
+      doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false, zoomSnap: 0.25,
+    });
+    capa().addTo(recuadro);
+    marcar(recuadro, canarias);
+    recuadro.fitBounds([[27.6, -18.2], [29.45, -13.3]]);
+  </script>
+</body>
+</html>

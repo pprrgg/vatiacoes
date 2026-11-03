@@ -1,0 +1,116 @@
+---
+import TopNav from '../../components/TopNav.astro';
+import PieSitio from '../../components/PieSitio.astro';
+import '../../styles/sitio.css';
+// Tras enviar el alta (/alta/gracias/?alta=<id>): pregunta a la API por el alta hasta que la
+// comunidad esta creada (tarda un minuto) o queda en revision (la aprueba el superusuario).
+const API = 'https://VatiaCo.duckdns.org/cec-api';
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alta completada · VatiaCo</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <style is:global>
+      .confirmacion { max-width: 38rem; margin: 0 auto; background: var(--gray-6); border: 1px solid var(--gray-5); border-radius: 0.9rem;
+        padding: 2.2rem 2rem; text-align: center; }
+      .confirmacion h1 { font-size: 2rem; margin: 1rem auto 0.6rem; }
+      .pasos { text-align: left; margin: 1.6rem 0 0; padding: 0; list-style: none; counter-reset: paso; }
+      .pasos li { position: relative; padding: 0 0 1rem 2.4rem; counter-increment: paso; }
+      .pasos li::before { content: counter(paso); position: absolute; left: 0; top: 0; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+        background: var(--accent); color: var(--white); display: grid; place-items: center; font-size: 0.85rem; font-weight: 700; }
+      .pasos strong { color: var(--white); }
+      .estado { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.8rem; border-radius: 999px;
+        background: var(--accent-low); color: var(--accent-high); font-size: 0.85rem; font-weight: 600; }
+      .estado.ok { background: rgba(46, 125, 50, 0.25); color: #a5d6a7; }
+      .estado.mal { background: #3a1d1b; color: #ffb4ab; }
+      .giro { width: 0.8rem; height: 0.8rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+        animation: giro 0.8s linear infinite; }
+      @keyframes giro { to { transform: rotate(360deg); } }
+      .confirmacion .acciones { justify-content: center; margin-top: 1rem; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <TopNav />
+    <main>
+      <section>
+        <div class="wrap">
+          <div class="confirmacion">
+            <div class="etiqueta">Alta de comunidad</div>
+            <h1 id="titulo">¡Gracias!</h1>
+            <p id="subtitulo">Estamos preparando la plataforma de tu comunidad.</p>
+            <span class="estado" id="estado"><span class="giro"></span><span id="estado-txt">Creando la comunidad…</span></span>
+            <ol class="pasos">
+              <li>Entra en la plataforma con <strong id="email">tu email</strong> y la contraseña que elegiste.</li>
+              <li>Da de alta a los socios con su CUPS: cada uno tendrá su panel.</li>
+              <li>Cada noche se descargan sus lecturas de Datadis y se calcula el reparto.</li>
+            </ol>
+            <p style="font-size: 0.85rem;">El uso de la plataforma es gratuito y queda bajo la responsabilidad del gestor de la
+              comunidad, según las <a href="/condiciones/">condiciones de uso</a>.</p>
+            <div class="acciones">
+              <a class="btn principal" id="plataforma" href="#" data-plataforma="Acceso socios" hidden>Entrar en la plataforma</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <PieSitio />
+
+    <script is:inline define:vars={{ API }}>
+      (function () {
+        var $ = function (s) { return document.querySelector(s); };
+        try { sessionStorage.removeItem('alta-comunidad-borrador'); } catch (e) {}
+        var aid = new URLSearchParams(location.search).get('alta'), intentos = 0;
+        function estado(txt, clase, girando) {
+          $('#estado').className = 'estado' + (clase ? ' ' + clase : '');
+          $('#estado').innerHTML = (girando ? '<span class="giro"></span>' : '') + '<span></span>';
+          $('#estado span:last-child').textContent = txt;
+        }
+        function consultar() {
+          fetch(API + '/alta/estado?alta=' + encodeURIComponent(aid))
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (d) {
+              if (d.comunidad) $('#subtitulo').textContent = 'Estamos preparando la plataforma de ' + d.comunidad + '.';
+              if (d.email) $('#email').textContent = d.email;
+              if (d.estado === 'creada') {
+                $('#titulo').textContent = '¡Alta completada!';
+                $('#subtitulo').textContent = (d.comunidad || 'Tu comunidad') + ' ya está en la plataforma.';
+                estado('Comunidad creada', 'ok');
+                if (d.url_plataforma) { $('#plataforma').href = d.url_plataforma + '/'; $('#plataforma').hidden = false; }
+                return;
+              }
+              if (d.estado === 'revision') {
+                $('#titulo').textContent = '¡Solicitud recibida!';
+                $('#subtitulo').textContent = 'Revisamos cada alta antes de crear la comunidad' + (d.comunidad ? ' (' + d.comunidad + ')' : '') + '.';
+                estado('En revisión: te escribiremos' + (d.email ? ' a ' + d.email : '') + ' en cuanto esté lista. También puedes volver a esta página.', '');
+                return;
+              }
+              if (d.estado === 'rechazada') {
+                $('#titulo').textContent = 'Alta no aprobada';
+                $('#subtitulo').textContent = 'No hemos podido aprobar esta solicitud.';
+                estado('Si crees que es un error, escríbenos a info@vatiaco.es.', 'mal');
+                return;
+              }
+              if (d.estado === 'error') {
+                estado('Alta recibida. Estamos terminando de crear tu comunidad y te escribiremos en cuanto esté lista.', 'mal');
+                return;
+              }
+              estado('Creando la comunidad… (un minuto)', '', true);
+              if (++intentos < 60) setTimeout(consultar, 5000);
+              else estado('Está tardando más de lo normal: te escribiremos en cuanto esté lista.', 'mal');
+            })
+            .catch(function () {
+              if (++intentos < 6) setTimeout(consultar, 5000);
+              else estado('No podemos consultar el alta ahora mismo. Te escribiremos en cuanto esté lista.', 'mal');
+            });
+        }
+        if (aid && /^[A-Za-z0-9_-]{8,40}$/.test(aid)) consultar();
+        else estado('No hay ningún alta que comprobar.', 'mal');
+      })();
+    </script>
+  </body>
+</html>

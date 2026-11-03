@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stack de Supervisión LoRaWAN de Contadores de Energía</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
+  .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
+  .tabbar a:hover{color:var(--text); background:var(--panel2);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
+  .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
+  .tabbar-arrow svg{width:16px; height:16px;}
+  .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:820px;}
+  section .lede{color:var(--text-dim); max-width:760px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:820px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:660px; font-size:15.5px;}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:150px; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.05em; margin:20px 0 10px;}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:9px 10px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  table.data-table code.inline{white-space:nowrap;}
+
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+  .code-block{background:#060B12; border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; overflow-x:auto; margin:12px 0;}
+  .code-block pre{font-family:var(--font-mono); font-size:12px; color:#B9C6D4; white-space:pre; line-height:1.6;}
+  .code-block .cm{color:var(--text-dimmer);}
+  .code-block .kw{color:var(--cyan);}
+  .code-block .str{color:var(--amber);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=tel], .field input[type=email], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .field select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238FA3B8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+  .svc-form-row{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;}
+  .svc-form-row .field{flex:1; min-width:220px; margin-bottom:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em; text-decoration:none; display:inline-flex; align-items:center; gap:6px;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc352;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.small{padding:7px 12px; font-size:11.5px;}
+  .btn:disabled{opacity:0.45; cursor:not-allowed; pointer-events:none;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap;}
+
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:11px; padding:4px 11px; border-radius:var(--radius); text-transform:uppercase; letter-spacing:0.05em; border:1px solid var(--line);}
+  .badge.good{background:rgba(22,163,74,0.15); color:var(--green); border-color:var(--green);}
+  .badge.mid{background:rgba(255,176,32,0.15); color:var(--amber); border-color:var(--amber);}
+  .badge.bad{background:rgba(220,38,38,0.15); color:var(--red); border-color:var(--red);}
+  .badge.ok{color:var(--green); border-color:var(--green);}
+  .badge.err{color:var(--red); border-color:var(--red);}
+  .badge.pending{color:var(--amber); border-color:var(--amber);}
+  .spinner{display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--cyan); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:4px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- diagrama de flujo ---------- */
+  .flow-diagram{display:flex; align-items:stretch; flex-wrap:wrap; gap:0; margin:20px 0;}
+  .flow-step{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px; width:150px; text-align:center;}
+  .flow-step .fi{font-size:22px; margin-bottom:8px;}
+  .flow-step h4{font-size:12.5px; margin-bottom:5px; line-height:1.25;}
+  .flow-step p{font-size:11px; color:var(--text-dimmer);}
+  .flow-arrow{display:flex; align-items:center; justify-content:center; width:34px; flex-shrink:0; color:var(--amber); font-size:18px;}
+  @media(max-width:960px){
+    .flow-diagram{flex-direction:column; align-items:stretch;}
+    .flow-step{width:100%;}
+    .flow-arrow{width:100%; height:26px; transform:rotate(90deg);}
+  }
+  .flow-note{font-size:12px; color:var(--text-dimmer); margin-top:14px; border-left:2px solid var(--line); padding-left:12px;}
+
+  /* ---------- paneles embebidos de los servicios ---------- */
+  .svc-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:20px; overflow:hidden;}
+  .svc-head{padding:18px 22px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; border-bottom:1px solid var(--line-soft);}
+  .svc-head h3{font-size:16px; margin-bottom:6px;}
+  .svc-head .role{font-family:var(--font-mono); font-size:10.5px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;}
+  .svc-head p{font-size:12.5px; color:var(--text-dim); max-width:520px;}
+  .svc-meta{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); margin-top:8px;}
+  .svc-actions{display:flex; flex-direction:column; gap:8px; align-items:flex-end;}
+  .svc-body{background:var(--bg2);}
+  .svc-body iframe{width:100%; height:560px; border:0; display:block; background:#fff;}
+
+  .infra-card{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:16px 18px; display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:12px;}
+  .infra-card h4{font-size:13px; margin-bottom:4px;}
+  .infra-card p{font-size:12px; color:var(--text-dimmer); max-width:480px;}
+  .infra-card .port{font-family:var(--font-mono); font-size:12px; color:var(--cyan); white-space:nowrap;}
+
+  /* ---------- presupuesto: tablas editables ---------- */
+  .budget-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .budget-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 8px; border-bottom:1px solid var(--line);}
+  .budget-table td{padding:7px 8px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+  .budget-table .concepto{color:var(--text); max-width:360px;}
+  .budget-table .concepto input[type=text]{width:100%; min-width:160px; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:7px 8px; border-radius:var(--radius); font-family:inherit; font-size:12.5px;}
+  .budget-table .concepto input[type=text]:focus{outline:none; border-color:var(--amber);}
+  .budget-table input[type=number]{width:100%; min-width:72px; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:7px 8px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; text-align:right;}
+  .budget-table input[type=number]:focus{outline:none; border-color:var(--amber);}
+  .budget-table .subtotal{font-family:var(--font-mono); color:var(--amber); text-align:right; white-space:nowrap;}
+  .budget-table td.row-actions{width:30px; padding:7px 4px; text-align:center;}
+  .budget-table .btn-del-row{background:transparent; border:1px solid var(--line); color:var(--text-dimmer); border-radius:var(--radius); width:22px; height:22px; line-height:1; cursor:pointer; font-size:11px;}
+  .budget-table .btn-del-row:hover{border-color:var(--red); color:var(--red);}
+  .budget-table tfoot td{border-bottom:none; border-top:1px solid var(--line); padding-top:10px; font-family:var(--font-mono);}
+  .budget-table tfoot .subtotal{font-size:13.5px;}
+
+  .result-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:16px; text-align:center;}
+  .result-chip .v{font-family:var(--font-mono); font-size:19px; color:var(--amber);}
+  .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
+  .result-chip.good{border-color:var(--green);}
+  .result-chip.good .v{color:var(--green);}
+
+  .report-sheet{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:32px 36px;}
+  .report-sheet h3{font-size:15px; color:var(--amber); margin:22px 0 10px; padding-top:14px; border-top:1px solid var(--line-soft);}
+  .report-sheet h3:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .report-sheet p{font-size:12.5px; color:var(--text-dim); margin-bottom:6px;}
+  .report-sheet .rmeta{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--amber); text-decoration:none;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:960px){
+    .tabbar-brand{display:none;}
+    .tabbar a{padding:14px 14px;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    .svc-head{flex-direction:column;}
+    .svc-actions{align-items:flex-start; flex-direction:row;}
+    .report-sheet{padding:22px 18px;}
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="shell">
+  <div class="tabbar-wrap" id="tabbarWrap">
+    <div class="tabbar-brand">STACK LORAWAN</div>
+    <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <nav class="tabbar" id="sidenav">
+      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
+      <a href="#chirpstack" data-sec="chirpstack"><span class="tag">01</span>ChirpStack</a>
+      <a href="#thingsboard" data-sec="thingsboard"><span class="tag">02</span>ThingsBoard CE</a>
+      <a href="#nodered" data-sec="nodered"><span class="tag">03</span>Node-RED</a>
+      <a href="#arquitectura" data-sec="arquitectura"><span class="tag">04</span>Arquitectura</a>
+      <a href="#flujo" data-sec="flujo"><span class="tag">05</span>Flujo de un dato real</a>
+      <a href="#puesta" data-sec="puesta"><span class="tag">06</span>Puesta en marcha</a>
+      <a href="#codec" data-sec="codec"><span class="tag">07</span>El codec del contador</a>
+      <a href="#seguridad" data-sec="seguridad"><span class="tag">08</span>Seguridad</a>
+      <a href="#proyecto" data-sec="proyecto"><span class="tag">09</span>Datos del proyecto</a>
+      <a href="#presupuesto" data-sec="presupuesto"><span class="tag">10</span>Presupuesto</a>
+      <a href="#informe" data-sec="informe"><span class="tag">11</span>Informe final</a>
+    </nav>
+    <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var wrap = document.getElementById('tabbarWrap');
+    var bar = document.getElementById('sidenav');
+    var btnL = document.getElementById('tabScrollLeft');
+    var btnR = document.getElementById('tabScrollRight');
+    function update(){
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      wrap.classList.toggle('can-scroll-left', bar.scrollLeft > 4);
+      wrap.classList.toggle('can-scroll-right', bar.scrollLeft < maxScroll - 4);
+    }
+    btnL.addEventListener('click', function(){ bar.scrollBy({left:-220, behavior:'smooth'}); });
+    btnR.addEventListener('click', function(){ bar.scrollBy({left:220, behavior:'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    setTimeout(update, 0);
+  })();
+  </script>
+
+  <main>
+
+    <!-- SECCIÓN 00: RESUMEN -->
+    <section id="resumen">
+      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
+      <h2>Un stack para supervisar contadores de energía por radio, sin cableado de datos.</h2>
+      <p class="lede">Arquitectura completa para leer contadores eléctricos Modbus (Eastron SDM630) a través de LoRaWAN y volcarlos en un panel de control con histórico y alarmas: <b>Contador → Dragino RS485-LN → Gateway LoRaWAN → ChirpStack → Mosquitto → Node-RED → ThingsBoard CE</b>. Pensada para 20-50 contadores en un radio de hasta 5&nbsp;km, en la región europea <b>EU868</b>, desplegada con <code class="inline">docker compose</code> en un único servidor Ubuntu.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del registro Modbus del contador <em>a un dashboard en el navegador</em>, sin ningún cable de datos entre medias.</h1>
+            <p class="sub">Cada contador se conecta a un nodo Dragino que traduce sus lecturas Modbus a radio LoRa. El gateway capta esa radio y la reenvía al servidor, donde cuatro piezas de software encadenadas —ChirpStack, Mosquitto, Node-RED y ThingsBoard— descifran, traducen y visualizan el dato hasta convertirlo en un gráfico en tiempo real.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">EU868 · Clase A</div><div class="l">región y clase LoRaWAN de los nodos Dragino</div></div>
+          <div class="stat"><div class="v">20-50 contadores</div><div class="l">radio de hasta 5 km con línea de vista razonable</div></div>
+          <div class="stat"><div class="v">4 servicios + BD</div><div class="l">ChirpStack, Mosquitto, Node-RED, ThingsBoard CE</div></div>
+          <div class="stat"><div class="v">docker compose</div><div class="l">stack completo en un único servidor Ubuntu</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Cómo está organizada esta página</div>
+      <div class="grid4">
+        <div class="comp-card"><h4>01-03 · Paneles de acceso</h4><p>ChirpStack, ThingsBoard y Node-RED, cada uno en su propia pestaña, embebidos con la URL que tú indiques.</p></div>
+        <div class="comp-card"><h4>04 · Arquitectura</h4><p>Qué hace cada pieza del stack, en una frase, y cómo se conectan entre sí.</p></div>
+        <div class="comp-card"><h4>05 · Flujo de un dato</h4><p>El recorrido completo de una lectura de tensión, paso a paso, desde el contador hasta la pantalla.</p></div>
+        <div class="comp-card"><h4>06-08 · Despliegue</h4><p>Puesta en marcha, el codec de decodificación del SDM630, y qué reforzar antes de producción.</p></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 01: CHIRPSTACK -->
+     
+    <section id="chirpstack">
+      <div class="eyebrow kicker">01 · ChirpStack</div>
+      <h2>Network &amp; Application Server LoRaWAN, embebido aquí.</h2>
+      <p class="lede">Autentica gateways y dispositivos, descifra las tramas, ejecuta el codec de cada Device Profile y gestiona applications, gateways y devices. Por defecto apunta a <code class="inline">http://localhost:8080</code>, el puerto que publica el <code class="inline">docker-compose.yml</code> del stack — cambia la URL si tu instancia vive en otra máquina, dominio o detrás de un reverse proxy.</p>
+
+      <form class="card svc-form-row" id="form_chirpstack" style="margin-bottom:20px;">
+        <div class="field">
+          <label>URL de ChirpStack</label>
+          <input type="text" id="url_chirpstack" value="http://localhost:8080">
+          <div class="hint">admin / admin (cámbialas en el primer login) · la URL se recuerda en este navegador</div>
+        </div>
+        <button class="btn primary" type="submit">Cargar</button>
+        <a class="btn ghost" id="open_chirpstack" href="http://localhost:8080" target="_blank" rel="noopener">↗ Abrir en pestaña nueva</a>
+      </form>
+
+      <div class="svc-card">
+        <div class="svc-body">
+          <iframe id="frame_chirpstack" src="http://localhost:8080" loading="lazy" referrerpolicy="no-referrer" title="ChirpStack"></iframe>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin-top:16px;">Si no carga: comprueba que el contenedor está arriba (<code class="inline">docker compose ps</code>) y que la URL es alcanzable desde este navegador — "Abrir en pestaña nueva" es el diagnóstico más rápido.</p>
+    </section>
+
+    <!-- SECCIÓN 02: THINGSBOARD -->
+    <section id="thingsboard">
+      <div class="eyebrow kicker">02 · ThingsBoard CE</div>
+      <h2>Dashboards, alarmas e histórico, embebidos aquí.</h2>
+      <p class="lede">Visualización en tiempo real, gestión de usuarios y clientes, reglas de alarma y almacenamiento de series temporales de cada contador. Por defecto apunta a <code class="inline">http://localhost:8081</code> (el <code class="inline">docker-compose.yml</code> mapea el 9090 interno de ThingsBoard a ese puerto del host) — cámbiala si tu instancia vive en otra máquina o dominio.</p>
+
+      <form class="card svc-form-row" id="form_thingsboard" style="margin-bottom:20px;">
+        <div class="field">
+          <label>URL de ThingsBoard</label>
+          <input type="text" id="url_thingsboard" value="http://localhost:8081">
+          <div class="hint">sysadmin@thingsboard.org / sysadmin (cámbialas en el primer login) · la URL se recuerda en este navegador</div>
+        </div>
+        <button class="btn primary" type="submit">Cargar</button>
+        <a class="btn ghost" id="open_thingsboard" href="http://localhost:8081" target="_blank" rel="noopener">↗ Abrir en pestaña nueva</a>
+      </form>
+
+      <div class="svc-card">
+        <div class="svc-body">
+          <iframe id="frame_thingsboard" src="http://localhost:8081" loading="lazy" referrerpolicy="no-referrer" title="ThingsBoard CE"></iframe>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin-top:16px;">Si no carga: comprueba que el contenedor está arriba (<code class="inline">docker compose ps</code>) y que la URL es alcanzable desde este navegador — "Abrir en pestaña nueva" es el diagnóstico más rápido.</p>
+    </section>
+
+    <!-- SECCIÓN 03: NODE-RED -->
+    <section id="nodered">
+      <div class="eyebrow kicker">03 · Node-RED</div>
+      <h2>El traductor ChirpStack → ThingsBoard, embebido aquí.</h2>
+      <p class="lede">Editor de flujos donde se importa <code class="inline">flows-example.json</code>: escucha los uplinks decodificados en Mosquitto y los reempaqueta en la Gateway API de ThingsBoard. Por defecto apunta a <code class="inline">http://localhost:1880</code> — cámbiala si tu instancia vive en otra máquina o dominio.</p>
+
+      <form class="card svc-form-row" id="form_nodered" style="margin-bottom:20px;">
+        <div class="field">
+          <label>URL de Node-RED</label>
+          <input type="text" id="url_nodered" value="http://localhost:1880">
+          <div class="hint">sin autenticación por defecto — protégelo si el editor queda expuesto · la URL se recuerda en este navegador</div>
+        </div>
+        <button class="btn primary" type="submit">Cargar</button>
+        <a class="btn ghost" id="open_nodered" href="http://localhost:1880" target="_blank" rel="noopener">↗ Abrir en pestaña nueva</a>
+      </form>
+
+      <div class="svc-card">
+        <div class="svc-body">
+          <iframe id="frame_nodered" src="http://localhost:1880" loading="lazy" referrerpolicy="no-referrer" title="Node-RED"></iframe>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin-top:16px;">Si no carga: comprueba que el contenedor está arriba (<code class="inline">docker compose ps</code>) y que la URL es alcanzable desde este navegador — "Abrir en pestaña nueva" es el diagnóstico más rápido.</p>
+    </section>
+
+    <!-- SECCIÓN 04: ARQUITECTURA -->
+    <section id="arquitectura">
+      <div class="eyebrow kicker">04 · Arquitectura</div>
+      <h2>Ocho piezas, cada una con un único trabajo.</h2>
+      <p class="lede">El punto que más suele confundir: <b>ChirpStack y ThingsBoard no se hablan directamente</b>. Cada uno tiene su propio "idioma" de MQTT (topics y formato de payload distintos), por eso Node-RED existe en medio — sin él, los datos llegarían a Mosquitto pero ThingsBoard no sabría interpretarlos.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Diagrama de flujo completo</div>
+      <div class="flow-diagram">
+        <div class="flow-step"><div class="fi">⚡</div><h4>Contador SDM630</h4><p>Modbus RTU</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">📡</div><h4>Dragino RS485-LN</h4><p>RS485 → LoRaWAN</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">📶</div><h4>Gateway LoRaWAN</h4><p>radio EU868</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔌</div><h4>gateway-bridge</h4><p>UDP 1700 → MQTT</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🧠</div><h4>ChirpStack</h4><p>Network Server LoRaWAN</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">📨</div><h4>Mosquitto</h4><p>broker MQTT central</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">🔀</div><h4>Node-RED</h4><p>traductor de formato</p></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="fi">📊</div><h4>ThingsBoard CE</h4><p>dashboards y alarmas</p></div>
+      </div>
+      <p class="flow-note">ChirpStack lee y escribe su propio estado (claves, sesiones, dispositivos) en <b>PostgreSQL + Redis</b>, en paralelo al flujo de datos — no forma parte de la cadena de mensajes, es su memoria interna.</p>
+
+      <div class="fieldset-title">Qué hace cada pieza, en una frase</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Componente</th><th>Rol</th><th>Analogía</th></tr></thead>
+          <tbody>
+            <tr><td><b>Contador SDM630</b></td><td>Mide la energía y expone sus datos por Modbus RTU</td><td>El "sensor"</td></tr>
+            <tr><td><b>Dragino RS485-LN</b></td><td>Traduce Modbus → radio LoRa</td><td>El "módem" del contador</td></tr>
+            <tr><td><b>Gateway LoRaWAN</b></td><td>Antena que capta la radio y la reenvía por IP</td><td>La "antena de telefonía"</td></tr>
+            <tr><td><b>gateway-bridge</b></td><td>Traduce el protocolo UDP del gateway a MQTT</td><td>Un adaptador de enchufe</td></tr>
+            <tr><td><b>ChirpStack</b></td><td>Autentica, descifra y decodifica cada trama (aplica el codec)</td><td>El "operador de telefonía"</td></tr>
+            <tr><td><b>Postgres / Redis</b></td><td>Guardan el estado interno de ChirpStack (claves, sesiones...)</td><td>La "base de datos" del operador</td></tr>
+            <tr><td><b>Mosquitto</b></td><td>Autopista de mensajes MQTT compartida por todos</td><td>El "cartero"</td></tr>
+            <tr><td><b>Node-RED</b></td><td>Reformatea el mensaje de ChirpStack al formato de ThingsBoard</td><td>El "traductor"</td></tr>
+            <tr><td><b>ThingsBoard CE</b></td><td>Dashboards, alarmas, histórico, usuarios/clientes</td><td>El panel de control del usuario final</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="fieldset-title">Piezas sin interfaz web</div>
+      <p class="lede" style="margin-bottom:16px;">A diferencia de ChirpStack, ThingsBoard y Node-RED (sección 01-03), estas dos piezas no tienen panel embebible: son infraestructura de transporte, no interfaces de usuario.</p>
+      <div id="serviciosInfra"></div>
+    </section>
+
+    <!-- SECCIÓN 05: FLUJO DE UN DATO REAL -->
+    <section id="flujo">
+      <div class="eyebrow kicker">05 · Flujo de un dato real</div>
+      <h2>De "230&nbsp;V en la fase L1" a un punto en una gráfica, paso a paso.</h2>
+      <p class="lede">El mismo recorrido, pero contado como la vida de un único dato — útil para depurar el stack cuando algo no llega hasta el dashboard.</p>
+
+      <div class="grid2">
+        <div class="comp-card">
+          <h4>1 · El contador mide</h4>
+          <p>El contador mide, por ejemplo, 230&nbsp;V en la fase L1, junto con el resto de registros Modbus configurados (corrientes, potencias, energía acumulada).</p>
+        </div>
+        <div class="comp-card">
+          <h4>2 · El Dragino empaqueta</h4>
+          <p>El Dragino RS485-LN lee ese registro Modbus por su bus RS485 y lo mete en una trama de radio LoRa, junto con las demás lecturas configuradas por AT+COMMAND.</p>
+        </div>
+        <div class="comp-card">
+          <h4>3 · El gateway reenvía</h4>
+          <p>El gateway LoRaWAN capta la señal de radio y la reenvía por Internet/Ethernet al servidor, mediante UDP (protocolo Semtech packet forwarder), al puerto 1700.</p>
+        </div>
+        <div class="comp-card">
+          <h4>4 · El bridge traduce el transporte</h4>
+          <p><code class="inline">chirpstack-gateway-bridge</code> convierte ese paquete UDP en un mensaje MQTT interno, publicado en Mosquitto.</p>
+        </div>
+        <div class="comp-card">
+          <h4>5 · ChirpStack decodifica</h4>
+          <p>ChirpStack descifra la trama, identifica el dispositivo Dragino, ejecuta el codec <code class="inline">sdm630_codec.js</code> de su Device Profile y obtiene <code class="inline">{"voltaje_l1": 230.4, ...}</code>.</p>
+        </div>
+        <div class="comp-card">
+          <h4>6 · ChirpStack publica</h4>
+          <p>ChirpStack publica ese JSON ya decodificado en Mosquitto, en el topic <code class="inline">application/.../event/up</code>.</p>
+        </div>
+        <div class="comp-card">
+          <h4>7 · Node-RED reempaqueta</h4>
+          <p>Node-RED está escuchando ese topic, coge el JSON y lo reempaqueta en el formato que espera ThingsBoard (<code class="inline">v1/gateway/telemetry</code>, Gateway API).</p>
+        </div>
+        <div class="comp-card">
+          <h4>8 · ThingsBoard visualiza</h4>
+          <p>ThingsBoard recibe el dato, lo guarda en su base de datos de series temporales y lo muestra en el dashboard en tiempo real — o dispara una alarma si supera un umbral.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 06: PUESTA EN MARCHA -->
+    <section id="puesta">
+      <div class="eyebrow kicker">06 · Puesta en marcha</div>
+      <h2>De un Ubuntu recién instalado a los primeros datos en el dashboard.</h2>
+      <p class="lede">Resumen de los pasos del stack; el <code class="inline">docker-compose.yml</code> completo, con nueve servicios (Postgres, Redis, Mosquitto, gateway-bridge, ChirpStack, Node-RED y ThingsBoard) y sus volúmenes, vive junto al resto de ficheros de configuración del proyecto.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">0 · Requisitos</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>Docker + Compose</h4><p>Ubuntu Server con <code class="inline">docker.io</code> y el plugin <code class="inline">docker-compose-plugin</code> instalados.</p></div>
+        <div class="comp-card"><h4>Gateway LoRaWAN físico</h4><p>RAK7248/7249, MikroTik wAP LR8/LR9, Dragino LPS8... con línea de vista razonable a los puntos de medición.</p></div>
+        <div class="comp-card"><h4>Un Dragino RS485-LN por bus</h4><p>Un nodo por cada bus RS485 (Modbus permite varios SDM630 en el mismo bus, así que un cuadro con varios contadores puede compartir nodo).</p></div>
+      </div>
+
+      <div class="fieldset-title">Arranque automático (recomendado)</div>
+      <div class="card" style="margin-bottom:8px;">
+        <p style="font-size:13px; color:var(--text-dim); margin-bottom:14px;">Este script crea todo el árbol de directorios y archivos de configuración del stack —idéntico a los pasos 1 y 2 de abajo, con una contraseña de PostgreSQL y un secreto de API generados al azar— y lo levanta con <code class="inline">docker compose up -d</code>. Necesita Docker y <code class="inline">docker-compose-plugin</code> ya instalados (paso 0).</p>
+        <div class="code-block"><pre><span class="cm"># dale permisos de ejecución y ejecútalo (crea ./energy-lora-stack por defecto)</span>
+chmod +x bootstrap-energy-lora-stack.sh
+./bootstrap-energy-lora-stack.sh <span class="cm">[directorio-destino]</span></pre></div>
+        <div class="btn-row">
+          <a class="btn primary" href="bootstrap-energy-lora-stack.sh" download>&#8681; Descargar bootstrap-energy-lora-stack.sh</a>
+          <button class="btn ghost" type="button" id="btnVerScript">Ver el script completo</button>
+        </div>
+        <div class="code-block" id="scriptCompletoWrap" style="display:none; margin-top:14px; max-height:420px; overflow-y:auto;"><pre id="scriptCompletoPre">Cargando…</pre></div>
+      </div>
+      <p class="tooltip-text" style="font-size:11.5px; color:var(--text-dimmer); margin:0 0 24px;">El script solo automatiza los pasos 1 y 2 (entorno + arranque del stack). Los pasos 3 a 7 (dar de alta el gateway físico, los contadores y el flujo de Node-RED) siguen siendo manuales: dependen de hardware y credenciales que solo tú tienes.</p>
+
+      <div class="fieldset-title">1 · Preparar el entorno <span style="color:var(--text-dimmer); text-transform:none; letter-spacing:normal; font-weight:400;">— ya hecho si usaste el script</span></div>
+      <div class="code-block"><pre><span class="cm"># copia la plantilla de variables de entorno</span>
+cp .env.example .env
+nano .env   <span class="cm"># cambia CHIRPSTACK_PG_PASSWORD</span>
+
+<span class="cm"># la misma password debe reflejarse en:</span>
+<span class="cm">#   configuration/chirpstack/chirpstack.toml -> [postgresql] dsn</span></pre></div>
+      <p class="tooltip-text" style="color:var(--text-dim); font-size:12.5px; margin-top:-4px; margin-bottom:16px;">Cambia también el <code class="inline">secret</code> de <code class="inline">chirpstack.toml</code> por una cadena aleatoria larga: <code class="inline">openssl rand -base64 32</code>.</p>
+
+      <div class="fieldset-title">2 · Levantar el stack <span style="color:var(--text-dimmer); text-transform:none; letter-spacing:normal; font-weight:400;">— ya hecho si usaste el script</span></div>
+      <div class="code-block"><pre>docker compose up -d
+docker compose ps        <span class="cm"># comprueba que todo está "healthy"/"up"</span>
+docker compose logs -f chirpstack   <span class="cm"># por si hay que depurar algo</span></pre></div>
+
+      <div class="fieldset-title">3-7 · Configurar el resto de la cadena</div>
+      <div class="grid2">
+        <div class="comp-card"><h4>3 · Gateway físico</h4><p>Configura el packet forwarder Semtech UDP del gateway apuntando a la IP del servidor, puerto 1700. Luego dalo de alta en ChirpStack (Gateways → Add gateway) con su Gateway ID (EUI).</p></div>
+        <div class="comp-card"><h4>4 · Contadores en ChirpStack</h4><p>Crea una Application, un Device Profile EU868/Clase A con el codec del SDM630 en la pestaña Codec, y da de alta cada contador como Device con su DevEUI/AppKey.</p></div>
+        <div class="comp-card"><h4>5 · Nodo Dragino RS485-LN</h4><p>Configura el modo Modbus (baudrate, paridad) y los registros del SDM630 a leer, verificando el datasheet exacto de tu variante/firmware.</p></div>
+        <div class="comp-card"><h4>6 · Gateway en ThingsBoard</h4><p>Crea un Device de tipo "Gateway", copia su Access Token y pégalo en el nodo <code class="inline">broker-thingsboard</code> del flujo de Node-RED.</p></div>
+      </div>
+      <div class="comp-card" style="margin-top:16px;"><h4>7 · Importar el flujo en Node-RED</h4><p>Abre el editor de Node-RED (panel de acceso, sección 03), importa <code class="inline">node-red/flows-example.json</code>, añade el Access Token de ThingsBoard en el nodo "ThingsBoard (Gateway API)" y despliega. Cada contador aparecerá como dispositivo hijo del gateway la primera vez que llegue una trama.</p></div>
+
+      <div class="fieldset-title">Servicios y puertos expuestos</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Servicio</th><th>Puerto host</th><th>Credenciales por defecto</th></tr></thead>
+          <tbody>
+            <tr><td>ChirpStack (web)</td><td><code class="inline">8080/tcp</code></td><td><code class="inline">admin / admin</code></td></tr>
+            <tr><td>ThingsBoard (web)</td><td><code class="inline">8081/tcp</code></td><td><code class="inline">sysadmin@thingsboard.org / sysadmin</code></td></tr>
+            <tr><td>Node-RED (editor)</td><td><code class="inline">1880/tcp</code></td><td>sin autenticación por defecto</td></tr>
+            <tr><td>Mosquitto (MQTT)</td><td><code class="inline">1883/tcp</code></td><td><code class="inline">allow_anonymous true</code> por defecto</td></tr>
+            <tr><td>gateway-bridge (Semtech UDP)</td><td><code class="inline">1700/udp</code></td><td>— (aquí apunta el gateway físico)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="lede" style="margin-top:24px;"><b>Alcance de 5 km con LoRa:</b> en EU868 con línea de vista razonable y el gateway en un punto alto, 5 km es alcanzable; en entorno urbano con obstáculos conviene una prueba de campo con un solo nodo antes de desplegar los 20-50 definitivos. Los intervalos de envío largos (varios minutos) permiten usar Spreading Factors altos (SF10-SF12): más alcance a costa de más tiempo en el aire, perfecto para supervisión energética sin necesidad de telemetría segundo a segundo.</p>
+    </section>
+
+    <!-- SECCIÓN 07: EL CODEC DEL CONTADOR -->
+    <section id="codec">
+      <div class="eyebrow kicker">07 · El codec del contador</div>
+      <h2>De bytes crudos LoRaWAN a un JSON con voltajes, corrientes y potencia.</h2>
+      <p class="lede">El Dragino RS485-LN concatena en el payload el resultado de cada <code class="inline">AT+COMMAND</code> configurado, en el mismo orden. ChirpStack ejecuta esta función <code class="inline">decodeUplink</code> (Device Profile → pestaña Codec) para convertir esos bytes en campos con nombre, antes de publicarlos en Mosquitto.</p>
+
+      <div class="grid3">
+        <div class="comp-card"><h4>Formato de cada campo</h4><p>8 registros float IEEE754 de 32 bits, big-endian ("ABCD"): V_L1, V_L2, V_L3, I_L1, I_L2, I_L3, P_total y Energía_total_kWh.</p></div>
+        <div class="comp-card"><h4>Cabecera del Dragino</h4><p>Los 2 primeros bytes del payload suelen ser de estado/batería, no de datos Modbus — por eso el offset inicial es 2, no 0.</p></div>
+        <div class="comp-card"><h4>Ajusta antes de producción</h4><p>La dirección de registro Modbus varía entre SDM630 / SDM630-MCT / SDM630M según firmware: verifica siempre el datasheet real de tu contador.</p></div>
+      </div>
+
+      <div class="fieldset-title">codecs/sdm630_codec.js</div>
+      <div class="code-block"><pre><span class="cm">// bytes: array de 4 elementos, orden ABCD (big-endian), típico en SDM630</span>
+<span class="kw">function</span> bytesToFloat32(bytes) {
+  <span class="kw">var</span> buffer = <span class="kw">new</span> ArrayBuffer(4);
+  <span class="kw">var</span> view = <span class="kw">new</span> DataView(buffer);
+  <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; 4; i++) view.setUint8(i, bytes[i]);
+  <span class="kw">return</span> view.getFloat32(0, <span class="kw">false</span>); <span class="cm">// false = big-endian</span>
+}
+
+<span class="kw">function</span> decodeUplink(input) {
+  <span class="kw">var</span> bytes = input.bytes;
+  <span class="kw">var</span> data = {}, errors = [];
+  <span class="kw">var</span> offset = 2; <span class="cm">// 2 bytes de cabecera (battery/status) del Dragino</span>
+
+  <span class="kw">var</span> campos = [
+    <span class="str">"voltaje_l1"</span>, <span class="str">"voltaje_l2"</span>, <span class="str">"voltaje_l3"</span>,
+    <span class="str">"corriente_l1"</span>, <span class="str">"corriente_l2"</span>, <span class="str">"corriente_l3"</span>,
+    <span class="str">"potencia_total_w"</span>, <span class="str">"energia_total_kwh"</span>
+  ];
+
+  <span class="kw">try</span> {
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; campos.length; i++) {
+      <span class="kw">var</span> chunk = bytes.slice(offset, offset + 4);
+      <span class="kw">if</span> (chunk.length &lt; 4) { errors.push(<span class="str">"Payload corto en "</span> + campos[i]); <span class="kw">break</span>; }
+      data[campos[i]] = Math.round(bytesToFloat32(chunk) * 100) / 100;
+      offset += 4;
+    }
+  } <span class="kw">catch</span> (e) { errors.push(<span class="str">"Error decodificando: "</span> + e.message); }
+
+  <span class="kw">return</span> { data: data, errors: errors };
+}</pre></div>
+      <p style="font-size:12px; color:var(--text-dimmer);">Antes de darlo por bueno: contrasta el orden exacto de bytes con la consola serie del Dragino (o su app de configuración) y con el repositorio oficial <code class="inline">dragino-end-node-decoder</code> en GitHub, que mantiene ejemplos actualizados por modelo.</p>
+    </section>
+
+    <!-- SECCIÓN 08: SEGURIDAD -->
+    <section id="seguridad">
+      <div class="eyebrow kicker">08 · Seguridad</div>
+      <h2>Qué cambiar antes de pasar de laboratorio a producción.</h2>
+      <p class="lede">La configuración de partida prioriza arrancar rápido para pruebas, no un despliegue expuesto a Internet. Antes de dar el stack por operativo con datos reales de clientes, repasa esto:</p>
+
+      <div class="grid2">
+        <div class="comp-card">
+          <h4>Mosquitto sin autenticación</h4>
+          <p>Por defecto usa <code class="inline">allow_anonymous true</code> para simplificar el arranque. Crea usuarios con <code class="inline">mosquitto_passwd</code> y desactiva el acceso anónimo antes de producción.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Contraseñas y secretos por defecto</h4>
+          <p>Cambia el admin/admin de ChirpStack, el sysadmin de ThingsBoard, el <code class="inline">secret</code> de la API de ChirpStack y la password de Postgres del <code class="inline">.env</code>.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Reverse proxy con TLS</h4>
+          <p>Si el servidor es accesible desde Internet, pon Caddy o Traefik delante de los puertos web 8080/8081/1880 — nunca expongas esos puertos HTTP directamente.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Restringe el puerto del gateway</h4>
+          <p>Limita <code class="inline">1700/udp</code> (gateway-bridge) solo a las IPs de tus gateways físicos si tu red lo permite, para reducir la superficie expuesta.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 09: DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">09 · Datos del proyecto</div>
+      <h2>¿Para quién y por quién se realiza esta oferta?</h2>
+      <p class="lede">Estos datos aparecen en la portada y encabezados del informe (sección 11). Se guardan en este navegador y se comparten con el resto de herramientas del blog (localStorage), igual que en las demás calculadoras de Vatia&amp;Co.</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / instalación</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Supervisión energética LoRaWAN"></div>
+          <div class="field"><label>Fecha de la oferta</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Técnico / autor de la oferta</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización que presenta la oferta</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección de la instalación</label><input type="text" id="p_dest_dir" placeholder="Dirección o parcela donde se instalan los contadores"></div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">Estos mismos campos (con id que empieza por "p_") aparecen ya rellenos si los usaste antes en otra calculadora del blog, y viceversa.</p>
+    </section>
+
+    <!-- SECCIÓN 10: PRESUPUESTO -->
+    <section id="presupuesto">
+      <div class="eyebrow kicker">10 · Presupuesto</div>
+      <h2>Oferta económica: hardware, instalación y mantenimiento.</h2>
+      <p class="lede">Partidas orientativas para un despliegue de este tipo (precios de referencia, editables uno a uno). Indica el número de contadores y de gateways y pulsa "Aplicar cantidades" para rellenar automáticamente las partidas que dependen de ellas — el resto de cantidades y precios se pueden ajustar libremente a mano.</p>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="grid4" style="align-items:end;">
+          <div class="field"><label>Nº de contadores a supervisar</label><input type="number" id="b_ndispositivos" value="20" min="1" max="500" step="1"></div>
+          <div class="field"><label>Nº de gateways LoRaWAN</label><input type="number" id="b_ngateways" value="1" min="1" max="20" step="1"></div>
+          <div class="field"><label>Periodo de garantía y mantenimiento</label>
+            <select id="b_periodo_garantia">
+              <option value="36" selected>36 meses (mínimo obligatorio)</option>
+              <option value="48">48 meses (4 años)</option>
+              <option value="60">60 meses (5 años)</option>
+              <option value="84">84 meses (7 años)</option>
+              <option value="120">120 meses (10 años)</option>
+            </select>
+          </div>
+          <div class="field"><label>IVA aplicable</label>
+            <select id="b_iva">
+              <option value="21">21 % (general)</option>
+              <option value="10">10 % (reducido)</option>
+              <option value="0">Sin IVA (exento / inversión del sujeto pasivo)</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn primary" type="button" id="btnAplicarCantidades">Aplicar cantidades a las partidas</button>
+        </div>
+        <p class="tooltip-text" style="font-size:11.5px; color:var(--text-dimmer); margin-top:10px;">Sugerencia de gateways: 1 por cada ~40 contadores en un radio de hasta 5&nbsp;km con línea de vista razonable; ajusta según tu estudio de cobertura real.</p>
+        <p class="tooltip-text" style="font-size:11.5px; color:var(--text-dimmer); margin-top:6px;">Periodo de garantía: 36 meses de compromiso mínimo, ampliable hasta 120 meses (10 años) — orientado a la vida útil que suelen asignarse a las medidas de monitorización y control energético en el sistema de Certificados de Ahorro Energético (CAE), donde mantener la supervisión activa durante ese periodo es lo que permite acreditar el ahorro. Verifica la vida útil exacta en la ficha CAE vigente si el proyecto se va a presentar a certificación.</p>
+      </div>
+
+      <div class="fieldset-title" style="margin-top:0;">Hardware</div>
+      <div style="overflow-x:auto;">
+        <table class="budget-table" id="tablaHardware">
+          <thead><tr><th style="width:44%;">Concepto</th><th>Cantidad</th><th>Precio unitario (€)</th><th>Subtotal</th><th></th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><td colspan="4">Subtotal hardware</td><td class="subtotal" id="totalHardware">—</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="btn-row" style="margin:8px 0 20px;"><button class="btn ghost small" type="button" data-add-row="hardware" data-add-table="tablaHardware">+ Añadir línea</button></div>
+
+      <div class="fieldset-title">Instalación y puesta en marcha</div>
+      <div style="overflow-x:auto;">
+        <table class="budget-table" id="tablaInstalacion">
+          <thead><tr><th style="width:44%;">Concepto</th><th>Cantidad</th><th>Precio unitario (€)</th><th>Subtotal</th><th></th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><td colspan="4">Subtotal instalación y puesta en marcha</td><td class="subtotal" id="totalInstalacion">—</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="btn-row" style="margin:8px 0 20px;"><button class="btn ghost small" type="button" data-add-row="instalacion" data-add-table="tablaInstalacion">+ Añadir línea</button></div>
+
+      <div class="fieldset-title">Mantenimiento durante el periodo de garantía (cuota mensual, obligatoria)</div>
+      <div style="overflow-x:auto;">
+        <table class="budget-table" id="tablaMantenimiento">
+          <thead><tr><th style="width:44%;">Concepto</th><th>Cantidad</th><th>Precio unitario (€/mes)</th><th>Subtotal</th><th></th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><td colspan="4">Subtotal mantenimiento mensual</td><td class="subtotal" id="totalMantenimientoMes">—</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="btn-row" style="margin:8px 0;"><button class="btn ghost small" type="button" data-add-row="mantenimiento" data-add-table="tablaMantenimiento">+ Añadir línea</button></div>
+      <p class="tooltip-text" style="font-size:11.5px; color:var(--text-dimmer); margin:8px 0 0;">Durante el periodo de garantía (mínimo 36 meses, arriba) el mantenimiento es obligatorio y cubre actualizaciones del stack, copias de seguridad, soporte técnico y sustitución de hardware defectuoso — se contrata por todo el periodo, no mes a mes. Si el proyecto se acoge a un CAE, esta continuidad de la supervisión es además la que justifica el ahorro acreditado durante la vida útil de la medida.</p>
+      <p style="font-size:11.5px; color:var(--text-dimmer); margin:6px 0 0; border-left:2px solid var(--line); padding-left:10px;">Nota comercial: en este tipo de proyecto el hardware y la instalación suelen cotizarse muy ajustados frente a la competencia; el margen se concentra en esta cuota de mantenimiento, de coste relativamente alto y obligada durante toda la garantía — ajusta los precios de esta tabla en consecuencia antes de enviar la oferta.</p>
+
+      <div class="fieldset-title">Resumen de la oferta</div>
+      <div class="grid3" id="resumenChips"></div>
+    </section>
+
+    <!-- SECCIÓN 11: INFORME FINAL -->
+    <section id="informe">
+      <div class="eyebrow kicker">11 · Informe final</div>
+      <h2>Oferta económica generada a partir de tus datos.</h2>
+      <p class="lede">Estructura orientativa: portada con datos del proyecto y cliente, alcance del stack, partidas de hardware/instalación/mantenimiento con sus importes, resumen económico y condiciones. Rellena las secciones 09 y 10 antes de generar el informe.</p>
+
+      <div class="btn-row" style="margin-bottom:24px;">
+        <button class="btn primary" type="button" id="btnGenerarInforme">Generar / actualizar vista previa</button>
+        <button class="btn ghost" type="button" id="btnPdf">&#8681; Descargar oferta en PDF</button>
+      </div>
+
+      <div class="report-sheet" id="reportOutput">
+        <p class="tooltip-text">Pulsa "Generar / actualizar vista previa" para componer el documento con los datos introducidos, y "Descargar oferta en PDF" para obtener el informe descargable.</p>
+      </div>
+    </section>
+
+    <footer>
+      Página de referencia sobre el stack de supervisión de contadores de energía vía LoRaWAN (ChirpStack + Mosquitto + Node-RED + ThingsBoard CE, Docker Compose), pensado para instalaciones propias en red local o tras VPN. Los paneles de acceso (secciones 01-03) embeben cada servicio con la URL que tú indiques — esta página no aloja ni proxea ninguna de esas aplicaciones. Integrado en el blog de Vatia&amp;Co. Última actualización: 2026.
+    </footer>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.tabbar a');
+const SECCION_POR_DEFECTO = 'resumen';
+
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{ e.preventDefault(); irASeccion(link.getAttribute('href')); });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 3200); }
+
+// ===================== PIEZAS SIN INTERFAZ WEB =====================
+const SERVICIOS_INFRA = [
+  {nombre:'Mosquitto (broker MQTT)', puerto:'1883', desc:'Autopista de mensajes MQTT compartida por ChirpStack, Node-RED y ThingsBoard. Sin interfaz web: se consulta con un cliente MQTT (mosquitto_sub, MQTT Explorer...).'},
+  {nombre:'chirpstack-gateway-bridge', puerto:'1700/udp', desc:'Recibe el forwarder Semtech UDP del gateway LoRaWAN físico y lo traduce a MQTT interno. Aquí apunta la configuración del gateway, no un navegador.'},
+];
+
+document.getElementById('serviciosInfra').innerHTML = SERVICIOS_INFRA.map(s=>`
+  <div class="infra-card">
+    <div>
+      <h4>${esc(s.nombre)}</h4>
+      <p>${esc(s.desc)}</p>
+    </div>
+    <div class="port">${esc(s.puerto)}</div>
+  </div>
+`).join('');
+
+// ===================== PANELES DE ACCESO (CHIRPSTACK / THINGSBOARD / NODE-RED) =====================
+// Cada panel tiene su propio formulario con una URL editable (por defecto localhost con el
+// puerto que publica docker-compose.yml). Se recuerda por navegador en localStorage, y
+// "Cargar" actualiza tanto el iframe como el enlace "Abrir en pestaña nueva" con la URL escrita.
+const PANELES_ACCESO = [
+  {id:'chirpstack', urlPorDefecto:'http://localhost:8080'},
+  {id:'thingsboard', urlPorDefecto:'http://localhost:8081'},
+  {id:'nodered', urlPorDefecto:'http://localhost:1880'},
+];
+const URL_KEY_PREFIX = 'iot_lora_stack_url_';
+
+function normalizarUrl(v){
+  v = (v || '').trim();
+  if(!v) return '';
+  if(!/^https?:\/\//i.test(v)) v = 'http://' + v;
+  return v;
+}
+
+PANELES_ACCESO.forEach(p=>{
+  const input = document.getElementById('url_'+p.id);
+  const frame = document.getElementById('frame_'+p.id);
+  const openLink = document.getElementById('open_'+p.id);
+  const form = document.getElementById('form_'+p.id);
+
+  const guardada = localStorage.getItem(URL_KEY_PREFIX + p.id);
+  const inicial = normalizarUrl(guardada) || p.urlPorDefecto;
+  input.value = inicial;
+  frame.src = inicial;
+  openLink.href = inicial;
+
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const url = normalizarUrl(input.value) || p.urlPorDefecto;
+    input.value = url;
+    frame.src = url;
+    openLink.href = url;
+    localStorage.setItem(URL_KEY_PREFIX + p.id, url);
+  });
+});
+
+// ===================== PRESUPUESTO / OFERTA ECONÓMICA =====================
+function fmtEUR(n){ return (isFinite(n)?n:0).toLocaleString('es-ES',{style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}); }
+// La fuente estándar "helvetica" de jsPDF no tiene glyph para flechas (→ etc.): si se le pasa
+// una, el texto sale corrupto (espaciado roto). Esto sanea los conceptos —incluidos los que
+// escriba el usuario en líneas nuevas del presupuesto— antes de pasarlos a doc.text().
+function pdfSafe(text){
+  return String(text).replace(/[←-⇿]/g, '->');
+}
+function fmtFecha(iso){
+  if(!iso) return '—';
+  const d = new Date(iso+'T00:00:00');
+  if(isNaN(d)) return iso;
+  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+// Partidas de referencia para un despliegue típico de 20 contadores / 1 gateway.
+// "link" indica qué campo alimenta su cantidad al pulsar "Aplicar cantidades".
+const BUDGET = {
+  hardware: [
+    {id:'hw_contador', label:'Contador de energía Eastron SDM630 (si no está ya instalado)', qty:0, price:120, link:null},
+    {id:'hw_dragino', label:'Nodo Dragino RS485-LN (lectura Modbus, transmisión LoRaWAN)', qty:20, price:95, link:'ndispositivos'},
+    {id:'hw_accesorios', label:'Accesorios por punto (alimentación, cableado RS485, protecciones)', qty:20, price:40, link:'ndispositivos'},
+    {id:'hw_gateway', label:'Gateway LoRaWAN EU868 (RAK7248 / MikroTik wAP LR9 o equivalente)', qty:1, price:350, link:'ngateways'},
+    {id:'hw_servidor', label:'Servidor / mini-PC dedicado para el stack Docker (opcional)', qty:1, price:450, link:null},
+  ],
+  instalacion: [
+    {id:'in_cableado', label:'Instalación, cableado y puesta en servicio por contador', qty:20, price:60, link:'ndispositivos'},
+    {id:'in_gateway', label:'Instalación y orientación de antena por gateway', qty:1, price:150, link:'ngateways'},
+    {id:'in_stack', label:'Despliegue del stack Docker (ChirpStack + Mosquitto + Node-RED + ThingsBoard)', qty:1, price:450, link:null},
+    {id:'in_codec', label:'Configuración de Device Profile y codec de decodificación', qty:1, price:180, link:null},
+    {id:'in_dash', label:'Diseño de dashboards y reglas de alarma en ThingsBoard', qty:1, price:380, link:null},
+    {id:'in_pruebas', label:'Pruebas de cobertura de campo y puesta en marcha', qty:1, price:320, link:null},
+  ],
+  mantenimiento: [
+    {id:'mn_soporte', label:'Mantenimiento del stack, copias de seguridad y soporte técnico prioritario', qty:1, price:150, link:null},
+    {id:'mn_garantia', label:'Garantía extendida y sustitución de hardware (nodos y gateway)', qty:1, price:40, link:null},
+  ],
+};
+const TODAS_LAS_PARTIDAS = [...BUDGET.hardware, ...BUDGET.instalacion, ...BUDGET.mantenimiento];
+
+function filaHtml(it){
+  return `
+    <tr data-row-id="${it.id}">
+      <td class="concepto"><input type="text" id="lb_${it.id}" value="${esc(it.label)}"></td>
+      <td><input type="number" id="q_${it.id}" value="${it.qty}" min="0" step="1"></td>
+      <td><input type="number" id="pr_${it.id}" value="${it.price}" min="0" step="0.01"></td>
+      <td class="subtotal" id="st_${it.id}">—</td>
+      <td class="row-actions">${it.personalizada ? `<button type="button" class="btn-del-row" data-del-id="${it.id}" aria-label="Eliminar línea">✕</button>` : ''}</td>
+    </tr>
+  `;
+}
+function renderTabla(tablaId, items){
+  document.querySelector('#'+tablaId+' tbody').innerHTML = items.map(filaHtml).join('');
+}
+renderTabla('tablaHardware', BUDGET.hardware);
+renderTabla('tablaInstalacion', BUDGET.instalacion);
+renderTabla('tablaMantenimiento', BUDGET.mantenimiento);
+
+function filaValores(it){
+  const labelInput = document.getElementById('lb_'+it.id)?.value.trim();
+  const label = labelInput || it.label;
+  const q = parseFloat(document.getElementById('q_'+it.id)?.value)||0;
+  const p = parseFloat(document.getElementById('pr_'+it.id)?.value)||0;
+  return {label, q, p, st: q*p};
+}
+
+// ===================== AÑADIR / ELIMINAR LÍNEAS PERSONALIZADAS =====================
+const contadoresLineas = {hardware:0, instalacion:0, mantenimiento:0};
+document.querySelectorAll('[data-add-row]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const budgetKey = btn.dataset.addRow;
+    const tablaId = btn.dataset.addTable;
+    contadoresLineas[budgetKey]++;
+    const it = {id:'custom_'+budgetKey+'_'+contadoresLineas[budgetKey], label:'Nuevo concepto', qty:1, price:0, link:null, personalizada:true};
+    BUDGET[budgetKey].push(it);
+    document.querySelector('#'+tablaId+' tbody').insertAdjacentHTML('beforeend', filaHtml(it));
+    recalcular();
+    const inputLabel = document.getElementById('lb_'+it.id);
+    inputLabel.focus();
+    inputLabel.select();
+  });
+});
+document.getElementById('presupuesto').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.btn-del-row');
+  if(!btn) return;
+  const id = btn.dataset.delId;
+  for(const key of ['hardware','instalacion','mantenimiento']){
+    const idx = BUDGET[key].findIndex(x=>x.id===id);
+    if(idx>-1){ BUDGET[key].splice(idx,1); break; }
+  }
+  btn.closest('tr').remove();
+  recalcular();
+});
+
+function recalcular(){
+  let totalHW=0, totalIN=0, totalMN=0;
+  BUDGET.hardware.forEach(it=>{ const {st}=filaValores(it); document.getElementById('st_'+it.id).textContent = fmtEUR(st); totalHW+=st; });
+  BUDGET.instalacion.forEach(it=>{ const {st}=filaValores(it); document.getElementById('st_'+it.id).textContent = fmtEUR(st); totalIN+=st; });
+  BUDGET.mantenimiento.forEach(it=>{ const {st}=filaValores(it); document.getElementById('st_'+it.id).textContent = fmtEUR(st); totalMN+=st; });
+
+  document.getElementById('totalHardware').textContent = fmtEUR(totalHW);
+  document.getElementById('totalInstalacion').textContent = fmtEUR(totalIN);
+  document.getElementById('totalMantenimientoMes').textContent = fmtEUR(totalMN);
+
+  const ivaPct = parseFloat(document.getElementById('b_iva').value)||0;
+  const totalInversion = totalHW + totalIN;
+  const ivaInversion = totalInversion * ivaPct/100;
+  const totalInversionConIva = totalInversion + ivaInversion;
+  const periodoGarantiaMeses = Math.max(parseFloat(document.getElementById('b_periodo_garantia').value)||36, 36);
+  const mantenimientoTotalGarantia = totalMN * periodoGarantiaMeses;
+  const ivaMantenimientoGarantia = mantenimientoTotalGarantia * ivaPct/100;
+  const mantenimientoTotalGarantiaConIva = mantenimientoTotalGarantia + ivaMantenimientoGarantia;
+  const mantenimientoMesConIva = totalMN * (1 + ivaPct/100);
+  const nDisp = Math.max(parseFloat(document.getElementById('b_ndispositivos').value)||1, 1);
+  const costePorDispositivo = totalInversion / nDisp;
+
+  document.getElementById('resumenChips').innerHTML = `
+    <div class="result-chip"><div class="v">${fmtEUR(totalInversion)}</div><div class="l">Inversión inicial (sin IVA)</div></div>
+    <div class="result-chip"><div class="v">${fmtEUR(ivaInversion)}</div><div class="l">IVA (${ivaPct}%) sobre la inversión</div></div>
+    <div class="result-chip good"><div class="v">${fmtEUR(totalInversionConIva)}</div><div class="l">Inversión inicial, IVA incluido</div></div>
+    <div class="result-chip"><div class="v">${fmtEUR(mantenimientoMesConIva)}</div><div class="l">Cuota de mantenimiento mensual, IVA incluido</div></div>
+    <div class="result-chip"><div class="v">${periodoGarantiaMeses} meses</div><div class="l">Periodo de garantía contratado</div></div>
+    <div class="result-chip good"><div class="v">${fmtEUR(mantenimientoTotalGarantiaConIva)}</div><div class="l">Total mantenimiento durante la garantía, IVA incluido</div></div>
+  `;
+
+  return {totalHW, totalIN, totalMN, ivaPct, totalInversion, ivaInversion, totalInversionConIva, periodoGarantiaMeses, mantenimientoTotalGarantia, ivaMantenimientoGarantia, mantenimientoTotalGarantiaConIva, mantenimientoMesConIva, costePorDispositivo, nDisp};
+}
+recalcular();
+
+document.getElementById('presupuesto').addEventListener('input', recalcular);
+document.getElementById('presupuesto').addEventListener('change', recalcular);
+
+document.getElementById('btnAplicarCantidades').addEventListener('click', ()=>{
+  const ndisp = document.getElementById('b_ndispositivos').value;
+  const ngw = document.getElementById('b_ngateways').value;
+  TODAS_LAS_PARTIDAS.forEach(it=>{
+    if(it.link==='ndispositivos') document.getElementById('q_'+it.id).value = ndisp;
+    if(it.link==='ngateways') document.getElementById('q_'+it.id).value = ngw;
+  });
+  recalcular();
+  showToast('Cantidades aplicadas según nº de contadores y gateways.');
+});
+
+// ===================== INFORME FINAL (VISTA PREVIA + PDF) =====================
+function datosProyecto(){
+  const val = id => (document.getElementById(id)?.value || '').trim();
+  return {
+    proyecto: val('p_proyecto') || 'Supervisión energética LoRaWAN',
+    fecha: val('p_fecha'),
+    autor: val('p_autor'),
+    registro: val('p_registro'),
+    orgNombre: val('p_org_nombre'), orgCif: val('p_org_cif'), orgDir: val('p_org_dir'), orgTel: val('p_org_tel'), orgCorreo: val('p_org_correo'),
+    destNombre: val('p_dest_nombre'), destCif: val('p_dest_cif'), destDir: val('p_dest_dir'),
+  };
+}
+
+function filasConCantidad(items){
+  return items.map(it=>filaValores(it)).filter(r=>r.q>0);
+}
+
+function tablaHtmlInforme(rows, unidad){
+  if(!rows.length) return '<p class="rmeta">Sin partidas con cantidad &gt; 0.</p>';
+  return `<table class="data-table" style="margin-bottom:14px;">
+    <thead><tr><th>Concepto</th><th>Cant.</th><th>Precio unit.${unidad}</th><th>Subtotal</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${esc(r.label)}</td><td>${r.q}</td><td>${fmtEUR(r.p)}</td><td>${fmtEUR(r.st)}</td></tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function generarInforme(){
+  const d = datosProyecto();
+  const calc = recalcular();
+  const nDisp = document.getElementById('b_ndispositivos').value;
+  const nGw = document.getElementById('b_ngateways').value;
+
+  document.getElementById('reportOutput').innerHTML = `
+    <h3 style="border-top:none; margin-top:0;">Oferta económica — ${esc(d.proyecto)}</h3>
+    <p class="rmeta">Fecha: ${fmtFecha(d.fecha)}${d.autor?(' · Técnico: '+esc(d.autor)):''}${d.registro?(' · Ref. '+esc(d.registro)):''}</p>
+
+    <h3>Partes</h3>
+    <p><b>Presentada por:</b> ${esc(d.orgNombre)||'—'}${d.orgCif?(' (CIF '+esc(d.orgCif)+')'):''}<br>${esc(d.orgDir)||''}${d.orgTel?(' · '+esc(d.orgTel)):''}${d.orgCorreo?(' · '+esc(d.orgCorreo)):''}</p>
+    <p><b>Dirigida a:</b> ${esc(d.destNombre)||'—'}${d.destCif?(' (CIF/NIF '+esc(d.destCif)+')'):''}<br>${esc(d.destDir)||''}</p>
+
+    <h3>Alcance del proyecto</h3>
+    <p>Supervisión de ${esc(nDisp)} contadores de energía mediante ${esc(nGw)} gateway(s) LoRaWAN EU868, con la cadena Contador → Dragino RS485-LN → Gateway → ChirpStack → Mosquitto → Node-RED → ThingsBoard CE, desplegada con Docker Compose.</p>
+
+    <h3>Hardware</h3>${tablaHtmlInforme(filasConCantidad(BUDGET.hardware), ' (€)')}
+    <h3>Instalación y puesta en marcha</h3>${tablaHtmlInforme(filasConCantidad(BUDGET.instalacion), ' (€)')}
+    <h3>Garantía y mantenimiento (${calc.periodoGarantiaMeses} meses)</h3>
+    <p>Durante el periodo de garantía de <b>${calc.periodoGarantiaMeses} meses</b>, el mantenimiento es obligatorio y se contrata por la totalidad del periodo:</p>
+    ${tablaHtmlInforme(filasConCantidad(BUDGET.mantenimiento), ' (€/mes)')}
+
+    <h3>Resumen económico</h3>
+    <table class="data-table" style="margin-bottom:6px;">
+      <tbody>
+        <tr><td>Subtotal hardware + instalación</td><td>${fmtEUR(calc.totalInversion)}</td></tr>
+        <tr><td>IVA (${calc.ivaPct}%)</td><td>${fmtEUR(calc.ivaInversion)}</td></tr>
+        <tr><td><b>Total inversión inicial, IVA incluido</b></td><td><b>${fmtEUR(calc.totalInversionConIva)}</b></td></tr>
+        <tr><td>Cuota de mantenimiento mensual, IVA incluido</td><td>${fmtEUR(calc.mantenimientoMesConIva)}</td></tr>
+        <tr><td><b>Total mantenimiento durante los ${calc.periodoGarantiaMeses} meses de garantía, IVA incluido</b></td><td><b>${fmtEUR(calc.mantenimientoTotalGarantiaConIva)}</b></td></tr>
+      </tbody>
+    </table>
+    <p class="rmeta">Coste medio por dispositivo (sin IVA, sin mantenimiento): ${fmtEUR(calc.costePorDispositivo)}</p>
+
+    <h3>Condiciones</h3>
+    <p>Oferta orientativa válida 30 días desde la fecha indicada, sujeta a visita técnica previa para confirmar cobertura de radio LoRa y el estado de los cuadros eléctricos. El contrato de mantenimiento tiene un compromiso mínimo de 36 meses (ampliable hasta 120 meses / 10 años) y es obligatorio durante todo el periodo de garantía contratado; al finalizar puede renovarse en las mismas condiciones. No incluye obra civil, canalizaciones nuevas ni gestión de permisos salvo que se indique expresamente. Los precios son de referencia para un proyecto de este tipo y deben ajustarse a las condiciones reales del emplazamiento.</p>
+  `;
+  showToast('Vista previa del informe actualizada.');
+}
+document.getElementById('btnGenerarInforme').addEventListener('click', generarInforme);
+
+function descargarPDF(){
+  if(!window.jspdf){ alert('No se pudo cargar la librería de generación de PDF (jsPDF). Comprueba tu conexión e inténtalo de nuevo.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const marginX = 18, pageW = 210, pageH = 297, contentW = pageW - marginX*2;
+  let y = 20;
+  const AMBER = [214,132,26], TXT = [30,34,40], DIM = [110,115,124], LINE = [222,222,222];
+
+  function checkBreak(h){ if(y + h > pageH - 22){ doc.addPage(); y = 20; } }
+  function heading(text){
+    checkBreak(11);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...AMBER);
+    doc.text(text.toUpperCase(), marginX, y);
+    doc.setDrawColor(...AMBER); doc.setLineWidth(0.3);
+    doc.line(marginX, y+1.6, pageW-marginX, y+1.6);
+    y += 8;
+    doc.setTextColor(...TXT);
+  }
+  function paragraph(text, size=9.5){
+    doc.setFont('helvetica','normal'); doc.setFontSize(size); doc.setTextColor(...TXT);
+    const lines = doc.splitTextToSize(text, contentW);
+    lines.forEach(line=>{ checkBreak(6); doc.text(line, marginX, y); y+=5; });
+    y += 2;
+  }
+  function tabla(rows, cols){
+    const rowH = 7;
+    checkBreak(rowH+4);
+    doc.setFillColor(244,244,244);
+    doc.rect(marginX, y-4.7, contentW, rowH, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.3); doc.setTextColor(...DIM);
+    let x = marginX;
+    cols.forEach(c=>{ doc.text(c.label, c.align==='right'? x+c.width-2 : x+2, y, c.align==='right'?{align:'right'}:undefined); x+=c.width; });
+    y += rowH;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...TXT);
+    rows.forEach(r=>{
+      checkBreak(rowH+2);
+      x = marginX;
+      r.forEach((val,i)=>{
+        const c = cols[i];
+        const linea = doc.splitTextToSize(String(val), c.width-4)[0] || '';
+        doc.text(linea, c.align==='right'? x+c.width-2 : x+2, y, c.align==='right'?{align:'right'}:undefined);
+        x += c.width;
+      });
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.15);
+      doc.line(marginX, y+2, pageW-marginX, y+2);
+      y += rowH;
+    });
+    y += 3;
+  }
+  function filasPdf(items){
+    return filasConCantidad(items).map(r=>[pdfSafe(r.label), String(r.q), fmtEUR(r.p), fmtEUR(r.st)]);
+  }
+
+  const d = datosProyecto();
+  const calc = recalcular();
+  const cols = [
+    {label:'Concepto', width: contentW*0.52},
+    {label:'Cant.', width: contentW*0.12, align:'right'},
+    {label:'P. unit.', width: contentW*0.16, align:'right'},
+    {label:'Subtotal', width: contentW*0.20, align:'right'},
+  ];
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...TXT);
+  doc.text('OFERTA ECONÓMICA', marginX, y); y+=7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...DIM);
+  doc.text('Supervisión energética vía LoRaWAN', marginX, y); y+=9;
+
+  doc.setFontSize(9.5); doc.setTextColor(...TXT);
+  doc.text('Proyecto: '+(d.proyecto||'-'), marginX, y); y+=5;
+  doc.text('Fecha: '+fmtFecha(d.fecha), marginX, y); y+=5;
+  if(d.autor){ doc.text('Técnico: '+d.autor+(d.registro?' ('+d.registro+')':''), marginX, y); y+=5; }
+  y += 3;
+
+  heading('Partes');
+  paragraph('Presentada por: '+(d.orgNombre||'—')+(d.orgCif?' (CIF '+d.orgCif+')':'')+(d.orgDir?' · '+d.orgDir:'')+(d.orgTel?' · '+d.orgTel:'')+(d.orgCorreo?' · '+d.orgCorreo:''));
+  paragraph('Dirigida a: '+(d.destNombre||'—')+(d.destCif?' (CIF/NIF '+d.destCif+')':'')+(d.destDir?' · '+d.destDir:''));
+
+  heading('Alcance del proyecto');
+  paragraph('Supervisión de '+document.getElementById('b_ndispositivos').value+' contadores de energía mediante '+document.getElementById('b_ngateways').value+' gateway(s) LoRaWAN EU868, con la cadena Contador -> Dragino RS485-LN -> Gateway -> ChirpStack -> Mosquitto -> Node-RED -> ThingsBoard CE, desplegada con Docker Compose.');
+
+  heading('Hardware');
+  const rHW = filasPdf(BUDGET.hardware);
+  rHW.length ? tabla(rHW, cols) : paragraph('Sin partidas con cantidad > 0.');
+
+  heading('Instalación y puesta en marcha');
+  const rIN = filasPdf(BUDGET.instalacion);
+  rIN.length ? tabla(rIN, cols) : paragraph('Sin partidas con cantidad > 0.');
+
+  heading('Garantía y mantenimiento ('+calc.periodoGarantiaMeses+' meses)');
+  paragraph('Durante el periodo de garantía de '+calc.periodoGarantiaMeses+' meses, el mantenimiento es obligatorio y se contrata por la totalidad del periodo:');
+  const rMN = filasPdf(BUDGET.mantenimiento);
+  rMN.length ? tabla(rMN, cols) : paragraph('Sin partidas con cantidad > 0.');
+
+  heading('Resumen económico');
+  tabla([
+    ['Subtotal hardware + instalación', '', '', fmtEUR(calc.totalInversion)],
+    ['IVA ('+calc.ivaPct+'%)', '', '', fmtEUR(calc.ivaInversion)],
+    ['Total inversión inicial, IVA incluido', '', '', fmtEUR(calc.totalInversionConIva)],
+    ['Cuota de mantenimiento mensual, IVA incluido', '', '', fmtEUR(calc.mantenimientoMesConIva)],
+    ['Total mantenimiento durante '+calc.periodoGarantiaMeses+' meses de garantía, IVA incluido', '', '', fmtEUR(calc.mantenimientoTotalGarantiaConIva)],
+  ], cols);
+  paragraph('Coste medio por dispositivo (sin IVA, sin mantenimiento): '+fmtEUR(calc.costePorDispositivo));
+
+  heading('Condiciones');
+  paragraph('Oferta orientativa válida 30 días desde la fecha indicada, sujeta a visita técnica previa para confirmar cobertura de radio LoRa y el estado de los cuadros eléctricos. El contrato de mantenimiento tiene un compromiso mínimo de 36 meses (ampliable hasta 120 meses / 10 años) y es obligatorio durante todo el periodo de garantía contratado; al finalizar puede renovarse en las mismas condiciones. No incluye obra civil, canalizaciones nuevas ni gestión de permisos salvo que se indique expresamente. Los precios son de referencia para un proyecto de este tipo y deben ajustarse a las condiciones reales del emplazamiento.');
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=1;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DIM);
+    doc.text('Página '+p+' / '+totalPages, pageW/2, pageH-12, {align:'center'});
+  }
+
+  const nombreProyecto = (d.proyecto||'oferta-lorawan').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('oferta-'+nombreProyecto+'.pdf');
+  showToast('Oferta en PDF generada y descargada.');
+}
+document.getElementById('btnPdf').addEventListener('click', descargarPDF);
+
+// ===================== VER SCRIPT DE ARRANQUE AUTOMÁTICO =====================
+const btnVerScript = document.getElementById('btnVerScript');
+if(btnVerScript){
+  let scriptCargado = false;
+  btnVerScript.addEventListener('click', async ()=>{
+    const wrap = document.getElementById('scriptCompletoWrap');
+    const abierto = wrap.style.display !== 'none';
+    if(abierto){
+      wrap.style.display = 'none';
+      btnVerScript.textContent = 'Ver el script completo';
+      return;
+    }
+    wrap.style.display = 'block';
+    btnVerScript.textContent = 'Ocultar el script';
+    if(!scriptCargado){
+      const pre = document.getElementById('scriptCompletoPre');
+      try{
+        const resp = await fetch('bootstrap-energy-lora-stack.sh');
+        pre.textContent = resp.ok ? await resp.text() : 'No se pudo cargar el script (HTTP '+resp.status+'). Usa el botón de descarga.';
+        scriptCargado = true;
+      }catch(e){
+        pre.textContent = 'No se pudo cargar el script aquí. Usa el botón de descarga.';
+      }
+    }
+  });
+}
+
+const pFechaInput = document.getElementById('p_fecha');
+if(pFechaInput && !pFechaInput.value) pFechaInput.value = new Date().toISOString().slice(0,10);
+</script>
+
+<!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
+<!-- "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
+     compartida entre todos los documentos de esta familia a través de localStorage,
+     igual que en las demás calculadoras del blog. -->
+<script>
+(function(){
+  var DOC_KEY = 'stack_lorawan_contadores';
+  var LS_KEY = 'VatiaCo';
+
+  function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
+  function guardarVatiaco(v){ try{ localStorage.setItem(LS_KEY, JSON.stringify(v)); }catch(e){} }
+
+  function valorCampo(el){ return el.type==='checkbox' ? el.checked : el.value; }
+  function fijarCampo(el, val){ if(el.type==='checkbox') el.checked = !!val; else el.value = val; }
+
+  var TIPOS_IGNORADOS = {file:1, button:1, submit:1, reset:1, image:1};
+
+  function sincronizarCampos(campos, leerContenedor, obtenerContenedorParaGuardar){
+    campos.forEach(function(el){
+      if(!el.id || TIPOS_IGNORADOS[el.type]) return;
+      var guardado = leerContenedor(leerVatiaco());
+      if(guardado && guardado[el.id]!==undefined && guardado[el.id]!==null && guardado[el.id]!==''){
+        fijarCampo(el, guardado[el.id]);
+        el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input', {bubbles:true}));
+      } else {
+        var v0 = leerVatiaco();
+        var c0 = obtenerContenedorParaGuardar(v0);
+        c0[el.id] = valorCampo(el);
+        guardarVatiaco(v0);
+      }
+      var evento = (el.tagName==='SELECT' || el.type==='checkbox' || el.type==='radio') ? 'change' : 'input';
+      el.addEventListener(evento, function(){
+        var v = leerVatiaco();
+        var c = obtenerContenedorParaGuardar(v);
+        c[el.id] = valorCampo(el);
+        guardarVatiaco(v);
+      });
+    });
+  }
+
+  function instalarBotonesExportarImportar(){
+    var barra = document.createElement('div');
+    barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
+    function crearBoton(texto){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = texto;
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      return b;
+    }
+    var btnExp = crearBoton('⬇');
+    btnExp.addEventListener('click', function(){
+      var blob = new Blob([JSON.stringify(leerVatiaco(), null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'VatiaCo.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    var btnImp = crearBoton('⬆');
+    var inputFile = document.createElement('input');
+    inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
+    inputFile.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          var v = JSON.parse(ev.target.result);
+          guardarVatiaco(v);
+          location.reload();
+        }catch(err){
+          alert('El archivo no es un JSON válido.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    btnImp.addEventListener('click', function(){ inputFile.click(); });
+
+    barra.appendChild(btnExp);
+    barra.appendChild(btnImp);
+    barra.appendChild(inputFile);
+    document.body.appendChild(barra);
+  }
+
+  function inicializarVatiaco(){
+    var v = leerVatiaco();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].inputs = v[DOC_KEY].inputs || {};
+    guardarVatiaco(v);
+
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]')),
+      function(vv){ return vv.proyecto; },
+      function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
+    );
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input:not([id^="p_"]):not([id^="url_"]), select:not([id^="p_"]):not([id^="url_"])')),
+      function(vv){ return vv[DOC_KEY] && vv[DOC_KEY].inputs; },
+      function(vv){ vv[DOC_KEY] = vv[DOC_KEY] || {}; vv[DOC_KEY].inputs = vv[DOC_KEY].inputs || {}; return vv[DOC_KEY].inputs; }
+    );
+
+    instalarBotonesExportarImportar();
+  }
+
+  setTimeout(inicializarVatiaco, 0);
+})();
+</script>
+</body>
+</html>

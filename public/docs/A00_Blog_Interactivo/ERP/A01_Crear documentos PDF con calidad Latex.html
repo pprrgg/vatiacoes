@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Editor Typst → PDF</title>
+
+    <!--
+        Typst.ts 0.7.0
+
+        Bundle oficial para navegador.
+        El bundle expone $typst.
+    -->
+    <script
+        type="module"
+        src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.7.0/dist/esm/index.js"
+        id="typst"
+    ></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            font-family:
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background: #f3f4f6;
+        }
+
+        header {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 20px;
+            background: #111827;
+            color: white;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        header button {
+            border: 0;
+            border-radius: 6px;
+            padding: 9px 15px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        #compile {
+            background: #2563eb;
+            color: white;
+        }
+
+        #download {
+            background: #16a34a;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-left: auto;
+            font-size: 13px;
+            color: #d1d5db;
+        }
+
+        main {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 50% 50%;
+        }
+
+        .panel {
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            background: #e5e7eb;
+            border-bottom: 1px solid #d1d5db;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        #source {
+            flex: 1;
+            width: 100%;
+            resize: none;
+            border: 0;
+            outline: none;
+            padding: 20px;
+            background: #111827;
+            color: #e5e7eb;
+            font-family:
+                "Fira Code",
+                "Cascadia Code",
+                Consolas,
+                monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            tab-size: 4;
+        }
+
+        #preview {
+            flex: 1;
+            overflow: auto;
+            background: #d1d5db;
+            padding: 30px;
+        }
+
+        /*
+            El SVG generado por Typst se coloca aquí.
+        */
+
+        #preview svg {
+            display: block;
+            margin: 0 auto 30px auto;
+            background: white;
+            box-shadow:
+                0 3px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #error {
+            display: none;
+            margin: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            background: #fee2e2;
+            color: #991b1b;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 800px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 50% 50%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+
+    <h1>Typst → PDF</h1>
+
+    <button id="compile" disabled>
+        Compilar
+    </button>
+
+    <button id="download" disabled>
+        Descargar PDF
+    </button>
+
+    <span id="status">
+        Cargando Typst...
+    </span>
+
+</header>
+
+
+<main>
+
+    <!-- ========================================= -->
+    <!-- EDITOR                                   -->
+    <!-- ========================================= -->
+
+    <section class="panel">
+
+        <div class="panel-title">
+            Documento Typst
+        </div>
+
+        <textarea id="source">
+
+#set page(paper: "a5")
+#set heading(numbering: "1.")
+
+#show link: set text(fill: blue, weight: 700)
+#show link: underline
+
+
+= The Typst Playground
+
+Welcome to the Typst Playground! This is a sandbox where you can experiment with Typst. You can type anywhere in the editor panel on the left. The preview panel to the right will update live.
+
+= Basics <basics>
+
+Typst is a _markup_ language. You use it to express not just the content, but also the structure and formatting of your document. For example, surrounding a word with underscores _emphasizes_ it with italics and starting a line with an equals sign creates a section heading.
+
+Typst has lightweight syntax like this for the most common formatting needs. Among other things, you can use it to:
+
+- *Strongly emphasize* some text
+- Refer to @basics
+- Typeset math: $a, b in { 1/2, sqrt(4 a b) }$
+
+That's just the surface though! Typst has powerful systems for scripting, styling, introspection, and more. In the realm of a Typst document, there is nothing you can't automate.
+
+= Next steps
+
+To learn more about Typst, we recommend you to check out our tutorial at https://typst.app/docs/tutorial.
+
+Once you've explored Typst a bit, why not set yourself up a proper editing environment?
+
+#import "@preview/tiaoma:0.3.0"
+#let next-step(url, body) = grid(
+  columns: 2,
+  gutter: 1em,
+  tiaoma.qrcode(url, width: 3em),
+  {
+    show strong: link.with(url)
+    body
+  }
+)
+
+#next-step("https://typst.app/signup")[
+  To get access to multi-file projects, live collaboration, and more, *sign up* to our web app for free.
+]
+
+#next-step("https://typst.app/open-source/#download")[
+  You can also *download* our free and open-source command line tool to continue your journey locally.
+]
+
+= Fuente
+
+https://typst.app/play/
+
+</textarea>
+
+    </section>
+
+
+    <!-- ========================================= -->
+    <!-- PREVIEW                                  -->
+    <!-- ========================================= -->
+
+    <section class="panel">
+
+        <div class="panel-title">
+            Vista previa
+        </div>
+
+        <div id="preview">
+        </div>
+
+        <div id="error">
+        </div>
+
+    </section>
+
+</main>
+
+
+<script>
+
+    // ============================================================
+    // ELEMENTOS
+    // ============================================================
+
+    const source =
+        document.getElementById("source");
+
+    const preview =
+        document.getElementById("preview");
+
+    const errorBox =
+        document.getElementById("error");
+
+    const compileButton =
+        document.getElementById("compile");
+
+    const downloadButton =
+        document.getElementById("download");
+
+    const status =
+        document.getElementById("status");
+
+    const typstScript =
+        document.getElementById("typst");
+
+
+    // Último PDF generado
+    let currentPdf = null;
+
+
+    // ============================================================
+    // MOSTRAR ERROR
+    // ============================================================
+
+    function showError(error) {
+
+        console.error(error);
+
+        errorBox.style.display = "block";
+
+        if (error instanceof Error) {
+            errorBox.textContent =
+                error.stack || error.message;
+        } else {
+            errorBox.textContent =
+                String(error);
+        }
+    }
+
+
+    function clearError() {
+
+        errorBox.style.display = "none";
+        errorBox.textContent = "";
+
+    }
+
+
+    // ============================================================
+    // ESPERAR A QUE TYPST ESTÉ CARGADO
+    // ============================================================
+
+    typstScript.addEventListener(
+        "load",
+        async function () {
+
+            try {
+
+                status.textContent =
+                    "Inicializando WASM...";
+
+
+                /*
+                 * Typst.ts documenta explícitamente estas rutas
+                 * para cargar los módulos WASM desde jsDelivr.
+                 */
+
+                $typst.setCompilerInitOptions({
+
+                    getModule: () =>
+                        "https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm"
+
+                });
+
+
+                $typst.setRendererInitOptions({
+
+                    getModule: () =>
+                        "https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm"
+
+                });
+
+
+                status.textContent =
+                    "Typst listo";
+
+                compileButton.disabled = false;
+
+
+                // Compilar documento inicial
+                await compileDocument();
+
+
+            } catch (error) {
+
+                status.textContent =
+                    "Error inicializando Typst";
+
+                showError(error);
+
+            }
+
+        }
+    );
+
+
+    // ============================================================
+    // COMPILAR TYPST
+    // ============================================================
+
+    async function compileDocument() {
+
+        clearError();
+
+        compileButton.disabled = true;
+
+        status.textContent =
+            "Compilando...";
+
+
+        try {
+
+            const typstSource =
+                source.value;
+
+
+            // ----------------------------------------------------
+            // Generar PDF
+            // ----------------------------------------------------
+
+            const pdfData =
+                await $typst.pdf({
+
+                    mainContent:
+                        typstSource
+
+                });
+
+
+            /*
+             * Convertimos el resultado en Uint8Array.
+             */
+
+            currentPdf =
+                new Uint8Array(pdfData);
+
+
+            downloadButton.disabled = false;
+
+
+            // ----------------------------------------------------
+            // Generar preview SVG
+            // ----------------------------------------------------
+
+            const svg =
+                await $typst.svg({
+
+                    mainContent:
+                        typstSource
+
+                });
+
+
+            preview.innerHTML = svg;
+
+
+            // ----------------------------------------------------
+            // Ajustar tamaño del SVG
+            // ----------------------------------------------------
+
+            const svgElement =
+                preview.querySelector("svg");
+
+
+            if (svgElement) {
+
+                const width =
+                    parseFloat(
+                        svgElement.getAttribute("width")
+                    );
+
+                const height =
+                    parseFloat(
+                        svgElement.getAttribute("height")
+                    );
+
+
+                const availableWidth =
+                    preview.clientWidth - 60;
+
+
+                if (
+                    width &&
+                    height &&
+                    availableWidth > 0
+                ) {
+
+                    const scale =
+                        Math.min(
+                            1,
+                            availableWidth / width
+                        );
+
+
+                    svgElement.setAttribute(
+                        "width",
+                        width * scale
+                    );
+
+
+                    svgElement.setAttribute(
+                        "height",
+                        height * scale
+                    );
+
+                }
+
+            }
+
+
+            status.textContent =
+                "PDF generado correctamente";
+
+
+        } catch (error) {
+
+            currentPdf = null;
+
+            downloadButton.disabled = true;
+
+            status.textContent =
+                "Error de compilación";
+
+            showError(error);
+
+        } finally {
+
+            compileButton.disabled = false;
+
+        }
+
+    }
+
+
+    // ============================================================
+    // BOTÓN COMPILAR
+    // ============================================================
+
+    compileButton.addEventListener(
+        "click",
+        compileDocument
+    );
+
+
+    // ============================================================
+    // BOTÓN DESCARGAR
+    // ============================================================
+
+    downloadButton.addEventListener(
+        "click",
+        function () {
+
+            if (!currentPdf) {
+                return;
+            }
+
+
+            const blob =
+                new Blob(
+                    [currentPdf],
+                    {
+                        type:
+                            "application/pdf"
+                    }
+                );
+
+
+            const url =
+                URL.createObjectURL(blob);
+
+
+            const link =
+                document.createElement("a");
+
+
+            link.href = url;
+
+            link.download =
+                "documento-typst.pdf";
+
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+
+            /*
+             * Dejamos un pequeño margen antes
+             * de liberar el Object URL.
+             */
+
+            setTimeout(
+                () => URL.revokeObjectURL(url),
+                1000
+            );
+
+        }
+    );
+
+
+    // ============================================================
+    // CTRL + ENTER
+    // ============================================================
+
+    source.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                compileDocument();
+
+            }
+
+        }
+    );
+
+
+    // ============================================================
+    // TAB DENTRO DEL EDITOR
+    // ============================================================
+
+    source.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (event.key !== "Tab") {
+                return;
+            }
+
+            event.preventDefault();
+
+
+            const start =
+                source.selectionStart;
+
+            const end =
+                source.selectionEnd;
+
+
+            source.value =
+                source.value.substring(0, start) +
+                "    " +
+                source.value.substring(end);
+
+
+            source.selectionStart =
+                source.selectionEnd =
+                    start + 4;
+
+        }
+    );
+
+</script>
+
+</body>
+</html>

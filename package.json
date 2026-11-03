@@ -1,0 +1,19 @@
+{
+  "name": "VatiaCo-docs-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/generate-video-manifest.mjs",
+    "dev": "astro dev",
+    "prebuild": "node scripts/generate-video-manifest.mjs",
+    "build": "astro build",
+    "preview": "astro preview",
+    "predeploy": "node scripts/generate-video-manifest.mjs && scripts/set-docs-url.sh prod && astro build",
+    "deploy": "gh-pages -d dist --dotfiles",
+    "postdeploy": "scripts/set-docs-url.sh local"
+  },
+  "devDependencies": {
+    "astro": "^4.8.0",
+    "gh-pages": "^6.3.0"
+  }
+}

@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora y Compensación de Energía Reactiva · Blog de un ingeniero jubilado Energética SPA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Dependencias PDF y Utilidades -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #07090e;
+            --bg-panel: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --accent-cyan: #06b6d4;
+            --accent-cyan-hover: #22d3ee;
+            --accent-amber: #f59e0b;
+            --accent-amber-glow: rgba(245, 158, 11, 0.2);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-badge {
+            background: var(--accent-cyan);
+            color: var(--bg-deep);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            border-radius: 4px;
+        }
+
+        h1 {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            flex: 1;
+            height: calc(100vh - 65px);
+        }
+
+        /* Sidebar Navegación */
+        aside {
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5r em;
+        }
+
+        .nav-select-mobile {
+            display: none;
+            width: 100%;
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            font-family: var(--font-mono);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 0.85rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-btn span {
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .nav-btn:hover {
+            background: rgba(6, 182, 212, 0.08);
+            color: var(--text-main);
+        }
+
+        .nav-btn.active {
+            background: var(--bg-card);
+            color: var(--accent-cyan);
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        /* Contenido Principal / Secciones SPA */
+        main {
+            padding: 2rem;
+            overflow-y: auto;
+            background: var(--bg-deep);
+        }
+
+        .section-view {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .section-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        p, li {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+        }
+
+        ul {
+            padding-left: 1.25rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        /* Formularios e Inputs */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-main);
+            margin-bottom: 0.4rem;
+        }
+
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.65rem 0.85rem;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-cyan);
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+        .range-value {
+            font-family: var(--font-mono);
+            color: var(--accent-amber);
+            font-weight: 600;
+            float: right;
+        }
+
+        /* Editor SVG Interactivo Curvas */
+        .svg-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        svg.curve-editor {
+            width: 100%;
+            height: 320px;
+            cursor: crosshair;
+        }
+
+        .node-handle {
+            fill: var(--accent-amber);
+            stroke: var(--bg-deep);
+            stroke-width: 2px;
+            cursor: pointer;
+            transition: r 0.1s;
+        }
+
+        .node-handle:hover {
+            r: 8px;
+            fill: var(--accent-cyan);
+        }
+
+        /* Tablas de Resultados */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.65rem;
+            text-align: center;
+        }
+
+        th {
+            background: var(--bg-card);
+            color: var(--accent-cyan);
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        /* Botones y Acciones */
+        .btn-action {
+            background: var(--accent-cyan);
+            color: var(--bg-deep);
+            border: none;
+            font-family: var(--font-heading);
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-action:hover {
+            background: var(--accent-cyan-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            margin-left: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-amber);
+            margin-top: 0.25rem;
+        }
+
+        /* Media Queries Responsive */
+        @media (max-width: 960px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            aside {
+                display: none;
+            }
+            .nav-select-mobile {
+                display: block;
+            }
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <span class="logo-badge">ENG-SPA</span>
+            <h1>Calculadora & Compensación de Reactiva · GUÍA-BT</h1>
+        </div>
+        <div class="header-actions">
+            <button class="btn-action" onclick="exportPDF()">Exportar Informe PDF</button>
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- Menú Lateral -->
+        <aside id="sidebar">
+            <button class="nav-btn active" onclick="switchSection('00', this)"><span>00</span> Teoría Reactiva</button>
+            <button class="nav-btn" onclick="switchSection('01', this)"><span>01</span> Metodología</button>
+            <button class="nav-btn" onclick="switchSection('02', this)"><span>02</span> Datos Proyecto</button>
+            <button class="nav-btn" onclick="switchSection('03', this)"><span>03</span> Curvas Horarias (SVG)</button>
+            <button class="nav-btn" onclick="switchSection('04', this)"><span>04</span> Dimensionamiento Banco</button>
+            <button class="nav-btn" onclick="switchSection('05', this)"><span>05</span> Resultados & Análisis</button>
+        </aside>
+
+        <!-- Contenido SPA -->
+        <main id="main-content">
+            <select class="nav-select-mobile" id="mobileNav" onchange="switchSection(this.value, null)">
+                <option value="00">00 - Teoría Reactiva</option>
+                <option value="01">01 - Metodología</option>
+                <option value="02">02 - Datos Proyecto</option>
+                <option value="03">03 - Curvas Horarias (SVG)</option>
+                <option value="04">04 - Dimensionamiento Banco</option>
+                <option value="05">05 - Resultados & Análisis</option>
+            </select>
+
+            <!-- SECCIÓN 00: TEORÍA -->
+            <section id="sec-00" class="section-view active">
+                <div class="card">
+                    <h2>00 · Fundamentos de la Energía Reactiva y Compensación</h2>
+                    <p>La energía reactiva ($Q$, en kVArh) es consumida por equipos inductivos (motores, transformadores, balastos) para generar campos magnéticos. Aunque no produce trabajo útil directo, circula por las redes de distribución provocando caídas de tensión, mayores pérdidas por efecto Joule y sobrecarga en los transformadores.</p>
+                    <p>El factor de potencia ($\cos\varphi$) relaciona la potencia activa ($P$) y la potencia aparente ($S$):</p>
+                    <div style="background: var(--bg-card); padding: 1rem; border-left: 4px solid var(--accent-cyan); margin: 1rem 0; font-family: var(--font-mono);">
+                        $$\cos\varphi = \frac{P}{S} = \frac{P}{\sqrt{P^2 + Q^2}}$$
+                    </div>
+                    <p>La normativa eléctrica penaliza factores de potencia inferiores a $0.95$ mediante recargos en la factura eléctrica. La compensación mediante baterías de condensadores reduce la potencia reactiva demandada de la red, elevando el $\cos\varphi$ al valor objetivo deseado (típicamente $0.96$ - $0.98$).</p>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 01: METODOLOGÍA -->
+            <section id="sec-01" class="section-view">
+                <div class="card">
+                    <h2>01 · Metodología de Cálculo</h2>
+                    <p>El procedimiento técnico para determinar la potencia reactiva del condensador o sistema de compensación necesario ($Q_c$) se basa en la potencia activa máxima ($P$) y los ángulos inicial ($\varphi_1$) y final ($\varphi_2$):</p>
+                    <div style="background: var(--bg-card); padding: 1rem; border-left: 4px solid var(--accent-amber); margin: 1rem 0; font-family: var(--font-mono);">
+                        $$Q_c = P \cdot [\tan(\varphi_1) - \tan(\varphi_2)]$$
+                    </div>
+                    <ul>
+                        <li><strong>P:</strong> Potencia activa máxima de la instalación (kW).</li>
+                        <li><strong>$\varphi_1$:</strong> Ángulo inicial correspondiente al factor de potencia actual ($\cos\varphi_1$).</li>
+                        <li><strong>$\varphi_2$:</strong> Ángulo final correspondiente al factor de potencia objetivo ($\cos\varphi_2$).</li>
+                        <li><strong>Simulación Horaria:</strong> Se evalúa el perfil de 24 horas para garantizar que no se produzca sobrecompensación en horas valle de baja carga.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 02: PROYECTO -->
+            <section id="sec-02" class="section-view">
+                <div class="card">
+                    <h2>02 · Parámetros del Proyecto e Instalación</h2>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Nombre del Cliente / Instalación</label>
+                            <input type="text" id="projName" value="Planta Industrial Metalmecánica S.A." oninput="saveData(); updateReactiveCalculations();">
+                        </div>
+                        <div class="form-group">
+                            <label>Potencia Activa Máxima, P (kW)</label>
+                            <input type="number" id="inputPmax" value="250" min="10" max="5000" oninput="saveData(); updateReactiveCalculations();">
+                        </div>
+                        <div class="form-group">
+                            <label>Factor de Potencia Actual (cos φ₁)</label>
+                            <input type="number" id="inputCos1" value="0.75" min="0.5" max="0.95" step="0.01" oninput="saveData(); updateReactiveCalculations();">
+                        </div>
+                        <div class="form-group">
+                            <label>Factor de Potencia Objetivo (cos φ₂)</label>
+                            <input type="number" id="inputCos2" value="0.96" min="0.90" max="0.99" step="0.01" oninput="saveData(); updateReactiveCalculations();">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 03: CURVAS (SVG INTERACTIVO) -->
+            <section id="sec-03" class="section-view">
+                <div class="card">
+                    <h2>03 · Editor de Perfiles Horarios (24h)</h2>
+                    <p>Arrastre o modifique los nodos del gráfico interactivo SVG para definir la variación horaria de Potencia Activa ($P$) y Reactiva ($Q$) o use los controles rápidos.</p>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Factor Carga Nocturna (%) <span id="valNight" class="range-value">40%</span></label>
+                            <input type="range" id="rangeNight" min="10" max="80" value="40" oninput="updateCurveFromRange(); saveData();">
+                        </div>
+                        <div class="form-group">
+                            <label>Factor Pico Industrial (%) <span id="valPeak" class="range-value">95%</span></label>
+                            <input type="range" id="rangePeak" min="50" max="100" value="95" oninput="updateCurveFromRange(); saveData();">
+                        </div>
+                    </div>
+
+                    <div class="svg-container">
+                        <svg class="curve-editor" id="curveSvg" viewBox="0 0 800 300" onmousemove="handleSvgMove(event)" onmouseup="stopDrag()" onmouseleave="stopDrag()">
+                            <!-- Grid de fondo -->
+                            <g stroke="#334155" stroke-dasharray="4" stroke-width="0.5">
+                                <line x1="50" y1="50" x2="750" y2="50"></line>
+                                <line x1="50" y1="125" x2="750" y2="125"></line>
+                                <line x1="50" y1="200" x2="750" y2="200"></line>
+                                <line x1="50" y1="250" x2="750" y2="250"></line>
+                            </g>
+                            <!-- Ejes -->
+                            <line x1="50" y1="250" x2="750" y2="250" stroke="#94a3b8" stroke-width="1.5"></line>
+                            <line x1="50" y1="30" x2="50" y2="250" stroke="#94a3b8" stroke-width="1.5"></line>
+                            <!-- Área de Curva Activa P(t) -->
+                            <path id="pathActive" fill="none" stroke="#06b6d4" stroke-width="2.5"></path>
+                            <!-- Área de Curva Reactiva Q(t) -->
+                            <path id="pathReactive" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5"></path>
+                            <!-- Nodos Interactivos -->
+                            <g id="svgNodes"></g>
+                        </svg>
+                    </div>
+                    <div style="margin-top: 0.75rem; display: flex; gap: 1rem; font-family: var(--font-mono); font-size: 0.85rem;">
+                        <span style="color: var(--accent-cyan);">&#9632; Potencia Activa P (kW)</span>
+                        <span style="color: var(--accent-amber);">&#9632; Potencia Reactiva Q (kVAr)</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 04: DIMENSIONAMIENTO -->
+            <section id="sec-04" class="section-view">
+                <div class="card" id="pdfReportContent">
+                    <h2>04 · Dimensionamiento del Banco de Condensadores</h2>
+                    <div class="grid-3" style="margin-bottom: 1.5rem;">
+                        <div class="metric-card">
+                            <p>Potencia Reactiva Requerida ($Q_c$)</p>
+                            <div class="metric-value" id="resQc">-- kVAr</div>
+                        </div>
+                        <div class="metric-card">
+                            <p>Corriente Nominal del Banco ($I_c$)</p>
+                            <div class="metric-value" id="resIc">-- A</div>
+                        </div>
+                        <div class="metric-card">
+                            <p>Ahorro Anual Estimado</p>
+                            <div class="metric-value" id="resSaving">-- €/año</div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.75rem;">Especificaciones Técnicas Sugeridas</h3>
+                    <ul>
+                        <li><strong>Tensión nominal de diseño:</strong> 400 V / 50 Hz (Trifásico).</li>
+                        <li><strong>Tipo de escalonamiento recomendado:</strong> Automático por relé varmétrico (ej. pasos de 12.5 - 25 - 50 kVAr).</li>
+                        <li><strong>Protección contra armónicos:</strong> Incorporación de reactancias de bloqueo (sintonizadas al 189Hz / factor $p=7$) para evitar resonancias con cargas no lineales.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 05: RESULTADOS Y TABLA -->
+            <section id="sec-05" class="section-view">
+                <div class="card">
+                    <h2>05 · Resultados de Simulación Horaria (24h)</h2>
+                    <p>Tabla detallada del comportamiento de la instalación antes y después de la compensación de energía reactiva.</p>
+                    <div style="overflow-x: auto;">
+                        <table id="hourlyTable">
+                            <thead>
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>P (kW)</th>
+                                    <th>Q Inicial (kVAr)</th>
+                                    <th>cos φ Inicial</th>
+                                    <th>Q Compensada (kVAr)</th>
+                                    <th>cos φ Final</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hourlyTableBody">
+                                <!-- Generado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Lógica de Navegación SPA
+        function switchSection(secId, btnElement) {
+            document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('sec-' + secId).classList.add('active');
+            if(btnElement) {
+                btnElement.classList.add('active');
+            } else {
+                document.getElementById('mobileNav').value = secId;
+            }
+            localStorage.setItem('activeSec', secId);
+        }
+
+        // Datos Horarios Base (24 puntos)
+        let hourlyData = Array.from({length: 24}, (_, i) => {
+            let loadFactor = 0.4 + 0.5 * Math.sin((i - 6) * Math.PI / 12);
+            if(loadFactor < 0.2) loadFactor = 0.2;
+            return { hour: i, p: Math.round(loadFactor * 250), q: Math.round(loadFactor * 250 * 0.88) };
+        });
+
+        let activeNodeIndex = null;
+
+        function initCurveEditor() {
+            renderCurve();
+        }
+
+        function renderCurve() {
+            const svgNodes = document.getElementById('svgNodes');
+            const pathActive = document.getElementById('pathActive');
+            const pathReactive = document.getElementById('pathReactive');
+            svgNodes.innerHTML = '';
+
+            let ptsA = [];
+            let ptsR = [];
+
+            hourlyData.forEach((d, idx) => {
+                let cx = 50 + (idx / 23) * 700;
+                let cyA = 250 - (d.p / 300) * 200;
+                let cyR = 250 - (d.q / 300) * 200;
+
+                ptsA.push(`${cx},${cyA}`);
+                ptsR.push(`${cx},${cyR}`);
+
+                // Círculo interactivo para Activa P
+                let circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', cyA);
+                circle.setAttribute('r', '5');
+                circle.setAttribute('class', 'node-handle');
+                circle.onmousedown = (e) => startDrag(idx, e);
+                svgNodes.appendChild(circle);
+            });
+
+            pathActive.setAttribute('d', `M ${ptsA.join(' L ')}`);
+            pathReactive.setAttribute('d', `M ${ptsR.join(' L ')}`);
+        }
+
+        function startDrag(idx, e) {
+            activeNodeIndex = idx;
+        }
+
+        function handleSvgMove(e) {
+            if (activeNodeIndex === null) return;
+            const svg = document.getElementById('curveSvg');
+            const pt = svg.createSVGPoint();
+            pt.x = e.clientX;
+            pt.y = e.clientY;
+            const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+            
+            let newP = Math.round(((250 - cursorPt.y) / 200) * 300);
+            if (newP < 20) newP = 20;
+            if (newP > 300) newP = 300;
+
+            hourlyData[activeNodeIndex].p = newP;
+            hourlyData[activeNodeIndex].q = Math.round(newP * 0.85); // Mantener proporción inductiva aprox
+            renderCurve();
+            updateReactiveCalculations();
+            saveData();
+        }
+
+        function stopDrag() {
+            activeNodeIndex = null;
+        }
+
+        function updateCurveFromRange() {
+            let night = parseInt(document.getElementById('rangeNight').value) / 100;
+            let peak = parseInt(document.getElementById('rangePeak').value) / 100;
+            
+            document.getElementById('valNight').innerText = document.getElementById('rangeNight').value + '%';
+            document.getElementById('valPeak').innerText = document.getElementById('rangePeak').value + '%';
+
+            let pMax = parseFloat(document.getElementById('inputPmax').value) || 250;
+
+            hourlyData.forEach((d, i) => {
+                let factor = (i >= 8 && i <= 18) ? peak : night;
+                d.p = Math.round(pMax * factor * (0.8 + 0.2 * Math.sin(i * Math.PI / 12)));
+                d.q = Math.round(d.p * 0.85);
+            });
+            renderCurve();
+            updateReactiveCalculations();
+        }
+
+        // Cálculos Reactivos y Actualización de Resultados
+        function updateReactiveCalculations() {
+            let pMax = parseFloat(document.getElementById('inputPmax').value) || 250;
+            let cos1 = parseFloat(document.getElementById('inputCos1').value) || 0.75;
+            let cos2 = parseFloat(document.getElementById('inputCos2').value) || 0.96;
+
+            let tan1 = Math.tan(Math.acos(cos1));
+            let tan2 = Math.tan(Math.acos(cos2));
+
+            let qc = pMax * (tan1 - tan2);
+            if (qc < 0) qc = 0;
+
+            let voltage = 400; // V
+            let ic = (qc * 1000) / (Math.sqrt(3) * voltage);
+
+            // Estimación económica de ahorro por penalización de reactiva evitada
+            let estimatedSaving = qc * 35; // €/año aprox por kVAr instalado evitando recargos
+
+            document.getElementById('resQc').innerText = qc.toFixed(1) + ' kVAr';
+            document.getElementById('resIc').innerText = ic.toFixed(1) + ' A';
+            document.getElementById('resSaving').innerText = estimatedSaving.toFixed(0) + ' €/año';
+
+            // Actualizar tabla horaria
+            let tbody = document.getElementById('hourlyTableBody');
+            tbody.innerHTML = '';
+
+            let tableHtml = '';
+            hourlyData.forEach(d => {
+                let sInit = Math.sqrt(d.p * d.p + d.q * d.q);
+                let cosInit = sInit > 0 ? (d.p / sInit).toFixed(2) : '1.00';
+                
+                // Q compensado (reducido por el banco dimensionado)
+                let qComp = Math.max(0, d.q - (qc * (d.p / pMax)));
+                let sFinal = Math.sqrt(d.p * d.p + qComp * qComp);
+                let cosFinal = sFinal > 0 ? (d.p / sFinal).toFixed(2) : '1.00';
+
+                tableHtml += `<tr>
+                    <td>${String(d.hour).padStart(2, '0')}:00</td>
+                    <td>${d.p}</td>
+                    <td>${d.q}</td>
+                    <td>${cosInit}</td>
+                    <td>${qComp.toFixed(1)}</td>
+                    <td style="color: var(--accent-cyan); font-weight: bold;">${cosFinal}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = tableHtml;
+        }
+
+        // Persistencia localStorage
+        function saveData() {
+            let data = {
+                projName: document.getElementById('projName').value,
+                pMax: document.getElementById('inputPmax').value,
+                cos1: document.getElementById('inputCos1').value,
+                cos2: document.getElementById('inputCos2').value,
+                hourly: hourlyData
+            };
+            localStorage.setItem('reactivaAppData', JSON.stringify(data));
+        }
+
+        function loadData() {
+            let saved = localStorage.getItem('reactivaAppData');
+            if (saved) {
+                try {
+                    let data = JSON.parse(saved);
+                    document.getElementById('projName').value = data.projName || document.getElementById('projName').value;
+                    document.getElementById('inputPmax').value = data.pMax || document.getElementById('inputPmax').value;
+                    document.getElementById('inputCos1').value = data.cos1 || document.getElementById('inputCos1').value;
+                    document.getElementById('inputCos2').value = data.cos2 || document.getElementById('inputCos2').value;
+                    if (data.hourly) hourlyData = data.hourly;
+                } catch(e) {}
+            }
+            let activeSec = localStorage.getItem('activeSec') || '00';
+            let btn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('onclick').includes(activeSec));
+            switchSection(activeSec, btn);
+        }
+
+        // Exportación PDF profesional con html2pdf.js / jsPDF
+        function exportPDF() {
+            const element = document.getElementById('pdfReportContent');
+            const opt = {
+                margin:       10,
+                filename:     'Informe_Compensacion_Reactiva.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().from(element).set(opt).save();
+        }
+
+        window.onload = () => {
+            loadData();
+            initCurveEditor();
+            updateReactiveCalculations();
+        };
+    </script>
+</body>
+</html>

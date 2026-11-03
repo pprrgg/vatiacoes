@@ -1,0 +1,245 @@
+---
+import TopNav from '../components/TopNav.astro';
+import PieSitio from '../components/PieSitio.astro';
+import DemoAcceso from '../components/DemoAcceso.astro';
+import '../styles/sitio.css';
+// Servicios de VatiaCo: herramientas para comunidades energeticas y la plataforma de gestion.
+// Uso gratuito, sin cuotas ni pagos: la comunidad la usa bajo la responsabilidad de su gestor
+// (condiciones de uso, /condiciones/). El alta online es la de iot-thingsboard.sh, app/alta.py.
+const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
+const B = '/docs/A00_Blog_Interactivo/';
+const doc = (ruta: string) => `/blog/?doc=${encodeURIComponent(B + ruta)}`;
+
+const servicios = [
+  {
+    id: 'gestion', num: '01', icono: 'gestion',
+    titulo: 'Herramientas para la gestión',
+    lema: 'Constitución, socios y reparto de la energía.',
+    puntos: [
+      'Guías para constituir la comunidad: forma jurídica, estatutos y registro.',
+      'Alta de los socios con sus suministros (CUPS) y autorización de acceso a sus datos de Datadis.',
+      'Acuerdos de reparto: cálculo y revisión de los coeficientes a partir del consumo real hora a hora.',
+      'Gobernanza: convocatorias, actas de asamblea, reglamento interno y libro de socios.',
+    ],
+    enlaces: [
+      { t: 'Constitución de comunidades', href: doc('A02_Comunidades Energéticas/C01_Comunidades_Energeticas.html') },
+    ],
+  },
+  {
+    id: 'plataforma', num: '02', icono: 'plataforma',
+    titulo: 'Plataforma de gestión',
+    lema: 'Un panel para cada socio y otro para la comunidad.',
+    puntos: [
+      'Descarga diaria y automática de las lecturas de Datadis de todos los suministros.',
+      'Panel de cada socio: su consumo, su parte de la generación y su posición en el mapa.',
+      'Panel del gestor: socios, reparto, informes PDF y Excel, documentos y copias de seguridad.',
+      'Alta online sin coste: la plataforma de la comunidad se crea en cuanto revisamos la solicitud.',
+    ],
+    enlaces: [
+      { t: 'Mapa de comunidades', href: '/comunidades/' },
+    ],
+  },
+];
+
+const pasos = [
+  { t: 'Alta online', d: 'Elige la comunidad del IDAE y registra a su gestor' },
+  { t: 'Plataforma lista', d: 'Se crea tras revisar la solicitud, sin pagos ni datos bancarios' },
+  { t: 'Socios', d: 'El gestor da de alta a los socios con su CUPS' },
+  { t: 'Datos', d: 'Cada noche llegan las lecturas de Datadis y se calcula el reparto' },
+  { t: 'Seguimiento', d: 'Informes, documentos y asambleas desde la propia plataforma' },
+];
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Servicios · VatiaCo</title>
+    <meta name="description" content="Plataforma de gestión de comunidades energéticas de uso gratuito para instaladores, ingenierías y gestores: paneles por socio, datos de Datadis y reparto de la energía." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <style is:global>
+      .enlaces { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--gray-5); }
+      .enlaces a { font-size: 0.85rem; font-weight: 600; color: var(--accent-high); text-decoration: none; padding: 0.3rem 0.65rem;
+        border: 1px solid var(--gray-5); border-radius: 0.45rem; }
+      .enlaces a:hover { border-color: var(--accent); background: var(--accent-low); }
+      .pilar .btn.alta { margin-top: 1rem; }
+
+      /* reclamos: gratuita, sin limite de socios y sin datos bancarios */
+      .reclamos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+      @media (max-width: 900px) { .reclamos { grid-template-columns: 1fr; } }
+      .reclamo { display: flex; align-items: center; gap: 1.1rem; padding: 1.3rem 1.5rem; border-radius: 0.9rem;
+        border: 1px solid var(--gray-5); background: linear-gradient(135deg, var(--accent-low), var(--gray-6)); }
+      .reclamo .grande { font-size: clamp(2.2rem, 5vw, 3rem); font-weight: 800; line-height: 1; color: var(--bolt); letter-spacing: -0.03em; white-space: nowrap; }
+      .reclamo .grande small { font-size: 0.45em; font-weight: 600; color: var(--gray-2); letter-spacing: 0; }
+      .reclamo strong { display: block; color: var(--white); font-size: 1.05rem; }
+      .reclamo p { margin: 0.2rem 0 0; font-size: 0.9rem; }
+
+      /* a quien va dirigida */
+      .perfiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+      @media (max-width: 900px) { .perfiles { grid-template-columns: 1fr; } }
+      .perfil { background: var(--gray-6); border: 1px solid var(--gray-5); border-radius: 0.9rem; padding: 1.4rem 1.4rem 1.2rem; }
+      .perfil h3 { margin: 0 0 0.5rem; color: var(--white); font-size: 1.1rem; }
+      .perfil p { margin: 0; font-size: 0.92rem; }
+      .uso { margin-top: 2rem; padding: 1.2rem 1.4rem; border-radius: 0.9rem; border: 1px dashed rgba(255, 213, 79, 0.45);
+        background: rgba(255, 213, 79, 0.05); font-size: 0.92rem; }
+      .uso p { margin: 0 0 0.6rem; } .uso p:last-child { margin: 0; }
+      .uso strong { color: var(--bolt); } .uso a { color: var(--accent-high); }
+</style>
+  </head>
+  <body>
+    <TopNav />
+
+    <main>
+      <div class="hero">
+        <div class="wrap">
+          <div class="etiqueta">Servicios</div>
+          <h1>Tu comunidad energética, gestionada <em>sin coste</em>.</h1>
+          <p>Una plataforma propia para tu comunidad: un panel para cada socio y otro para la gestión, con los datos de Datadis cada día.
+            <strong style="color: var(--white);">De uso gratuito</strong>,
+            pensada para instaladores, ingenierías y gestores de comunidades energéticas.</p>
+          <div class="acciones">
+            <a class="btn principal" href="/alta/">Dar de alta una comunidad</a>
+            <a class="btn" href="#gratuita">Cómo funciona el uso gratuito</a>
+          </div>
+          <DemoAcceso compacto />
+        </div>
+      </div>
+
+      <section id="servicios">
+        <div class="wrap">
+          <div class="etiqueta">Qué ofrece</div>
+          <h2>Dos servicios para tu comunidad.</h2>
+          <p class="intro">Las herramientas para llevar la comunidad y la plataforma que la sostiene, en un mismo sitio.</p>
+          <div class="pilares">
+            {servicios.map((s) => (
+              <article class="pilar" id={s.id}>
+                <header>
+                  <div class="ico" aria-hidden="true">
+                    {s.icono === 'gestion' && (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.2M18 14.5c1.8.8 3 2.7 3 4.9"/></svg>
+                    )}
+                    {s.icono === 'plataforma' && (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 13l3-3 2 2 4-4"/></svg>
+                    )}
+                  </div>
+                  <div>
+                    <div class="num">{s.num}</div>
+                    <h3>{s.titulo}</h3>
+                  </div>
+                </header>
+                <p class="lema">{s.lema}</p>
+                <ul>{s.puntos.map((t) => <li>{t}</li>)}</ul>
+                <div class="enlaces">{s.enlaces.map((e) => <a href={e.href}>{e.t}</a>)}</div>
+                <a class="btn principal alta" href="/alta/">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M19 8v6M16 11h6"/></svg>
+                  Da de alta tu comunidad
+                </a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="gratuita" style="background: rgba(35, 38, 47, 0.35);">
+        <div class="wrap">
+          <div class="etiqueta">Uso gratuito</div>
+          <h2>Sin cuotas, sin pagos, sin letra pequeña.</h2>
+          <p class="intro">La plataforma se ofrece de forma gratuita a las comunidades energéticas y a los profesionales que las acompañan.</p>
+
+          <div class="reclamos">
+            <div class="reclamo">
+              <div class="grande">0 €</div>
+              <div><strong>Sin cuotas</strong><p>Ni por socio, ni por comunidad, ni por funciones: todo está incluido.</p></div>
+            </div>
+            <div class="reclamo">
+              <div class="grande">∞<small> socios</small></div>
+              <div><strong>Sin límite de tamaño</strong><p>Da de alta a todos los socios y suministros de la comunidad.</p></div>
+            </div>
+            <div class="reclamo">
+              <div class="grande">0<small> ataduras</small></div>
+              <div><strong>Sin datos bancarios</strong><p>Ni tarjeta ni domiciliación. Te das de baja con un email.</p></div>
+            </div>
+          </div>
+
+          <div class="etiqueta" style="margin-top: 2.5rem;">Para quién</div>
+          <div class="perfiles">
+            <article class="perfil">
+              <h3>Instaladores</h3>
+              <p>Entrega a la comunidad, junto a la instalación, una plataforma con el seguimiento de la generación y el consumo de cada socio.</p>
+            </article>
+            <article class="perfil">
+              <h3>Ingenierías</h3>
+              <p>Calcula y revisa los coeficientes de reparto con el consumo real hora a hora y genera informes en PDF y Excel.</p>
+            </article>
+            <article class="perfil">
+              <h3>Gestores de comunidades</h3>
+              <p>Socios, asambleas, documentos y reparto en un solo panel, con un acceso propio para cada socio.</p>
+            </article>
+          </div>
+
+          <div class="etiqueta" style="margin-top: 2.5rem;">Tus datos</div>
+          <h3 style="margin: 0 0 1rem; color: var(--white);">Los datos son de la comunidad, y se los lleva cuando quiera.</h3>
+          <div class="perfiles">
+            <article class="perfil">
+              <h3>Exportación en CSV</h3>
+              <p>Con un clic, todos los datos de la comunidad: las lecturas de cada suministro en los mismos ficheros y formato que
+                Datadis, y la gestión en CSV que se abren con cualquier hoja de cálculo, sin depender de la plataforma.</p>
+            </article>
+            <article class="perfil">
+              <h3>Copias completas</h3>
+              <p>Copia automática cada día y copias manuales que el gestor descarga en formato PostgreSQL y en SQL, para guardarlas
+                donde quiera o restaurarlas.</p>
+            </article>
+            <article class="perfil">
+              <h3>Aviso previo</h3>
+              <p>Si la plataforma dejara de ofrecerse, se avisará a los gestores con al menos 60 días de antelación para que
+                descarguen sus datos.</p>
+            </article>
+          </div>
+
+          <div class="uso">
+            <p><strong>Uso bajo la responsabilidad del gestor.</strong> La plataforma se ofrece tal cual, sin garantías de
+              disponibilidad ni de resultados. El gestor que da de alta la comunidad es responsable de su uso, de los datos que
+              introduce y de las decisiones que tome con la información de la plataforma; los cálculos son una ayuda y no sustituyen
+              la revisión de un profesional ni la información oficial de la distribuidora.</p>
+            <p>Los detalles están en las <a href="/condiciones/">condiciones de uso</a>.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="como-trabajamos">
+        <div class="wrap">
+          <div class="etiqueta">Cómo funciona</div>
+          <h2>De la alta a los primeros datos.</h2>
+          <p class="intro">Todo online y en el mismo día.</p>
+          <div class="cadena">
+            {pasos.map((p) => (
+              <div class="paso"><h4>{p.t}</h4><p>{p.d}</p></div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="contacto">
+        <div class="wrap">
+          <div class="etiqueta">Contacto</div>
+          <h2>¿Dudas o sugerencias?</h2>
+          <p class="intro" style="margin-bottom: 0;">Si tu comunidad no aparece en la lista del IDAE o tienes alguna propuesta para mejorar la plataforma, escríbenos.</p>
+          <div class="contacto">
+            <a class="btn principal" href="tel:+34951733491">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V21a1 1 0 0 1-1 1C10.61 22 2 13.39 2 3a1 1 0 0 1 1-1h4.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.24 1.01l-2.21 2.21Z"/></svg>
+              951 733 491
+            </a>
+            <a class="btn" href="mailto:info@vatiaco.es?subject=Comunidad%20energ%C3%A9tica">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z"/></svg>
+              info@vatiaco.es
+            </a>
+            <a class="btn" href={PORTAL_URL} data-plataforma="Acceso socios">Acceso socios</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <PieSitio />
+  </body>
+</html>

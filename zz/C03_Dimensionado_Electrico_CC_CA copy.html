@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dimensionado Eléctrico FV · CC y CA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
+    --line:#213348; --line-soft:#182739;
+    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
+    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
+    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber); color:#0A121C;}
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
+  a{color:inherit;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
+
+  .shell{display:flex; max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  nav.side{width:238px; flex-shrink:0; position:sticky; top:0; height:100vh; padding:32px 18px 32px 28px; border-right:1px solid var(--line-soft); overflow-y:auto;}
+  nav.side .brand{font-family:var(--font-mono); font-size:12px; color:var(--text-dimmer); letter-spacing:0.08em; margin-bottom:28px;}
+  nav.side .brand b{color:var(--amber); display:block; font-size:13px; margin-bottom:2px;}
+  nav.side ul{list-style:none;}
+  nav.side li{margin-bottom:2px;}
+  nav.side a{display:flex; gap:10px; align-items:baseline; padding:7px 10px; border-radius:var(--radius); font-size:13px; color:var(--text-dim); text-decoration:none; border-left:2px solid transparent; transition:all .15s ease;}
+  nav.side a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer); width:20px; flex-shrink:0;}
+  nav.side a:hover{color:var(--text); background:var(--panel2);}
+  nav.side a.active{color:var(--amber); border-left-color:var(--amber); background:var(--panel2);}
+  nav.side a.active .tag{color:var(--amber);}
+
+  main{flex:1; min-width:0;}
+  section{display:none; padding:88px 56px;}
+  section.tab-active{display:block;}
+  section .kicker{margin-bottom:14px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
+  section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
+
+  .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
+  #teoria{padding-top:0;}
+  #teoria > .hero{margin:0 -56px 48px;}
+  .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
+  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .hero-meta{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer); display:flex; flex-direction:column; gap:6px; text-align:right; padding-top:6px;}
+  .hero-meta span{color:var(--text-dim);}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
+  .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
+  .stat:last-child{border-right:none;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:15px;}
+  .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr 1fr;}}
+
+  .theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:900px){.theory-grid{grid-template-columns:1fr;}}
+  .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
+  .theory-card h3{font-size:14px; color:var(--text); margin-bottom:10px;}
+  .theory-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:8px;}
+  .theory-card ul{padding-left:18px; font-size:12.5px; color:var(--text-dim);}
+  .theory-card li{margin-bottom:6px;}
+  .theory-card li b{color:var(--text);}
+  .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
+  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--amber);}
+  .formula-box .f small{font-size:10px; color:var(--text-dimmer); display:block; margin-top:4px; font-family:var(--font-mono);}
+
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
+  .comp-card p{font-size:12px; color:var(--text-dim);}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:12px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 9px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:8px 9px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  table.data-table tr:hover td{background:var(--panel2);}
+  table.data-table td.num, table.data-table th.num{text-align:right; font-family:var(--font-mono);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=email], .field input[type=tel], .field select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .field-check{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim); margin-bottom:10px;}
+  .field-check input{accent-color:var(--amber);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(255,176,32,0.1);}
+  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc352;}
+  .btn.ghost{border-color:var(--line); color:var(--text-dim);}
+  .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
+  .btn.small{padding:7px 14px; font-size:11.5px;}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+  .line-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden;}
+  .line-head{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; cursor:pointer; gap:16px; flex-wrap:wrap;}
+  .line-head:hover{background:var(--panel2);}
+  .line-head .lh-left{display:flex; align-items:center; gap:12px; min-width:0;}
+  .line-head .lh-idx{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); flex-shrink:0;}
+  .line-head .lh-title{font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .line-head .lh-right{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+  .line-body{padding:0 20px 20px; border-top:1px solid var(--line-soft); display:none;}
+  .line-body.open{display:block;}
+  .empty-state{text-align:center; padding:36px 20px; color:var(--text-dimmer); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--radius);}
+  .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
+
+  .stat-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 18px; flex:1; min-width:140px;}
+  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--amber);}
+  .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
+  .stat-chip-row{display:flex; gap:12px; flex-wrap:wrap; margin:18px 0;}
+
+  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:24px 0 10px;}
+  .subsection-title:first-child{margin-top:0;}
+  /* Diagrama unifilar: pila vertical de nodos (HTML/CSS, no SVG) para que se vea completo
+     con el scroll normal de la página, sin desplazamiento horizontal. El nodo del
+     inversor es el único con campos de formulario reales (interactivos); el resto son
+     valores calculados de solo lectura ("chips"). */
+  .unifilar-vertical{display:flex; flex-direction:column; align-items:stretch; max-width:820px; margin:0 auto 32px;}
+  .unifilar-node-html{background:var(--panel); border:1.5px solid var(--line); border-radius:6px; padding:22px 24px; position:relative;}
+  .unifilar-node-title{font-family:var(--font-mono); font-weight:700; font-size:14px; text-align:center; letter-spacing:0.04em; margin-bottom:6px;}
+  .unifilar-node-subtitulo{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-align:center; margin-bottom:14px;}
+  .unifilar-chip-row{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:12px;}
+  .unifilar-chip{background:var(--panel2); border:1px solid var(--line-soft); border-radius:4px; padding:11px 18px; min-width:104px; text-align:center;}
+  .unifilar-chip .v{font-family:var(--font-mono); font-weight:700; font-size:15.5px; color:var(--text);}
+  .unifilar-chip .l{font-family:var(--font-mono); font-size:9.5px; color:var(--text-dimmer); margin-top:4px;}
+  .unifilar-badge{position:absolute; top:-13px; left:50%; transform:translateX(-50%); background:var(--bg); border:1px solid var(--amber); color:var(--amber); border-radius:12px; padding:4px 14px; font-family:var(--font-mono); font-weight:700; font-size:11px; white-space:nowrap;}
+  .unifilar-edge{display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 0;}
+  .unifilar-edge-line{width:2px; height:30px; background:var(--line); position:relative;}
+  .unifilar-edge-line::after{content:''; position:absolute; left:50%; bottom:-1px; transform:translateX(-50%); width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid var(--line);}
+  .unifilar-edge-label{font-family:var(--font-mono); font-weight:700; font-size:12.5px; color:var(--text-dim);}
+  .unifilar-field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
+  .unifilar-field input, .unifilar-field select{width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:9px 10px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13px; font-weight:700; text-align:center;}
+  .unifilar-field input:focus, .unifilar-field select:focus{outline:none; border-color:var(--cyan);}
+  .unifilar-field label{font-family:var(--font-mono); font-size:9px; color:var(--text-dimmer); text-align:center; letter-spacing:.02em; text-transform:none;}
+  .unifilar-readout{background:var(--panel2); border:1px solid var(--line); color:var(--amber); padding:9px 10px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13px; font-weight:700; text-align:center;}
+  @media(max-width:640px){ #unifilarNodoInversor .grid4{grid-template-columns:1fr 1fr;} }
+
+  .check-item{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:11px 14px; border:1px solid var(--line); border-radius:var(--radius); margin-bottom:8px; font-size:12.5px; flex-wrap:wrap;}
+  .check-item .desc{color:var(--text); flex:1; min-width:220px;}
+  .check-item .desc small{display:block; color:var(--text-dimmer); font-family:var(--font-mono); font-size:11px; margin-top:2px;}
+  .check-item .val{font-family:var(--font-mono); color:var(--text-dim); font-size:12px; white-space:nowrap;}
+  .pill{font-family:var(--font-mono); font-size:10.5px; padding:3px 10px; border-radius:20px; border:1px solid; flex-shrink:0; white-space:nowrap;}
+  .pill.ok{color:var(--green); border-color:var(--green); background:rgba(22,163,74,0.1);}
+  .pill.warn{color:var(--amber); border-color:var(--amber); background:rgba(255,176,32,0.1);}
+  .pill.fail{color:var(--red); border-color:var(--red); background:rgba(220,38,38,0.1);}
+
+  .import-box{background:var(--panel2); border:1px dashed var(--line); padding:18px 20px; border-radius:var(--radius); margin-bottom:24px;}
+  .import-box .warn-msg{font-size:12.5px; color:var(--text-dim);}
+  .import-box .warn-msg a{color:var(--cyan);}
+  .import-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;}
+  .import-row .field{flex:1; min-width:260px; margin-bottom:0;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
+  footer a{color:var(--amber); text-decoration:none;}
+
+  .mobile-bar{display:none;}
+  @media(max-width:960px){
+    nav.side{display:none;}
+    section{padding:56px 24px;}
+    .hero{padding:100px 24px 40px;}
+    #teoria > .hero{margin:0 -24px 32px;}
+    .hero-top{flex-direction:column;}
+    .hero-meta{text-align:left;}
+    .mobile-bar{display:flex; position:sticky; top:0; z-index:20; background:var(--bg2); border-bottom:1px solid var(--line-soft); padding:14px 20px; align-items:center; justify-content:space-between;}
+    .mobile-bar .brand{font-family:var(--font-mono); font-size:12px; color:var(--amber);}
+    .mobile-bar select{background:var(--panel2); color:var(--text); border:1px solid var(--line); padding:8px 10px; font-family:var(--font-mono); font-size:12px;}
+  }
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+  .disclaimer{font-size:11.5px; color:var(--text-dimmer); border-top:1px solid var(--line-soft); padding-top:14px; margin-top:26px;}
+
+  @media print{
+    nav.side, .mobile-bar, .btn-row, .toast, #vatiacoBarraFlotante{display:none !important;}
+    body{background:#fff; color:#111;}
+    .grid-bg{display:none;}
+    section{display:block !important; padding:6px 0; page-break-after:always;}
+    .card, .line-card, .check-item, .theory-card, .comp-card{border-color:#ccc; background:#fff;}
+    .shell{display:block;}
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="mobile-bar">
+  <span class="brand">DIMENSIONADO ELÉCTRICO FV</span>
+  <select onchange="if(this.value) irASeccion(this.value)">
+    <option value="">Ir a sección…</option>
+    <option value="#teoria">00 · Fundamento teórico</option>
+    <option value="#cadenas">01 · Panel, cadenas, inversor y diagrama</option>
+    <option value="#ccprot">02 · Protecciones CC</option>
+    <option value="#caprot">03 · Protecciones CA</option>
+    <option value="#proyecto">04 · Datos del proyecto</option>
+    <option value="#informe">05 · Informe</option>
+  </select>
+</div>
+
+<div class="shell">
+  <nav class="side" id="sidenav">
+    <div class="brand"><b>DIMENSIONADO FV</b>Instalación eléctrica CC y CA</div>
+    <ul>
+      <li><a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a></li>
+      <li><a href="#cadenas" data-sec="cadenas"><span class="tag">01</span>Panel, cadenas, inversor y diagrama</a></li>
+      <li><a href="#ccprot" data-sec="ccprot"><span class="tag">02</span>Protecciones CC</a></li>
+      <li><a href="#caprot" data-sec="caprot"><span class="tag">03</span>Protecciones CA</a></li>
+      <li><a href="#proyecto" data-sec="proyecto"><span class="tag">04</span>Datos del proyecto</a></li>
+      <li><a href="#informe" data-sec="informe"><span class="tag">05</span>Informe</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <!-- 00 PANEL Y OBJETIVO -->
+    <!-- 00 TEORIA -->
+    <section id="teoria">
+      <header class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow">Dimensionado eléctrico · Fase de cadenas, inversores y protecciones</div>
+            <h1>De los <em>vatios pico</em><br>al cuadro de protecciones.</h1>
+            <p class="sub">A partir de las características eléctricas del panel y del inversor, esta herramienta calcula cuántos paneles van en serie por cadena, cuántas cadenas caben en cada entrada MPPT, cuántos inversores hacen falta para la potencia objetivo, y cómo calibrar las protecciones de corriente continua (CC) y corriente alterna (CA).</p>
+          </div>
+          <div class="hero-meta">
+            <span>Encadena con</span>
+            <span style="color:var(--amber)">C01 · Diseño de Sistemas FV</span>
+            <span>Datos propios: guardados en <code class="inline" style="color:inherit; background:transparent; padding:0;">VatiaCo</code></span>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">Cadenas CC</div><div class="l">nº de paneles en serie compatible con Voc en frío y Vmp en caliente</div></div>
+          <div class="stat"><div class="v">Inversores y MPPT</div><div class="l">distribución de cadenas por entrada y por inversor según el kWp objetivo</div></div>
+          <div class="stat"><div class="v">Protecciones CC/CA</div><div class="l">fusibles, seccionadores, magnetotérmicos, diferenciales, SPD y secciones de cable</div></div>
+        </div>
+      </header>
+
+      <div class="eyebrow kicker">00 · Fundamento teórico</div>
+      <h2>Las reglas que fijan cuántos paneles van en serie, cuántos en paralelo y cómo se protege el circuito.</h2>
+      <p class="lede">Un generador fotovoltaico se dimensiona en dos pasos: primero la <b style="color:var(--text);">cadena</b> (tensión), después el <b style="color:var(--text);">paralelo</b> (corriente). Las protecciones se calculan a partir de las corrientes y tensiones resultantes.</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>① Corrección de tensión por temperatura</h3>
+          <p>Los datos de placa (Voc, Vmp) se miden a 25°C (condiciones STC). En campo, la tensión varía con la temperatura de la célula según el coeficiente de temperatura del fabricante.</p>
+          <div class="formula-box"><div class="f">V(T) = V<sub>STC</sub> · [1 + (β/100) · (T − 25)]<small>β = coeficiente de temperatura en %/°C (negativo para Voc)</small></div></div>
+          <p>Con frío, Voc sube (riesgo de superar la tensión máxima del inversor). Con calor, Vmp baja (riesgo de caer por debajo del rango MPPT).</p>
+        </div>
+        <div class="theory-card">
+          <h3>② Nº de paneles en serie (cadena)</h3>
+          <ul>
+            <li><b>Máximo</b>: Voc corregido a la temperatura mínima × Nserie ≤ tensión máxima CC del inversor (con margen de seguridad).</li>
+            <li><b>Mínimo</b>: Vmp corregido a la temperatura máxima × Nserie ≥ tensión mínima del rango MPPT.</li>
+            <li><b>Recomendado</b>: el mayor Nserie posible sin superar el rango MPPT en condiciones STC, para aprovechar mejor la ventana de seguimiento del inversor.</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>③ Nº de cadenas en paralelo por entrada MPPT</h3>
+          <div class="formula-box"><div class="f">N<sub>paralelo,máx</sub> = I<sub>máx,MPPT</sub> / I<sub>sc,panel</sub><small>limitado también por el nº de entradas físicas por MPPT del inversor</small></div></div>
+          <p>A partir de 3 cadenas en paralelo en la misma entrada suele exigirse fusible de cadena, porque una cadena en falta de aislamiento puede recibir la corriente inversa acumulada del resto.</p>
+        </div>
+        <div class="theory-card">
+          <h3>④ Ratio DC/AC (sobredimensionado)</h3>
+          <div class="formula-box"><div class="f">Ratio = kWp<sub>CC</sub> conectados / kW<sub>CA</sub> nominal del inversor<small>habitual entre 1.0 y 1.3; por encima, el inversor recorta pico (clipping)</small></div></div>
+          <p>Un ratio moderadamente superior a 1 suele ser rentable porque el inversor rara vez alcanza su potencia CC máxima teórica; por encima del límite del fabricante hay recorte de producción en las horas centrales.</p>
+        </div>
+        <div class="theory-card">
+          <h3>⑤ Sección de los conductores</h3>
+          <div class="formula-box"><div class="f">S = (k · L · I<sub>b</sub>) / (κ · ΔV)<small>k=2 en CC y monofásico, k=√3 en trifásico; κ = conductividad del cobre</small></div></div>
+          <p>La sección final es la mayor entre la exigida por caída de tensión y la exigida por capacidad térmica del conductor (ampacidad), redondeada a la sección comercial superior.</p>
+        </div>
+        <div class="theory-card">
+          <h3>⑥ Protecciones en CC</h3>
+          <ul>
+            <li><b>Fusibles de cadena</b> (tipo gPV): si hay 3 o más cadenas en paralelo por entrada.</li>
+            <li><b>Seccionador CC</b>: obligatorio antes de la entrada del inversor, dimensionado a la Isc total con margen.</li>
+            <li><b>Descargador de sobretensiones (SPD) CC</b>: recomendado tipo II (o I+II si hay pararrayos externo) cuando el cableado CC exterior es largo.</li>
+            <li><b>Caja de conexión / combiner box</b>: cuando hay más cadenas por entrada de las que el inversor admite directamente por conector.</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>⑦ Protecciones en CA</h3>
+          <ul>
+            <li><b>Magnetotérmico</b>: calibre normalizado inmediatamente superior a 1.25 × la corriente nominal del inversor.</li>
+            <li><b>Diferencial</b>: mismo calibre que el magnetotérmico; sensibilidad y tipo (A o B) según si el inversor tiene o no aislamiento galvánico.</li>
+            <li><b>SPD CA</b>: recomendado en la mayoría de instalaciones FV por la exposición a sobretensiones inducidas.</li>
+            <li><b>IGM (interruptor general)</b>: cuando hay varios inversores compartiendo cuadro, dimensionado a la suma de sus corrientes nominales.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="disclaimer">Esta herramienta es una ayuda de predimensionado con criterios habituales de diseño (IEC 62548, buenas prácticas de instalación FV). No sustituye el cálculo justificativo del proyecto ni el criterio del instalador autorizado: verifica siempre los resultados frente a la normativa vigente (REBT y sus ITC, UNE-HD 60364) y las hojas de datos reales de los equipos.</p>
+    </section>
+
+    <!-- 02 INVERSOR -->
+    <!-- 01 PANEL, CADENAS, INVERSOR Y DIAGRAMA -->
+    <section id="cadenas">
+      <div class="eyebrow kicker">01 · Panel, cadenas, inversor y diagrama</div>
+      <h2>Diagrama unifilar interactivo: panel, cadenas, inversor y protecciones.</h2>
+      <p class="lede">Ni el panel ni el inversor se registran en ningún otro documento de este sitio (salvo que importes el panel desde C01): configúralos directamente en sus nodos del diagrama. El resto de nodos se recalculan al momento a partir de estos datos.</p>
+
+      <div class="btn-row" style="margin-bottom:20px;"><button class="btn primary" id="btnRecalcular" type="button">⚡ Calcular dimensionado</button></div>
+
+      <p class="hint" style="margin:0 0 16px;">Se dibuja una sola cadena representativa; las etiquetas "×N" indican cuántas cadenas o inversores iguales tiene realmente la instalación. El diagrama se despliega en vertical para verse completo sin desplazamiento horizontal.</p>
+
+      <div class="unifilar-vertical" id="diagramaUnifilarWrap">
+        <div class="unifilar-node-html" id="unifilarNodoCadena" style="border-color:var(--amber);">
+          <div id="unifilarBadgeCadena"></div>
+          <div class="unifilar-node-title" style="color:var(--amber);">PANEL Y CADENA FV</div>
+
+          <div class="import-box" style="text-align:left; margin-bottom:18px;">
+            <div class="fieldset-title" style="margin-top:0;">Importar desde C01 · Diseño de Sistemas FV</div>
+            <div id="importAvisoVacio" class="warn-msg" style="display:none;"></div>
+            <div id="importSelectorWrap" style="display:none;">
+              <div class="import-row">
+                <div class="field">
+                  <label>Modelo de panel encontrado en el diseño guardado</label>
+                  <select id="importSelectGrupo"></select>
+                </div>
+                <button class="btn primary" id="btnImportarGrupo" type="button">⬇Usar este modelo</button>
+              </div>
+              <p class="hint" style="margin-top:10px;">Se importan las características eléctricas del panel y se sugiere como potencia objetivo el kWp total de ese modelo ya dibujado sobre el mapa (editable a continuación).</p>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="unifilar-field"><input type="text" id="g_modelo" placeholder="p. ej. JKM540M-72HL4-V" style="text-align:left; font-weight:600;"><label>Modelo</label></div>
+            <div class="unifilar-field"><input type="number" id="g_potenciaW" min="0" step="1" value="540"><label>Potencia (Wp)</label></div>
+          </div>
+          <div class="grid4">
+            <div class="unifilar-field"><input type="number" id="g_vOc" step="0.1" value="49.9"><label>Voc (V)</label></div>
+            <div class="unifilar-field"><input type="number" id="g_vMp" step="0.1" value="41.7"><label>Vmp (V)</label></div>
+            <div class="unifilar-field"><input type="number" id="g_iSc" step="0.01" value="13.85"><label>Isc / Icc (A)</label></div>
+            <div class="unifilar-field"><input type="number" id="g_iMp" step="0.01" value="12.95"><label>Imp (A)</label></div>
+          </div>
+          <div class="grid2">
+            <div class="unifilar-field"><input type="number" id="g_coefVoc" step="0.001" value="-0.27"><label>Coef. temp. Voc (%/°C)</label></div>
+            <div class="unifilar-field"><input type="number" id="g_coefVmp" step="0.001" placeholder="= Voc si vacío"><label>Coef. temp. Vmp (%/°C)</label></div>
+          </div>
+
+          <div class="grid3">
+            <div class="unifilar-field"><input type="number" id="g_tmin" step="1" value="-10"><label>Tª mín. ambiente (°C)</label></div>
+            <div class="unifilar-field"><input type="number" id="g_tmax" step="1" value="70"><label>Tª máx. célula (°C)</label></div>
+            <div class="unifilar-field"><input type="number" id="g_margen" step="0.5" value="3"><label>Margen sobre Vmáx CC (%)</label></div>
+          </div>
+
+          <div class="grid2">
+            <div class="unifilar-field"><input type="number" id="g_kwp_objetivo" min="0" step="0.01" value="10"><label>Potencia pico objetivo (kWp)</label></div>
+            <div class="unifilar-field"><div class="unifilar-readout" id="g_paneles_objetivo_mini">— paneles</div><label>paneles necesarios para el objetivo (redondeo a cadenas completas más adelante)</label></div>
+          </div>
+        </div>
+        <div id="unifilarEdge1"></div>
+        <div id="unifilarNodoManiobraCC"></div>
+        <div id="unifilarEdge2"></div>
+
+        <div class="unifilar-node-html" id="unifilarNodoInversor" style="border-color:var(--cyan);">
+          <div id="unifilarBadgeInversor"></div>
+          <div class="unifilar-node-title" style="color:var(--cyan);">INVERSOR</div>
+
+          <div class="unifilar-field" style="max-width:380px; margin:0 auto 16px;">
+            <select id="inv_preset"></select>
+            <label>Cargar valores orientativos de…</label>
+          </div>
+
+          <div class="grid2">
+            <div class="unifilar-field"><input type="text" id="inv_modelo" value="Inversor de cadena trifásico 10 kW" style="text-align:left; font-weight:600;"><label>Modelo</label></div>
+            <div class="unifilar-field">
+              <select id="inv_tipo_red">
+                <option value="mono">Monofásico 230 V</option>
+                <option value="tri" selected>Trifásico 400 V</option>
+              </select>
+              <label>Tipo de red de salida</label>
+            </div>
+          </div>
+
+          <div class="grid4">
+            <div class="unifilar-field"><input type="number" id="inv_pot_nom_ca" step="0.1" value="10"><label>Potencia nominal CA (kW)</label></div>
+            <div class="unifilar-field"><input type="number" id="inv_imax_ca" step="0.1" placeholder="auto"><label>Corriente máx. CA (A)</label></div>
+            <div class="unifilar-field"><input type="number" id="inv_ratio_dcac_max" step="0.05" value="1.3"><label>Ratio DC/AC máx.</label></div>
+            <div class="unifilar-field">
+              <div style="display:flex; align-items:center; justify-content:center; height:37px;"><input type="checkbox" id="inv_con_transformador" style="width:auto; accent-color:var(--amber);"></div>
+              <label for="inv_con_transformador">Con transformador</label>
+            </div>
+          </div>
+
+          <div class="grid3">
+            <div class="unifilar-field"><input type="number" id="inv_tension_max_cc" step="1" value="1000"><label>Tensión máx. CC (V)</label></div>
+            <div class="unifilar-field"><input type="number" id="inv_rango_mppt_min" step="1" value="200"><label>Rango MPPT mín. (V)</label></div>
+            <div class="unifilar-field"><input type="number" id="inv_rango_mppt_max" step="1" value="850"><label>Rango MPPT máx. (V)</label></div>
+          </div>
+
+          <div class="grid4">
+            <div class="unifilar-field"><input type="number" id="inv_n_mppt" step="1" value="2"><label>Nº entradas MPPT</label></div>
+            <div class="unifilar-field"><input type="number" id="inv_strings_por_mppt" step="1" value="2"><label>Nº máx. cadenas / entrada</label></div>
+            <div class="unifilar-field"><input type="number" id="inv_imax_mppt" step="0.1" value="16"><label>I máx. / entrada (A)</label></div>
+            <div class="unifilar-field"><input type="number" id="inv_isc_max_mppt" step="0.1" placeholder="auto"><label>Isc máx. / entrada (A)</label></div>
+          </div>
+        </div>
+
+        <div id="unifilarEdge3"></div>
+        <div id="unifilarNodoManiobraCA"></div>
+        <div id="unifilarNodoRed"></div>
+      </div>
+
+      <div class="subsection-title">Cadena (paneles en serie)</div>
+      <div class="grid2">
+        <div class="field"><label>Nº de paneles en serie — usado</label><input type="number" id="g_nseries_override" step="1" placeholder="auto"></div>
+        <div class="field" style="display:flex; align-items:flex-end;"><div class="stat-chip" style="width:100%;"><div class="v" id="cadenaRangoTexto">—</div><div class="l">rango compatible (mín–máx paneles en serie)</div></div></div>
+      </div>
+      <div id="cadenaChecks"></div>
+
+      <div class="subsection-title">Cadenas en paralelo por entrada MPPT</div>
+      <div class="grid2">
+        <div class="field"><label>Nº de cadenas en paralelo por MPPT — usado</label><input type="number" id="g_nparalelo_override" step="1" placeholder="auto"></div>
+        <div class="field" style="display:flex; align-items:flex-end;"><div class="stat-chip" style="width:100%;"><div class="v" id="paraleloMaxTexto">—</div><div class="l">máximo admisible por corriente / por entradas físicas</div></div></div>
+      </div>
+      <div id="paraleloChecks"></div>
+
+      <div class="subsection-title">Resultado del generador</div>
+      <div class="stat-chip-row" id="resumenGeneradorChips"></div>
+
+      <div class="subsection-title">Distribución por inversor y por entrada MPPT</div>
+      <div id="listaInversores"></div>
+    </section>
+
+    <!-- 04 PROTECCIONES CC -->
+    <section id="ccprot">
+      <div class="eyebrow kicker">02 · Protecciones CC</div>
+      <h2>Fusibles, seccionador, sección de cable y SPD del lado de corriente continua.</h2>
+      <p class="lede">Se calculan sobre la cadena y la agrupación por entrada MPPT resultantes de la sección anterior.</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Datos de la instalación CC</div>
+        <div class="grid4">
+          <div class="field"><label>Longitud del tramo CC más desfavorable (m)</label><input type="number" id="cc_longitud" step="0.5" value="15"></div>
+          <div class="field"><label>Caída de tensión máxima admisible (%)</label><input type="number" id="cc_caida_max" step="0.1" value="1.5"></div>
+          <div class="field">
+            <label>Conductividad γ del cobre (Tabla 3, REBT)</label>
+            <select id="cc_kappa">
+              <option value="44" selected>44 m/(Ω·mm²) — XLPE/EPR 90°C (cable solar, recomendado)</option>
+              <option value="48">48 m/(Ω·mm²) — PVC 70°C</option>
+            </select>
+          </div>
+          <div class="field"><label>Factor de seguridad sobre Isc</label><input type="number" id="cc_factor_isc" step="0.05" value="1.25"></div>
+        </div>
+        <p class="hint" style="margin:-6px 0 16px;">La sección de cable CC nunca baja de 4 mm², la que traen de fábrica los rabillos (pigtails) del propio panel.</p>
+        <div class="grid2">
+          <div class="field-check"><input type="checkbox" id="cc_expuesto"><label for="cc_expuesto" style="margin:0; text-transform:none; font-family:inherit; font-size:12.5px;">El cableado CC exterior supera los 10 m</label></div>
+          <div class="field-check"><input type="checkbox" id="cc_lps"><label for="cc_lps" style="margin:0; text-transform:none; font-family:inherit; font-size:12.5px;">El edificio dispone de pararrayos / sistema externo de protección contra el rayo (LPS)</label></div>
+        </div>
+      </div>
+
+      <div class="subsection-title">Resultado de protecciones CC</div>
+      <div id="proteccionesCCResultado"></div>
+    </section>
+
+    <!-- 05 PROTECCIONES CA -->
+    <section id="caprot">
+      <div class="eyebrow kicker">03 · Protecciones CA</div>
+      <h2>Magnetotérmico, diferencial, sección de cable, SPD e interruptor general del lado de corriente alterna.</h2>
+      <p class="lede">Se calculan por inversor y para el conjunto de la instalación, a partir del nº de inversores resultante de la sección 03.</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Datos de la instalación CA</div>
+        <div class="grid4">
+          <div class="field"><label>Longitud inversor → cuadro de protecciones (m)</label><input type="number" id="ca_longitud" step="0.5" value="20"></div>
+          <div class="field"><label>Caída de tensión máxima admisible (%)</label><input type="number" id="ca_caida_max" step="0.1" value="1.5"></div>
+          <div class="field">
+            <label>Conductividad γ del cobre (Tabla 3, REBT)</label>
+            <select id="ca_kappa">
+              <option value="48" selected>48 m/(Ω·mm²) — PVC 70°C (tabla clásica ITC-BT-19)</option>
+              <option value="44">44 m/(Ω·mm²) — XLPE/EPR 90°C</option>
+            </select>
+          </div>
+          <div class="field"><label>cos φ</label><input type="number" id="ca_cosphi" step="0.01" value="1"></div>
+        </div>
+        <p class="hint" style="margin:-6px 0 16px;">La sección de cable CA se comprueba contra la tabla clásica ITC-BT-19 (cobre, PVC 70°C, bajo tubo) — la misma que usa la <a href="../A04_Instalaciones/B02_REBT/C01_Calculadora_BT_Anexo_2.html" style="color:var(--cyan);">Calculadora de Sección de Conductor</a> de este sitio. Para otro método de instalación, sube manualmente la sección resultante si tu tabla real da un valor mayor.</p>
+        <div class="grid3">
+          <div class="field"><label>Factor de seguridad sobre In inversor</label><input type="number" id="ca_factor_in" step="0.05" value="1.25"></div>
+          <div class="field">
+            <label>Sensibilidad del diferencial</label>
+            <select id="ca_sensibilidad">
+              <option value="30" selected>30 mA (protección de personas)</option>
+              <option value="300">300 mA (selectividad, instalaciones mayores)</option>
+            </select>
+          </div>
+          <div class="field"><label>Icc prevista en el punto de conexión (kA)</label><input type="number" id="ca_icc_kA" step="0.5" value="6"><p class="hint">Dato de la compañía distribuidora si está disponible; si no, se usa un valor orientativo habitual en acometidas de baja potencia. Fija el poder de corte (Icu) mínimo del magnetotérmico.</p></div>
+        </div>
+      </div>
+
+      <div class="subsection-title">Resultado de protecciones CA</div>
+      <div id="proteccionesCAResultado"></div>
+    </section>
+
+    <!-- 06 DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">04 · Datos del proyecto</div>
+      <h2>¿Para quién es este informe?</h2>
+      <p class="lede">Estos datos se comparten con el resto de documentos del sitio (misma memoria del navegador).</p>
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Dimensionado eléctrico de sistema fotovoltaico — CC y CA"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+        <div class="fieldset-title">Autor</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+        </div>
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
+        </div>
+        <div class="fieldset-title">Destinatario</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">05 · Resultados e informe</div>
+      <h2>Resumen completo del dimensionado.</h2>
+      <p class="lede">Vuelve a calcular si has cambiado algún dato en las secciones anteriores.</p>
+      <div class="btn-row" style="margin-bottom:24px;">
+        <button class="btn primary" id="btnRecalcular2" type="button">⚡ Recalcular</button>
+        <button class="btn ghost" id="btnPdf" type="button">⬇Generar informe en PDF</button>
+      </div>
+      <div id="informeResumen"></div>
+      <p class="disclaimer">Informe de predimensionado generado automáticamente. Antes de ejecutar la instalación, valida los cálculos con el proyecto justificativo, la normativa vigente (REBT e ITC aplicables, UNE-HD 60364) y las hojas de características reales de los equipos elegidos.</p>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <p>Herramienta de predimensionado eléctrico FV · parte de <span style="color:var(--amber);">Vatia&amp;Co</span> · datos guardados localmente en tu navegador (<code class="inline">localStorage</code>), nunca se envían a ningún servidor.</p>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== NAV COMO TABS =====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav.side a');
+const SECCION_POR_DEFECTO = 'teoria';
+function activarSeccion(id){
+  if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
+  sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
+  navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
+  const selectMovil = document.querySelector('.mobile-bar select');
+  if(selectMovil) selectMovil.value = '#'+id;
+  window.scrollTo({top:0, left:0, behavior:'auto'});
+}
+function irASeccion(hash){
+  const id = hash.replace('#','');
+  if(!document.getElementById(id)) return;
+  activarSeccion(id);
+  history.pushState(null, '', hash);
+}
+navLinks.forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    irASeccion(link.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', ()=>{
+  const id = location.hash.replace('#','') || SECCION_POR_DEFECTO;
+  activarSeccion(id);
+});
+activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
+
+const elP_fecha = document.getElementById('p_fecha');
+if(elP_fecha && !elP_fecha.value) elP_fecha.valueAsDate = new Date();
+
+// ===================== HELPERS =====================
+function fmtNum(n,d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Las fuentes base de jsPDF (Helvetica/Times) usan WinAnsiEncoding y no incluyen
+// ≤ ≥ ∈ → ⚠ φ Δ − (signo menos U+2212, distinto del guion "-"), que se corromperían en
+// el PDF: se sustituyen por su equivalente ASCII. Definida a nivel de módulo (no solo
+// dentro del handler del botón PDF) para que también la use dibujarUnifilarPDF.
+function pdfSafe(s){
+  return String(s==null?'':s)
+    .replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/∈/g,'en').replace(/→/g,'->').replace(/⚠/g,'ATENCION:')
+    .replace(/φ/g,'phi').replace(/Δ/g,'Delta ').replace(/−/g,'-');
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function val(id){ const e=document.getElementById(id); return e ? e.value : ''; }
+function num(id){ const v=parseFloat(val(id)); return isFinite(v) ? v : 0; }
+function numOrNull(id){ const s=val(id); if(s===''||s==null) return null; const v=parseFloat(s); return isFinite(v) ? v : null; }
+function checked(id){ const e=document.getElementById(id); return !!(e && e.checked); }
+function pill(estado, texto){ return '<span class="pill '+estado+'">'+esc(texto)+'</span>'; }
+
+// ===================== TABLAS DE VALORES COMERCIALES =====================
+const SECCIONES_MM2 = [1.5,2.5,4,6,10,16,25,35,50,70,95,120,150,185,240,300];
+// Sección mínima en CC: la que traen de fábrica los rabillos (pigtails) del propio panel
+// (conectores MC4 precableados), que en la inmensa mayoría de fabricantes son de 4 mm².
+const MIN_SECCION_CC_MM2 = 4;
+// Conductividad γ (Tabla 3 de la GUÍA-BT-ANEXO 2 del REBT), cobre, según temperatura de
+// servicio del aislamiento: 90°C para cable solar XLPE/EPR (el habitual en CC), 70°C para PVC.
+const GAMMA_CU = {70:48, 90:44};
+// Ampacidad orientativa del cable solar unipolar (p.ej. PV1-F / H1Z2Z2-K, doble aislamiento,
+// XLPE/EPR 90°C) al aire libre, amb. 30°C — valores de referencia para predimensionado; usar
+// siempre la tabla del fabricante del cable para el cálculo justificativo final.
+const AMPACIDAD_CC_MM2 = {1.5:23,2.5:31,4:42,6:54,10:75,16:100,25:127,35:158,50:192,70:246,95:298,120:346,150:399,185:456,240:538,300:621};
+// Tabla clásica ITC-BT-19 (cobre, aislamiento PVC 70°C, bajo tubo empotrado o superficial),
+// misma tabla que usa la Calculadora de Sección de Conductor (GUÍA-BT-ANEXO 2) de este sitio:
+// columna "2" para monofásico (2 conductores cargados), "3" para trifásico (3 conductores).
+const AC_IZ_TABLE = {
+  2:{1.5:15,2.5:21,4:27,6:36,10:50,16:66,25:84,35:104,50:125,70:160,95:194,120:225,150:260,185:297,240:350,300:402},
+  3:{1.5:13.5,2.5:18.5,4:25,6:32,10:44,16:59,25:73,35:90,50:110,70:139,95:167,120:192,150:219,185:248,240:291,300:334},
+};
+const CALIBRES_MAGNETOTERMICO_A = [6,10,13,16,20,25,32,40,50,63,80,100,125,160,200,250,315,400];
+const CALIBRES_FUSIBLE_GPV_A = [1,2,3,4,5,6,8,10,12,15,16,20,25,30,32];
+// Poder de corte (Icu) normalizado de los interruptores automáticos, serie IEC 60898-1/60947-2.
+const ICU_STANDARD_KA = [4.5,6,10,15,20,25,36,50];
+
+function seccionPorCaida(scalc){
+  return SECCIONES_MM2.find(s=>s>=scalc) || SECCIONES_MM2[SECCIONES_MM2.length-1];
+}
+function seccionPorAmpacidadCC(Ib){
+  return SECCIONES_MM2.find(s=>AMPACIDAD_CC_MM2[s]>=Ib) || SECCIONES_MM2[SECCIONES_MM2.length-1];
+}
+function seccionPorAmpacidadCA(Ib, nConductores){
+  const tabla = AC_IZ_TABLE[nConductores] || AC_IZ_TABLE[2];
+  return SECCIONES_MM2.find(s=>tabla[s]!==undefined && tabla[s]>=Ib) || SECCIONES_MM2[SECCIONES_MM2.length-1];
+}
+function seccionMinima(Ib, L, dV, kappa, factorK, fnAmpacidad){
+  const scalc = (factorK*L*Ib)/(kappa*Math.max(dV,0.0001));
+  return Math.max(seccionPorCaida(scalc), fnAmpacidad(Ib));
+}
+function calibreSuperior(lista, valor){
+  return lista.find(c=>c>=valor) || lista[lista.length-1];
+}
+
+// ===================== IMPORTAR PANEL DESDE C01 =====================
+const VATIACO_LS_KEY = 'VatiaCo';
+const DOC_KEY_C01 = 'fv_diseno_sistemas_fv';
+const DOC_KEY = 'fv_dimensionado_electrico_cc_ca';
+function vatiacoLeer(){
+  try{ return JSON.parse(localStorage.getItem(VATIACO_LS_KEY)||'{}'); }
+  catch(e){ return {}; }
+}
+function vatiacoGuardar(v){
+  try{ localStorage.setItem(VATIACO_LS_KEY, JSON.stringify(v)); }
+  catch(e){ /* localStorage no disponible */ }
+}
+
+function obtenerGruposPanelesC01(){
+  const c01 = vatiacoLeer()[DOC_KEY_C01];
+  const geojson = c01 && c01.outputs && c01.outputs.diseno;
+  if(!geojson || !Array.isArray(geojson.features) || geojson.features.length===0) return null;
+  const grupos = new Map();
+  geojson.features.forEach(f=>{
+    const p = f.properties||{};
+    const key = [p.modelo||'(sin modelo)', p.potenciaW, p.vOc, p.vMp, p.iSc, p.iMp, p.coefVoc].join('|');
+    if(!grupos.has(key)){
+      grupos.set(key, {modelo:p.modelo||'(sin modelo)', potenciaW:+p.potenciaW||0, vOc:+p.vOc||0, vMp:+p.vMp||0, iSc:+p.iSc||0, iMp:+p.iMp||0, coefVoc:+p.coefVoc||0, count:0, areas:new Set()});
+    }
+    const g = grupos.get(key);
+    g.count++;
+    if(p.area) g.areas.add(p.area);
+  });
+  return Array.from(grupos.values());
+}
+
+function inicializarImportacion(){
+  const grupos = obtenerGruposPanelesC01();
+  const avisoVacio = document.getElementById('importAvisoVacio');
+  const selectorWrap = document.getElementById('importSelectorWrap');
+  if(!grupos || grupos.length===0){
+    avisoVacio.style.display = 'block';
+    avisoVacio.innerHTML = '⚠ No se ha encontrado ningún diseño guardado en el navegador (clave <code class="inline">VatiaCo.'+DOC_KEY_C01+'.outputs.diseno</code>). Ve primero a <a href="C01_Diseno_Sistemas_FV.html">Diseño de Sistemas FV</a>, pinta al menos una superficie con un modelo de panel, y vuelve a esta página. También puedes seguir con los datos manuales de abajo.';
+    selectorWrap.style.display = 'none';
+    return;
+  }
+  selectorWrap.style.display = 'block';
+  const select = document.getElementById('importSelectGrupo');
+  select.innerHTML = grupos.map((g,i)=>{
+    const kwp = (g.count*g.potenciaW/1000);
+    const areas = Array.from(g.areas).join(', ') || '—';
+    return '<option value="'+i+'">'+esc(g.modelo)+' — '+g.count+' paneles ('+fmtNum(kwp,2)+' kWp) · '+esc(areas)+'</option>';
+  }).join('');
+  document.getElementById('btnImportarGrupo').addEventListener('click', ()=>{
+    const g = grupos[+select.value];
+    document.getElementById('g_modelo').value = g.modelo;
+    document.getElementById('g_potenciaW').value = g.potenciaW;
+    document.getElementById('g_vOc').value = g.vOc;
+    document.getElementById('g_vMp').value = g.vMp;
+    document.getElementById('g_iSc').value = g.iSc;
+    document.getElementById('g_iMp').value = g.iMp;
+    document.getElementById('g_coefVoc').value = g.coefVoc;
+    document.getElementById('g_kwp_objetivo').value = fmtNum(g.count*g.potenciaW/1000, 2).replace(/\./g,'').replace(',','.');
+    showToast('Panel "'+g.modelo+'" importado desde C01 ('+g.count+' paneles).');
+    recalcularTodo();
+  });
+}
+
+// ===================== PRESETS ORIENTATIVOS DE INVERSOR =====================
+const INVERSOR_PRESETS = [
+  {nombre:'— Personalizado (no cambia nada) —'},
+  {nombre:'String trifásico ~5 kW, 2 MPPT (orientativo)', modelo:'Inversor de cadena trifásico 5 kW', tipoRed:'tri', potNomCA:5, ratioDCACmax:1.3, tensionMaxCC:1000, mpptMin:140, mpptMax:850, nMppt:2, stringsPorMppt:1, imaxMppt:16, iscMaxMppt:18, conTransformador:false},
+  {nombre:'String trifásico ~10 kW, 2 MPPT (orientativo)', modelo:'Inversor de cadena trifásico 10 kW', tipoRed:'tri', potNomCA:10, ratioDCACmax:1.3, tensionMaxCC:1000, mpptMin:200, mpptMax:850, nMppt:2, stringsPorMppt:2, imaxMppt:16, iscMaxMppt:18, conTransformador:false},
+  {nombre:'String trifásico ~20 kW, 3 MPPT (orientativo)', modelo:'Inversor de cadena trifásico 20 kW', tipoRed:'tri', potNomCA:20, ratioDCACmax:1.3, tensionMaxCC:1100, mpptMin:200, mpptMax:950, nMppt:3, stringsPorMppt:2, imaxMppt:16, iscMaxMppt:18, conTransformador:false},
+  {nombre:'String trifásico ~50 kW, 4 MPPT (orientativo)', modelo:'Inversor de cadena trifásico 50 kW', tipoRed:'tri', potNomCA:50, ratioDCACmax:1.2, tensionMaxCC:1100, mpptMin:250, mpptMax:950, nMppt:4, stringsPorMppt:3, imaxMppt:26, iscMaxMppt:30, conTransformador:false},
+  {nombre:'String monofásico ~3.5 kW, 1 MPPT (orientativo)', modelo:'Inversor de cadena monofásico 3.5 kW', tipoRed:'mono', potNomCA:3.5, ratioDCACmax:1.3, tensionMaxCC:600, mpptMin:80, mpptMax:500, nMppt:1, stringsPorMppt:2, imaxMppt:16, iscMaxMppt:18, conTransformador:false},
+];
+function inicializarPresetsInversor(){
+  const select = document.getElementById('inv_preset');
+  select.innerHTML = INVERSOR_PRESETS.map((p,i)=>'<option value="'+i+'">'+esc(p.nombre)+'</option>').join('');
+  select.addEventListener('change', ()=>{
+    const p = INVERSOR_PRESETS[+select.value];
+    if(!p || !p.modelo) return;
+    document.getElementById('inv_modelo').value = p.modelo;
+    document.getElementById('inv_tipo_red').value = p.tipoRed;
+    document.getElementById('inv_pot_nom_ca').value = p.potNomCA;
+    document.getElementById('inv_ratio_dcac_max').value = p.ratioDCACmax;
+    document.getElementById('inv_tension_max_cc').value = p.tensionMaxCC;
+    document.getElementById('inv_rango_mppt_min').value = p.mpptMin;
+    document.getElementById('inv_rango_mppt_max').value = p.mpptMax;
+    document.getElementById('inv_n_mppt').value = p.nMppt;
+    document.getElementById('inv_strings_por_mppt').value = p.stringsPorMppt;
+    document.getElementById('inv_imax_mppt').value = p.imaxMppt;
+    document.getElementById('inv_isc_max_mppt').value = p.iscMaxMppt;
+    document.getElementById('inv_con_transformador').checked = p.conTransformador;
+    document.getElementById('inv_imax_ca').value = '';
+    showToast('Valores orientativos de "'+p.nombre+'" cargados. Ajusta con la ficha técnica real.');
+    recalcularTodo();
+  });
+}
+
+// ===================== LECTURA DE ESTADO =====================
+function leerPanel(){
+  return {
+    modelo: val('g_modelo')||'(sin modelo)',
+    wp: num('g_potenciaW'),
+    vOc: num('g_vOc'), vMp: num('g_vMp'),
+    iSc: num('g_iSc'), iMp: num('g_iMp'),
+    coefVoc: num('g_coefVoc'),
+    coefVmp: (numOrNull('g_coefVmp')!==null ? numOrNull('g_coefVmp') : num('g_coefVoc')),
+  };
+}
+function leerInversor(){
+  return {
+    modelo: val('inv_modelo')||'(sin modelo)',
+    tipoRed: val('inv_tipo_red'),
+    potNomCA: num('inv_pot_nom_ca'),
+    imaxCA: numOrNull('inv_imax_ca'),
+    ratioDCACmax: num('inv_ratio_dcac_max')||1.3,
+    conTransformador: checked('inv_con_transformador'),
+    vMaxCC: num('inv_tension_max_cc'),
+    vMpptMin: num('inv_rango_mppt_min'),
+    vMpptMax: num('inv_rango_mppt_max'),
+    nMppt: Math.max(1, Math.round(num('inv_n_mppt'))||1),
+    stringsPorMppt: Math.max(1, Math.round(num('inv_strings_por_mppt'))||1),
+    iMaxMppt: num('inv_imax_mppt'),
+    iscMaxMppt: numOrNull('inv_isc_max_mppt'),
+  };
+}
+function leerContextoDiseno(){
+  return {
+    tmin: num('g_tmin'), tmax: num('g_tmax'), margen: num('g_margen'),
+    kwpObjetivo: num('g_kwp_objetivo'),
+  };
+}
+
+// ===================== CALCULO: CADENA =====================
+function correccionV(v0, coefPct, T){ return v0 * (1 + (coefPct/100)*(T-25)); }
+
+function calcularCadena(panel, inv, ctx){
+  const vocFrioUnit = correccionV(panel.vOc, panel.coefVoc, ctx.tmin);
+  const vmpCalienteUnit = correccionV(panel.vMp, panel.coefVmp, ctx.tmax);
+  const vMaxUtil = inv.vMaxCC * (1 - ctx.margen/100);
+  const nMax = vocFrioUnit>0 ? Math.floor(vMaxUtil / vocFrioUnit) : 0;
+  const nMin = vmpCalienteUnit>0 ? Math.ceil(inv.vMpptMin / vmpCalienteUnit) : 1;
+  const nMaxPorRangoMPPT = panel.vMp>0 ? Math.floor(inv.vMpptMax / panel.vMp) : 0;
+  const compatible = nMax>=1 && nMin>=1 && nMin<=nMax;
+  let nRec = Math.min(nMax, nMaxPorRangoMPPT>0?nMaxPorRangoMPPT:nMax);
+  if(nRec < nMin) nRec = nMin;
+  if(nRec > nMax) nRec = nMax;
+  const override = numOrNull('g_nseries_override');
+  const nUsado = (override && override>0) ? Math.round(override) : nRec;
+  return {vocFrioUnit, vmpCalienteUnit, nMin, nMax, nMaxPorRangoMPPT, nRec, nUsado, compatible};
+}
+
+function calcularParalelo(panel, inv){
+  const nParaleloMaxPorCorriente = panel.iSc>0 ? Math.floor(inv.iMaxMppt / panel.iSc) : 0;
+  const nParaleloMaxPorEntradas = inv.stringsPorMppt || nParaleloMaxPorCorriente;
+  const nParaleloMax = Math.max(1, Math.min(nParaleloMaxPorCorriente||1, nParaleloMaxPorEntradas||1));
+  const override = numOrNull('g_nparalelo_override');
+  const nUsado = (override && override>0) ? Math.round(override) : nParaleloMax;
+  return {nParaleloMaxPorCorriente, nParaleloMaxPorEntradas, nParaleloMax, nUsado};
+}
+
+function calcularDistribucion(panel, inv, nSeries, nParalelo, kwpObjetivo){
+  const panelesObjetivo = panel.wp>0 ? Math.ceil(kwpObjetivo*1000/panel.wp) : 0;
+  const totalStrings = nSeries>0 ? Math.max(1, Math.ceil(panelesObjetivo/nSeries)) : 0;
+  const stringsPorInversor = nParalelo * inv.nMppt;
+  const nInversores = stringsPorInversor>0 ? Math.max(1, Math.ceil(totalStrings/stringsPorInversor)) : 1;
+  const inversores = [];
+  let restante = totalStrings;
+  for(let i=0;i<nInversores;i++){
+    const stringsInv = Math.min(stringsPorInversor, restante);
+    restante -= stringsInv;
+    const base = Math.floor(stringsInv/inv.nMppt);
+    const resto = stringsInv - base*inv.nMppt;
+    const mppts = [];
+    for(let m=0;m<inv.nMppt;m++){
+      const s = base + (m<resto?1:0);
+      mppts.push({idx:m+1, strings:s, paneles:s*nSeries, kwp:s*nSeries*panel.wp/1000});
+    }
+    const panelesInv = stringsInv*nSeries;
+    const kwpInv = panelesInv*panel.wp/1000;
+    inversores.push({idx:i+1, strings:stringsInv, paneles:panelesInv, kwp:kwpInv, mppts, ratioDCAC: inv.potNomCA>0 ? kwpInv/inv.potNomCA : 0});
+  }
+  const totalPanelesReal = totalStrings*nSeries;
+  const kwpReal = totalPanelesReal*panel.wp/1000;
+  return {panelesObjetivo, totalStrings, nInversores, inversores, totalPanelesReal, kwpReal, stringsPorInversor};
+}
+
+// ===================== CALCULO: PROTECCIONES CC =====================
+function calcularProteccionesCC(panel, inv, cadena, paralelo){
+  const factorIsc = num('cc_factor_isc')||1.25;
+  const L = num('cc_longitud');
+  const caidaPct = num('cc_caida_max');
+  const kappa = parseFloat(val('cc_kappa'))||44;
+  const nSeries = cadena.nUsado, nParalelo = paralelo.nUsado;
+
+  const IbRamal = panel.iSc*factorIsc;
+  const IbPrincipal = nParalelo*panel.iSc*factorIsc;
+  const vRef = nSeries*panel.vMp;
+  const dV = (caidaPct/100)*vRef;
+
+  const seccionRamal = Math.max(seccionMinima(IbRamal, L, dV, kappa, 2, seccionPorAmpacidadCC), MIN_SECCION_CC_MM2);
+  const seccionPrincipal = Math.max(seccionMinima(IbPrincipal, L, dV, kappa, 2, seccionPorAmpacidadCC), MIN_SECCION_CC_MM2);
+
+  const necesitaFusibles = nParalelo>=3;
+  const fusibleRating = necesitaFusibles ? calibreSuperior(CALIBRES_FUSIBLE_GPV_A, panel.iSc*1.25) : null;
+
+  const IbSeccionador = (inv.nMppt*nParalelo)*panel.iSc*factorIsc;
+  const seccionadorRating = calibreSuperior(CALIBRES_MAGNETOTERMICO_A, IbSeccionador);
+  const tensionMaxCircuito = cadena.vocFrioUnit*nSeries;
+  const seccionadorVoltaje = Math.ceil(tensionMaxCircuito/50)*50;
+
+  // Corriente de cortocircuito maxima que puede aportar el generador conectado a esas
+  // entradas MPPT (suma de Isc de todas sus cadenas, sin margen: es la magnitud de falta,
+  // no una intensidad de servicio). No determina la seccion del cable en BT (la propia
+  // impedancia del generador FV limita la Icc), pero SI fija el poder de corte DC minimo
+  // que deben tener el seccionador y los fusibles, a la tension de trabajo mas desfavorable.
+  const IccGenerador = inv.nMppt*nParalelo*panel.iSc;
+
+  const necesitaCombiner = nParalelo>=3;
+  const necesitaSpdCC = checked('cc_expuesto') || checked('cc_lps');
+  const tipoSpdCC = checked('cc_lps') ? 'Tipo I + II' : 'Tipo II';
+
+  return {IbRamal, IbPrincipal, seccionRamal, seccionPrincipal, necesitaFusibles, fusibleRating, IbSeccionador, seccionadorRating, seccionadorVoltaje, tensionMaxCircuito, IccGenerador, necesitaCombiner, necesitaSpdCC, tipoSpdCC, L, caidaPct};
+}
+
+// ===================== CALCULO: PROTECCIONES CA =====================
+function calcularProteccionesCA(inv, distribucion){
+  const factorIn = num('ca_factor_in')||1.25;
+  const L = num('ca_longitud');
+  const caidaPct = num('ca_caida_max');
+  const kappa = parseFloat(val('ca_kappa'))||48;
+  const cosphi = num('ca_cosphi')||1;
+  const trifasico = inv.tipoRed==='tri';
+  const V = trifasico ? 400 : 230;
+  const nConductores = trifasico ? 3 : 2;
+
+  const InInversor = inv.imaxCA!=null ? inv.imaxCA : (trifasico ? (inv.potNomCA*1000)/(Math.sqrt(3)*V*cosphi) : (inv.potNomCA*1000)/(V*cosphi));
+  const magnetoRating = calibreSuperior(CALIBRES_MAGNETOTERMICO_A, InInversor*factorIn);
+  const diferencialRating = magnetoRating;
+
+  const IbCable = InInversor*factorIn;
+  const dV = (caidaPct/100)*V;
+  const factorK = trifasico ? Math.sqrt(3) : 2;
+  const scalc = (factorK*L*IbCable*cosphi)/(kappa*Math.max(dV,0.0001));
+  const seccionCable = Math.max(seccionPorCaida(scalc), seccionPorAmpacidadCA(IbCable, nConductores));
+
+  const nInversores = distribucion.nInversores;
+  const corrienteTotalInstalacion = InInversor*nInversores;
+  const necesitaIGM = nInversores>1;
+  const igmRating = calibreSuperior(CALIBRES_MAGNETOTERMICO_A, corrienteTotalInstalacion*factorIn);
+
+  // Poder de corte (Icu) minimo del magnetotermico frente a la Icc prevista en el punto de
+  // conexion (dato de la companyia distribuidora; a falta de ese dato se usa un valor por
+  // defecto habitual en acometidas de baja potencia).
+  const iccPrevistaKA = num('ca_icc_kA')||6;
+  const icuRecomendado = calibreSuperior(ICU_STANDARD_KA, iccPrevistaKA);
+
+  const sensibilidad = val('ca_sensibilidad');
+  const tipoRecomendado = inv.conTransformador ? 'Tipo A (con transformador, aislamiento galvánico)' : 'Tipo A o B según ficha técnica del inversor (sin transformador — comprobar si el fabricante exige Tipo B o si ya integra monitorización de corriente residual RCMU)';
+
+  return {InInversor, magnetoRating, diferencialRating, seccionCable, corrienteTotalInstalacion, necesitaIGM, igmRating, iccPrevistaKA, icuRecomendado, sensibilidad, tipoRecomendado, L, caidaPct, V, trifasico};
+}
+
+// ===================== RENDER =====================
+function chipHtml(v,l){ return '<div class="stat-chip"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'; }
+
+function checkItem(desc, sub, valorTexto, estado, textoEstado){
+  return '<div class="check-item"><div class="desc">'+esc(desc)+(sub?'<small>'+esc(sub)+'</small>':'')+'</div><div class="val">'+esc(valorTexto)+'</div>'+pill(estado,textoEstado)+'</div>';
+}
+
+function checksCadena(panel, inv, ctx, cadena){
+  const items = [];
+  if(!cadena.compatible){
+    items.push({desc:'Compatibilidad panel / inversor', sub:'No existe un nº de paneles en serie que cumpla a la vez la tensión máxima del inversor en frío y la tensión mínima del rango MPPT en caliente.', valor:'Nmin='+cadena.nMin+' > Nmax='+cadena.nMax, estado:'fail', texto:'INCOMPATIBLE'});
+  }
+  const vocFrioTotal = cadena.vocFrioUnit*cadena.nUsado;
+  const vmpCalienteTotal = cadena.vmpCalienteUnit*cadena.nUsado;
+  const vmpSTCTotal = panel.vMp*cadena.nUsado;
+  const vocSTCTotal = panel.vOc*cadena.nUsado;
+
+  items.push({desc:'Voc en frío ('+ctx.tmin+'°C) × '+cadena.nUsado+' paneles ≤ tensión máx. CC del inversor',
+    sub:fmtNum(cadena.vocFrioUnit,2)+' V/panel', valor:fmtNum(vocFrioTotal,1)+' V / '+fmtNum(inv.vMaxCC,0)+' V',
+    estado:vocFrioTotal<=inv.vMaxCC ? 'ok':'fail', texto:vocFrioTotal<=inv.vMaxCC?'OK':'SUPERA Vmáx'});
+
+  items.push({desc:'Vmp en caliente ('+ctx.tmax+'°C) × '+cadena.nUsado+' paneles ≥ tensión mín. del rango MPPT',
+    sub:fmtNum(cadena.vmpCalienteUnit,2)+' V/panel', valor:fmtNum(vmpCalienteTotal,1)+' V / '+fmtNum(inv.vMpptMin,0)+' V',
+    estado:vmpCalienteTotal>=inv.vMpptMin ? 'ok':'fail', texto:vmpCalienteTotal>=inv.vMpptMin?'OK':'POR DEBAJO DE Vmín'});
+
+  items.push({desc:'Vmp en STC (25°C) dentro del rango MPPT del inversor',
+    sub:'condiciones estándar de medida', valor:fmtNum(vmpSTCTotal,1)+' V ∈ ['+fmtNum(inv.vMpptMin,0)+', '+fmtNum(inv.vMpptMax,0)+'] V',
+    estado:(vmpSTCTotal>=inv.vMpptMin && vmpSTCTotal<=inv.vMpptMax) ? 'ok':'warn',
+    texto:(vmpSTCTotal>=inv.vMpptMin && vmpSTCTotal<=inv.vMpptMax) ? 'OK':'FUERA DE RANGO EN STC'});
+
+  items.push({desc:'Voc en STC (25°C) por debajo de la tensión máxima CC',
+    sub:'margen de seguridad configurado: '+ctx.margen+'%', valor:fmtNum(vocSTCTotal,1)+' V / '+fmtNum(inv.vMaxCC,0)+' V',
+    estado:vocSTCTotal<=inv.vMaxCC ? 'ok':'fail', texto:vocSTCTotal<=inv.vMaxCC?'OK':'SUPERA Vmáx'});
+
+  return items;
+}
+
+function checksParalelo(panel, inv, paralelo){
+  const iscTotal = paralelo.nUsado*panel.iSc;
+  const limiteCorriente = inv.iscMaxMppt!=null ? inv.iscMaxMppt : inv.iMaxMppt;
+  const items = [];
+  items.push({desc:'Nº de cadenas en paralelo ≤ máximo por corriente de entrada MPPT',
+    sub:'Imáx MPPT = '+fmtNum(inv.iMaxMppt,2)+' A, Isc panel = '+fmtNum(panel.iSc,2)+' A', valor:paralelo.nUsado+' / '+paralelo.nParaleloMaxPorCorriente,
+    estado:paralelo.nUsado<=paralelo.nParaleloMaxPorCorriente ? 'ok':'fail', texto:paralelo.nUsado<=paralelo.nParaleloMaxPorCorriente?'OK':'SUPERA Imáx'});
+  items.push({desc:'Nº de cadenas en paralelo ≤ nº de entradas físicas por MPPT',
+    sub:'según ficha del inversor', valor:paralelo.nUsado+' / '+paralelo.nParaleloMaxPorEntradas,
+    estado:paralelo.nUsado<=paralelo.nParaleloMaxPorEntradas ? 'ok':'fail', texto:paralelo.nUsado<=paralelo.nParaleloMaxPorEntradas?'OK':'SIN ENTRADAS SUFICIENTES'});
+  items.push({desc:'Corriente de cortocircuito total en la entrada MPPT',
+    sub:fmtNum(paralelo.nUsado,0)+' cadenas × '+fmtNum(panel.iSc,2)+' A', valor:fmtNum(iscTotal,2)+' A / '+fmtNum(limiteCorriente,2)+' A admisible',
+    estado:iscTotal<=limiteCorriente ? 'ok':'fail', texto:iscTotal<=limiteCorriente?'OK':'SUPERA LÍMITE'});
+  return items;
+}
+
+function renderCadena(panel, inv, ctx, cadena){
+  document.getElementById('cadenaRangoTexto').textContent = cadena.compatible ? (cadena.nMin+' – '+cadena.nMax) : 'sin solución';
+  document.getElementById('g_nseries_override').placeholder = 'auto ('+cadena.nRec+')';
+  const html = checksCadena(panel, inv, ctx, cadena).map(c=>checkItem(c.desc,c.sub,c.valor,c.estado,c.texto)).join('');
+  document.getElementById('cadenaChecks').innerHTML = html;
+}
+
+function renderParalelo(panel, inv, paralelo){
+  document.getElementById('paraleloMaxTexto').textContent = paralelo.nParaleloMax+' cadenas';
+  document.getElementById('g_nparalelo_override').placeholder = 'auto ('+paralelo.nParaleloMax+')';
+  const html = checksParalelo(panel, inv, paralelo).map(c=>checkItem(c.desc,c.sub,c.valor,c.estado,c.texto)).join('');
+  document.getElementById('paraleloChecks').innerHTML = html;
+}
+
+function renderDistribucion(panel, inv, distribucion){
+  const ratioGlobal = inv.potNomCA>0 ? (distribucion.kwpReal/(distribucion.nInversores*inv.potNomCA)) : 0;
+  document.getElementById('resumenGeneradorChips').innerHTML =
+    chipHtml(distribucion.totalPanelesReal+' paneles', 'objetivo: '+distribucion.panelesObjetivo) +
+    chipHtml(fmtNum(distribucion.kwpReal,2)+' kWp', 'potencia CC real instalada') +
+    chipHtml(distribucion.totalStrings+' cadenas', 'en total') +
+    chipHtml(distribucion.nInversores+' inversor(es)', esc(inv.modelo)) +
+    chipHtml(fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW CA', 'potencia CA total instalada') +
+    chipHtml(fmtNum(ratioGlobal,2), 'ratio DC/AC global'+(ratioGlobal>inv.ratioDCACmax?' ⚠':''));
+
+  const html = distribucion.inversores.map(iv=>{
+    const ratioEstado = iv.ratioDCAC>inv.ratioDCACmax ? 'warn' : 'ok';
+    const mpptRows = iv.mppts.map(m=>'<tr><td>MPPT '+m.idx+'</td><td class="num">'+m.strings+'</td><td class="num">'+m.paneles+'</td><td class="num">'+fmtNum(m.kwp,2)+'</td></tr>').join('');
+    return '<div class="line-card">'
+      +'<div class="line-head" onclick="this.parentElement.querySelector(\'.line-body\').classList.toggle(\'open\')">'
+        +'<div class="lh-left"><span class="lh-idx">#'+String(iv.idx).padStart(2,'0')+'</span><span class="lh-title">Inversor '+iv.idx+' — '+fmtNum(iv.kwp,2)+' kWp · '+iv.strings+' cadenas</span></div>'
+        +'<div class="lh-right">'+pill(ratioEstado, 'DC/AC '+fmtNum(iv.ratioDCAC,2))+'<span class="badge">▾</span></div>'
+      +'</div>'
+      +'<div class="line-body"><table class="data-table"><thead><tr><th>Entrada</th><th class="num">Cadenas</th><th class="num">Paneles</th><th class="num">kWp</th></tr></thead><tbody>'+mpptRows+'</tbody></table></div>'
+    +'</div>';
+  }).join('') || '<div class="empty-state">Introduce un panel, un inversor y una potencia objetivo, y pulsa "Calcular dimensionado".</div>';
+  document.getElementById('listaInversores').innerHTML = html;
+}
+
+// ===================== DIAGRAMA UNIFILAR =====================
+// Estructura de datos compartida entre el dibujo en pantalla (SVG) y el dibujo vectorial
+// en el PDF: solo el contenido (texto y valores de cada nodo), nunca coordenadas — la
+// geometria es responsabilidad de cada renderer, porque una vive en px de un viewBox
+// responsive y la otra en mm de una pagina A4. Cinco nodos en una sola fila (cadena ->
+// maniobra y protecciones CC -> inversor -> maniobra y protecciones CA -> punto de
+// conexion a red), cada uno con sus valores como chips numericos independientes (valor
+// grande + etiqueta pequeña), igual que los indicadores del diagrama de flujo de C04.
+function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'…' : (s||''); }
+function chipUnifilar(valor, etiqueta){ return {v:valor, l:etiqueta}; }
+
+function nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car){
+  // Potencia CC realmente conectada a cada entrada MPPT (cadenas en paralelo de esa
+  // entrada × paneles en serie × Wp), no la potencia CA nominal del inversor repartida.
+  const potenciaPorEntrada = paralelo.nUsado*cadena.nUsado*panel.wp/1000;
+
+  const chipsCC = [chipUnifilar(ccr.seccionadorRating+' A', 'seccionador CC')];
+  if(ccr.necesitaFusibles) chipsCC.push(chipUnifilar(ccr.fusibleRating+' A', 'fusibles gPV'));
+
+  return [
+    {
+      // En pantalla este nodo se sustituye por el formulario real (interactivo) del panel;
+      // estos chips solo se usan para el PDF, que es de solo lectura. Por eso incluyen
+      // también objetivo y temperaturas de diseño, no solo los datos electricos del panel.
+      id:'cadena', titulo:'PANEL Y CADENA FV', tituloColor:'amber', subtitulo:trunc(panel.modelo,30),
+      // Un valor numerico por chip (no pares "V1 / V2"): con dos valores juntos, el texto
+      // no cabe en el ancho del chip ni en pantalla ni en el PDF y se solapa con el de al
+      // lado. Separados, cada chip es corto y sobra espacio de sobra en ambos renderers.
+      chips:[
+        chipUnifilar(String(cadena.nUsado), 'paneles en serie'),
+        chipUnifilar(fmtNum(panel.wp,0)+' Wp', 'potencia panel'),
+        chipUnifilar(fmtNum(panel.vOc,1), 'Voc (V)'),
+        chipUnifilar(fmtNum(panel.vMp,1), 'Vmp (V)'),
+        chipUnifilar(fmtNum(panel.iSc,2), 'Isc (A)'),
+        chipUnifilar(fmtNum(panel.iMp,2), 'Imp (A)'),
+        chipUnifilar(ctx.tmin+'°C', 'Tª mín. ambiente'),
+        chipUnifilar(ctx.tmax+'°C', 'Tª máx. célula'),
+        chipUnifilar(fmtNum(ctx.kwpObjetivo,2)+' kWp', 'objetivo'),
+        chipUnifilar(fmtNum(distribucion.kwpReal,2)+' kWp', 'real instalado'),
+      ],
+      // El nº de paneles en serie es el unico dato realmente "derivado" de este nodo (el
+      // resto son entradas en bruto): se muestra siempre en el badge, junto con el
+      // multiplicador de cadenas cuando hay mas de una.
+      badge: cadena.nUsado+' paneles/cadena'+(distribucion.totalStrings>1 ? (' · × '+distribucion.totalStrings+' cadenas iguales') : ''),
+      // Etiqueta corta a propósito (solo la sección, sin prefijo "Cable CC ·"): el color
+      // ámbar/cian del nodo ya distingue CC de CA, y un texto corto deja mucho más margen
+      // en el hueco entre nodos que uno largo — precisamente lo que se pidió reforzar.
+      cableSiguiente: ccr.seccionRamal+' mm²',
+    },
+    {
+      id:'maniobraCC', titulo:'MANIOBRA Y PROTECCIONES CC', tituloColor:'amber',
+      subtitulo: ccr.necesitaCombiner ? 'con caja de conexión (combiner box)' : null,
+      chips: chipsCC,
+      badge:null,
+      cableSiguiente: ccr.seccionPrincipal+' mm²',
+    },
+    {
+      // En pantalla este nodo se sustituye por el formulario real (interactivo) del
+      // inversor; estos chips solo se usan para el PDF, que es de solo lectura. Por eso
+      // aquí se listan más campos que antes: en el PDF es la única representación de
+      // todo lo que el usuario configuró en el nodo del diagrama.
+      id:'inversor', titulo:'INVERSOR', tituloColor:'cyan', subtitulo:trunc(inv.modelo,30),
+      chips:[
+        chipUnifilar(String(inv.nMppt), 'entradas MPPT'),
+        chipUnifilar(fmtNum(potenciaPorEntrada,2)+' kW', 'potencia / entrada'),
+        chipUnifilar(fmtNum(inv.vMpptMin,0)+'–'+fmtNum(inv.vMpptMax,0)+' V', 'rango V / entrada'),
+        chipUnifilar(fmtNum(inv.iMaxMppt,1)+' A', 'I máx / entrada'),
+        chipUnifilar(fmtNum(inv.potNomCA,1)+' kW', 'potencia CA nominal'),
+        chipUnifilar(inv.tipoRed==='tri'?'Trifásico':'Monofásico', 'red de salida'),
+        chipUnifilar(fmtNum(inv.vMaxCC,0)+' V', 'tensión máx. CC'),
+        chipUnifilar(fmtNum(inv.ratioDCACmax,2), 'ratio DC/AC máx.'),
+      ],
+      badge: distribucion.nInversores>1 ? ('× '+distribucion.nInversores+' inversores iguales') : null,
+      cableSiguiente: car.seccionCable+' mm²',
+    },
+    {
+      id:'maniobraCA', titulo:'MANIOBRA Y PROTECCIONES CA', tituloColor:'cyan', subtitulo:null,
+      chips:[
+        chipUnifilar(car.magnetoRating+' A', 'magnetotérmico'),
+        chipUnifilar(car.diferencialRating+' A', 'diferencial'),
+        chipUnifilar(car.sensibilidad+' mA', 'sensibilidad'),
+        chipUnifilar(car.icuRecomendado+' kA', 'Icu mínimo'),
+      ],
+      badge:null,
+      cableSiguiente:null,
+    },
+    {
+      id:'red', titulo:'PUNTO DE CONEXIÓN A RED', tituloColor:'green',
+      subtitulo: car.trifasico ? 'Red trifásica 400 V' : 'Red monofásica 230 V',
+      chips:[chipUnifilar(fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW', 'potencia CA total')],
+      badge: distribucion.nInversores>1 ? ('convergen '+distribucion.nInversores+' líneas CA') : null,
+      cableSiguiente:null,
+    },
+  ];
+}
+
+// Anchos de nodo en px de viewBox (SVG, responsive) y en mm (PDF, pagina landscape) —
+// cada renderer tiene su propia tabla porque las unidades no son comparables entre si.
+// ===================== VERSION EN PANTALLA (HTML/CSS, no SVG) =====================
+// El nodo del inversor es formulario real y persistente (ids inv_*, escritos una vez en
+// el HTML): NO se regenera aquí, para no perder el foco/estado mientras se escribe en él.
+// Solo se actualiza su badge. Los otros 4 nodos y los edges sí se regeneran en cada
+// recalculo, porque son de solo lectura (valores calculados).
+function nodoChipHTML(n){
+  const colorVar = 'var(--'+n.tituloColor+')';
+  let html = '<div class="unifilar-node-html" style="border-color:'+colorVar+';">';
+  if(n.badge) html += '<div class="unifilar-badge" style="border-color:'+colorVar+'; color:'+colorVar+';">'+esc(n.badge)+'</div>';
+  html += '<div class="unifilar-node-title" style="color:'+colorVar+';">'+esc(n.titulo)+'</div>';
+  if(n.subtitulo) html += '<div class="unifilar-node-subtitulo">'+esc(n.subtitulo)+'</div>';
+  html += '<div class="unifilar-chip-row">';
+  n.chips.forEach(c=>{ html += '<div class="unifilar-chip"><div class="v">'+esc(c.v)+'</div><div class="l">'+esc(c.l)+'</div></div>'; });
+  html += '</div></div>';
+  return html;
+}
+function edgeHTML(label){
+  return '<div class="unifilar-edge"><div class="unifilar-edge-line"></div>'+(label?'<div class="unifilar-edge-label">'+esc(label)+'</div>':'')+'</div>';
+}
+function badgeHTML(text, colorVar){
+  colorVar = colorVar || 'var(--amber)';
+  return text ? '<div class="unifilar-badge" style="border-color:'+colorVar+'; color:'+colorVar+';">'+esc(text)+'</div>' : '';
+}
+// Los nodos "cadena" e "inversor" son formulario real y persistente (ids g_*/inv_*,
+// escritos una vez en el HTML): NO se regeneran aquí, para no perder el foco/estado
+// mientras se escribe en ellos. Solo se actualiza su badge. Los otros 3 nodos y los
+// edges sí se regeneran en cada recálculo, porque son de solo lectura.
+function renderUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car){
+  const nodos = nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car);
+  const byId = {}; nodos.forEach(n=>{ byId[n.id] = n; });
+  document.getElementById('unifilarBadgeCadena').innerHTML = badgeHTML(byId.cadena.badge, 'var(--amber)');
+  document.getElementById('unifilarEdge1').innerHTML = edgeHTML(byId.cadena.cableSiguiente);
+  document.getElementById('unifilarNodoManiobraCC').innerHTML = nodoChipHTML(byId.maniobraCC);
+  document.getElementById('unifilarEdge2').innerHTML = edgeHTML(byId.maniobraCC.cableSiguiente);
+  document.getElementById('unifilarBadgeInversor').innerHTML = badgeHTML(byId.inversor.badge, 'var(--cyan)');
+  document.getElementById('unifilarEdge3').innerHTML = edgeHTML(byId.inversor.cableSiguiente);
+  document.getElementById('unifilarNodoManiobraCA').innerHTML = nodoChipHTML(byId.maniobraCA);
+  document.getElementById('unifilarNodoRed').innerHTML = nodoChipHTML(byId.red);
+}
+
+// ===================== VERSION PDF (jsPDF, vectorial y también vertical) =====================
+const UNIFILAR_COLOR_PDF = {amber:[200,130,10], cyan:[30,120,150], green:[22,120,74]};
+
+// Reparte los chips de un nodo en tantas columnas como quepan (mínimo ~32mm cada una,
+// máximo 4), calculando la posición de cada chip dentro del ancho disponible.
+function distribuirChipsPDF(chips, x0, y0, w, chipH, chipGapY){
+  const gapX = 4, chipMinW = 32;
+  const cols = Math.max(1, Math.min(chips.length, 4, Math.floor((w+gapX)/(chipMinW+gapX))));
+  const chipW = (w-(cols-1)*gapX)/cols;
+  const items = chips.map((c,i)=>{
+    const row = Math.floor(i/cols), col = i%cols;
+    return Object.assign({}, c, {x:x0+col*(chipW+gapX), y:y0+row*(chipH+chipGapY), w:chipW, h:chipH});
+  });
+  const rows = Math.ceil(chips.length/cols);
+  return {items, rows};
+}
+
+// Dibuja el diagrama apilando los 5 nodos en vertical, en el mismo orden y con el mismo
+// contenido que en pantalla — cada nodo ocupa el ancho completo de la página, así que no
+// hace falta una página apaisada aparte: pagina con checkPageFn igual que el resto del
+// informe. Devuelve la nueva coordenada Y.
+function dibujarUnifilarPDF(doc, nodos, x0, y0, width, checkPageFn){
+  const chipH=11.5, chipGapY=2.8, padTop=7, padBottom=6, edgeH=13;
+  let y = y0;
+  nodos.forEach((n, i)=>{
+    const {rows} = distribuirChipsPDF(n.chips, 0, 0, width-4, chipH, chipGapY);
+    const subH = n.subtitulo ? 4.6 : 0;
+    const boxH = padTop+4.5+subH+rows*chipH+(rows-1)*chipGapY+padBottom;
+    y = checkPageFn(y, boxH+(i<nodos.length-1?edgeH:0)+8);
+
+    const col = UNIFILAR_COLOR_PDF[n.tituloColor]||UNIFILAR_COLOR_PDF.cyan;
+    doc.setFillColor(16,23,34);
+    doc.setDrawColor(col[0],col[1],col[2]); doc.setLineWidth(0.35);
+    doc.roundedRect(x0, y, width, boxH, 1.6, 1.6, 'FD');
+    const ty = y+padTop;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(col[0],col[1],col[2]);
+    doc.text(pdfSafe(n.titulo), x0+width/2, ty, {align:'center'});
+    let chipsY = ty+4.5;
+    if(n.subtitulo){
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.2); doc.setTextColor(150,155,163);
+      doc.text(pdfSafe(n.subtitulo), x0+width/2, chipsY, {align:'center'});
+      chipsY += subH;
+    }
+    const {items} = distribuirChipsPDF(n.chips, x0+2, chipsY, width-4, chipH, chipGapY);
+    items.forEach(c=>{
+      doc.setDrawColor(90,96,106); doc.setLineWidth(0.2);
+      doc.roundedRect(c.x, c.y, c.w, c.h, 0.9, 0.9, 'S');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(230,236,241);
+      doc.text(pdfSafe(c.v), c.x+c.w/2, c.y+c.h*0.46, {align:'center', maxWidth:c.w-1.5});
+      doc.setFont('helvetica','normal'); doc.setFontSize(5.3); doc.setTextColor(140,145,155);
+      doc.text(pdfSafe(c.l), c.x+c.w/2, c.y+c.h*0.82, {align:'center', maxWidth:c.w-1.5});
+    });
+    if(n.badge){
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.6); doc.setTextColor(col[0],col[1],col[2]);
+      doc.text(pdfSafe(n.badge), x0+width/2, y-2.4, {align:'center'});
+    }
+
+    y += boxH;
+    if(i<nodos.length-1){
+      const midX = x0+width/2;
+      doc.setDrawColor(150,155,163); doc.setLineWidth(0.3);
+      doc.line(midX, y+2, midX, y+edgeH-3);
+      doc.line(midX-1.3, y+edgeH-5, midX, y+edgeH-3); doc.line(midX+1.3, y+edgeH-5, midX, y+edgeH-3);
+      if(n.cableSiguiente){
+        doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(120,126,136);
+        doc.text(pdfSafe(n.cableSiguiente), midX+9, y+edgeH/2+1.4, {align:'left'});
+      }
+      y += edgeH;
+    }
+  });
+  return y+8;
+}
+
+function itemsProteccionesCC(panel, inv, paralelo, ccr){
+  return [
+    {desc:'Sección del ramal de cadena (string → entrada)', sub:'Ib='+fmtNum(ccr.IbRamal,2)+' A, L='+ccr.L+' m, ΔV≤'+ccr.caidaPct+'% · mínimo '+MIN_SECCION_CC_MM2+' mm² (rabillos de fábrica del panel)', valor:ccr.seccionRamal+' mm² Cu', estado:'ok', texto:'SECCIÓN CALCULADA'},
+    {desc:'Sección del tramo principal (agrupación MPPT → inversor)', sub:'Ib='+fmtNum(ccr.IbPrincipal,2)+' A ('+paralelo.nUsado+' cadenas en paralelo) · mínimo '+MIN_SECCION_CC_MM2+' mm²', valor:ccr.seccionPrincipal+' mm² Cu', estado:'ok', texto:'SECCIÓN CALCULADA'},
+    {desc:'Fusibles de cadena (tipo gPV)', sub:ccr.necesitaFusibles ? 'obligatorio con 3 o más cadenas en paralelo por entrada' : 'no requerido con 1–2 cadenas en paralelo', valor:ccr.necesitaFusibles ? (ccr.fusibleRating+' A, un fusible por polo y por cadena') : '—', estado:ccr.necesitaFusibles ? 'warn':'ok', texto:ccr.necesitaFusibles ? 'NECESARIO':'NO NECESARIO'},
+    {desc:'Caja de conexión CC / combiner box', sub:ccr.necesitaCombiner ? 'agrupa y protege 3 o más cadenas antes del inversor' : 'conexión directa al inversor suficiente', valor:ccr.necesitaCombiner?'recomendada':'no necesaria', estado:ccr.necesitaCombiner?'warn':'ok', texto:ccr.necesitaCombiner?'RECOMENDADA':'NO NECESARIA'},
+    {desc:'Seccionador CC (interruptor-seccionador antes del inversor)', sub:'corriente asignada dimensionada a la Isc del generador con factor de seguridad', valor:ccr.seccionadorRating+' A · ≥ '+ccr.seccionadorVoltaje+' V CC', estado:'ok', texto:'CALIBRE CALCULADO'},
+    {desc:'Poder de corte DC del seccionador y los fusibles frente a la Icc del generador', sub:'Icc máx. = suma de Isc de las cadenas conectadas, a '+fmtNum(ccr.tensionMaxCircuito,0)+' V DC (Voc en frío) — verificar contra la ficha técnica del dispositivo elegido', valor:fmtNum(ccr.IccGenerador,2)+' A DC', estado:'warn', texto:'VERIFICAR EN FICHA TÉCNICA'},
+    {desc:'Descargador de sobretensiones (SPD) CC', sub:ccr.necesitaSpdCC ? ('recomendado '+ccr.tipoSpdCC+' según exposición marcada arriba') : 'no se han marcado condiciones de exposición relevantes', valor:ccr.necesitaSpdCC ? ccr.tipoSpdCC : '—', estado:ccr.necesitaSpdCC ? 'warn':'ok', texto:ccr.necesitaSpdCC?'RECOMENDADO':'OPCIONAL'},
+  ];
+}
+function itemsProteccionesCA(panel, inv, distribucion, car){
+  return [
+    {desc:'Corriente nominal del inversor ('+(car.trifasico?'trifásico 400V':'monofásico 230V')+')', sub:'P='+fmtNum(inv.potNomCA,2)+' kW, cos φ='+val('ca_cosphi'), valor:fmtNum(car.InInversor,2)+' A', estado:'ok', texto:'CALCULADA'},
+    {desc:'Magnetotérmico por inversor', sub:'≥ '+val('ca_factor_in')+' × In inversor, redondeado a calibre normalizado', valor:car.magnetoRating+' A', estado:'ok', texto:'CALIBRE CALCULADO'},
+    {desc:'Poder de corte (Icu) del magnetotérmico frente a la Icc prevista', sub:'Icc en el punto de conexión = '+fmtNum(car.iccPrevistaKA,1)+' kA (dato de la compañía distribuidora; por defecto valor orientativo de acometida de baja potencia)', valor:car.icuRecomendado+' kA mínimo', estado:'ok', texto:'CALIBRE CALCULADO'},
+    {desc:'Diferencial por inversor', sub:'sensibilidad '+car.sensibilidad+' mA · '+car.tipoRecomendado, valor:car.diferencialRating+' A', estado:'ok', texto:'CALIBRE CALCULADO'},
+    {desc:'Sección del cable CA (inversor → cuadro)', sub:'Ib='+fmtNum(car.InInversor*(num('ca_factor_in')||1.25),2)+' A, L='+car.L+' m, ΔV≤'+car.caidaPct+'% · según tabla clásica ITC-BT-19 (Cu, PVC 70°C, bajo tubo)', valor:car.seccionCable+' mm² Cu', estado:'ok', texto:'SECCIÓN CALCULADA'},
+    {desc:'SPD CA', sub:'recomendado en la mayoría de instalaciones FV por sobretensiones inducidas desde el lado CC', valor:'Tipo II', estado:'warn', texto:'RECOMENDADO'},
+    {desc:'Interruptor General de Maniobra y Protección (IGM)', sub:distribucion.nInversores>1 ? ('agrupa '+distribucion.nInversores+' inversores en el mismo cuadro') : 'un único inversor: normalmente no se requiere IGM adicional', valor:car.necesitaIGM ? (car.igmRating+' A (Itotal='+fmtNum(car.corrienteTotalInstalacion,2)+' A)') : '—', estado:car.necesitaIGM ? 'warn':'ok', texto:car.necesitaIGM ? 'NECESARIO':'NO NECESARIO'},
+  ];
+}
+function renderProteccionesCC(panel, inv, paralelo, ccr){
+  document.getElementById('proteccionesCCResultado').innerHTML = itemsProteccionesCC(panel, inv, paralelo, ccr).map(c=>checkItem(c.desc,c.sub,c.valor,c.estado,c.texto)).join('');
+}
+function renderProteccionesCA(inv, distribucion, car){
+  document.getElementById('proteccionesCAResultado').innerHTML = itemsProteccionesCA(null, inv, distribucion, car).map(c=>checkItem(c.desc,c.sub,c.valor,c.estado,c.texto)).join('');
+}
+
+function renderInforme(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car){
+  const fecha = val('p_fecha') || new Date().toISOString().slice(0,10);
+  let html = '<div class="card">';
+  html += '<div class="fieldset-title" style="margin-top:0;">'+esc(val('p_proyecto')||'Dimensionado eléctrico FV')+'</div>';
+  html += '<p class="hint" style="margin-bottom:16px;">Fecha: '+esc(fecha)+' · Autor: '+esc(val('p_autor'))+'</p>';
+
+  html += '<div class="subsection-title" style="margin-top:0;">Generador fotovoltaico</div>';
+  html += '<table class="data-table"><tbody>'
+    +'<tr><td>Panel</td><td class="num">'+esc(panel.modelo)+' — '+fmtNum(panel.wp,0)+' Wp</td></tr>'
+    +'<tr><td>Paneles en serie por cadena</td><td class="num">'+cadena.nUsado+'</td></tr>'
+    +'<tr><td>Cadenas en paralelo por entrada MPPT</td><td class="num">'+paralelo.nUsado+'</td></tr>'
+    +'<tr><td>Total de cadenas</td><td class="num">'+distribucion.totalStrings+'</td></tr>'
+    +'<tr><td>Total de paneles instalados</td><td class="num">'+distribucion.totalPanelesReal+' (objetivo '+distribucion.panelesObjetivo+')</td></tr>'
+    +'<tr><td>Potencia pico CC instalada</td><td class="num">'+fmtNum(distribucion.kwpReal,2)+' kWp</td></tr>'
+    +'</tbody></table>';
+
+  html += '<div class="subsection-title">Inversores</div>';
+  html += '<table class="data-table"><tbody>'
+    +'<tr><td>Modelo</td><td class="num">'+esc(inv.modelo)+'</td></tr>'
+    +'<tr><td>Nº de inversores necesarios</td><td class="num">'+distribucion.nInversores+'</td></tr>'
+    +'<tr><td>Potencia CA total instalada</td><td class="num">'+fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW</td></tr>'
+    +'<tr><td>Red de salida</td><td class="num">'+(car.trifasico?'Trifásica 400 V':'Monofásica 230 V')+'</td></tr>'
+    +'</tbody></table>';
+
+  html += '<div class="subsection-title">Protecciones CC</div>';
+  html += '<table class="data-table"><tbody>'
+    +'<tr><td>Sección ramal de cadena</td><td class="num">'+ccr.seccionRamal+' mm² Cu</td></tr>'
+    +'<tr><td>Sección tramo principal (MPPT→inversor)</td><td class="num">'+ccr.seccionPrincipal+' mm² Cu</td></tr>'
+    +'<tr><td>Fusibles de cadena</td><td class="num">'+(ccr.necesitaFusibles ? (ccr.fusibleRating+' A gPV'):'no necesarios')+'</td></tr>'
+    +'<tr><td>Seccionador CC</td><td class="num">'+ccr.seccionadorRating+' A · ≥ '+ccr.seccionadorVoltaje+' V</td></tr>'
+    +'<tr><td>Caja de conexión CC</td><td class="num">'+(ccr.necesitaCombiner?'recomendada':'no necesaria')+'</td></tr>'
+    +'<tr><td>SPD CC</td><td class="num">'+(ccr.necesitaSpdCC?ccr.tipoSpdCC:'opcional')+'</td></tr>'
+    +'</tbody></table>';
+
+  html += '<div class="subsection-title">Protecciones CA (por inversor)</div>';
+  html += '<table class="data-table"><tbody>'
+    +'<tr><td>Corriente nominal del inversor</td><td class="num">'+fmtNum(car.InInversor,2)+' A</td></tr>'
+    +'<tr><td>Magnetotérmico</td><td class="num">'+car.magnetoRating+' A</td></tr>'
+    +'<tr><td>Diferencial</td><td class="num">'+car.diferencialRating+' A · '+car.sensibilidad+' mA</td></tr>'
+    +'<tr><td>Sección de cable CA</td><td class="num">'+car.seccionCable+' mm² Cu</td></tr>'
+    +'<tr><td>IGM (conjunto de la instalación)</td><td class="num">'+(car.necesitaIGM?(car.igmRating+' A'):'no necesario')+'</td></tr>'
+    +'</tbody></table>';
+  html += '</div>';
+  document.getElementById('informeResumen').innerHTML = html;
+}
+
+// ===================== ORQUESTADOR =====================
+let ULTIMO_RESULTADO = null;
+function recalcularTodo(){
+  const panel = leerPanel();
+  const inv = leerInversor();
+  const ctx = leerContextoDiseno();
+
+  document.getElementById('g_paneles_objetivo_mini').textContent = panel.wp>0 ? (Math.ceil(ctx.kwpObjetivo*1000/panel.wp)+' paneles') : '— paneles';
+
+  const cadena = calcularCadena(panel, inv, ctx);
+  const paralelo = calcularParalelo(panel, inv);
+  const distribucion = calcularDistribucion(panel, inv, cadena.nUsado, paralelo.nUsado, ctx.kwpObjetivo);
+  const ccr = calcularProteccionesCC(panel, inv, cadena, paralelo);
+  const car = calcularProteccionesCA(inv, distribucion);
+
+  renderCadena(panel, inv, ctx, cadena);
+  renderParalelo(panel, inv, paralelo);
+  renderDistribucion(panel, inv, distribucion);
+  renderUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car);
+  renderProteccionesCC(panel, inv, paralelo, ccr);
+  renderProteccionesCA(inv, distribucion, car);
+  renderInforme(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car);
+
+  ULTIMO_RESULTADO = {panel, inv, ctx, cadena, paralelo, distribucion, ccr, car};
+  guardarSalidaEnVatiaco(ULTIMO_RESULTADO);
+  return ULTIMO_RESULTADO;
+}
+
+document.getElementById('btnRecalcular').addEventListener('click', ()=>{ recalcularTodo(); showToast('Dimensionado recalculado.'); });
+document.getElementById('btnRecalcular2').addEventListener('click', ()=>{ recalcularTodo(); showToast('Dimensionado recalculado.'); });
+
+// Recalculo automatico (con pequeño retardo) al cambiar cualquier campo de calculo relevante.
+let _recalcTimer = null;
+function programarRecalculo(){
+  clearTimeout(_recalcTimer);
+  _recalcTimer = setTimeout(recalcularTodo, 400);
+}
+document.querySelectorAll('#cadenas input, #cadenas select, #ccprot input, #ccprot select, #caprot input, #caprot select').forEach(el=>{
+  const evento = (el.tagName==='SELECT' || el.type==='checkbox') ? 'change' : 'input';
+  el.addEventListener(evento, programarRecalculo);
+});
+
+// ===================== GENERAR INFORME PDF =====================
+function registrarSalidaPdf(){
+  const v = vatiacoLeer();
+  v[DOC_KEY] = v[DOC_KEY] || {};
+  v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+  v[DOC_KEY].outputs.ultimaGeneracionPdf = new Date().toISOString();
+  vatiacoGuardar(v);
+}
+
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  const r = recalcularTodo();
+  const { jsPDF } = window.jspdf;
+  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
+
+  const proyecto = val('p_proyecto') || 'Dimensionado eléctrico de sistema fotovoltaico';
+  const autor = val('p_autor') || '-';
+  const registro = val('p_registro') || '-';
+  const orgNombre = val('p_org_nombre') || '-';
+  const orgCif = val('p_org_cif') || '-';
+  const orgDir = val('p_org_dir') || '-';
+  const orgTel = val('p_org_tel') || '-';
+  const orgCorreo = val('p_org_correo') || '-';
+  const destNombre = val('p_dest_nombre') || '-';
+  const destCif = val('p_dest_cif') || '-';
+  const destDir = val('p_dest_dir') || '-';
+  const fechaVal = val('p_fecha');
+  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
+
+  const panel = r.panel, inv = r.inv, ctx = r.ctx, cadena = r.cadena, paralelo = r.paralelo, distribucion = r.distribucion, ccr = r.ccr, car = r.car;
+
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+
+  function checkPage(yy, needed=12){
+    if(yy > bottomY-needed){ doc.addPage(); return topY; }
+    return yy;
+  }
+  function sectionTitle(yy, numText, text){
+    yy = checkPage(yy, 18);
+    doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
+    doc.text(numText+'  '+pdfSafe(text), marginX, yy);
+    doc.setDrawColor(255,176,32); doc.setLineWidth(0.6);
+    doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
+    doc.setLineWidth(0.2);
+    return yy+11;
+  }
+  function kv(yy, k, v, indent=0){
+    yy = checkPage(yy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
+    doc.text(pdfSafe(k), marginX+indent, yy);
+    doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
+    const vLines = doc.splitTextToSize(pdfSafe(v), pageW-marginX-(marginX+indent+75));
+    doc.text(vLines[0], marginX+indent+75, yy);
+    let extra = 0;
+    for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+75, yy+extra); }
+    return yy+5.6+extra;
+  }
+  function paragraph(yy, text, opts={}){
+    const size = opts.size || 9;
+    const width = opts.width || (pageW-2*marginX);
+    doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
+    const linesArr = doc.splitTextToSize(pdfSafe(text), width);
+    linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
+    return yy+3;
+  }
+  function estadoColor(estado){
+    return estado==='ok' ? [22,163,74] : (estado==='fail' ? [220,38,38] : [200,130,10]);
+  }
+  function checksTable(yy, items){
+    items.forEach(it=>{
+      yy = checkPage(yy, 13);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,35,45);
+      const descLines = doc.splitTextToSize(pdfSafe(it.desc), pageW-2*marginX-55);
+      doc.text(descLines[0], marginX, yy);
+      const col = estadoColor(it.estado);
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.6); doc.setTextColor(col[0],col[1],col[2]);
+      doc.text(pdfSafe(it.texto), pageW-marginX, yy, {align:'right'});
+      yy += 4.6;
+      for(let i=1;i<descLines.length;i++){ yy=checkPage(yy,6); doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,35,45); doc.text(descLines[i], marginX, yy); yy+=4.4; }
+      if(it.sub){
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.4); doc.setTextColor(120,126,136);
+        const subLines = doc.splitTextToSize(pdfSafe(it.sub), pageW-2*marginX-55);
+        doc.text(subLines[0], marginX, yy);
+        doc.setTextColor(90,96,106);
+        doc.text(pdfSafe(it.valor), pageW-marginX, yy, {align:'right'});
+        yy += 4.4;
+        for(let i=1;i<subLines.length;i++){ yy=checkPage(yy,6); doc.text(subLines[i], marginX, yy); yy+=4.2; }
+      } else {
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.4); doc.setTextColor(90,96,106);
+        doc.text(pdfSafe(it.valor), pageW-marginX, yy, {align:'right'});
+        yy += 4.4;
+      }
+      doc.setDrawColor(230,232,236); doc.setLineWidth(0.15); doc.line(marginX, yy-1.3, pageW-marginX, yy-1.3);
+      yy += 3;
+    });
+    return yy+2;
+  }
+  function tablaDistribucion(yy, distribucion){
+    const colX = [marginX, marginX+55, marginX+95, marginX+130];
+    const kwpX = pageW-marginX;
+    distribucion.inversores.forEach(iv=>{
+      yy = checkPage(yy, 18+iv.mppts.length*5.2);
+      doc.setFillColor(245,245,247);
+      doc.rect(marginX, yy-4.5, pageW-2*marginX, 6.5, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,66,76);
+      doc.text('INVERSOR '+iv.idx+' — '+fmtNum(iv.kwp,2)+' kWp · '+iv.strings+' cadenas · ratio DC/AC '+fmtNum(iv.ratioDCAC,2), marginX+2, yy);
+      yy += 7;
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(100,108,120);
+      doc.text('Entrada MPPT', colX[0], yy); doc.text('Cadenas', colX[1], yy); doc.text('Paneles', colX[2], yy); doc.text('kWp', kwpX, yy, {align:'right'});
+      yy+=2; doc.setDrawColor(210,210,215); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5;
+      doc.setFont('helvetica','normal');
+      iv.mppts.forEach(m=>{
+        yy = checkPage(yy,6);
+        doc.setFontSize(7.6); doc.setTextColor(30,35,45);
+        doc.text('MPPT '+m.idx, colX[0], yy);
+        doc.text(String(m.strings), colX[1], yy);
+        doc.text(String(m.paneles), colX[2], yy);
+        doc.text(fmtNum(m.kwp,2), kwpX, yy, {align:'right'});
+        yy += 5.2;
+      });
+      yy += 5;
+    });
+    return yy;
+  }
+
+  // ===================== PORTADA =====================
+  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(255,176,32);
+  doc.text('INFORME TÉCNICO DE PREDIMENSIONADO', marginX, 42);
+  doc.setDrawColor(255,176,32); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
+
+  doc.setFont('times','bold'); doc.setFontSize(20); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  let cy = 64;
+  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=9; });
+  cy += 4;
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
+  doc.text('Instalación eléctrica CC y CA — '+fmtNum(distribucion.kwpReal,2)+' kWp, '+distribucion.nInversores+' inversor(es)', marginX, cy); cy+=14;
+
+  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 62, 1.5, 1.5, 'S');
+  let by = cy+9;
+  doc.setFontSize(9.5);
+  [['Instalador', orgNombre+' — '+orgCif],['Dirección', orgDir],['Contacto', orgTel+' / '+orgCorreo],
+   ['Cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],['Dirección de instalación', destDir],
+   ['Autor del informe', autor+' ('+registro+')'],['Fecha', fecha],['Panel / Inversor', panel.modelo+' · '+inv.modelo]]
+   .forEach(([k,v])=>{
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
+    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-60);
+    doc.text(vLines[0], marginX+58, by);
+    by += 6.6;
+  });
+
+  cy += 74;
+  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 24, 1.5, 1.5, 'F');
+  doc.setFont('times','bold'); doc.setFontSize(9.5); doc.setTextColor(10,18,28);
+  doc.text('GENERADOR FOTOVOLTAICO', marginX+8, cy+8);
+  doc.setFontSize(12.5);
+  doc.text(fmtNum(distribucion.kwpReal,2)+' kWp CC  ·  '+distribucion.totalStrings+' cadenas de '+cadena.nUsado+' paneles  ·  '+distribucion.nInversores+' inversor(es), '+fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW CA', marginX+8, cy+17);
+
+  if(!cadena.compatible){
+    doc.setFont('times','bold'); doc.setFontSize(9); doc.setTextColor(200,40,30);
+    const avisoLines = doc.splitTextToSize('ATENCIÓN: la configuración actual de panel e inversor no es compatible en tensión — revisar antes de ejecutar.', pageW-2*marginX);
+    let ay = cy+34;
+    avisoLines.forEach(l=>{ doc.text(l, marginX, ay); ay+=5; });
+  }
+
+  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
+  doc.text('Generador, comprobaciones de compatibilidad, distribución por inversor y protecciones CC/CA — ver páginas siguientes', marginX, 274);
+
+  // ===================== CUERPO =====================
+  doc.addPage();
+  let y = topY;
+
+  y = sectionTitle(y, '1.', 'Presentación');
+  y = paragraph(y, 'Informe técnico de predimensionado eléctrico de la instalación fotovoltaica "'+proyecto+'", con una potencia pico de '+fmtNum(distribucion.kwpReal,2)+' kWp repartida en '+distribucion.totalStrings+' cadena(s) y '+distribucion.nInversores+' inversor(es) modelo '+inv.modelo+'.');
+  y = paragraph(y, 'Incluye la configuración de las cadenas de corriente continua, su distribución entre las entradas MPPT de cada inversor, y el calibrado de las protecciones de corriente continua (CC) y corriente alterna (CA).');
+
+  y = sectionTitle(y, '2.', 'Generador fotovoltaico y cadenas');
+  y = kv(y, 'Panel', panel.modelo+' — '+fmtNum(panel.wp,0)+' Wp');
+  y = kv(y, 'Datos eléctricos del panel', 'Voc '+fmtNum(panel.vOc,1)+' V · Vmp '+fmtNum(panel.vMp,1)+' V · Isc '+fmtNum(panel.iSc,2)+' A · Imp '+fmtNum(panel.iMp,2)+' A');
+  y = kv(y, 'Paneles en serie por cadena', String(cadena.nUsado));
+  y = kv(y, 'Cadenas en paralelo por entrada MPPT', String(paralelo.nUsado));
+  y = kv(y, 'Total de cadenas', String(distribucion.totalStrings));
+  y = kv(y, 'Total de paneles instalados', distribucion.totalPanelesReal+' (objetivo: '+distribucion.panelesObjetivo+')');
+  y = kv(y, 'Potencia pico CC instalada', fmtNum(distribucion.kwpReal,2)+' kWp');
+  y = kv(y, 'Temperaturas de diseño', 'mín. '+ctx.tmin+'°C · máx. célula '+ctx.tmax+'°C · margen '+ctx.margen+'%');
+
+  y = sectionTitle(y, '3.', 'Comprobaciones de compatibilidad panel / inversor');
+  y = checksTable(y, checksCadena(panel, inv, ctx, cadena).concat(checksParalelo(panel, inv, paralelo)));
+
+  y = sectionTitle(y, '4.', 'Inversores y distribución por entrada MPPT');
+  y = kv(y, 'Modelo de inversor', inv.modelo);
+  y = kv(y, 'Nº de inversores necesarios', String(distribucion.nInversores));
+  y = kv(y, 'Potencia CA total instalada', fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW ('+(car.trifasico?'trifásica 400 V':'monofásica 230 V')+')');
+  y += 2;
+  y = tablaDistribucion(y, distribucion);
+
+  y = sectionTitle(y, '5.', 'Diagrama unifilar');
+  y = paragraph(y, 'Se dibuja una sola cadena representativa, con el resto de cadenas e inversores indicados mediante las etiquetas "×N".', {size:8.5});
+  y = dibujarUnifilarPDF(doc, nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car), marginX, y, pageW-2*marginX, checkPage);
+
+  y = sectionTitle(y, '6.', 'Protecciones CC');
+  y = checksTable(y, itemsProteccionesCC(panel, inv, paralelo, ccr));
+
+  y = sectionTitle(y, '7.', 'Protecciones CA');
+  y = checksTable(y, itemsProteccionesCA(panel, inv, distribucion, car));
+
+  y = sectionTitle(y, '8.', 'Advertencia');
+  y = paragraph(y, 'Este informe es una ayuda de predimensionado con criterios habituales de diseño (IEC 62548, buenas prácticas de instalación FV). No sustituye el cálculo justificativo del proyecto ni el criterio del instalador autorizado: verifica siempre los resultados frente a la normativa vigente (REBT y sus ITC, UNE-HD 60364) y las hojas de datos reales de los equipos antes de ejecutar la instalación.', {size:8.5});
+
+  // ===================== CABECERA / PIE =====================
+  // Usa el ancho/alto propios de cada pagina (doc.internal.pageSize) en vez de las
+  // constantes pageW/bottomY de portada, porque la pagina del diagrama unifilar es
+  // apaisada (297x210) y el resto son verticales (210x297).
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=2;p<=totalPages;p++){
+    doc.setPage(p);
+    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
+    doc.line(marginX, 14, pw-marginX, 14);
+    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text(proyecto, marginX, 11);
+    doc.text(autor, pw-marginX, 11, {align:'right'});
+    doc.line(marginX, ph-16, pw-marginX, ph-16);
+    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
+    doc.text('Página '+p, pw/2, ph-10, {align:'center'});
+  }
+
+  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('dimensionado-electrico-fv-'+safeName+'.pdf');
+  registrarSalidaPdf();
+  showToast('Informe en PDF generado y descargado.');
+});
+
+// ===================== VATIACO: memoria compartida del navegador =====================
+// "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
+// bidireccional con VatiaCo.proyecto, compartido entre todos los documentos. El resto de
+// campos propios de este documento se acumulan en VatiaCo.fv_dimensionado_electrico_cc_ca.inputs,
+// y cada calculo escribe el resultado completo en VatiaCo.fv_dimensionado_electrico_cc_ca.outputs
+// (mismo esquema inputs/outputs que usan todos los documentos del sitio).
+function guardarSalidaEnVatiaco(resultado){
+  const v = vatiacoLeer();
+  v[DOC_KEY] = v[DOC_KEY] || {};
+  v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+  v[DOC_KEY].outputs.ultimoCalculo = new Date().toISOString();
+  v[DOC_KEY].outputs.panel = resultado.panel;
+  v[DOC_KEY].outputs.inversor = resultado.inv;
+  v[DOC_KEY].outputs.cadena = {nSeries:resultado.cadena.nUsado, nParalelo:resultado.paralelo.nUsado, vocFrioUnit:resultado.cadena.vocFrioUnit, vmpCalienteUnit:resultado.cadena.vmpCalienteUnit, compatible:resultado.cadena.compatible};
+  v[DOC_KEY].outputs.distribucion = {totalStrings:resultado.distribucion.totalStrings, totalPaneles:resultado.distribucion.totalPanelesReal, kwpReal:resultado.distribucion.kwpReal, nInversores:resultado.distribucion.nInversores, inversores:resultado.distribucion.inversores};
+  v[DOC_KEY].outputs.proteccionesCC = {seccionRamal:resultado.ccr.seccionRamal, seccionPrincipal:resultado.ccr.seccionPrincipal, fusibleRating:resultado.ccr.fusibleRating, seccionadorRating:resultado.ccr.seccionadorRating, seccionadorVoltaje:resultado.ccr.seccionadorVoltaje};
+  v[DOC_KEY].outputs.proteccionesCA = {InInversor:resultado.car.InInversor, magnetoRating:resultado.car.magnetoRating, diferencialRating:resultado.car.diferencialRating, seccionCable:resultado.car.seccionCable, igmRating:resultado.car.necesitaIGM?resultado.car.igmRating:null};
+  vatiacoGuardar(v);
+}
+
+(function(){
+  function valorCampo(el){ return el.type==='checkbox' ? el.checked : el.value; }
+  function fijarCampo(el, valorVal){ if(el.type==='checkbox') el.checked = !!valorVal; else el.value = valorVal; }
+  const TIPOS_IGNORADOS = {file:1, button:1, submit:1, reset:1, image:1};
+
+  function sincronizarCampos(campos, leerContenedor, obtenerContenedorParaGuardar){
+    campos.forEach(function(el){
+      if(!el.id || TIPOS_IGNORADOS[el.type]) return;
+      const guardado = leerContenedor(vatiacoLeer());
+      if(guardado && guardado[el.id]!==undefined && guardado[el.id]!==null && guardado[el.id]!==''){
+        fijarCampo(el, guardado[el.id]);
+      } else {
+        const v0 = vatiacoLeer();
+        const c0 = obtenerContenedorParaGuardar(v0);
+        c0[el.id] = valorCampo(el);
+        vatiacoGuardar(v0);
+      }
+      const evento = (el.tagName==='SELECT' || el.type==='checkbox' || el.type==='radio') ? 'change' : 'input';
+      el.addEventListener(evento, function(){
+        const v = vatiacoLeer();
+        const c = obtenerContenedorParaGuardar(v);
+        c[el.id] = valorCampo(el);
+        vatiacoGuardar(v);
+      });
+    });
+  }
+
+  function instalarBotonesExportarImportar(){
+    const barra = document.createElement('div');
+    barra.id = 'vatiacoBarraFlotante';
+    barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
+    function crearBoton(texto){
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = texto;
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      return b;
+    }
+    const btnExp = crearBoton('⬇');
+    btnExp.addEventListener('click', function(){
+      const blob = new Blob([JSON.stringify(vatiacoLeer(), null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'VatiaCo.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+    const btnImp = crearBoton('⬆');
+    const inputFile = document.createElement('input');
+    inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
+    inputFile.addEventListener('change', function(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          const v = JSON.parse(ev.target.result);
+          vatiacoGuardar(v);
+          location.reload();
+        }catch(err){
+          alert('El archivo no es un JSON válido.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    btnImp.addEventListener('click', function(){ inputFile.click(); });
+    barra.appendChild(btnExp);
+    barra.appendChild(btnImp);
+    barra.appendChild(inputFile);
+    document.body.appendChild(barra);
+  }
+
+  function inicializarVatiaco(){
+    const v = vatiacoLeer();
+    v[DOC_KEY] = v[DOC_KEY] || {};
+    v[DOC_KEY].inputs = v[DOC_KEY].inputs || {};
+    v[DOC_KEY].outputs = v[DOC_KEY].outputs || {};
+    vatiacoGuardar(v);
+
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input[id^="p_"], select[id^="p_"], textarea[id^="p_"]')),
+      function(vv){ return vv.proyecto; },
+      function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
+    );
+    sincronizarCampos(
+      Array.prototype.slice.call(document.querySelectorAll('input:not([id^="p_"]), select:not([id^="p_"]), textarea:not([id^="p_"])')),
+      function(vv){ return vv[DOC_KEY] && vv[DOC_KEY].inputs; },
+      function(vv){ vv[DOC_KEY] = vv[DOC_KEY] || {}; vv[DOC_KEY].inputs = vv[DOC_KEY].inputs || {}; return vv[DOC_KEY].inputs; }
+    );
+
+    instalarBotonesExportarImportar();
+  }
+
+  inicializarImportacion();
+  inicializarPresetsInversor();
+  setTimeout(function(){ inicializarVatiaco(); recalcularTodo(); }, 0);
+})();
+</script>
+</body>
+</html>
