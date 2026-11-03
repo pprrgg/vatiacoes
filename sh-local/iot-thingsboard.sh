@@ -8675,6 +8675,21 @@ def _texto(v, minimo, maximo):
     return t if minimo <= len(t) <= maximo and "|" not in t else None
 
 
+def _comunidad_prueba(sel):
+    """Comunidad de prueba (no esta en el IDAE): solo nombre y municipio del formulario. Su
+    nombre en la plataforma lleva "(prueba)" y no pide documento acreditativo."""
+    sel = sel if isinstance(sel, dict) else {}
+    err = {}
+    n = _texto(sel.get("nombre"), 3, 100)
+    m = _texto(sel.get("municipio"), 0, 60) or ""
+    if not n:
+        err["prueba_nombre"] = "Pon un nombre a la comunidad de prueba (de 3 a 100 caracteres)."
+    if err:
+        raise Errores(err)
+    return {"comunidad": f"{n} (prueba)", "idae_nombre": None, "municipio": m, "provincia": "", "autonomia": None,
+            "lat": None, "lon": None, "socios_idae": None, "web": None, "prueba": True}
+
+
 def _documento(v):
     """Documento acreditativo del formulario ({nombre, datos: base64}) -> (bytes, nombre, tipo),
     o un mensaje de error. El tipo sale del contenido (PDF, PNG o JPG), no del nombre."""
@@ -8700,7 +8715,8 @@ def _validar(f):
     de alli); del formulario solo se registra el gestor. Lo de la comunidad y el gestor lo
     comprueba ademas plataforma.validar_comunidad, igual que en el panel del superusuario."""
     err = {}
-    d = _comunidad_idae(f.get("idae"))
+    prueba = f.get("prueba") is True
+    d = _comunidad_prueba(f.get("prueba_datos")) if prueba else _comunidad_idae(f.get("idae"))
     d.update(contacto=_texto(f.get("contacto"), 3, 80), email=str(f.get("email") or "").strip().lower(),
              telefono=_texto(f.get("telefono"), 0, 30) or "")
     pw = str(f.get("password") or "")
@@ -8714,7 +8730,7 @@ def _validar(f):
         err["password"] = "La contraseña debe tener al menos 8 caracteres."
     elif pw != str(f.get("password2") or ""):
         err["password2"] = "Las contraseñas no coinciden."
-    doc = _documento(f.get("documento"))
+    doc = None if prueba else _documento(f.get("documento"))
     if isinstance(doc, str):
         err["documento"] = doc
     if f.get("acepta") is not True:
@@ -8727,7 +8743,9 @@ def _validar(f):
     except ValueError as e:
         if "gestor" in str(e) or "Email" in str(e):
             raise Errores({"email": str(e)})
-        raise Errores({"comunidad": "Esta comunidad ya está dada de alta en la plataforma. Si eres su gestor, entra con tu usuario."})
+        raise Errores({"prueba_nombre" if prueba else "comunidad":
+                       "Ya hay una comunidad de prueba con ese nombre: elige otro." if prueba else
+                       "Esta comunidad ya está dada de alta en la plataforma. Si eres su gestor, entra con tu usuario."})
     if plataforma._hashes_tb([d["email"]]):
         raise Errores({"email": "Ese email ya es usuario de la plataforma."})
     with _cx() as cx:   # otra alta con esa comunidad o ese gestor que aun no ha terminado
@@ -8818,7 +8836,7 @@ def lista():
         return [dict(r, creada=r["creada"].isoformat())
                 for r in cx.execute(
                     "SELECT id, comunidad_id, comunidad, datos->>'comunidad' AS nombre, datos->>'municipio' AS municipio, datos->>'provincia' AS provincia, "
-                    "datos->>'contacto' AS contacto, datos->>'email' AS email, socios, estado, error, creada, "
+                    "datos->>'contacto' AS contacto, datos->>'email' AS email, (datos->>'prueba') IS NOT NULL AS prueba, socios, estado, error, creada, "
                     "documento_nombre FROM alta "
                     "ORDER BY creada DESC LIMIT 200").fetchall()]
 
@@ -10870,7 +10888,7 @@ EOF
 # API de alta (/cec-api/alta/*, la misma que la web) y sigue el alta hasta que esta creada.
 cat > config/branding/VatiaCo-alta.js <<'EOF'
 (function () {
-  var API = '/cec-api', INFO = null, LISTA = null, POR = {}, ELEGIDA = null, ALTA = null;
+  var API = '/cec-api', INFO = null, LISTA = null, ELEGIDA = null, ALTA = null, MODO = 'idae';
   var CSS = '#vl-alta{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.35);display:flex;align-items:flex-start;' +
     'justify-content:center;padding:16px;overflow:auto;font:13px Roboto,Arial,sans-serif;color:#333}' +
     '#vl-alta *{box-sizing:border-box}' +
@@ -10901,6 +10919,21 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     '#vl-alta .b.sec{background:#f1e6f8;color:#7b2fa8}#vl-alta .b:disabled{opacity:.5;cursor:default}' +
     '#vl-alta .giro{display:inline-block;width:14px;height:14px;border:2px solid #d9c3e8;border-top-color:#7b2fa8;border-radius:50%;' +
     'animation:vl-gira .8s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes vl-gira{to{transform:rotate(360deg)}}' +
+    '#vl-alta .modo{display:flex;gap:0;margin-bottom:8px;border:1px solid #d9c3e8;border-radius:4px;overflow:hidden}' +
+    '#vl-alta .modo label{flex:1;flex-direction:row;align-items:center;justify-content:center;gap:6px;padding:7px 8px;cursor:pointer;' +
+    'font-size:12.5px;color:#7b2fa8;background:#fff;text-align:center}' +
+    '#vl-alta .modo label+label{border-left:1px solid #d9c3e8}' +
+    '#vl-alta .modo input{position:absolute;opacity:0;width:1px;height:1px}' +
+    '#vl-alta .modo label.on{background:#7b2fa8;color:#fff;font-weight:700}' +
+    '#vl-alta .lista{margin-top:4px;max-height:min(260px,45vh);overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid #e3d4ee;border-radius:4px;background:#fff}' +
+    '#vl-alta .lista button{display:block;width:100%;text-align:left;font:inherit;padding:9px 10px;border:0;border-bottom:1px solid #f3edf7;' +
+    'background:#fff;color:#333;cursor:pointer}' +
+    '#vl-alta .lista button:hover,#vl-alta .lista button:focus{background:#faf6fc;outline:none}' +
+    '#vl-alta .lista button small{display:block;color:#888}' +
+    '#vl-alta .lista .nada{padding:9px 10px;color:#888;font-size:12px}' +
+    '#vl-alta .elegida{display:flex;align-items:center;gap:8px}#vl-alta .elegida input{flex:1}' +
+    '@media (max-width:600px){#vl-alta{padding:6px}#vl-alta .vf{padding:12px}#vl-alta input{font-size:16px;padding:8px}' +
+    '#vl-alta .pie .b{flex:1;padding:10px 12px}}' +
     '#vl-alta [hidden]{display:none!important}';
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); }
   function json(r) { return r.json().catch(function () { return {}; }).then(function (c) { return { ok: r.ok, c: c }; }); }
@@ -10926,10 +10959,20 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       '<small class="sub">Uso gratuito: sin cuotas, sin permanencia y sin datos bancarios. Se crea la plataforma de la comunidad ' +
       '(paneles, base de datos y tu usuario de gestor para dar de alta a los socios) <span class="cuando">en cuanto revisamos la solicitud</span>.</small>' +
       '<div class="aviso" data-inactiva hidden></div>' +
-      '<div class="sec">La comunidad</div><div class="campos">' +
-      campo('comunidad', '<span class="req">Comunidad energética</span>', ' list="vl-alta-idae" autocomplete="off" spellcheck="false" placeholder="Cargando la lista del IDAE…"',
-            'Elige tu comunidad entre las registradas en el IDAE. ¿No aparece? <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">Escríbenos</a>.', true) +
-      '</div><datalist id="vl-alta-idae"></datalist><div class="ficha" hidden></div>' +
+      '<div class="sec">La comunidad</div>' +
+      '<div class="modo" role="radiogroup"><label class="on"><input type="radio" name="modo" value="idae" checked>De la lista del IDAE</label>' +
+      '<label><input type="radio" name="modo" value="prueba">Comunidad de prueba</label></div>' +
+      '<div data-modo="idae"><div class="campos">' +
+      campo('comunidad', '<span class="req">Comunidad energética</span>', ' type="search" autocomplete="off" autocorrect="off" autocapitalize="off" ' +
+            'spellcheck="false" enterkeyhint="search" placeholder="Cargando la lista del IDAE…"',
+            'Escribe parte de su nombre o de su municipio y pulsa en ella. ¿No aparece? Prueba la plataforma con una ' +
+            '<a href="#" data-a-prueba>comunidad de prueba</a> o <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">escríbenos</a>.', true) +
+      '</div><div class="lista" hidden></div><div class="ficha" hidden></div></div>' +
+      '<div data-modo="prueba" hidden><div class="campos">' +
+      campo('prueba_nombre', '<span class="req">Nombre de la comunidad de prueba</span>', ' maxlength="100" autocomplete="off"', '', true) +
+      campo('prueba_municipio', 'Municipio (opcional)', ' maxlength="60" autocomplete="address-level2"') +
+      '</div><small>Para conocer la plataforma: se crea con el nombre que pongas y «(prueba)» al final, sin documento acreditativo. ' +
+      'Puedes añadir socios virtuales con perfiles de consumo y generación simulados.</small></div>' +
       '<div class="sec">Gestor de la comunidad</div><div class="campos">' +
       campo('contacto', '<span class="req">Nombre y apellidos</span>', ' maxlength="80" autocomplete="name"', '', true) +
       campo('email', '<span class="req">Email</span>', ' type="email" maxlength="120" autocomplete="email"', 'Es tu usuario para entrar en la plataforma.') +
@@ -10951,8 +10994,23 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     document.addEventListener('keydown', tecla);
     $('[data-cancelar]').onclick = cerrar;
     var f = $('form');
-    f.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); if (e.target.name === 'comunidad') elegir(); });
-    f.addEventListener('change', function (e) { if (e.target.name) limpiar(e.target.name); });
+    f.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); if (e.target.name === 'comunidad') buscar(); });
+    f.addEventListener('change', function (e) { if (e.target.name) limpiar(e.target.name); if (e.target.name === 'modo') modo(e.target.value); });
+    f.elements.comunidad.addEventListener('focus', function () { if (!ELEGIDA) buscar(); });
+    f.elements.comunidad.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); var b = $('.lista button'); if (b) b.click(); }
+      else if (e.key === 'ArrowDown') { var p = $('.lista button'); if (p) { e.preventDefault(); p.focus(); } }
+    });
+    $('.lista').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-i]'); if (!b) return;
+      e.preventDefault(); elegir(LISTA[+b.dataset.i]);
+    });
+    $('.lista').addEventListener('keydown', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (e.key === 'ArrowDown' && b.nextElementSibling) { e.preventDefault(); b.nextElementSibling.focus(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); (b.previousElementSibling || f.elements.comunidad).focus(); }
+    });
+    $('[data-a-prueba]').onclick = function (e) { e.preventDefault(); f.querySelector('[name=modo][value=prueba]').checked = true; modo('prueba'); };
     f.addEventListener('submit', enviar);
     cargar();
     f.elements.comunidad.focus();
@@ -10962,14 +11020,14 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     var b = $('[data-enviar]'); b.disabled = true;
     Promise.all([fetch(API + '/alta/info').then(json), LISTA ? { ok: true, c: LISTA } : fetch(API + '/alta/comunidades').then(json)]).then(function (r) {
       if (!r[0].ok || !r[1].ok) throw new Error();
-      INFO = r[0].c; LISTA = r[1].c; POR = {};
-      LISTA.forEach(function (c) { POR[c.etiqueta] = c; });
-      $('#vl-alta-idae').innerHTML = LISTA.map(function (c) { return '<option value="' + esc(c.etiqueta) + '">'; }).join('');
+      INFO = r[0].c; LISTA = r[1].c;
+      LISTA.forEach(function (c) { c._t = norm(c.etiqueta); });
       $('[name=comunidad]').placeholder = 'Escribe su nombre o su municipio…';
+      if (document.activeElement === $('[name=comunidad]')) buscar();
       if (INFO.url_condiciones) $('.u-cond').href = INFO.url_condiciones;
       if (INFO.url_privacidad) $('.u-priv').href = INFO.url_privacidad;
       if (INFO.aprobacion === false) $('.cuando').textContent = 'al momento';
-      $('[data-campo=documento]').hidden = INFO.documento === false;
+      modo(MODO);
       $('.max').textContent = INFO.documento_max_mb || 5;
       if (!INFO.activa) { var a = $('[data-inactiva]'); a.textContent = 'El alta online no está disponible ahora mismo. Inténtalo más tarde.'; a.hidden = false; return; }
       b.disabled = false;
@@ -10979,10 +11037,44 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       a.textContent = 'No podemos conectar con la plataforma ahora mismo. Inténtalo en unos minutos.'; a.hidden = false;
     });
   }
-  function elegir() {
-    var c = POR[$('[name=comunidad]').value] || null, fi = $('.ficha');
-    ELEGIDA = c; fi.hidden = !c;
+  // Sin acentos ni mayusculas, para buscar
+  function norm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  // IDAE o prueba: cada uno con sus campos; la de prueba no pide documento
+  function modo(v) {
+    MODO = v === 'prueba' ? 'prueba' : 'idae';
+    [].forEach.call($('form').querySelectorAll('.modo label'), function (l) { l.classList.toggle('on', l.querySelector('input').checked); });
+    $('[data-modo=idae]').hidden = MODO !== 'idae';
+    $('[data-modo=prueba]').hidden = MODO !== 'prueba';
+    $('[data-campo=documento]').hidden = MODO === 'prueba' || (INFO && INFO.documento === false);
+    var i = $(MODO === 'prueba' ? '[name=prueba_nombre]' : '[name=comunidad]'); if (i) i.focus({ preventScroll: true });
+  }
+  // Lista de coincidencias (todas las palabras escritas, en el nombre, municipio o provincia)
+  function buscar() {
+    var i = $('[name=comunidad]'), l = $('.lista'), MAX = 50;
+    if (ELEGIDA && i.value !== ELEGIDA.etiqueta) { ELEGIDA = null; $('.ficha').hidden = true; }
+    if (!LISTA) { l.hidden = true; return; }
+    var ps = norm(i.value).split(/\s+/).filter(Boolean);
+    if (!ps.length) { l.hidden = true; return; }
+    var hay = [], n = 0;
+    for (var k = 0; k < LISTA.length; k++) {
+      var t = LISTA[k]._t;
+      if (ps.every(function (p) { return t.indexOf(p) >= 0; })) { if (hay.length < MAX) hay.push(k); n++; }
+    }
+    l.innerHTML = hay.length ? hay.map(function (k) {
+      var c = LISTA[k];
+      return '<button type="button" data-i="' + k + '">' + esc(c.n.trim()) + '<small>' + esc(c.m + ' (' + c.p + ')') + '</small></button>';
+    }).join('') + (n > MAX ? '<div class="nada">Y ' + (n - MAX) + ' más: escribe más para afinar.</div>' : '')
+      : '<div class="nada">Ninguna comunidad del IDAE coincide. Si no está registrada, prueba con una ' +
+        '<a href="#" data-a-prueba2>comunidad de prueba</a>.</div>';
+    var a2 = l.querySelector('[data-a-prueba2]');
+    if (a2) a2.onclick = function (e) { e.preventDefault(); $('form').querySelector('[name=modo][value=prueba]').checked = true; modo('prueba'); };
+    l.hidden = false; l.scrollTop = 0;
+  }
+  function elegir(c) {
+    var fi = $('.ficha'), i = $('[name=comunidad]');
+    ELEGIDA = c || null; fi.hidden = !c; $('.lista').hidden = true;
     if (!c) return;
+    i.value = c.etiqueta; limpiar('comunidad');
     fi.innerHTML = [['Municipio', c.m], ['Provincia', c.p], ['Comunidad autónoma', c.a || '–'],
                     ['Socios', c.s ? Number(c.s).toLocaleString('es-ES') : 'sin datos']].map(function (x) {
       return '<div><b>' + x[0] + '</b><span>' + esc(x[1]) + '</span></div>'; }).join('') +
@@ -11002,7 +11094,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
   // Documento acreditativo -> { nombre, datos: base64 } (null si no se pide)
   function leerDocumento() {
     var f = $('[name=documento]').files[0], max = (INFO && INFO.documento_max_mb) || 5;
-    if (!f || (INFO && INFO.documento === false)) return Promise.resolve(null);
+    if (!f || MODO === 'prueba' || (INFO && INFO.documento === false)) return Promise.resolve(null);
     if (f.size > max * 1024 * 1024) return Promise.reject({ documento: 'El documento ocupa más de ' + max + ' MB.' });
     return new Promise(function (ok, mal) {
       var r = new FileReader();
@@ -11015,12 +11107,16 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     e.preventDefault();
     var f = $('form'), b = $('[data-enviar]'), TEXTO = 'Crear la plataforma de la comunidad';
     $('[data-general]').hidden = true;
-    if (!ELEGIDA) { errores({ comunidad: 'Elige tu comunidad de la lista (comunidades registradas en el IDAE).' }); return; }
-    if (INFO && INFO.documento !== false && !f.elements.documento.files[0]) {
+    var prueba = MODO === 'prueba';
+    if (!prueba && !ELEGIDA) { errores({ comunidad: 'Escribe y pulsa en tu comunidad de la lista (comunidades registradas en el IDAE).' }); return; }
+    if (prueba && f.elements.prueba_nombre.value.trim().length < 3) { errores({ prueba_nombre: 'Pon un nombre a la comunidad de prueba (al menos 3 caracteres).' }); return; }
+    if (!prueba && INFO && INFO.documento !== false && !f.elements.documento.files[0]) {
       errores({ documento: 'Adjunta un documento que acredite que eres gestor de la comunidad.' }); return; }
     var v = function (k) { return f.elements[k]; };
     var d = { contacto: v('contacto').value, email: v('email').value, telefono: v('telefono').value, password: v('password').value,
-              password2: v('password2').value, idae: { n: ELEGIDA.n, m: ELEGIDA.m }, acepta: v('acepta').checked };
+              password2: v('password2').value, acepta: v('acepta').checked };
+    if (prueba) { d.prueba = true; d.prueba_datos = { nombre: v('prueba_nombre').value, municipio: v('prueba_municipio').value }; }
+    else d.idae = { n: ELEGIDA.n, m: ELEGIDA.m };
     b.disabled = true; b.textContent = 'Enviando…';
     leerDocumento().then(function (doc) {
       d.documento = doc;
@@ -11078,6 +11174,10 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'mdc-button mat-mdc-button-base mat-mdc-button mat-unthemed vl-alta-b';
     b.innerHTML = '<span class="mdc-button__label">Dar de alta una comunidad</span>';
+    // El contenedor alinea a la derecha (justify-end): el margen automatico lleva este
+    // enlace al borde izquierdo y deja "¿Olvidaste tu contraseña?" a la derecha
+    b.style.marginRight = 'auto';
+    b.style.marginLeft = '0';
     b.onclick = abrir;
     r.parentNode.insertBefore(b, r);
   }
@@ -15552,7 +15652,7 @@ self.onInit = function () {
       q('al-altas').classList.toggle('al-oculto', !filas.length);
       q('al-atabla').innerHTML = '<table><tr><th>Comunidad</th><th>Municipio</th><th>Gestor</th><th class="n">Socios (IDAE)</th><th>Estado</th><th>Fecha</th><th></th></tr>' +
         filas.map(function (a) {
-          return '<tr><td><b>' + esc(a.nombre) + '</b><br><small>' + esc(a.comunidad_id) + '</small></td><td>' + esc(a.municipio) + '<br><small>' + esc(a.provincia) + '</small></td>' +
+          return '<tr><td><b>' + esc(a.nombre) + '</b>' + (a.prueba ? ' <span class="al-chip">prueba</span>' : '') + '<br><small>' + esc(a.comunidad_id) + '</small></td><td>' + esc(a.municipio) + '<br><small>' + esc(a.provincia) + '</small></td>' +
             '<td>' + esc(a.contacto) + '<br><small>' + esc(a.email) + '</small></td>' +
             '<td class="n">' + a.socios + '</td>' +
             '<td>' + (ALTA_EST[a.estado] || esc(a.estado)) + (a.error ? '<br><small title="' + esc(a.error) + '">' + esc(a.error.slice(-120)) + '</small>' : '') + '</td>' +
