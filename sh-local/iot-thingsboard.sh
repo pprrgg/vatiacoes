@@ -143,6 +143,26 @@ ALTA_URL_WEB="https://vatiaco.es"     # web con la pagina de alta
 # Origenes que pueden llamar a /cec-api/alta (CORS): la web y "astro dev"
 ALTA_ORIGENES="https://vatiaco.es,https://www.vatiaco.es,http://localhost:4321"
 
+# Avisos por correo de las peticiones que llegan a la plataforma (altas de comunidad y
+# restablecer la contraseña desde el inicio de sesion): un email a AVISOS_EMAIL por cada una,
+# con sus datos (y el documento del gestor), para atenderla en el panel del superusuario.
+# Sin SMTP_HOST no se envia nada (las peticiones siguen llegando al panel).
+# Los datos del servidor de correo NO van en este script (se publica en GitHub): se leen de
+# variables de entorno o del fichero .env.secretos junto al script (ignorado por git, .env.*),
+# con lineas VARIABLE=valor (p. ej. SMTP_PASS='...'). El fichero manda sobre el entorno.
+SECRETOS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.secretos"
+if [ -f "$SECRETOS" ]; then
+  # shellcheck disable=SC1090
+  . "$SECRETOS"
+fi
+AVISOS_EMAIL="${AVISOS_EMAIL:-info@vatiaco.es}"   # a quien se avisa (varios separados por comas)
+SMTP_HOST="${SMTP_HOST:-}"                         # servidor de correo saliente
+SMTP_PORT="${SMTP_PORT:-587}"                      # 587 con STARTTLS, 465 con SSL
+SMTP_SEGURIDAD="${SMTP_SEGURIDAD:-starttls}"       # starttls, ssl o no
+SMTP_USER="${SMTP_USER:-}"                         # usuario del servidor (vacio = sin autenticacion)
+SMTP_PASS="${SMTP_PASS:-}"                         # contraseña (sin comillas simples)
+SMTP_FROM="${SMTP_FROM:-}"                         # remitente (vacio = SMTP_USER)
+
 # Sincronizacion diaria con Datadis de todas las comunidades (cada una con su cuenta)
 DATADIS_PAUSA_S="5"                  # segundos entre peticiones a Datadis
 SYNC_HORA="07:15"                    # las distribuidoras publican con retraso
@@ -163,6 +183,9 @@ docker compose version >/dev/null 2>&1 || { echo "ERROR: falta docker compose" >
 # COPIAS_CLAVE va entre comillas simples en el .env (se lee con source y con docker compose)
 case "$COPIAS_CLAVE" in
   *"'"*|*$'\n'*) echo "ERROR: COPIAS_CLAVE no puede llevar comillas simples ni saltos de línea" >&2; exit 1 ;;
+esac
+case "$SMTP_PASS" in      # tambien entre comillas simples
+  *"'"*|*$'\n'*) echo "ERROR: SMTP_PASS no puede llevar comillas simples ni saltos de línea" >&2; exit 1 ;;
 esac
 
 # Reset: cada ejecucion empieza de cero. Se paran los contenedores del stack y se borran sus
@@ -285,6 +308,13 @@ ALTA_URL_CONDICIONES=$ALTA_URL_CONDICIONES
 ALTA_URL_PRIVACIDAD=$ALTA_URL_PRIVACIDAD
 ALTA_URL_WEB=$ALTA_URL_WEB
 ALTA_ORIGENES=$ALTA_ORIGENES
+AVISOS_EMAIL=$AVISOS_EMAIL
+SMTP_HOST=$SMTP_HOST
+SMTP_PORT=$SMTP_PORT
+SMTP_SEGURIDAD=$SMTP_SEGURIDAD
+SMTP_USER=$SMTP_USER
+SMTP_PASS='$SMTP_PASS'
+SMTP_FROM=$SMTP_FROM
 EOF
 chmod 600 .env
 
@@ -371,6 +401,17 @@ log = logging.getLogger("cec")
 
 # Comunidad en curso: fila del registro (id, nombre, base, tenant_email, tenant_id...)
 COMUNIDAD = contextvars.ContextVar("comunidad", default=None)
+# Registro de actividad de la peticion en curso (lo crea el middleware actividad de main.py):
+# quien, perfil, comunidad y detalles. Es un dict compartido: lo que se anota en los hilos de
+# la peticion (asyncio.to_thread copia el contexto) llega al registro
+ACTIVIDAD = contextvars.ContextVar("actividad", default=None)
+
+
+def anotar(**datos):
+    """Detalles para el registro de actividad de la peticion en curso (sin contraseñas)."""
+    d = ACTIVIDAD.get()
+    if d is not None:
+        d.setdefault("datos", {}).update({k: v for k, v in datos.items() if v not in (None, "")})
 
 
 def plataforma():
@@ -7103,6 +7144,7 @@ estan se borran de ThingsBoard con su cliente y su usuario).
 Las contraseñas de los usuarios viven en ThingsBoard; su hash bcrypt se copia a PostgreSQL
 (gestor.hash y socio.hash) para que viaje en las copias: al restaurar, aprovisionar() vuelve
 a crear los usuarios con el mismo hash y entran con su contraseña de siempre."""
+import json
 import os
 import random
 import re
@@ -7120,7 +7162,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from . import db, gestion
-from .comun import COMUNIDAD, E, comunidad, log
+from .comun import COMUNIDAD, TZL, E, comunidad, log
 from .tb import TB
 
 BASE = "plataforma"
@@ -7264,6 +7306,28 @@ CREATE TABLE IF NOT EXISTS clave (
   creada      timestamptz NOT NULL DEFAULT now(),
   actualizado timestamptz NOT NULL DEFAULT now()
 );
+
+-- Registro de actividad (app/main.py, middleware actividad): cada peticion que cambia algo
+-- (POST, PUT, DELETE), las descargas (informes, copias, documentos) y las tareas programadas,
+-- de todos los usuarios (superusuario, gestores, socios y las peticiones publicas de alta y de
+-- contraseña). quien: email del usuario de ThingsBoard ("api-key", "público", "plataforma");
+-- accion: lo que hace la ruta; estado: codigo HTTP; datos: parametros y detalles (nunca
+-- contraseñas ni el cuerpo de la peticion). No se borra: viaja en las copias de la plataforma
+CREATE TABLE IF NOT EXISTS actividad (
+  id        bigserial PRIMARY KEY,
+  cuando    timestamptz NOT NULL DEFAULT now(),
+  quien     text,
+  perfil    text,
+  comunidad text,
+  ip        text,
+  metodo    text NOT NULL,
+  ruta      text NOT NULL,
+  accion    text,
+  estado    integer,
+  ms        integer,
+  datos     jsonb
+);
+CREATE INDEX IF NOT EXISTS actividad_cuando ON actividad (cuando DESC);
 
 -- Copias de las comunidades que han salido de la plataforma (descargas del gestor): sha256 y
 -- base. El gestor solo puede subir y restaurar copias con una huella de aqui (app/copias.huella)
@@ -8736,6 +8800,67 @@ def asegurar_dispositivo(sid):
     so = next((x for x in db.socios() if x["id"] == sid), None)
     if so and so["origen"] == "virtual" and not cec.tb().dispositivo(sid):
         aprovisionar(comunidad())
+
+
+# ---------------- registro de actividad (tabla actividad) ----------------
+def anotar_actividad(f):
+    """Una fila del registro: {quien, perfil, comunidad, ip, metodo, ruta, accion, estado, ms, datos}."""
+    try:
+        with _cx() as cx:
+            cx.execute("INSERT INTO actividad (quien, perfil, comunidad, ip, metodo, ruta, accion, estado, ms, datos) "
+                       "VALUES (%(quien)s, %(perfil)s, %(comunidad)s, %(ip)s, %(metodo)s, %(ruta)s, %(accion)s, %(estado)s, "
+                       "%(ms)s, %(datos)s)", {**{k: None for k in ("quien", "perfil", "comunidad", "ip", "accion", "estado", "ms")},
+                                              **f, "datos": Jsonb(f.get("datos") or {})})
+    except Exception:
+        log.exception("registro de actividad: %s %s", f.get("metodo"), f.get("ruta"))
+
+
+def _filtro_actividad(q=None, perfil=None, comunidad=None, desde=None, hasta=None, errores=False):
+    w, a = [], []
+    if q:
+        for p in str(q).split()[:6]:
+            w.append("(coalesce(quien, '') || ' ' || coalesce(comunidad, '') || ' ' || coalesce(accion, '') || ' ' || ruta "
+                     "|| ' ' || coalesce(ip, '') || ' ' || coalesce(datos::text, '')) ILIKE %s")
+            a.append(f"%{p}%")
+    if perfil:
+        w.append("perfil = %s"); a.append(perfil)
+    if comunidad:
+        w.append("comunidad = %s"); a.append(comunidad)
+    if desde:
+        w.append("cuando >= %s::date"); a.append(str(desde))
+    if hasta:
+        w.append("cuando < %s::date + 1"); a.append(str(hasta))
+    if errores:
+        w.append("estado >= 400")
+    return (" WHERE " + " AND ".join(w)) if w else "", a
+
+
+def actividad(antes=None, limite=200, **filtro):
+    """Registro de actividad, de lo mas reciente a lo mas antiguo (antes: id para ver mas)."""
+    w, a = _filtro_actividad(**filtro)
+    if antes:
+        w += (" AND " if w else " WHERE ") + "id < %s"; a.append(int(antes))
+    with _cx() as cx:
+        filas = cx.execute(f"SELECT * FROM actividad{w} ORDER BY id DESC LIMIT %s", a + [min(int(limite), 1000)]).fetchall()
+        total = cx.execute("SELECT count(*) AS n, min(cuando) AS desde FROM actividad").fetchone()
+    return {"filas": [dict(r, cuando=r["cuando"].isoformat()) for r in filas],
+            "total": total["n"], "desde": total["desde"].isoformat() if total["desde"] else None}
+
+
+def actividad_csv(**filtro):
+    """Todo el registro que cumple el filtro, en CSV (';', UTF-8 con BOM para Excel)."""
+    import csv
+    import io
+    w, a = _filtro_actividad(**filtro)
+    out = io.StringIO()
+    out.write("\ufeff")
+    c = csv.writer(out, delimiter=";")
+    c.writerow(["fecha", "quien", "perfil", "comunidad", "ip", "metodo", "ruta", "accion", "estado", "ms", "datos"])
+    with _cx() as cx:
+        for r in cx.execute(f"SELECT * FROM actividad{w} ORDER BY id", a):
+            c.writerow([r["cuando"].astimezone(TZL).strftime("%Y-%m-%d %H:%M:%S"), r["quien"], r["perfil"], r["comunidad"], r["ip"],
+                        r["metodo"], r["ruta"], r["accion"], r["estado"], r["ms"], json.dumps(r["datos"] or {}, ensure_ascii=False)])
+    return out.getvalue().encode()
 __FASTAPI_EOF__
 
 cat > config/fastapi/app/alta.py <<'__FASTAPI_EOF__'
@@ -8761,8 +8886,12 @@ import base64
 import binascii
 import re
 import secrets
+import smtplib
+import ssl
 import threading
 import time
+from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
 
 import psycopg
 import requests
@@ -8770,7 +8899,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from . import db, plataforma
-from .comun import E, log
+from .comun import E, anotar, log
 
 URL = (E.get("ALTA_URL_PUBLICA") or "").rstrip("/")          # la plataforma (ThingsBoard)
 WEB = (E.get("ALTA_URL_WEB") or "").rstrip("/")              # la web con la pagina de alta
@@ -8788,10 +8917,50 @@ class Errores(Exception):
     def __init__(self, errores):
         super().__init__("; ".join(errores.values()))
         self.errores = errores
+        anotar(errores="; ".join(errores.values())[:500])
 
 
 def activa():
     return bool(WEB) and (E.get("ALTA_ONLINE") or "si") != "no"
+
+
+# ---------------- avisos por correo (AVISOS_EMAIL, servidor SMTP_*) ----------------
+AVISOS = [x.strip() for x in (E.get("AVISOS_EMAIL") or "").split(",") if x.strip()]
+
+
+def _enviar(asunto, lineas, responder=None, adjunto=None):
+    """Envia el aviso (se llama en un hilo: un fallo del correo no afecta a la peticion)."""
+    host = E.get("SMTP_HOST") or ""
+    if not host or not AVISOS:
+        log.info("aviso por correo no enviado (sin SMTP_HOST o AVISOS_EMAIL): %s", asunto)
+        return
+    seg, user = (E.get("SMTP_SEGURIDAD") or "starttls").lower(), E.get("SMTP_USER") or ""
+    remite = E.get("SMTP_FROM") or user or f"plataforma@{host}"
+    m = EmailMessage()
+    m["Subject"], m["From"], m["To"] = asunto, remite, ", ".join(AVISOS)
+    m["Date"], m["Message-ID"] = formatdate(localtime=True), make_msgid()
+    if responder:
+        m["Reply-To"] = responder
+    m.set_content("\n".join(x for x in lineas if x is not None) + f"\n\nSe atiende en el panel del superusuario: {URL or 'la plataforma'}\n")
+    if adjunto and adjunto[0]:
+        b, nombre, tipo = adjunto
+        m.add_attachment(b, maintype=tipo.split("/")[0], subtype=tipo.split("/")[1], filename=nombre)
+    try:
+        puerto = int(E.get("SMTP_PORT") or (465 if seg == "ssl" else 587))
+        ctx = ssl.create_default_context()
+        with (smtplib.SMTP_SSL(host, puerto, context=ctx, timeout=30) if seg == "ssl" else smtplib.SMTP(host, puerto, timeout=30)) as s:
+            if seg == "starttls":
+                s.starttls(context=ctx)
+            if user:
+                s.login(user, E.get("SMTP_PASS") or "")
+            s.send_message(m)
+        log.info("aviso por correo enviado a %s: %s", ", ".join(AVISOS), asunto)
+    except Exception:
+        log.exception("aviso por correo: %s", asunto)
+
+
+def avisar(asunto, lineas, responder=None, adjunto=None):
+    threading.Thread(target=_enviar, args=(asunto, lineas, responder, adjunto), name="aviso", daemon=True).start()
 
 
 def _cx():
@@ -8962,14 +9131,28 @@ def solicitud(f):
     if n >= MAX_DIA:
         log.warning("alta online: tope de %s altas en 24 h alcanzado", MAX_DIA)
         raise Errores({"general": "Hoy se han recibido muchas altas. Inténtalo mañana o escríbenos a info@vatiaco.es."})
+    anotar(email=str(f.get("email") or "").strip().lower()[:120])
     d, cid, pw, doc = _validar(f)
     aid = secrets.token_urlsafe(12)
+    anotar(alta=aid, nombre=d["comunidad"], municipio=d.get("municipio"), virtual=bool(d.get("virtual")))
     with _cx() as cx:
         cx.execute("INSERT INTO alta (id, comunidad_id, datos, hash, socios, periodo, estado, documento, documento_nombre, "
                    "documento_tipo) VALUES (%s, %s, %s, %s, %s, 'gratuito', %s, %s, %s, %s)",
                    (aid, cid, Jsonb(d), plataforma._hash(pw), max(1, int(d["socios_idae"] or 0)),
                     "revision" if APROBACION else "pendiente", *doc))
     log.info("alta online: %s (%s) solicitada por %s", d["comunidad"], d["municipio"], d["email"])
+    lugar = ", ".join(x for x in (d.get("municipio"), d.get("provincia")) if x)
+    avisar(f"Alta de comunidad: {d['comunidad']}", [
+        "Nueva solicitud de alta de una comunidad en la plataforma.", "",
+        f"Comunidad: {d['comunidad']}", "Tipo: " + ("virtual, para estudios con socios virtuales" if d.get("virtual") else "registrada en el IDAE"),
+        f"Lugar: {lugar or '–'}" + (f" ({d['lat']}, {d['lon']})" if d.get("lat") is not None else ""),
+        f"Socios (IDAE): {d['socios_idae']}" if d.get("socios_idae") else None,
+        f"Web: {d['web']}" if d.get("web") else None,
+        "", f"Gestor: {d['contacto']}", f"Email: {d['email']}", f"Teléfono: {d['telefono'] or '–'}", "",
+        ("Estado: en revisión. " + ("Revisa el documento adjunto que acredita al gestor y apruébala"
+                                     if doc[0] else "Apruébala") + " o recházala en Altas online."
+         if APROBACION else "Estado: se está creando (sin revisión)."),
+    ], responder=d["email"], adjunto=doc)
     if not APROBACION:
         threading.Thread(target=crear, args=(aid,), name=f"alta-{aid}", daemon=True).start()
     return {"alta": aid}
@@ -8977,7 +9160,10 @@ def solicitud(f):
 
 def _fila(aid):
     with _cx() as cx:
-        return cx.execute("SELECT * FROM alta WHERE id = %s", (aid,)).fetchone()
+        a = cx.execute("SELECT * FROM alta WHERE id = %s", (aid,)).fetchone()
+    if a:
+        anotar(nombre=a["datos"].get("comunidad"), email=a["datos"].get("email"))
+    return a
 
 
 def crear(aid):
@@ -9115,8 +9301,16 @@ def clave_solicitud(f):
         err["password"] = "La contraseña debe tener al menos 8 caracteres."
     elif pw != str(f.get("password2") or ""):
         err["password2"] = "Las contraseñas no coinciden."
+    anotar(email=email[:120])
     if err:
         raise Errores(err)
+    # si no es usuario de la plataforma (o es el administrador del sistema) se ignora: ni panel
+    # ni correo, y la misma respuesta que si lo fuera
+    u = _usuarios_tb([email]).get(email)
+    if not u or u["authority"] == "SYS_ADMIN":
+        log.info("restablecer contraseña: petición ignorada para %s (no es usuario de la plataforma)", email)
+        anotar(resultado="ignorada: no es usuario de la plataforma")
+        return {"ok": True}
     with _cx() as cx:
         n = cx.execute("SELECT count(*) AS n FROM clave WHERE creada > now() - interval '1 day'").fetchone()["n"]
         if n >= CLAVE_MAX_DIA:
@@ -9128,6 +9322,20 @@ def clave_solicitud(f):
         cx.execute("INSERT INTO clave (id, email, nombre, telefono, mensaje, hash) VALUES (%s, %s, %s, %s, %s, %s)",
                    (secrets.token_urlsafe(12), email, nombre, tel, mensaje, plataforma._hash(pw)))
     log.info("restablecer contraseña: petición para %s", email)
+    anotar(resultado="recibida: queda en el panel del superusuario")
+    try:
+        coms = {str(c["tenant_id"]): c for c in plataforma.lista() if c.get("tenant_id")}
+        quien = _quien(u, coms)
+    except Exception:
+        log.exception("restablecer contraseña: usuario %s", email)
+        quien = "?"
+    avisar(f"Restablecer contraseña: {email}", [
+        "Petición de restablecer la contraseña desde el inicio de sesión.", "",
+        f"Nombre: {nombre}", f"Email: {email}", f"Teléfono: {tel or '–'}", f"En la plataforma: {quien}",
+        f"Mensaje: {mensaje or '–'}", "",
+        "Comprueba que la pide esa persona y aplícala o recházala en Restablecer contraseñas "
+        f"(caduca a los {CLAVE_DIAS} días). La contraseña nueva no va en este correo.",
+    ], responder=email)
     return {"ok": True}
 
 
@@ -9178,6 +9386,7 @@ def clave_aplicar(rid):
         r = cx.execute("SELECT * FROM clave WHERE id = %s", (rid,)).fetchone()
     if not r:
         raise KeyError(rid)
+    anotar(email=r["email"])
     if r["estado"] != "revision" or not r["hash"]:
         raise ValueError("Solo se aplican las peticiones en revisión")
     u = _usuarios_tb([r["email"]]).get(r["email"])
@@ -9203,7 +9412,10 @@ def clave_aplicar(rid):
 def clave_rechazar(rid):
     with _cx() as cx:
         r = cx.execute("UPDATE clave SET estado = 'rechazada', hash = NULL, actualizado = now() "
-                       "WHERE id = %s AND estado = 'revision' RETURNING id", (rid,)).fetchone()
+                       "WHERE id = %s AND estado = 'revision' RETURNING id, email", (rid,)).fetchone()
+    if r:
+        anotar(email=r["email"])
+    with _cx() as cx:
         if not r and not cx.execute("SELECT 1 FROM clave WHERE id = %s", (rid,)).fetchone():
             raise KeyError(rid)
     if not r:
@@ -9708,7 +9920,7 @@ from starlette.background import BackgroundTask
 from starlette.concurrency import iterate_in_threadpool
 
 from . import alta, cec, copias, db, gestion, informes, plataforma, tb
-from .comun import COMUNIDAD, E, TZL, comunidad, config, datadis_configurado, log
+from .comun import ACTIVIDAD, COMUNIDAD, E, TZL, anotar, comunidad, config, datadis_configurado, log
 
 SYNC_HORA = E.get("SYNC_HORA") or "07:15"
 PLAN = AsyncIOScheduler(timezone=TZL)
@@ -9761,7 +9973,20 @@ async def _usuario_tb(x_authorization, authorization):
         _TOKENS[token] = (time.time() + 60, u)
     if not u:
         raise HTTPException(401, "Token de ThingsBoard no válido o caducado")
+    _quien(u.get("email"), {"TENANT_ADMIN": "gestor", "CUSTOMER_USER": "socio"}.get(u.get("authority"), u.get("authority")))
     return u
+
+
+def _quien(quien, perfil=None, comunidad=None):
+    """Quien hace la peticion en curso (registro de actividad)."""
+    d = ACTIVIDAD.get()
+    if d is not None:
+        if quien:
+            d["quien"] = quien
+        if perfil:
+            d["perfil"] = perfil
+        if comunidad:
+            d["comunidad"] = comunidad
 
 
 async def admin(x_api_key: str | None = Header(None),
@@ -9776,6 +10001,7 @@ async def admin(x_api_key: str | None = Header(None),
         if not c:
             raise HTTPException(404, "No existe esa comunidad")
         COMUNIDAD.set(c)
+        _quien("api-key", "api-key", c["id"])
         return "api-key"
     u = await _usuario_tb(x_authorization, authorization)
     c = await asyncio.to_thread(plataforma.por_tenant, (u.get("tenantId") or {}).get("id")) \
@@ -9785,6 +10011,7 @@ async def admin(x_api_key: str | None = Header(None),
     if c["gestor_estado"] != "activo" and (u.get("email") or "").lower() == (c["gestor_tb_email"] or "").lower():
         raise HTTPException(403, "Acceso bloqueado por la plataforma")
     COMUNIDAD.set(c)
+    _quien(None, "superusuario" if (u.get("email") or "").lower() == (E.get("SUPER_EMAIL") or "").lower() else None, c["id"])
     return u.get("email") or "admin"
 
 
@@ -9797,6 +10024,7 @@ async def socio_o_gestor(socio_id: str,
     c = await asyncio.to_thread(plataforma.por_tenant, (u.get("tenantId") or {}).get("id"))
     if not c:
         raise HTTPException(403, "Solo para los socios y el gestor de la comunidad")
+    _quien(None, None, c["id"])
     email = (u.get("email") or "").lower()
     if u.get("authority") == "TENANT_ADMIN":
         if c["gestor_estado"] != "activo" and email == (c["gestor_tb_email"] or "").lower():
@@ -9819,11 +10047,13 @@ async def superusuario(x_api_key: str | None = Header(None),
                        authorization: str | None = Header(None)) -> str:
     """Superusuario de la plataforma (SUPER_EMAIL): crea comunidades y sus gestores."""
     if x_api_key and _api_key(x_api_key):
+        _quien("api-key", "api-key")
         return "api-key"
     u = await _usuario_tb(x_authorization, authorization)
     if u.get("authority") != "TENANT_ADMIN" or not E.get("SUPER_EMAIL") or \
             (u.get("email") or "").lower() != E["SUPER_EMAIL"].lower():
         raise HTTPException(403, "Solo para el superusuario de la plataforma")
+    _quien(None, "superusuario")
     return u["email"]
 
 
@@ -9845,6 +10075,12 @@ async def lanzar(origen, desde, hasta, forzar, socios, quien):
     return jid
 
 
+def _tarea_anotada(cid, accion, estado, datos=None):
+    asyncio.get_running_loop().run_in_executor(None, plataforma.anotar_actividad, {
+        "quien": "plataforma", "perfil": "tarea", "comunidad": cid, "metodo": "TAREA", "ruta": "programada",
+        "accion": accion, "estado": estado, "datos": datos or {}})
+
+
 async def sync_programada():
     """Una sincronizacion por comunidad (cada una en su base y su tenant)."""
     for c in await asyncio.to_thread(plataforma.lista):
@@ -9859,10 +10095,13 @@ async def sync_programada():
                     log.exception("socios desde Datadis de %s", c["id"])
             jid = await lanzar("auto", None, None, False, None, "programada")
             log.info("sincronización programada de %s: %s", c["id"], jid)
+            _tarea_anotada(c["id"], "Sincronización programada (Datadis)", 202, {"job": str(jid)})
         except Ocupado as o:
             log.info("sincronización programada de %s omitida: ya hay una en curso (%s)", c["id"], o.jid)
-        except Exception:
+            _tarea_anotada(c["id"], "Sincronización programada omitida: ya había una en curso", 409, {"job": str(o.jid)})
+        except Exception as e:
             log.exception("sincronización programada de %s", c["id"])
+            _tarea_anotada(c["id"], "Sincronización programada", 500, {"error": str(e)[-300:]})
         finally:
             COMUNIDAD.reset(tok)
 
@@ -9892,6 +10131,47 @@ def _job_json(j):
 @app.get("/salud", include_in_schema=False)
 async def salud():
     return {"ok": True}
+
+
+# ---------------- registro de actividad (tabla actividad de la base plataforma) ----------------
+# Toda peticion que cambia algo (POST, PUT, DELETE) y las descargas (GET de esta lista), de
+# cualquier usuario, con su resultado. Las consultas (GET) de los paneles no se anotan.
+ACT_DESCARGAS = {"/plataforma/altas/{aid}/documento", "/plataforma/copias/{nombre}", "/copias/{nombre}",
+                 "/copias/exportar.zip", "/gestion/archivo/{did}", "/gestion/reparto/coeficientes.txt",
+                 "/reparto/coeficientes.txt", "/reparto/horarios.txt", "/gestor/comunidades/{cid}/coeficientes.txt",
+                 "/gestor/comunidades/{cid}/coeficientes_horarios.txt", "/informes/comunidad", "/informes/socio/{socio_id}",
+                 "/informes/coeficientes", "/informes/mio/{socio_id}", "/informes/mio/{socio_id}/comunidad",
+                 "/informes/mio/{socio_id}/coeficientes", "/plataforma/actividad.csv"}
+ACT_PARAMS_NO = {"password", "pass", "token", "datadis_pass", "gestor_password"}
+
+
+@app.middleware("http")
+async def registro_actividad(request: Request, siguiente):
+    if request.method in ("OPTIONS", "HEAD"):
+        return await siguiente(request)
+    d, t0, estado = {}, time.monotonic(), 500
+    tok = ACTIVIDAD.set(d)
+    try:
+        r = await siguiente(request)
+        estado = r.status_code
+        return r
+    finally:
+        ACTIVIDAD.reset(tok)
+        ruta = request.scope.get("route")
+        plantilla = getattr(ruta, "path", None)
+        if plantilla and (request.method != "GET" or plantilla in ACT_DESCARGAS):
+            datos = {k: v for k, v in (request.scope.get("path_params") or {}).items()}
+            datos.update({k: v for k, v in request.query_params.items() if k.lower() not in ACT_PARAMS_NO})
+            datos.update(d.get("datos") or {})
+            publica = plantilla.startswith("/alta/")
+            fila = {"quien": d.get("quien") or ("público" if publica else None),
+                    "perfil": d.get("perfil") or ("público" if publica else None), "comunidad": d.get("comunidad"),
+                    "ip": request.client.host if request.client else None, "metodo": request.method, "ruta": plantilla,
+                    "accion": getattr(ruta, "summary", None), "estado": estado,
+                    "ms": int((time.monotonic() - t0) * 1000), "datos": datos}
+            t = asyncio.create_task(asyncio.to_thread(plataforma.anotar_actividad, fila))
+            TAREAS.add(t)
+            t.add_done_callback(TAREAS.discard)
 
 
 # ---------------- alta online gratuita (publica: pagina de alta de la web) ----------------
@@ -10583,8 +10863,10 @@ def _plat(f, *a):
     except KeyError:
         raise HTTPException(404, "No existe ese socio o esa comunidad")
     except ValueError as e:
+        anotar(error=str(e)[:500])
         raise HTTPException(422, str(e))
     except RuntimeError as e:
+        anotar(error=str(e)[-500:])
         raise HTTPException(502, str(e))
 
 
@@ -10990,6 +11272,25 @@ async def plataforma_clave_rechazar(rid: str, quien: str = Depends(superusuario)
     r = await asyncio.to_thread(_plat, alta.clave_rechazar, rid)
     log.info("%s rechaza la petición de contraseña %s", quien, rid)
     return {"estado": r}
+
+
+@app.get("/plataforma/actividad", summary="Registro de actividad de la plataforma (lo más reciente primero)")
+async def plataforma_actividad(q: str | None = None, perfil: str | None = None, comunidad: str | None = None,
+                               desde: date | None = None, hasta: date | None = None, errores: bool = False,
+                               antes: int | None = None, limite: int = Query(200, ge=1, le=1000),
+                               _: str = Depends(superusuario)):
+    return await asyncio.to_thread(plataforma.actividad, antes, limite, q=q, perfil=perfil, comunidad=comunidad,
+                                   desde=desde, hasta=hasta, errores=errores)
+
+
+@app.get("/plataforma/actividad.csv", summary="Exporta el registro de actividad (CSV)")
+async def plataforma_actividad_csv(q: str | None = None, perfil: str | None = None, comunidad: str | None = None,
+                                   desde: date | None = None, hasta: date | None = None, errores: bool = False,
+                                   _: str = Depends(superusuario)):
+    b = await asyncio.to_thread(plataforma.actividad_csv, q=q, perfil=perfil, comunidad=comunidad,
+                                desde=desde, hasta=hasta, errores=errores)
+    return Response(b, media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="actividad-{date.today().isoformat()}.csv"'})
 
 
 @app.post("/plataforma/comunidades/{cid}/entrar",
@@ -11722,7 +12023,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
             var correo = v('email').trim();
             f.innerHTML = '<h4 id="vl-alta-tit">Restablecer la contraseña</h4><div class="aviso ok">Petición enviada. Cuando el administrador ' +
               'la aplique podrás entrar con <b>' + esc(correo) + '</b> y la contraseña nueva; mientras tanto sigue valiendo la actual. ' +
-              'Si ese email no es usuario de la plataforma, no se cambia nada.</div>' +
+              'Si ese email no es usuario de la plataforma, la petición no se tiene en cuenta.</div>' +
               '<div class="pie"><button type="button" class="b" data-volver>Volver al inicio de sesión</button></div>';
             $('[data-volver]').onclick = function () {
               cerrar();
@@ -12059,6 +12360,13 @@ services:
       COPIAS_CLAVE: ${COPIAS_CLAVE}
       ALTA_URL_CONDICIONES: ${ALTA_URL_CONDICIONES}
       ALTA_URL_PRIVACIDAD: ${ALTA_URL_PRIVACIDAD}
+      AVISOS_EMAIL: ${AVISOS_EMAIL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_SEGURIDAD: ${SMTP_SEGURIDAD}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
     volumes:
       - ./config/fastapi/app:/srv/app:ro
       - ./config/fastapi/config.json:/srv/config.json:ro
@@ -16002,7 +16310,12 @@ AYUDA = {
     "<i>Restablecer contraseñas</i>, con quién es en la plataforma (gestor o socio de qué comunidad). Cada una trae la "
     "contraseña nueva que eligió la persona: comprueba que la pide ella (llámala al teléfono que tenéis de ella) y pulsa "
     "<i>Aplicar</i>; después avísale de que ya puede entrar. <i>Rechazar</i> no cambia nada. Las que no se atienden "
-    "caducan a los 7 días."]]],
+    "caducan a los 7 días."],
+   ["¿Dónde veo lo que se ha hecho en la plataforma?",
+    "En la pestaña <i>Registro de actividad</i>: cada petición de alta o de contraseña, cada acción del superusuario, los "
+    "gestores y los socios (crear, editar, borrar, copias, restaurar…), las descargas y las sincronizaciones programadas, "
+    "con fecha, quién, comunidad, resultado e IP. Se guarda en la base de la plataforma, así que no se pierde al cerrar la "
+    "sesión. Filtra por texto, perfil, comunidad, fechas o solo errores, y descárgalo con <i>Exportar CSV</i>."]]],
   ["Copias de seguridad", "storage", [
    ["¿Qué se puede copiar?",
     "Cada base de datos por separado: la de los <b>gestores</b> (registro de la plataforma: gestores, comunidades y "
@@ -16096,7 +16409,7 @@ def w_ayuda(perfil, x, y, w, h):
 # plataforma, alta de una nueva con su gestor y su cuenta de Datadis (la API crea el tenant,
 # la base de datos, los paneles y el usuario del gestor) y copias de PostgreSQL.
 PLAT_HTML = """<div class="al">
- <div class="al-tabs"><button class="al-tab" data-tab="com">Comunidades</button><button class="al-tab" data-tab="cop">Copias de seguridad y registro</button><button class="al-tab" data-tab="ayu">Centro de ayuda</button></div>
+ <div class="al-tabs"><button class="al-tab" data-tab="com">Comunidades</button><button class="al-tab" data-tab="cop">Copias de seguridad y registro</button><button class="al-tab" data-tab="act">Registro de actividad</button><button class="al-tab" data-tab="ayu">Centro de ayuda</button></div>
  <div class="al-msg"></div><div class="al-log"></div>
  <div class="al-pest" data-pest="com">
  <section class="al-caja">
@@ -16121,7 +16434,7 @@ PLAT_HTML = """<div class="al">
   <p>Peticiones de <i>¿Olvidaste tu contraseña?</i> en el inicio de sesión (la plataforma no envía correos). Cada una trae la
    contraseña nueva que eligió la persona. Antes de pulsar <i>Aplicar</i> comprueba que la pide ella (por ejemplo, llámala al
    teléfono que tenéis de ella, no solo al que ha puesto aquí) y después avísale de que ya puede entrar. <i>Rechazar</i> no
-   cambia nada. Las que no se atienden caducan a los 7 días.</p>
+   cambia nada. Solo llegan las de usuarios de la plataforma (las demás se ignoran), y las que no se atienden caducan a los 7 días.</p>
  </section>
  <section class="al-caja al-form">
   <h3 class="al-titulo">Nuevo gestor y su comunidad</h3>
@@ -16200,6 +16513,27 @@ PLAT_HTML = """<div class="al">
   <div class="al-con-lineas al-reg-lineas"><div class="vacio">Aquí se va mostrando lo que se hace con las copias y cuándo termina.</div></div>
  </section>
  </div>
+ <div class="al-pest" data-pest="act">
+ <section class="al-caja">
+  <div class="al-con-cab"><h3>Registro de actividad</h3><span class="al-chip ac-total"></span></div>
+  <p class="c-ayuda">Todo lo que se hace en la plataforma, con su fecha, quién y desde dónde: las peticiones de alta y de
+   contraseña, lo que hacen el superusuario, los gestores y los socios (crear, editar, borrar, copias, restaurar…), las
+   descargas de informes, copias y documentos y las sincronizaciones programadas. Se guarda en la base de la plataforma
+   (no se borra al cerrar la sesión y viaja en sus copias). Las consultas de los paneles no se anotan; las contraseñas nunca.</p>
+  <div class="al-ctrl">
+   <input class="ac-q" type="search" placeholder="Buscar (email, comunidad, acción, IP…)" style="flex:1;min-width:200px">
+   <select class="ac-perfil"><option value="">Todos</option><option value="superusuario">Superusuario</option><option value="gestor">Gestores</option>
+    <option value="socio">Socios</option><option value="público">Público (alta y contraseña)</option><option value="tarea">Tareas programadas</option>
+    <option value="api-key">API key</option></select>
+   <select class="ac-com"><option value="">Todas las comunidades</option></select>
+   <label>Desde <input class="ac-desde" type="date"></label><label>Hasta <input class="ac-hasta" type="date"></label>
+   <label><input class="ac-err" type="checkbox"> Solo errores</label>
+   <button class="al-b sec peq ac-ver">Actualizar</button><button class="al-b sec peq ac-csv">Exportar CSV</button>
+  </div>
+  <div class="al-tabla ac-tabla">Cargando…</div>
+  <div class="al-ctrl"><button class="al-b sec peq ac-mas al-oculto">Ver más antiguas</button></div>
+ </section>
+ </div>
  <div class="al-pest" data-pest="ayu"><div class="ay"></div></div>
 </div>"""
 
@@ -16221,10 +16555,11 @@ self.onInit = function () {
     [].forEach.call(c.querySelectorAll('.al-tab'), function (b) { b.classList.toggle('activa', b.dataset.tab === t); });
     [].forEach.call(c.querySelectorAll('.al-pest'), function (d) { d.classList.toggle('al-oculto', d.dataset.pest !== t); });
     try { localStorage.setItem('plat_pestana', t); } catch (e) {}
+    if (t === 'act' && self.vlActividad) self.vlActividad();
   }
   [].forEach.call(c.querySelectorAll('.al-tab'), function (b) { b.onclick = function () { pestana(b.dataset.tab); }; });
   var pest0 = 'com';
-  try { pest0 = localStorage.getItem('plat_pestana') === 'cop' ? 'cop' : 'com'; } catch (e) {}
+  try { var pg = localStorage.getItem('plat_pestana'); pest0 = pg === 'cop' || pg === 'act' ? pg : 'com'; } catch (e) {}
   pestana(pest0);
   function tarea(p) { ocupado(true); return p.catch(function (e) { msg(e.message, 'err'); }).then(function () { ocupado(false); lista(); copias(); }); }
   var ruta = function (id) { return '/plataforma/comunidades/' + encodeURIComponent(id); };
@@ -16300,11 +16635,64 @@ self.onInit = function () {
       }; });
     }).catch(function () {});
   }
+  // Registro de actividad (tabla actividad de la base plataforma): filtros, paginas de 200 y CSV
+  var ACT = { ultimo: null, cargando: false };
+  var PERFIL = { superusuario: 'superusuario', gestor: 'gestor', socio: 'socio', 'público': 'público', tarea: 'tarea', 'api-key': 'API key' };
+  function filtroAct() {
+    var p = { q: q('ac-q').value.trim(), perfil: q('ac-perfil').value, comunidad: q('ac-com').value,
+              desde: q('ac-desde').value, hasta: q('ac-hasta').value, errores: q('ac-err').checked ? 'true' : '' };
+    return Object.keys(p).filter(function (k) { return p[k]; }).map(function (k) { return k + '=' + encodeURIComponent(p[k]); }).join('&');
+  }
+  function datosAct(d) {
+    return Object.keys(d || {}).map(function (k) { var v = d[k]; return k + ': ' + (typeof v === 'object' ? JSON.stringify(v) : v); }).join(' · ');
+  }
+  function actividad(mas) {
+    if (ACT.cargando) return;
+    ACT.cargando = true;
+    var f = filtroAct(), u = '/plataforma/actividad?limite=200' + (f ? '&' + f : '') + (mas && ACT.ultimo ? '&antes=' + ACT.ultimo : '');
+    api('GET', u).then(function (r) {
+      var t = q('ac-tabla'), filas = r.filas;
+      q('ac-total').textContent = r.total.toLocaleString('es-ES') + ' anotaciones' + (r.desde ? ' desde ' + fh(r.desde) : '');
+      var html = filas.map(function (a) {
+        var bien = a.estado != null && a.estado < 400;
+        return '<tr><td style="white-space:nowrap">' + fh(a.cuando) + '</td>' +
+          '<td>' + esc(a.quien || 'sin identificar') + (a.perfil ? '<br><small>' + esc(PERFIL[a.perfil] || a.perfil) + '</small>' : '') + '</td>' +
+          '<td>' + esc(a.comunidad ? nombre(a.comunidad) : '–') + '</td>' +
+          '<td>' + esc(a.accion || a.ruta) + '<br><small>' + esc(a.metodo + ' ' + a.ruta) + '</small></td>' +
+          '<td><span class="al-chip ' + (bien ? 'ok' : 'no') + '">' + (a.estado == null ? '–' : a.estado) + '</span></td>' +
+          '<td><small style="overflow-wrap:anywhere">' + esc(datosAct(a.datos)) + '</small></td>' +
+          '<td><small>' + esc(a.ip || '') + '</small></td></tr>';
+      }).join('');
+      if (!mas) t.innerHTML = filas.length ? '<table class="ac-t"><tr><th>Fecha</th><th>Quién</th><th>Comunidad</th><th>Acción</th><th>Resultado</th><th>Detalles</th><th>IP</th></tr>' + html + '</table>' :
+        '<p>No hay anotaciones' + (f ? ' con este filtro' : ' todavía') + '.</p>';
+      else if (filas.length) t.querySelector('table').insertAdjacentHTML('beforeend', html);
+      if (filas.length) ACT.ultimo = filas[filas.length - 1].id;
+      q('ac-mas').classList.toggle('al-oculto', filas.length < 200);
+    }).catch(function (e) { q('ac-tabla').textContent = e.message; }).then(function () { ACT.cargando = false; });
+  }
+  self.vlActividad = function () {
+    var s = q('ac-com'), v = s.value;      // comunidades del filtro
+    s.innerHTML = '<option value="">Todas las comunidades</option>' + P.filas.map(function (f) {
+      return '<option value="' + esc(f.id) + '">' + esc(f.nombre) + '</option>'; }).join('');
+    s.value = v;
+    actividad(false);
+  };
+  q('ac-ver').onclick = function () { actividad(false); };
+  q('ac-mas').onclick = function () { actividad(true); };
+  ['ac-perfil', 'ac-com', 'ac-desde', 'ac-hasta', 'ac-err'].forEach(function (k) { q(k).onchange = function () { actividad(false); }; });
+  q('ac-q').onkeydown = function (e) { if (e.key === 'Enter') actividad(false); };
+  q('ac-csv').onclick = function () {
+    var f = filtroAct();
+    binario('GET', '/plataforma/actividad.csv' + (f ? '?' + f : '')).then(function (r) { return r.blob(); })
+      .then(function (b) { guardarBlob(b, 'actividad-' + new Date().toISOString().slice(0, 10) + '.csv'); })
+      .catch(function (e) { msg(e.message, 'err'); });
+  };
   function lista() {
     altas();
     claves();
     api('GET', '/plataforma/comunidades').then(function (filas) {
       P.filas = filas;
+      if (!c.querySelector('[data-pest=act]').classList.contains('al-oculto')) self.vlActividad();   // (y lo recien hecho)
       if (P.bases.length) pintarBases();   // gestores de la lista de copias
       q('al-tabla').innerHTML = !filas.length ? '<p>No hay gestores: crea el primero con su comunidad abajo.</p>' :
         '<table><tr><th>Gestor</th><th>Contacto</th><th>Estado</th><th>Comunidad</th><th>Datadis</th><th>Alta</th><th class="n">Socios</th><th>Alta</th><th></th></tr>' +
@@ -19345,6 +19733,7 @@ echo "$EJEMPLOS_INFO" | while IFS='|' read -r E_NOM E_MAIL E_PW; do
 done
 if [ "$ALTA_ONLINE" != no ]; then
   echo " Alta online       : $ALTA_URL_WEB/alta/  (gratuita$( [ "$ALTA_APROBACION" != no ] && echo ", la apruebas en tu panel"))"
+  echo " Avisos por correo : $( [ -n "$SMTP_HOST" ] && echo "$AVISOS_EMAIL (altas y restablecer contraseña, por $SMTP_HOST)" || echo "desactivados (pon SMTP_HOST)")"
 else
   echo " Alta online       : desactivada (ALTA_ONLINE=no)"
 fi
