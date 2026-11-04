@@ -6,7 +6,9 @@
  *
  *   <script src="/js/plataforma.js"></script>
  *   <a href="https://VatiaCo.duckdns.org/" data-plataforma="Acceso socios">…</a>
- *   VatiaCoPlataforma.abrir('Nombre de la comunidad')
+ *   <a href="https://VatiaCo.duckdns.org/login?alta=prueba" data-plataforma="Comunidad de prueba"
+ *      data-plataforma-ruta="login?alta=prueba">…</a>     (abre el alta de la comunidad de prueba)
+ *   VatiaCoPlataforma.abrir('Nombre de la comunidad'[, ruta])
  *
  * Dentro del visor del blog (iframe del mismo origen) se monta en la ventana de arriba
  * para ocupar toda la pantalla. Se cierra con "atras" del navegador (o Esc mientras el
@@ -40,10 +42,11 @@
   }
   function abierto() { var v = D.getElementById('ceVisor'); return !!v && v.style.display !== 'none'; }
 
-  function abrir(titulo) {
-    var v = visor(), fr = v.querySelector('iframe');
+  // ruta: dentro de la plataforma, p.ej. 'login?alta=prueba' (el modal de la comunidad de prueba)
+  function abrir(titulo, ruta) {
+    var v = visor(), fr = v.querySelector('iframe'), url = DESTINO + (ruta || '');
     fr.title = titulo || 'Plataforma de la comunidad energética';
-    if (fr.getAttribute('src') !== DESTINO) fr.src = DESTINO;
+    if (fr.getAttribute('src') !== url) fr.src = url;
     foco = document.activeElement;
     v.style.display = 'block';
     D.body.style.overflow = 'hidden';
@@ -73,7 +76,7 @@
     var a = e.target.closest && e.target.closest('[data-plataforma]');
     if (!a) return;
     e.preventDefault();
-    abrir(a.getAttribute('data-plataforma') || 'Acceso socios');
+    abrir(a.getAttribute('data-plataforma') || 'Acceso socios', a.getAttribute('data-plataforma-ruta') || '');
   });
 
   window.VatiaCoPlataforma = { abrir: abrir, cerrar: cerrar, url: DESTINO };
