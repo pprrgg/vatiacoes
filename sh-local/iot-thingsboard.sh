@@ -11550,8 +11550,6 @@ EOF
 cat > config/branding/VatiaCo-alta.js <<'EOF'
 (function () {
   var API = '/cec-api', INFO = null, LISTA = null, ELEGIDA = null, ALTA = null, MODO = 'idae', PUNTO = null;
-  // sin ALTA_ONLINE (data-alta="no") solo se usa lo de restablecer la contraseña
-  var SIN_ALTA = !!(document.currentScript && document.currentScript.getAttribute('data-alta') === 'no');
   // Mapa de las comunidades (como https://vatiaco.es/comunidades/): Leaflet de cdnjs, la misma
   // version que la web y los paneles
   var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/', LF = null, MAPA = null;
@@ -11975,89 +11973,9 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     b.onclick = abrir;
     r.parentNode.insertBefore(b, r);
   }
-  // "Solicitar restablecimiento de contraseña" (/login/resetPasswordRequest): la plataforma no
-  // envia correos, asi que en lugar de la peticion de ThingsBoard se abre un modal donde la
-  // persona elige la contraseña nueva; la peticion queda en el panel del superusuario, que la
-  // aplica tras comprobar que es ella (/cec-api/alta/clave)
-  function abrirClave(email) {
-    if (document.getElementById('vl-alta')) return;
-    if (!document.getElementById('vl-alta-css')) {
-      var st = document.createElement('style'); st.id = 'vl-alta-css'; st.textContent = CSS; document.head.appendChild(st);
-    }
-    var m = document.createElement('div');
-    m.id = 'vl-alta'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-labelledby', 'vl-alta-tit');
-    m.innerHTML = '<form class="vf" novalidate style="width:min(520px,100%)"><h4 id="vl-alta-tit">Restablecer la contraseña</h4>' +
-      '<small class="sub">La plataforma no envía correos: elige aquí tu contraseña nueva y el administrador la pondrá en cuanto ' +
-      'compruebe que eres tú (puede llamarte). Hasta entonces sigue valiendo la actual.</small>' +
-      '<div class="campos">' +
-      campo('email', '<span class="req">Email</span>', ' type="email" maxlength="120" autocomplete="username"', 'Tu usuario de la plataforma.', true) +
-      campo('nombre', '<span class="req">Nombre y apellidos</span>', ' maxlength="80" autocomplete="name"', '', true) +
-      campo('telefono', 'Teléfono (opcional)', ' type="tel" maxlength="20" autocomplete="tel"', 'Para comprobar que eres tú.', true) +
-      campo('password', '<span class="req">Contraseña nueva</span>', ' type="password" autocomplete="new-password"', 'Al menos 8 caracteres.') +
-      campo('password2', '<span class="req">Repite la contraseña</span>', ' type="password" autocomplete="new-password"') +
-      campo('mensaje', 'Mensaje (opcional)', ' maxlength="500" autocomplete="off"', 'Por ejemplo, tu comunidad o cuándo llamarte.', true) +
-      '</div><div class="aviso" data-general hidden></div>' +
-      '<div class="pie"><button type="button" class="b sec" data-cancelar>Cancelar</button>' +
-      '<button type="submit" class="b" data-enviar>Enviar la petición</button></div></form>';
-    document.body.appendChild(m);
-    m.addEventListener('click', function (e) { if (e.target === m) cerrar(); });
-    document.addEventListener('keydown', tecla);
-    $('[data-cancelar]').onclick = cerrar;
-    var f = $('form');
-    f.elements.email.value = email || '';
-    f.addEventListener('input', function (e) { if (e.target.name) limpiar(e.target.name); });
-    f.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var b = $('[data-enviar]'), v = function (k) { return f.elements[k].value; }, ev = {};
-      $('[data-general]').hidden = true;
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('email').trim())) ev.email = 'El email no es válido.';
-      if (v('nombre').trim().length < 3) ev.nombre = 'Indica tu nombre y apellidos.';
-      if (v('password').length < 8) ev.password = 'La contraseña debe tener al menos 8 caracteres.';
-      else if (v('password') !== v('password2')) ev.password2 = 'Las contraseñas no coinciden.';
-      if (Object.keys(ev).length) { errores(ev); return; }
-      b.disabled = true; b.textContent = 'Enviando…';
-      fetch(API + '/alta/clave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        email: v('email'), nombre: v('nombre'), telefono: v('telefono'), password: v('password'), password2: v('password2'), mensaje: v('mensaje') }) })
-        .then(json).then(function (x) {
-          if (x.ok) {
-            var correo = v('email').trim();
-            f.innerHTML = '<h4 id="vl-alta-tit">Restablecer la contraseña</h4><div class="aviso ok">Petición enviada. Cuando el administrador ' +
-              'la aplique podrás entrar con <b>' + esc(correo) + '</b> y la contraseña nueva; mientras tanto sigue valiendo la actual. ' +
-              'Si ese email no es usuario de la plataforma, la petición no se tiene en cuenta.</div>' +
-              '<div class="pie"><button type="button" class="b" data-volver>Volver al inicio de sesión</button></div>';
-            $('[data-volver]').onclick = function () {
-              cerrar();
-              var c = document.querySelector('tb-reset-password-request button[routerlink="/login"]');
-              if (c) c.click(); else location.href = '/login';
-            };
-            return;
-          }
-          if (x.c.errores) errores(x.c.errores);
-          else general(x.c.detail || 'No se ha podido enviar la petición. Inténtalo de nuevo.');
-          b.disabled = false; b.textContent = 'Enviar la petición';
-        }).catch(function () {
-          general('No hay conexión con la plataforma. Inténtalo de nuevo en unos minutos.');
-          b.disabled = false; b.textContent = 'Enviar la petición';
-        });
-    });
-    var foco = email ? f.elements.nombre : f.elements.email;
-    if (window.matchMedia && matchMedia('(pointer: fine)').matches) foco.focus();
-  }
-  function interceptar(e) {
-    var r = e.target.closest && e.target.closest('tb-reset-password-request');
-    if (!r || (e.type === 'click' && !e.target.closest('button[type=submit]'))) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    var i = r.querySelector('input[formcontrolname=email]');
-    abrirClave(i ? i.value.trim() : '');
-  }
-  document.addEventListener('submit', interceptar, true);
-  document.addEventListener('click', interceptar, true);
-
-  if (!SIN_ALTA) {
-    new MutationObserver(boton).observe(document.documentElement, { childList: true, subtree: true });
-    boton();
-    window.VL_ALTA = abrir;
-  }
+  new MutationObserver(boton).observe(document.documentElement, { childList: true, subtree: true });
+  boton();
+  window.VL_ALTA = abrir;
 })();
 EOF
 
@@ -12659,9 +12577,9 @@ login = ("<script>(function(){var T={'username-input':" + json.dumps(txt_usuario
          "new MutationObserver(f).observe(document.documentElement,{childList:true,subtree:true,characterData:true});})();"
          "</script>")
 idioma += login
-# Inicio de sesion (config/branding/VatiaCo-alta.js): boton "Dar de alta una comunidad" y su
-# modal (con ALTA_ONLINE) y el de restablecer la contraseña (siempre)
-idioma += '<script src="/branding/VatiaCo-alta.js"' + (' data-alta="no"' if alta_online == "no" else '') + ' defer></script>'
+# Inicio de sesion: boton "Dar de alta una comunidad" y su modal (config/branding/VatiaCo-alta.js)
+if alta_online != "no":
+    idioma += '<script src="/branding/VatiaCo-alta.js" defer></script>'
 # Paneles a pantalla completa forzada (gestores y socios, encerrados en su panel): sin
 # el boton de editar del panel (ademas, la API no deja guardar cambios a los gestores)
 idioma += ("<script>(function(){function f(){document.querySelectorAll('tb-dashboard-toolbar.is-fullscreen button')"
