@@ -159,7 +159,7 @@
     <div class="tabbar-brand">GENERADOR DATADIS</div>
     <nav class="tabbar" id="sidenav">
       <a href="#suministro" data-sec="suministro"><span class="tag">00</span>Suministro y peaje</a>
-      <a href="#perfil" data-sec="perfil"><span class="tag">01</span>Perfil de consumo o generación</a>
+      <a href="#perfil" data-sec="perfil"><span class="tag">01</span>Perfil de consumo y generación</a>
       <a href="#vista" data-sec="vista"><span class="tag">02</span>Vista previa</a>
       <a href="#descarga" data-sec="descarga"><span class="tag">03</span>Descargar ZIP</a>
       <a href="#normativa" data-sec="normativa"><span class="tag">04</span>Normativa y formato</a>
@@ -219,13 +219,14 @@
 
     <!-- 01 · PERFIL -->
     <section id="perfil">
-      <div class="eyebrow kicker">01 · Perfil de consumo o generación</div>
-      <h2>Cómo consume (o genera) el suministro hora a hora y mes a mes.</h2>
-      <p class="lede">Parte de un perfil tipo y retócalo arrastrando las barras: la forma de un día <b>laborable</b>, la de un <b>fin de semana o festivo</b> y el peso de cada <b>mes</b>. El consumo medio diario escala el conjunto. Cada día y cada cuarto de hora añaden variaciones aleatorias, como en una curva real.</p>
+      <div class="eyebrow kicker">01 · Perfil de consumo y generación</div>
+      <h2>Cómo consume y genera el suministro hora a hora y mes a mes.</h2>
+      <p class="lede">Parte de un perfil tipo y retócalo arrastrando las barras: la forma de un día <b>laborable</b>, la de un <b>fin de semana o festivo</b> y el peso de cada <b>mes</b>. El consumo medio diario escala el conjunto. Con autoconsumo, la generación fotovoltaica va en el mismo fichero de consumo, en sus columnas. Cada día y cada cuarto de hora añaden variaciones aleatorias, como en una curva real.</p>
 
       <div class="seg-tipo">
-        <label><input type="radio" name="tipo" value="consumidor" checked><b>Consumidor</b>Vivienda, comercio, industria… con o sin autoconsumo fotovoltaico.</label>
-        <label><input type="radio" name="tipo" value="generador"><b>Generador</b>Instalación fotovoltaica de producción: vierte lo que genera y consume solo sus servicios auxiliares.</label>
+        <label><input type="radio" name="tipo" value="autoconsumo" checked><b>Consumo y generación</b>Vivienda, comercio, industria… con autoconsumo fotovoltaico: en el mismo fichero, el consumo de la red, la energía vertida, la generada y la autoconsumida.</label>
+        <label><input type="radio" name="tipo" value="consumidor"><b>Solo consumo</b>Sin generación: las columnas de vertida, generada y autoconsumida quedan vacías, como en Datadis.</label>
+        <label><input type="radio" name="tipo" value="generador"><b>Solo generación</b>Instalación fotovoltaica de producción: vierte lo que genera y consume solo sus servicios auxiliares.</label>
       </div>
 
       <div class="card" id="cardConsumo">
@@ -251,9 +252,8 @@
         <p class="note">Consumo propio de la instalación (vigilancia, comunicaciones, inversores en espera): casi constante, algo mayor de noche. De día se cubre con la propia generación.</p>
       </div>
 
-      <div class="fieldset-title">Generación fotovoltaica</div>
-      <div class="card">
-        <label class="chk" id="chkFvWrap"><input type="checkbox" id="conFv"> El consumidor tiene autoconsumo fotovoltaico</label>
+      <div class="fieldset-title" id="tituloFv">Generación fotovoltaica</div>
+      <div class="card" id="cardFv">
         <div class="grid4" id="fvCampos">
           <div class="field"><label>Generación media diaria (kWh/día)</label><input type="number" id="genDia" value="12" min="0.1" step="0.1"></div>
           <div class="field"><label>Modalidad (RD 244/2019)</label><select id="modalidad">
@@ -545,7 +545,9 @@ function pintarPeaje(){
 // Valores que se cambian arrastrando (raton o dedo); el eje se mantiene mientras se arrastra.
 // o: {color, max, paso, etiquetas, cada, titulo, unidad, W, H, alSoltar}
 function editorBarras(cont, vals, o){
-  const n = vals.length, W=o.W||480, H=o.H||140, L=30, R=6, T=8, B=20, bw=(W-L-R)/n, max=o.max, y=v=>T+(H-T-B)*(1-v/max);
+  // ancho del dibujo = ancho real del contenedor (texto y barras a su tamaño en el movil); si esta
+  // oculto (otra pestaña), el de o.W, y se vuelve a pintar al verse (observarEditores)
+  const n = vals.length, W=Math.round(cont.clientWidth)||o.W||480, H=o.H||140, L=30, R=6, T=8, B=20, bw=(W-L-R)/n, max=o.max, y=v=>T+(H-T-B)*(1-v/max);
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.titulo)}">`;
   [0, max/2, max].forEach(v=>{ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-5}" y="${y(v)+3}" fill="#5B7086" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${fmt(v, max<5?1:0)}</text>`; });
   for(let i=0; i<n; i++){
@@ -579,6 +581,16 @@ function pintarEditores(){
   editorBarras($('edMes'), ST.mes, {color:'#16A34A', max:Math.max(2, 2*Math.ceil(Math.max(...ST.mes)*1.2/2)), paso:.05, etiquetas:i=>MESES[i], titulo:'Peso de cada mes',
     W:960, H:130, alSoltar:()=>{ ST.plant=''; $('plantilla').value=''; pintarEditores(); recalcular(); }});
 }
+// Al cambiar el ancho (giro del movil, ventana, la pestaña que se hace visible) se vuelven a pintar
+function observarEditores(){
+  if(typeof ResizeObserver === 'undefined') return;
+  const anchos = new Map();
+  const ro = new ResizeObserver(es=>{
+    if(!es.some(e=>{ const w = Math.round(e.contentRect.width); if(!w || anchos.get(e.target) === w) return false; anchos.set(e.target, w); return true; })) return;
+    clearTimeout(observarEditores.t); observarEditores.t = setTimeout(pintarEditores, 60);
+  });
+  ['edLab','edFes','edMes'].forEach(id=>{ anchos.set($(id), $(id).clientWidth); ro.observe($(id)); });
+}
 
 // ===================== SIMULACION =====================
 // Devuelve la serie cuartohoraria (kWh) de consumo de red, vertida, generada y autoconsumida,
@@ -586,7 +598,7 @@ function pintarEditores(){
 function simular(){
   const d0 = $('desde').value, d1 = $('hasta').value;
   if(!d0 || !d1 || d1 < d0) return null;
-  const gen = document.querySelector('[name=tipo]:checked').value === 'generador', conFv = gen || $('conFv').checked;
+  const tipo = document.querySelector('[name=tipo]:checked').value, gen = tipo === 'generador', conFv = gen || tipo === 'autoconsumo';
   const kP = $('peaje').value, nP = PEAJES[kP].n === 2 ? 2 : 6, pot = potencias();
   const R = mulberry(hash($('cups').value + '|' + $('semilla').value));
   const varDia = num('varDia')/100, varQ = num('varQ')/100;
@@ -848,7 +860,7 @@ function csvContrato(S){
     `"${c}";${DISTRIB[c.slice(2,6)] || 'DISTRIBUIDORA'};"${$('comerc').value || '-'}";"${P.tarifa}";"${P.tension}";"${pot}";${pmx<=15 && S.kP==='2.0TD' ? 'ICP' : 'MAXIMETRO'};"${P.disc}";"${alta}";;${$('provincia').value};${$('municipio').value.toUpperCase()};"${$('cp').value}";${auto}"${(Math.ceil(pmx*1.25*10)/10).toFixed(1)}"\r\n`;
 }
 function leeme(S){
-  const tipo = S.gen ? 'Generador fotovoltaico' : `Consumidor (${ST.plant ? PLANTILLAS[ST.plant].n : 'perfil dibujado a mano'})`;
+  const tipo = S.gen ? 'Solo generación (generador fotovoltaico)' : `${S.conFv ? 'Consumo y generación (autoconsumo fotovoltaico)' : 'Solo consumo'}, perfil ${ST.plant ? PLANTILLAS[ST.plant].n : 'dibujado a mano'}`;
   return [`DATOS SIMULADOS con el formato de la descarga web de Datadis. No son lecturas de ningún contador.`, '',
     `CUPS: ${$('cups').value}`, `Periodo: del ${$('desde').value} al ${$('hasta').value} (${S.dias.length} días)`,
     `Peaje: ${S.kP.replace('+','')} (${PEAJES[S.kP].tarifa}); potencias contratadas: ${S.pot.join(' / ')} kW`,
@@ -856,6 +868,9 @@ function leeme(S){
     `Tipo: ${tipo}`, S.gen ? `Servicios auxiliares: ${num('auxDia')} kWh/día` : `Consumo medio: ${num('kwhDia')} kWh/día`,
     S.conFv ? `FV: ${num('genDia')} kWh/día de media (${S.kwp.toFixed(1)} kWp, inversor ${S.inv} kW)${S.gen ? '' : ', modalidad ' + $('modalidad').value}` : 'Sin generación',
     `cos φ medio ${num('cosphi')}; capacitiva en vacío ${num('capKvar')} kVAr; semilla ${$('semilla').value}`, '',
+    ...(S.gen ? [] : ['Perfil de consumo (peso relativo de cada hora, de 0-1 h a 23-24 h; 1 = hora de más consumo):',
+      `  Laborable: ${ST.lab.map(v=>fmt(v,2)).join(' | ')}`, `  Fin de semana y festivo: ${ST.fes.map(v=>fmt(v,2)).join(' | ')}`,
+      `Peso de cada mes (enero a diciembre; 1 = mes medio): ${ST.mes.map(v=>fmt(v,2)).join(' | ')}`, '']),
     'Ficheros: Consumo (curva de carga), Potencias (maxímetro), Contrato y Energia (reactiva mensual por periodo).',
     'Generado con el Generador de ficheros de Datadis del blog de VatiaCo.', ''].join('\r\n');
 }
@@ -940,10 +955,10 @@ function recalcularYa(){
   if(recalcular.ajustar && AGR){ recalcular.ajustar = false; ajustarPotencias(); }
 }
 function tipoActual(){
-  const gen = document.querySelector('[name=tipo]:checked').value === 'generador';
+  const tipo = document.querySelector('[name=tipo]:checked').value, gen = tipo === 'generador', fv = gen || tipo === 'autoconsumo';
   $('cardConsumo').style.display = gen ? 'none' : ''; $('cardGenerador').style.display = gen ? '' : 'none';
-  $('chkFvWrap').style.display = gen ? 'none' : ''; $('modalidad').closest('.field').style.display = gen ? 'none' : '';
-  $('fvCampos').style.display = gen || $('conFv').checked ? '' : 'none';
+  $('modalidad').closest('.field').style.display = gen ? 'none' : '';
+  $('tituloFv').style.display = $('cardFv').style.display = fv ? '' : 'none';
 }
 $('plantilla').innerHTML = '<option value="">Dibujado a mano</option>' + Object.entries(PLANTILLAS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
 $('plantilla').addEventListener('change', ()=>{
@@ -954,7 +969,6 @@ $('plantilla').addEventListener('change', ()=>{
   pintarEditores(); recalcular.ajustar = true; recalcular();     // (potencias a la medida del perfil nuevo)
 });
 document.querySelectorAll('[name=tipo]').forEach(r=>r.addEventListener('change', ()=>{ tipoActual(); recalcular(); }));
-$('conFv').addEventListener('change', ()=>{ tipoActual(); recalcular(); });
 $('peaje').addEventListener('change', ()=>{ pintarPotencias(false); recalcular(); });
 ['resol','desde','hasta','estimadas','semilla','kwhDia','varDia','varQ','auxDia','genDia','modalidad','inversor','cosphi','capKvar','alta','comerc','provincia','municipio','cp']
   .forEach(id=>$(id).addEventListener('change', recalcular));
@@ -985,7 +999,7 @@ function guardar(){
   try{
     const v = leerVatiaco();
     v.datadis = {campos:Object.fromEntries(CAMPOS.map(k=>[k, $(k).value])), pot:potencias(), tipo:document.querySelector('[name=tipo]:checked').value,
-      conFv:$('conFv').checked, curvaReac:$('conCurvaReac').checked, leeme:$('conLeeme').checked, plant:ST.plant, lab:ST.lab, fes:ST.fes, mes:ST.mes};
+      curvaReac:$('conCurvaReac').checked, leeme:$('conLeeme').checked, plant:ST.plant, lab:ST.lab, fes:ST.fes, mes:ST.mes};
     localStorage.setItem('VatiaCo', JSON.stringify(v));
   }catch(e){}
 }
@@ -996,13 +1010,15 @@ function guardar(){
     CAMPOS.forEach(k=>{ if(c.campos[k] != null && c.campos[k] !== '') $(k).value = c.campos[k]; });
     pintarPotencias(false);
     if(Array.isArray(c.pot)) document.querySelectorAll('[data-pot]').forEach((el,i)=>{ if(c.pot[i]) el.value = c.pot[i]; });
-    const r = document.querySelector(`[name=tipo][value="${c.tipo}"]`); if(r) r.checked = true;
-    $('conFv').checked = !!c.conFv; $('conCurvaReac').checked = !!c.curvaReac; $('conLeeme').checked = c.leeme !== false;
+    // (antes: consumidor + casilla de autoconsumo FV = consumo y generacion)
+    const tipo = c.tipo === 'consumidor' && c.conFv ? 'autoconsumo' : c.tipo;
+    const r = document.querySelector(`[name=tipo][value="${tipo}"]`); if(r) r.checked = true;
+    $('conCurvaReac').checked = !!c.curvaReac; $('conLeeme').checked = c.leeme !== false;
     if(ok(c.lab,24) && ok(c.fes,24) && ok(c.mes,12)){ ST.lab = c.lab; ST.fes = c.fes; ST.mes = c.mes; ST.plant = PLANTILLAS[c.plant] ? c.plant : ''; }
   }
   $('plantilla').value = ST.plant;
   if(!$('cups').value) cupsFicticio();
-  pintarCups(); tipoActual(); pintarEditores(); recalcular();
+  pintarCups(); tipoActual(); pintarEditores(); observarEditores(); recalcular();
 })();
 </script>
 

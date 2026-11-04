@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentos de la Comunidad Energética</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap">
+<style>
+/* Mesa de trabajo de despacho: panel de datos y documentos a la izquierda, el documento como folio a la derecha */
+:root {
+  --bg: #e9eeec; --surface: #ffffff; --paper: #fffefa; --ink: #17232a; --muted: #586870; --line: #cfd9d6;
+  --accent: #0d6a5b; --accent-ink: #ffffff; --accent-soft: #dcefe9;
+  --warn-bg: #fff0d1; --warn: #7d5300; --hueco: #ffe59a; --hueco-ink: #5a4100; --ok: #1f7a3a; --bad: #a3361f;
+  --f-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-disp: "IBM Plex Sans Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
+  --f-doc: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f161a; --surface: #162026; --paper: #1b262c; --ink: #e2eae7; --muted: #98a8ad; --line: #2b3a41;
+  --accent: #4cc0a5; --accent-ink: #052620; --accent-soft: #173a33;
+  --warn-bg: #3a2c0e; --warn: #f1c46b; --hueco: #5b470f; --hueco-ink: #ffe7a3; --ok: #6fd28d; --bad: #ff8f75; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f161a; --surface: #162026; --paper: #1b262c; --ink: #e2eae7; --muted: #98a8ad; --line: #2b3a41;
+  --accent: #4cc0a5; --accent-ink: #052620; --accent-soft: #173a33;
+  --warn-bg: #3a2c0e; --warn: #f1c46b; --hueco: #5b470f; --hueco-ink: #ffe7a3; --ok: #6fd28d; --bad: #ff8f75; color-scheme: dark }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+img { max-width: 100% }
+body { margin: 0 }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--f-ui); }
+.app { max-width: 1440px; margin: 0 auto; padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; margin-bottom: 14px }
+header.top h1 { font: 700 1.6rem/1.1 var(--f-disp); margin: 0; letter-spacing: .01em; text-wrap: balance }
+header.top p { margin: 4px 0 0; color: var(--muted); max-width: 70ch }
+.aviso-legal { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px }
+.aviso-legal b { color: inherit }
+.cols { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 18px; align-items: start }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr) } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 10px); max-height: calc(100vh - 20px); display: flex; flex-direction: column }
+@media (max-width: 900px) { .panel { position: static; max-height: none } }
+.tabs { display: flex; border-bottom: 1px solid var(--line) }
+.tabs button { flex: 1; background: none; border: 0; border-bottom: 2px solid transparent; padding: 11px 8px; font: 600 13px var(--f-ui); color: var(--muted); cursor: pointer; letter-spacing: .02em }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent) }
+.tabs button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.scroll { overflow: auto; padding: 12px 14px 16px; display: grid; gap: 14px }
+.fase h2 { font: 600 11px var(--f-ui); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0 0 6px }
+.fase ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px }
+.fase button.doc { width: 100%; text-align: left; background: none; border: 0; border-radius: 7px; padding: 7px 9px; cursor: pointer; color: var(--ink); display: grid; gap: 1px }
+.fase button.doc:hover { background: var(--accent-soft) }
+.fase button.doc[aria-current="true"] { background: var(--accent); color: var(--accent-ink) }
+.fase button.doc b { font-weight: 600; font-size: 13.5px }
+.fase button.doc small { color: var(--muted); font-size: 12px; line-height: 1.35 }
+.fase button.doc[aria-current="true"] small { color: inherit; opacity: .85 }
+.sec { border: 1px solid var(--line); border-radius: 8px }
+.sec > summary { cursor: pointer; padding: 9px 12px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; align-items: center }
+.sec > div { padding: 2px 12px 12px; display: grid; gap: 9px }
+.campo { display: grid; gap: 3px; min-width: 0 }
+.campo span { font-size: 12px; color: var(--muted) }
+.campo input, .campo select, .campo textarea, table.ed input, table.ed select { width: 100%; font: 13.5px var(--f-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0 }
+.campo textarea { min-height: 70px; resize: vertical }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 9px }
+.tabla-w { overflow-x: auto }
+table.ed { border-collapse: collapse; width: 100%; font-size: 12.5px }
+table.ed th { text-align: left; font-weight: 500; color: var(--muted); padding: 2px 4px }
+table.ed td { padding: 2px 3px; vertical-align: top }
+table.ed td.n input { width: 72px; font-family: var(--f-mono) }
+.mini { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 6px; padding: 4px 9px; cursor: pointer; font: 500 12.5px var(--f-ui) }
+.mini:hover { border-color: var(--accent); color: var(--accent) }
+.quitar { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px 6px }
+.quitar:hover { color: var(--bad) }
+.chip { display: inline-block; font: 500 11.5px var(--f-ui); border-radius: 99px; padding: 2px 8px; background: var(--accent-soft); color: var(--accent) }
+.chip.mal { background: var(--warn-bg); color: var(--warn) }
+.mesa { min-width: 0; display: grid; gap: 10px }
+.barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px }
+.barra .tit { font: 600 15px var(--f-disp); margin-right: auto; min-width: 0 }
+.barra label.socio { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted) }
+.barra select { font: 13px var(--f-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; max-width: 220px }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 7px; padding: 8px 14px; font: 600 13px var(--f-ui); cursor: pointer }
+.btn.sec2 { background: none; color: var(--accent); border: 1px solid var(--accent) }
+.folio-w { overflow-x: auto }
+.folio { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 28px rgba(15,40,35,.08);
+  max-width: 820px; margin: 0 auto; padding: clamp(22px, 5vw, 64px) clamp(18px, 6vw, 72px); font: 16px/1.62 var(--f-doc); min-width: 0 }
+.folio:focus { outline: 2px dashed var(--line); outline-offset: 4px }
+.folio h1 { font: 700 1.55rem/1.2 var(--f-doc); margin: 0 0 .2em; text-wrap: balance }
+.folio .sub { color: var(--muted); font-style: italic; margin: 0 0 1.4em }
+.folio h2 { font: 700 1.08rem/1.3 var(--f-doc); margin: 1.6em 0 .5em; padding-bottom: .25em; border-bottom: 1px solid var(--line); text-wrap: balance }
+.folio h3 { font: 600 1rem/1.3 var(--f-doc); margin: 1.2em 0 .4em }
+.folio p { margin: 0 0 .75em; text-align: justify; hyphens: auto }
+.folio ul, .folio ol { margin: 0 0 .8em; padding-left: 1.4em }
+.folio li { margin-bottom: .25em }
+.folio table { border-collapse: collapse; width: 100%; margin: .4em 0 1em; font-size: .9em; font-variant-numeric: tabular-nums }
+.folio th, .folio td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top }
+.folio th { background: var(--bg); font-weight: 600 }
+.folio td.n, .folio th.n { text-align: right }
+.folio .formula { background: var(--bg); padding: 8px 12px; text-align: center; margin: .4em 0 1em; font-family: var(--f-mono); font-size: .86em }
+.folio .art { font-weight: 700 }
+.folio .firmas { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 28px 24px; margin-top: 2.2em }
+.folio .firma { border-top: 1px solid var(--ink); padding-top: 6px; font-size: .9em; min-height: 70px; display: flex; flex-direction: column; justify-content: flex-end }
+.folio .firma { padding-top: 56px; border-top: 0; background: linear-gradient(var(--ink), var(--ink)) bottom 38px left 0 / 100% 1px no-repeat }
+.folio .casilla { font-family: var(--f-mono) }
+.folio .nota { font-size: .86em; color: var(--muted) }
+.folio .pendiente { background: var(--warn-bg); color: var(--warn); padding: 8px 12px; border-radius: 4px; font-size: .88em; margin: .6em 0 1em; text-align: left }
+.hueco { background: var(--hueco); color: var(--hueco-ink); border-radius: 3px; padding: 0 3px; font-family: var(--f-ui); font-size: .84em; white-space: nowrap }
+.refs { margin-top: 2.4em; border-top: 2px solid var(--ink); padding-top: .8em; font-size: .88em }
+.refs h2 { border: 0; margin-top: 0; font-size: 1rem }
+.refs li { text-align: left }
+.refs a { color: var(--accent) }
+.refs .donde { font-family: var(--f-mono); font-size: .9em; color: var(--muted) }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: 13px; z-index: 20; max-width: calc(100% - 32px) }
+.pistas { font-size: 12.5px; color: var(--muted); margin: 0 }
+@media (prefers-reduced-motion: no-preference) { .fase button.doc { transition: background .12s } }
+/* ---- impresion / PDF: solo el folio (o todos), A4 ---- */
+#impresion { display: none }
+@page { size: A4; margin: 20mm 18mm 18mm }
+@media print {
+  :root { --paper: #fff; --ink: #000; --muted: #444; --line: #999; --bg: #f1f1f1; --accent: #0d5a4d; --hueco: #fff3c4; --hueco-ink: #5a4100; --warn-bg: #f6f0e0; --warn: #5a4100 }
+  body { background: #fff }
+  .app > *:not(.cols), .panel, .barra, .pistas, .toast { display: none !important }
+  .cols { display: block } .folio-w { overflow: visible }
+  .folio { border: 0; box-shadow: none; max-width: none; padding: 0; font-size: 11pt; background: #fff }
+  .folio h2, .folio h3 { break-after: avoid } .folio table, .folio .firmas, .folio .formula { break-inside: avoid }
+  .refs a { color: #000; text-decoration: none }
+  body.todo .app { display: none } body.todo #impresion { display: block }
+  #impresion .folio + .folio { break-before: page }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Documentos de la Comunidad Energética</h1>
+      <p>Rellena los datos una vez y genera los documentos de constitución, admisión de socios, reparto de la energía, gobierno y protección de datos, con la normativa en la que se apoya cada uno.</p>
+    </div>
+    <span class="chip" id="cuenta-huecos"></span>
+  </header>
+  <div class="aviso-legal"><b>Modelos orientativos.</b> Sirven para preparar y probar la gestión. Un asesor jurídico tiene que revisarlos antes de usarlos con una comunidad real.
+    La normativa citada es la localizada a 4 de noviembre de 2026. El reglamento de las comunidades de energías renovables y el nuevo real decreto de autoconsumo están pendientes, y pueden cambiar plazos y requisitos.
+    Los datos de partida son de ejemplo (la comunidad de prueba del Anexo II de los estatutos).</div>
+
+  <div class="cols">
+    <aside class="panel">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-docs" aria-selected="true" aria-controls="p-docs">Documentos</button>
+        <button role="tab" id="tab-datos" aria-selected="false" aria-controls="p-datos">Datos de la comunidad</button>
+      </div>
+      <div class="scroll" id="p-docs" role="tabpanel"></div>
+      <div class="scroll" id="p-datos" role="tabpanel" hidden></div>
+    </aside>
+
+    <main class="mesa">
+      <div class="barra">
+        <span class="tit" id="doc-tit"></span>
+        <label class="socio" id="sel-socio-w" hidden>Socio <select id="sel-socio"></select></label>
+        <span class="chip" id="doc-huecos"></span>
+        <span class="chip" id="doc-pers" hidden>Personalizado</span>
+        <button class="mini" id="b-restaurar" type="button" hidden>Volver a la plantilla</button>
+        <button class="btn sec2" id="b-copiar" type="button">Copiar</button>
+        <button class="btn sec2" id="b-word" type="button">Descargar Word</button>
+        <button class="btn" id="b-pdf" type="button">Descargar PDF</button>
+      </div>
+      <p class="pistas">Los huecos en amarillo son datos que faltan: complétalos en <i>Datos de la comunidad</i>. Para personalizar un documento, escribe directamente en el folio: los cambios se guardan en este navegador (por documento y por socio) y se usan al descargar. Un documento personalizado ya no se actualiza con los datos; <i>Volver a la plantilla</i> lo regenera. En <b>Descargar PDF</b>, elige «Guardar como PDF» como impresora.</p>
+      <div class="folio-w"><article class="folio" id="folio" contenteditable="true" spellcheck="true"></article></div>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div id="impresion" aria-hidden="true"></div>
+
+<script>
+"use strict";
+// ---------------- normativa ----------------
+const REF = {
+  loda: ["Ley Orgánica 1/2002, de 22 de marzo, reguladora del Derecho de Asociación", "https://www.boe.es/eli/es/lo/2002/03/22/1/con"],
+  rna: ["Real Decreto 949/2015, de 23 de octubre, Reglamento del Registro Nacional de Asociaciones", "https://www.boe.es/eli/es/rd/2015/10/23/949/con"],
+  lse: ["Ley 24/2013, de 26 de diciembre, del Sector Eléctrico", "https://www.boe.es/eli/es/l/2013/12/26/24/con"],
+  rdl23: ["Real Decreto-ley 23/2020, de 23 de junio (introduce las comunidades de energías renovables en la Ley 24/2013)", "https://www.boe.es/eli/es/rdl/2020/06/23/23/con"],
+  rdl7: ["Real Decreto-ley 7/2026 (convalidado el 26 de marzo de 2026): autoconsumo colectivo hasta 5 km y gestor de autoconsumo", ""],
+  rd244: ["Real Decreto 244/2019, de 5 de abril, condiciones administrativas, técnicas y económicas del autoconsumo", "https://www.boe.es/eli/es/rd/2019/04/05/244/con"],
+  ted: ["Orden TED/1247/2021, de 15 de noviembre (coeficientes de reparto variables, modifica el anexo I del RD 244/2019)", "https://www.boe.es/eli/es/o/2021/11/15/ted1247"],
+  rebt: ["Real Decreto 842/2002, de 2 de agosto, Reglamento electrotécnico para baja tensión", "https://www.boe.es/eli/es/rd/2002/08/02/842/con"],
+  red2: ["Directiva (UE) 2018/2001, fomento del uso de energía procedente de fuentes renovables", "https://eur-lex.europa.eu/eli/dir/2018/2001/oj"],
+  red3: ["Directiva (UE) 2023/2413 (RED III), que modifica la Directiva (UE) 2018/2001", "https://eur-lex.europa.eu/eli/dir/2023/2413/oj"],
+  dme: ["Directiva (UE) 2019/944, normas comunes para el mercado interior de la electricidad", "https://eur-lex.europa.eu/eli/dir/2019/944/oj"],
+  rgpd: ["Reglamento (UE) 2016/679, General de Protección de Datos", "https://eur-lex.europa.eu/eli/reg/2016/679/oj"],
+  lopd: ["Ley Orgánica 3/2018, de 5 de diciembre, de Protección de Datos Personales y garantía de los derechos digitales", "https://www.boe.es/eli/es/lo/2018/12/05/3/con"],
+  cc: ["Código Civil (Real Decreto de 24 de julio de 1889)", "https://www.boe.es/eli/es/rd/1889/07/24/(1)/con"],
+  lph: ["Ley 49/1960, de 21 de julio, sobre propiedad horizontal", "https://www.boe.es/eli/es/l/1960/07/21/49/con"],
+  est: ["Estatutos de la Comunidad (documento de esta misma colección)", ""],
+};
+const PENDIENTE = '<div class="pendiente"><b>Pendiente de desarrollo.</b> El real decreto que desarrolle las comunidades de energías renovables y el nuevo real decreto de autoconsumo no estaban publicados a 4 de noviembre de 2026. Revisa este documento cuando se aprueben.</div>';
+
+// ---------------- datos de ejemplo ----------------
+const EJEMPLO = {
+  c: { nombre: "Comunidad Energética Solar del Barrio", tipo: "CER", domicilio: "Calle Mayor, 1", cp: "18001", municipio: "Granada", provincia: "Granada",
+       ambito: "el término municipal de Granada", nif: "", email: "info@ejemplo.es", registro: "Registro de Asociaciones de Andalucía",
+       lugar: "Granada", fecha: "2026-11-04", patrimonio: "0", duracion: "indefinida" },
+  junta: [ { cargo: "Presidencia", nombre: "Ana López Pérez", nif: "" }, { cargo: "Secretaría", nombre: "Luis Martín Ruiz", nif: "" },
+           { cargo: "Tesorería", nombre: "Carmen Ruiz Gil", nif: "" } ],
+  socios: [
+    { nombre: "Colegio Público San José", nif: "", tipo: "Entidad local", domicilio: "Calle Escuelas, 3, Granada", cups: "ES0031000000000001AA", beta: "0.55", email: "", alta: "2026-11-04", consumo: "14500" },
+    { nombre: "Panadería La Espiga, S.L.", nif: "", tipo: "Pyme", domicilio: "Calle Mayor, 12, Granada", cups: "ES0031000000000002BB", beta: "0.35", email: "", alta: "2026-11-04", consumo: "9800" },
+    { nombre: "Familia García (hogar)", nif: "", tipo: "Persona física", domicilio: "Calle Mayor, 20, 2.º B, Granada", cups: "ES0031000000000003CC", beta: "0.10", email: "", alta: "2026-11-04", consumo: "3100" } ],
+  inst: { nombre: "Instalación fotovoltaica de la cubierta del colegio", potencia: "15", ubicacion: "Cubierta del Colegio Público San José, Calle Escuelas, 3, Granada",
+          cau: "", modalidad: "con excedentes acogida a compensación", reparto: "fijo", produccion: "24000", coste: "18000", pendiente: "12000",
+          propietario: "Ayuntamiento de Granada", propNif: "", amort: "900", mant: "240", gestion: "300", seguros: "150", dotFondo: "150" },
+  p: { plazoBeta: "4", maxBeta: "60", excedentes: "40", reduccion: "10", avisoBaja: "60", expulsion: "120", fondo: "10", cuotaEntrada: "50",
+       resolver: "30", recurso: "30", prioridad: "20", espera: "15", pagos: "12", cubierta: "25", juntaMin: "3", juntaAnos: "2",
+       gestorAnos: "3", gestorAviso: "90", conflictos: "30", propuesta: "15", cuentas: "6", cambioSuministro: "30", vulnPresup: "5",
+       requerimiento: "15", suspension: "60" },
+  g: { nombre: "Gestora de Autoconsumo (ejemplo)", nif: "", domicilio: "", retribucion: "300", forma: "precio fijo anual" },
+  a: { fecha: "2027-01-20", hora: "18:00", hora2: "18:30", lugar: "Salón de actos del Colegio Público San José",
+       orden: "Lectura y aprobación, si procede, del acta de la sesión anterior.\nAprobación de las cuentas del ejercicio y de la liquidación por socio.\nAprobación del presupuesto y de las cuotas del próximo ejercicio.\nAdmisión de nuevos socios y revisión de coeficientes β.\nRuegos y preguntas." },
+  o: { deuda: "145", vencimiento: "2026-10-05", bajaEfecto: "", periodo: "enero a diciembre de 2026", energiaReal: "", excedReal: "" },
+};
+EJEMPLO.personal = {};   // documento (y socio) -> HTML retocado por el usuario
+let S = clonar(EJEMPLO), ACTUAL = "estatutos", SOCIO = 0;
+try { const g = JSON.parse(localStorage.getItem("cec-docs") || "null"); if (g && g.c) S = mezclar(clonar(EJEMPLO), g); } catch (e) { /* sin almacenamiento */ }
+try { ACTUAL = localStorage.getItem("cec-doc") || ACTUAL; } catch (e) {}
+function clonar(o) { return JSON.parse(JSON.stringify(o)); }
+function clave(id, s) { const d = DOCS.find((x) => x.id === id); return d && d.socio ? `${id}:${s}` : `${id}:0`; }
+function mezclar(base, g) { for (const k in g) { if (Array.isArray(g[k])) base[k] = g[k]; else if (g[k] && typeof g[k] === "object") base[k] = Object.assign(base[k] || {}, g[k]); } return base; }
+function guardar() { try { localStorage.setItem("cec-docs", JSON.stringify(S)); localStorage.setItem("cec-doc", ACTUAL); } catch (e) {} }
+
+// ---------------- utilidades ----------------
+const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+function V(v, etiqueta) { return v !== undefined && v !== null && String(v).trim() !== "" ? esc(v) : `<span class="hueco">[${esc(etiqueta)}]</span>`; }
+const num = (v) => { const x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : 0; };
+const eur = (x) => x.toLocaleString("es-ES", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
+const kwh = (x) => Math.round(x).toLocaleString("es-ES") + " kWh";
+const coef = (x, d = 2) => num(x).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: 6 });
+function fecha(iso, etiqueta) { if (!iso) return V("", etiqueta || "fecha"); const d = new Date(iso + "T12:00:00"); return isNaN(d) ? esc(iso) : d.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }); }
+const cargo = (k) => S.junta.find((j) => j.cargo.toLowerCase().startsWith(k)) || {};
+const nombreC = () => V(S.c.nombre, "nombre de la comunidad");
+function costes() { const i = S.inst; return num(i.amort) + num(i.mant) + num(i.gestion) + num(i.seguros) + num(i.dotFondo); }
+function sumaBeta() { return S.socios.reduce((t, s) => t + num(s.beta), 0); }
+function tipoTxt() { return S.c.tipo === "CCE" ? "comunidad ciudadana de energía" : "comunidad de energías renovables"; }
+function lugarFecha() { return `En ${V(S.c.lugar, "lugar")}, a ${fecha(S.c.fecha)}.`; }
+function firmas(lista) { return `<div class="firmas">${lista.map((f) => `<div class="firma"><span>${f[0]}</span><b>${f[1]}</b></div>`).join("")}</div>`; }
+function firmaCargo(k, etiqueta) { const j = cargo(k); return [etiqueta || j.cargo || k, V(j.nombre, "nombre de " + (etiqueta || k))]; }
+function refs(lista) {
+  return `<section class="refs"><h2>Referencias normativas</h2><ul>${lista.map(([k, donde]) => {
+    const r = REF[k]; const t = r[1] ? `<a href="${r[1]}" target="_blank" rel="noopener">${esc(r[0])}</a>` : esc(r[0]);
+    return `<li>${t}${donde ? ` <span class="donde">· ${esc(donde)}</span>` : ""}</li>`; }).join("")}</ul></section>`;
+}
+function cabecera(titulo, sub) { return `<h1>${titulo}</h1><p class="sub">${sub || nombreC()}</p>`; }
+const socio = () => S.socios[SOCIO] || S.socios[0] || {};
+function datosSocio(s) {
+  return `<table><tr><th>Nombre o razón social</th><td>${V(s.nombre, "nombre")}</td></tr><tr><th>NIF</th><td>${V(s.nif, "NIF")}</td></tr>
+    <tr><th>Tipo</th><td>${V(s.tipo, "tipo")}</td></tr><tr><th>Domicilio</th><td>${V(s.domicilio, "domicilio")}</td></tr>
+    <tr><th>Correo electrónico</th><td>${V(s.email, "email")}</td></tr><tr><th>CUPS</th><td>${V(s.cups, "CUPS")}</td></tr></table>`;
+}
+function tablaSocios(conCuota) {
+  const c = costes(), prod = num(S.inst.produccion);
+  return `<table><tr><th>Socio</th><th>CUPS</th><th class="n">β</th>${conCuota ? '<th class="n">Energía asignada / año</th><th class="n">Cuota anual</th>' : ""}</tr>
+    ${S.socios.map((s) => `<tr><td>${V(s.nombre, "socio")}</td><td>${V(s.cups, "CUPS")}</td><td class="n">${coef(s.beta)}</td>${conCuota ? `<td class="n">${kwh(num(s.beta) * prod)}</td><td class="n">${eur(num(s.beta) * c)}</td>` : ""}</tr>`).join("")}
+    <tr><th>Total</th><th></th><th class="n">${coef(sumaBeta())}</th>${conCuota ? `<th class="n">${kwh(sumaBeta() * prod)}</th><th class="n">${eur(sumaBeta() * c)}</th>` : ""}</tr></table>`;
+}
+function avisoBeta() { const t = sumaBeta(); return Math.abs(t - 1) > 1e-6 ? `<div class="pendiente"><b>La suma de los coeficientes es ${coef(t, 3)}.</b> Tiene que ser exactamente 1 (anexo I del RD 244/2019). Corrígelo en <i>Datos de la comunidad</i> → Socios.</div>` : ""; }
+const P = (k) => V(S.p[k], k);
+
+// ---------------- documentos ----------------
+const DOCS = [
+ { id: "hoja", fase: "Constitución", t: "Hoja de ruta de constitución", d: "Qué hay que hacer, en qué orden y ante quién", r() { const c = S.c; return cabecera("Hoja de ruta de constitución y puesta en marcha") + `
+  <p>Pasos para constituir ${nombreC()} como asociación sin ánimo de lucro con forma de ${tipoTxt()} y poner en marcha su autoconsumo colectivo. El orden importa: cada paso necesita el anterior.</p>
+  <ol>
+   <li><b>Reunión de los promotores.</b> Al menos tres personas físicas o jurídicas acuerdan constituir la asociación y aprueban el <i>acta fundacional</i> y los <i>estatutos</i> (LO 1/2002, arts. 5, 6 y 7).</li>
+   <li><b>Inscripción en el registro.</b> Se presenta la <i>solicitud de inscripción</i> con el acta y los estatutos en ${V(c.registro, "registro competente")}. Si la asociación actúa solo en una comunidad autónoma, el registro es el autonómico; si no, el Registro Nacional de Asociaciones. El registro tiene tres meses para inscribirla (LO 1/2002, arts. 10 y 30).</li>
+   <li><b>Número de identificación fiscal.</b> Se solicita el NIF a la Agencia Tributaria con la declaración censal (modelo 036), con el acta, los estatutos y la resolución de inscripción.</li>
+   <li><b>Cuenta bancaria a nombre de la comunidad.</b> Los fondos se gestionan siempre en cuentas de la comunidad, separadas de las del gestor (estatutos, art. 32).</li>
+   <li><b>Libros y documentación.</b> Relación actualizada de socios, libro de actas, contabilidad e inventario de bienes (LO 1/2002, art. 14).</li>
+   <li><b>Protección de datos.</b> Registro de actividades de tratamiento, información a cada socio y contrato de encargo con el gestor (RGPD, arts. 13, 28 y 30).</li>
+   <li><b>Instalación.</b> Proyecto o memoria técnica, licencia o comunicación previa municipal, certificado de instalación ante el órgano autonómico (REBT) e inscripción en el registro de autoconsumo (RD 244/2019, art. 19). La distribuidora asigna el código CAU.</li>
+   <li><b>Admisión de socios.</b> Solicitud de admisión, autorización de acceso a sus datos de consumo, resolución de la Junta y documento de adhesión (estatutos, arts. 7 a 9).</li>
+   <li><b>Acuerdo de reparto.</b> Lo firman todos los consumidores participantes y se comunica a la distribuidora, directamente o a través de las comercializadoras, con los coeficientes β (RD 244/2019, art. 4 y anexo I).</li>
+   <li><b>Gestor.</b> Contrato con el gestor de la comunidad, que puede actuar como gestor de autoconsumo en nombre de los consumidores asociados (Ley 24/2013, en la redacción del RDL 7/2026).</li>
+  </ol>
+  <h2>Requisitos de proximidad</h2>
+  <p>En el autoconsumo colectivo a través de red, la instalación y los consumidores asociados deben estar dentro de la distancia máxima vigente. El RDL 7/2026 amplió esa distancia hasta 5 km para el autoconsumo colectivo; la regla general del RD 244/2019 es de 500 metros. Comprueba en cada caso la distancia y el tipo de instalación que admite la norma en vigor.</p>
+  ${PENDIENTE}` + refs([["loda", "arts. 5, 6, 7, 10, 14 y 30"], ["rna", ""], ["lse", "art. 6.1.j"], ["rdl7", ""], ["rd244", "arts. 4, 19 y anexo I"], ["rebt", ""], ["rgpd", "arts. 13, 28 y 30"]]); } },
+
+ { id: "acta", fase: "Constitución", t: "Acta fundacional", d: "Acuerdo de los promotores para constituir la comunidad", r() { const c = S.c, J = S.junta; return cabecera("Acta fundacional") + `
+  <p>${lugarFecha()} Se reúnen las personas que figuran a continuación, mayores de edad o con personalidad jurídica, con capacidad de obrar y en su propio nombre:</p>
+  <table><tr><th>Nombre o razón social</th><th>NIF</th><th>Cargo provisional</th></tr>${J.map((j) => `<tr><td>${V(j.nombre, "nombre")}</td><td>${V(j.nif, "NIF")}</td><td>${V(j.cargo, "cargo")}</td></tr>`).join("")}</table>
+  <p>Y ACUERDAN:</p>
+  <p><span class="art">Primero.</span> Constituir una asociación sin ánimo de lucro denominada <b>${nombreC()}</b>, que actuará como ${tipoTxt()}, al amparo de la Ley Orgánica 1/2002, reguladora del Derecho de Asociación.</p>
+  <p><span class="art">Segundo.</span> Aprobar los estatutos que se adjuntan, que regirán el funcionamiento de la asociación.</p>
+  <p><span class="art">Tercero.</span> Fijar su domicilio en ${V(c.domicilio, "domicilio")}, ${V(c.cp, "CP")} ${V(c.municipio, "municipio")} (${V(c.provincia, "provincia")}), y su ámbito de actuación en ${V(c.ambito, "ámbito territorial")}.</p>
+  <p><span class="art">Cuarto.</span> Designar como órgano provisional de gobierno la Junta Directiva formada por las personas indicadas, con los cargos señalados, hasta la primera Asamblea General.</p>
+  <p><span class="art">Quinto.</span> Facultar a la persona que ostenta la Presidencia para solicitar la inscripción en ${V(c.registro, "registro")}, el NIF y la apertura de cuentas, y para realizar los demás trámites necesarios.</p>
+  <p>Y en prueba de conformidad firman todas las personas promotoras.</p>
+  ${firmas(J.map((j) => [esc(j.cargo || "Promotor/a"), V(j.nombre, "nombre")]))}
+  ${J.length < 3 ? '<div class="pendiente">La Ley Orgánica 1/2002 exige al menos tres personas promotoras. Añade más en <i>Datos</i> → Junta directiva.</div>' : ""}` + refs([["loda", "arts. 5 y 6"], ["est", ""]]); } },
+
+ { id: "estatutos", fase: "Constitución", t: "Estatutos", d: "Normas de la comunidad: socios, β, cuotas, órganos y disolución", r: estatutos },
+
+ { id: "inscripcion", fase: "Constitución", t: "Solicitud de inscripción en el registro", d: "Escrito para inscribir la asociación", r() { const c = S.c, pr = cargo("pres"); return cabecera("Solicitud de inscripción de asociación", "Dirigida a " + V(c.registro, "registro de asociaciones")) + `
+  <p>D./D.ª ${V(pr.nombre, "nombre de la Presidencia")}, con NIF ${V(pr.nif, "NIF")}, en calidad de Presidente/a de la asociación <b>${nombreC()}</b>, con domicilio a efectos de notificaciones en ${V(c.domicilio, "domicilio")}, ${V(c.cp, "CP")} ${V(c.municipio, "municipio")}, y correo electrónico ${V(c.email, "email")},</p>
+  <p>EXPONE que, por acuerdo de sus promotores de ${fecha(c.fecha)}, se ha constituido la asociación indicada, sin ánimo de lucro, cuya finalidad es la de una ${tipoTxt()}, y</p>
+  <p>SOLICITA su inscripción en el registro, a los solos efectos de publicidad, conforme al artículo 10 de la Ley Orgánica 1/2002.</p>
+  <h2>Documentación que se acompaña</h2>
+  <ul><li>Dos ejemplares del acta fundacional, firmados por todas las personas promotoras.</li><li>Dos ejemplares de los estatutos, firmados en todas sus hojas.</li>
+   <li>Copia del documento de identidad o del NIF de las personas promotoras y, si son personas jurídicas, certificación del acuerdo de su órgano competente para participar.</li>
+   <li>Justificante de la tasa, si el registro la exige.</li></ul>
+  <p class="nota">Cada registro autonómico tiene su propio modelo y su sede electrónica; usa el suyo si lo exige. El registro tiene tres meses para resolver; pasado ese plazo sin resolución, se entiende estimada (LO 1/2002, art. 30).</p>
+  <p>${lugarFecha()}</p>${firmas([firmaCargo("pres", "La Presidencia")])}` + refs([["loda", "arts. 10, 24, 25 y 30"], ["rna", ""]]); } },
+
+ { id: "certificado", fase: "Constitución", t: "Certificado de la Junta Directiva", d: "Composición de la Junta, para el registro y los bancos", r() { const s = cargo("secr"); return cabecera("Certificado de composición de la Junta Directiva") + `
+  <p>D./D.ª ${V(s.nombre, "nombre de la Secretaría")}, Secretario/a de ${nombreC()},</p>
+  <p>CERTIFICA que, según consta en el libro de actas, la Junta Directiva de la asociación está formada a la fecha de este certificado por las personas siguientes:</p>
+  <table><tr><th>Cargo</th><th>Nombre</th><th>NIF</th></tr>${S.junta.map((j) => `<tr><td>${V(j.cargo, "cargo")}</td><td>${V(j.nombre, "nombre")}</td><td>${V(j.nif, "NIF")}</td></tr>`).join("")}</table>
+  <p>Que fueron designadas por ${V("", "acta fundacional / Asamblea General de fecha …")} por un periodo de ${P("juntaAnos")} años, conforme al artículo 30 de los estatutos.</p>
+  <p>Y para que conste, expide este certificado con el visto bueno de la Presidencia. ${lugarFecha()}</p>
+  ${firmas([firmaCargo("secr", "La Secretaría"), [ "V.º B.º La Presidencia", V(cargo("pres").nombre, "Presidencia")]])}` + refs([["loda", "arts. 11 y 14"], ["est", "arts. 30 y 37"]]); } },
+
+ { id: "solicitud", fase: "Socios", socio: true, t: "Solicitud de admisión", d: "La rellena quien quiere entrar como socio", r() { const s = socio(); return cabecera("Solicitud de admisión como socio") + `
+  <h2>Datos de la persona solicitante</h2>${datosSocio(s)}
+  <p>Consumo de electricidad de los últimos 12 meses: ${V(s.consumo, "kWh")} kWh. ${s.consumo ? "" : "Si no hay 12 meses de historial, el Gestor usará un perfil estimado (estatutos, art. 8)."}</p>
+  <h2>Declaración</h2>
+  <p>SOLICITA ser admitido/a como socio de ${nombreC()} y DECLARA que:</p>
+  <ul><li><span class="casilla">☐</span> Su punto de suministro está dentro del ámbito de proximidad de la instalación.</li>
+   <li><span class="casilla">☐</span> Cumple los requisitos técnicos de la modalidad de autoconsumo ${esc(S.inst.modalidad || "")}.</li>
+   <li><span class="casilla">☐</span> Conoce y acepta los estatutos y firmará el acuerdo de reparto.</li>
+   <li><span class="casilla">☐</span> Pagará la cuota de entrada de ${P("cuotaEntrada")} €, salvo bonificación.</li>
+   <li><span class="casilla">☐</span> No tiene deudas vencidas con la Comunidad.</li>
+   <li><span class="casilla">☐</span> Autoriza el acceso a sus datos de consumo según el documento de autorización que se adjunta.</li></ul>
+  <p>La Junta Directiva resolverá en un máximo de ${P("resolver")} días. Si no hay coeficiente β disponible, la solicitud entrará en la lista de espera (estatutos, arts. 9 y 11).</p>
+  <p class="nota">Información sobre protección de datos: ver el documento <i>Autorización de acceso a datos y cláusula informativa</i>.</p>
+  <p>${lugarFecha()}</p>${firmas([["La persona solicitante", V(s.nombre, "nombre")]])}` + refs([["est", "arts. 6 a 11"], ["rgpd", "art. 13"]]); } },
+
+ { id: "datos", fase: "Socios", socio: true, t: "Autorización de acceso a datos y cláusula informativa", d: "Datadis y protección de datos del socio", r() { const s = socio(), c = S.c; return cabecera("Autorización de acceso a datos de consumo y cláusula informativa") + `
+  <h2>Autorización</h2>
+  <p>${V(s.nombre, "nombre del socio")}, con NIF ${V(s.nif, "NIF")}, titular del punto de suministro ${V(s.cups, "CUPS")}, AUTORIZA a ${nombreC()}, con NIF ${V(c.nif, "NIF de la comunidad")}, y al gestor que actúe por su cuenta, a consultar sus datos de consumo, curva de carga, potencias y contrato en la plataforma de las distribuidoras (Datadis), para calcular su coeficiente β, el reparto de la energía y los informes de la Comunidad.</p>
+  <p>La autorización se da también en la plataforma Datadis, a nombre del NIF de la Comunidad, y puede retirarse en cualquier momento allí o por escrito a la Comunidad. Retirarla impide calcular el reparto y puede afectar a su condición de socio con derecho a energía.</p>
+  <h2>Información sobre el tratamiento de sus datos</h2>
+  <table>
+   <tr><th>Responsable</th><td>${nombreC()}, NIF ${V(c.nif, "NIF")}, ${V(c.domicilio, "domicilio")}, ${V(c.municipio, "municipio")}. Contacto: ${V(c.email, "email")}.</td></tr>
+   <tr><th>Finalidades</th><td>Gestionar la relación de socio; calcular coeficientes β, reparto de energía, excedentes y cuotas; tramitar el acuerdo de reparto ante distribuidora y comercializadora; cobrar cuotas; enviar informes y convocatorias.</td></tr>
+   <tr><th>Base jurídica</th><td>La relación asociativa y la ejecución de los estatutos y del acuerdo de reparto (RGPD, art. 6.1.b); el cumplimiento de obligaciones legales del autoconsumo y contables (art. 6.1.c).</td></tr>
+   <tr><th>Datos</th><td>Identificación y contacto, CUPS, datos de contrato y curvas de consumo horarias. Las curvas de consumo son datos personales y se tratan con acceso limitado (estatutos, art. 33).</td></tr>
+   <tr><th>Destinatarios</th><td>Empresa distribuidora y comercializadora, para aplicar el reparto; el gestor de la Comunidad, como encargado del tratamiento; administraciones cuando la ley lo exija. A los demás socios solo se les muestra información agregada, salvo su β y los importes necesarios para aprobar el reparto.</td></tr>
+   <tr><th>Conservación</th><td>Mientras sea socio y, después, durante los plazos de prescripción de las obligaciones legales y contables.</td></tr>
+   <tr><th>Derechos</th><td>Acceso, rectificación, supresión, oposición, limitación y portabilidad, escribiendo a ${V(c.email, "email")}. Puede reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</td></tr></table>
+  <p>${lugarFecha()}</p>${firmas([["El socio", V(s.nombre, "nombre")]])}` + refs([["rgpd", "arts. 6, 13, 15 a 22 y 28"], ["lopd", "art. 11"], ["est", "art. 33"]]); } },
+
+ { id: "resolucion", fase: "Socios", socio: true, t: "Resolución sobre la admisión", d: "Admisión, lista de espera o denegación motivada", r() { const s = socio(), c = costes(); return cabecera("Resolución de la Junta Directiva sobre una solicitud de admisión") + `
+  <p>La Junta Directiva de ${nombreC()}, en su reunión de ${V("", "fecha de la reunión")}, ha estudiado la solicitud de admisión de ${V(s.nombre, "solicitante")} (CUPS ${V(s.cups, "CUPS")}), con el informe del Gestor sobre los requisitos, la β recomendada y su efecto sobre los demás socios (estatutos, art. 9), y RESUELVE (marcar lo que proceda):</p>
+  <p><span class="casilla">☐</span> <b>Admitir</b> la solicitud con un coeficiente β de ${coef(s.beta)}, la menor entre la recomendada y la disponible, y con un máximo del ${P("maxBeta")} % (art. 18). Cuota anual estimada: ${eur(num(s.beta) * c)}. Cuota de entrada: ${P("cuotaEntrada")} €. Será socio con derecho a energía cuando su β entre en vigor en la siguiente ventana de cambio de coeficientes; hasta entonces es socio admitido pendiente de activación.</p>
+  <p><span class="casilla">☐</span> <b>Incluir en la lista de espera</b> por falta de β disponible, en el puesto ${V("", "n.º")}, por fecha de solicitud completa (art. 11).</p>
+  <p><span class="casilla">☐</span> <b>Denegar</b> la admisión por el motivo siguiente (art. 10): <span class="casilla">☐</span> incumplir el requisito ${V("", "requisito del art. 7")}; <span class="casilla">☐</span> haber sido expulsado por impago sin saldar la deuda. Motivación: ${V("", "explicación")}.</p>
+  <p>Contra la denegación puede recurrir ante la próxima Asamblea General en un plazo de ${P("recurso")} días desde que reciba esta resolución.</p>
+  <p>${lugarFecha()}</p>${firmas([firmaCargo("secr", "La Secretaría"), ["V.º B.º La Presidencia", V(cargo("pres").nombre, "Presidencia")]])}` + refs([["est", "arts. 9, 10, 11 y 18"], ["loda", "art. 21"]]); } },
+
+ { id: "adhesion", fase: "Socios", socio: true, t: "Documento de adhesión", d: "El socio admitido acepta estatutos, β y cuotas", r() { const s = socio(), c = costes(), prod = num(S.inst.produccion); return cabecera("Documento de adhesión") + `
+  <p>${V(s.nombre, "nombre")}, con NIF ${V(s.nif, "NIF")}, admitido/a como socio de ${nombreC()} por resolución de la Junta Directiva de ${V("", "fecha")},</p>
+  <p>MANIFIESTA:</p>
+  <ol><li>Que conoce y acepta los estatutos de la Comunidad y los acuerdos de sus órganos.</li>
+   <li>Que se le asigna en la instalación <i>${V(S.inst.nombre, "instalación")}</i> un coeficiente de reparto β = <b>${coef(s.beta)}</b>, equivalente a unos ${kwh(num(s.beta) * prod)} al año con la producción estimada de ${kwh(prod)}.</li>
+   <li>Que pagará la cuota de entrada de ${P("cuotaEntrada")} € y la cuota anual proporcional a su β, estimada en ${eur(num(s.beta) * c)} en ${P("pagos")} pagos (art. 23).</li>
+   <li>Que firmará el acuerdo de reparto de la energía y autoriza al Gestor a tramitar los coeficientes aprobados ante la distribuidora y su comercializadora, en la medida que permita la norma (art. 19).</li>
+   <li>Que comunicará con ${P("cambioSuministro")} días de antelación cualquier cambio de suministro que afecte al reparto (art. 13).</li>
+   <li>Que conoce el régimen de baja (art. 14) y de impagos (art. 15), y que el ahorro en su propia factura no es un reparto de beneficios (art. 5).</li></ol>
+  <p>${lugarFecha()}</p>${firmas([["El socio", V(s.nombre, "nombre")], ["Por la Comunidad", V(cargo("pres").nombre, "Presidencia")]])}` + refs([["est", "arts. 5, 9, 13, 14, 15, 17 a 19, 23 y 24"], ["rd244", "art. 4 y anexo I"]]); } },
+
+ { id: "baja", fase: "Socios", socio: true, t: "Solicitud de baja voluntaria", d: "Aviso del socio que se va", r() { const s = socio(); return cabecera("Comunicación de baja voluntaria") + `
+  <p>${V(s.nombre, "nombre")}, con NIF ${V(s.nif, "NIF")}, socio de ${nombreC()} con el punto de suministro ${V(s.cups, "CUPS")} y un coeficiente β de ${coef(s.beta)},</p>
+  <p>COMUNICA su baja voluntaria como socio, con el preaviso de ${P("avisoBaja")} días que fija el artículo 14 de los estatutos${S.o.bajaEfecto ? `, con efectos desde ${fecha(S.o.bajaEfecto)}` : ""}.</p>
+  <h2>Efectos de la baja (estatutos, art. 14)</h2>
+  <ul><li>Su β se retirará en la siguiente ventana disponible de cambio de coeficientes (art. 19).</li>
+   <li>Pagará la cuota de su β hasta esa fecha, salvo que otro socio o solicitante asuma antes esa parte.</li>
+   <li>Seguirá respondiendo de su parte del préstamo de la instalación vigente, salvo que otra persona la asuma.</li>
+   <li>Se le devolverá el valor pendiente de su aportación cuando otra persona adquiera su β (art. 24).</li>
+   <li>No tendrá derecho a parte del fondo de la Comunidad.</li></ul>
+  <p>${lugarFecha()}</p>${firmas([["El socio", V(s.nombre, "nombre")], ["Recibido por la Comunidad (fecha y firma)", V("", "nombre")]])}` + refs([["loda", "art. 23"], ["est", "arts. 14, 19 y 24"]]); } },
+
+ { id: "requerimiento", fase: "Socios", socio: true, t: "Requerimiento de pago", d: "Primer aviso de cuota impagada", r() { const s = socio(), o = S.o; return cabecera("Requerimiento de pago") + `
+  <p>A: ${V(s.nombre, "socio")} · ${V(s.domicilio, "domicilio")}</p>
+  <p>Le comunicamos que, a fecha de hoy, tiene pendiente de pago a ${nombreC()} el importe de <b>${o.deuda ? eur(num(o.deuda)) : V("", "importe")}</b>, vencido el ${fecha(o.vencimiento, "fecha de vencimiento")}, correspondiente a las cuotas de su coeficiente β (estatutos, art. 23).</p>
+  <p>Le requerimos para que lo abone en la cuenta de la Comunidad ${V("", "IBAN")} en el plazo de ${P("requerimiento")} días.</p>
+  <h2>Qué pasa si no se paga (estatutos, art. 15)</h2>
+  <ul><li>A los ${P("suspension")} días del vencimiento, la Junta puede suspender su derecho de voto.</li>
+   <li>A los ${P("expulsion")} días, la Junta puede iniciar la expulsión, tras darle audiencia. La resuelve la Asamblea y se puede recurrir ante la jurisdicción competente.</li>
+   <li>Hasta la retirada de su β, el fondo de la Comunidad puede cubrir la cuota, y la Comunidad le reclamará después la deuda.</li></ul>
+  <p>Si ya ha pagado, ignore este aviso. Si tiene dificultades para pagar, hable con nosotros: la Asamblea puede aprobar bonificaciones para hogares vulnerables (art. 26).</p>
+  <p>${lugarFecha()}</p>${firmas([["El Gestor, por la Comunidad", V(S.g.nombre, "gestor")]])}` + refs([["est", "arts. 15, 23, 25 y 26"], ["loda", "art. 22"]]); } },
+
+ { id: "reparto", fase: "Reparto de la energía", t: "Acuerdo de reparto de la energía", d: "Coeficientes β que firman todos los participantes", r() { const i = S.inst, variable = i.reparto === "variable"; return cabecera("Acuerdo de reparto de la energía del autoconsumo colectivo") + avisoBeta() + `
+  <p>${lugarFecha()} Los consumidores que figuran en el cuadro, todos ellos socios de ${nombreC()} y asociados a la instalación de autoconsumo indicada, ACUERDAN repartir su energía según los coeficientes siguientes.</p>
+  <h2>Instalación</h2>
+  <table><tr><th>Denominación</th><td>${V(i.nombre, "instalación")}</td></tr><tr><th>Ubicación</th><td>${V(i.ubicacion, "ubicación")}</td></tr>
+   <tr><th>Potencia</th><td>${V(i.potencia, "kWp")} kWp</td></tr><tr><th>Código CAU</th><td>${V(i.cau, "CAU")}</td></tr>
+   <tr><th>Modalidad</th><td>Autoconsumo colectivo ${V(i.modalidad, "modalidad")}</td></tr><tr><th>Titular</th><td>${nombreC()}, NIF ${V(S.c.nif, "NIF")}</td></tr></table>
+  <h2>Coeficientes de reparto</h2>${tablaSocios(false)}
+  <p><span class="art">Criterio.</span> Cada coeficiente β es la parte de cada consumidor en la generación de la instalación. La suma de todos es 1. ${variable
+    ? "Los coeficientes son <b>variables por hora</b>: se fijan por adelantado para cada hora del año en el fichero que se adjunta, y en cada hora suman 1 (Orden TED/1247/2021)."
+    : "Los coeficientes son <b>constantes</b> para todas las horas."} Se han calculado según la curva de consumo de cada socio, con un máximo del ${P("maxBeta")} % por socio (estatutos, arts. 17 y 18).</p>
+  <p><span class="art">Vigencia y cambios.</span> El acuerdo entra en vigor cuando la distribuidora lo aplique. Los coeficientes solo pueden modificarse cuando haya pasado el plazo mínimo legal desde el último cambio, actualmente ${P("plazoBeta")} meses, con un nuevo acuerdo firmado por todos los participantes y sin efectos retroactivos (estatutos, art. 19).</p>
+  <p><span class="art">Comunicación.</span> Los firmantes autorizan al Gestor a comunicar este acuerdo y el fichero de coeficientes a la empresa distribuidora, directamente o a través de sus comercializadoras.</p>
+  <p><span class="art">Excedentes.</span> La energía asignada y no consumida por cada socio es su excedente, que se compensa o valora en su propia factura según su contrato y la modalidad vigente (estatutos, art. 21).</p>
+  ${firmas(S.socios.map((s) => [V(s.cups, "CUPS"), V(s.nombre, "socio")]))}` + refs([["rd244", "art. 4 y anexo I"], ["ted", ""], ["lse", "art. 9"], ["est", "arts. 17 a 21"]]); } },
+
+ { id: "comunicacion", fase: "Reparto de la energía", t: "Comunicación a la distribuidora", d: "Envío del acuerdo y del fichero de coeficientes", r() { const i = S.inst; return cabecera("Comunicación del acuerdo de reparto y de los coeficientes", "A la empresa distribuidora (directamente o a través de cada comercializadora)") + avisoBeta() + `
+  <p>${V(S.g.nombre, "gestor")}, en nombre de ${nombreC()} y de los consumidores asociados a la instalación ${V(i.nombre, "instalación")} (CAU ${V(i.cau, "CAU")}), COMUNICA el acuerdo de reparto firmado por todos ellos, que se adjunta, con estos coeficientes ${i.reparto === "variable" ? "variables por hora" : "constantes"}:</p>
+  <table><tr><th>CUPS</th><th class="n">Coeficiente β</th></tr>${S.socios.map((s) => `<tr><td>${V(s.cups, "CUPS")}</td><td class="n">${num(s.beta).toFixed(6).replace(".", ",")}</td></tr>`).join("")}</table>
+  <p class="nota">El fichero de coeficientes se entrega en el formato que establece el anexo I del RD 244/2019 y que publica la distribuidora: una línea por CUPS con su coeficiente${i.reparto === "variable" ? " para cada una de las horas del año" : ""}, con seis decimales y suma 1.</p>
+  <p>Se solicita que los coeficientes se apliquen a partir de ${V("", "fecha de inicio")}, respetando el plazo mínimo desde el último cambio (${P("plazoBeta")} meses).</p>
+  <p>${lugarFecha()}</p>${firmas([["El Gestor", V(S.g.nombre, "gestor")]])}` + refs([["rd244", "art. 4 y anexo I"], ["ted", ""], ["rdl7", "gestor de autoconsumo"]]); } },
+
+ { id: "cubierta", fase: "Reparto de la energía", t: "Contrato de cesión de cubierta", d: "Uso del tejado donde va la instalación", r() { const i = S.inst; return cabecera("Contrato de cesión de uso de cubierta") + `
+  <p>${lugarFecha()}</p>
+  <p>REUNIDOS, de una parte ${V(i.propietario, "propietario de la cubierta")}, con NIF ${V(i.propNif, "NIF")} (el <b>Cedente</b>); y de otra ${nombreC()}, con NIF ${V(S.c.nif, "NIF")}, representada por ${V(cargo("pres").nombre, "Presidencia")} (la <b>Comunidad</b>), ACUERDAN:</p>
+  <p><span class="art">1. Objeto.</span> El Cedente cede a la Comunidad el uso de la superficie de ${V(i.ubicacion, "cubierta")} necesaria para instalar y explotar ${V(i.nombre, "instalación")}, de ${V(i.potencia, "kWp")} kWp. La cubierta sigue siendo del Cedente; la instalación es de la Comunidad (estatutos, art. 16).</p>
+  <p><span class="art">2. Duración.</span> ${P("cubierta")} años desde la firma, prorrogables por acuerdo de las partes.</p>
+  <p><span class="art">3. Precio.</span> ${V("", "gratuito / importe anual")}.</p>
+  <p><span class="art">4. Acceso.</span> El Cedente permitirá el acceso del personal de la Comunidad y de sus técnicos para montaje, mantenimiento, lecturas y reparaciones, con aviso previo salvo urgencia.</p>
+  <p><span class="art">5. Obligaciones de la Comunidad.</span> Instalar y mantener según la normativa técnica (REBT), contratar un seguro de responsabilidad civil y de daños, y reparar los daños que cause en la cubierta.</p>
+  <p><span class="art">6. Obras en la cubierta.</span> Si el Cedente necesita hacer obras que obliguen a desmontar la instalación, avisará con ${V("", "plazo")} de antelación y las partes acordarán cómo se reparten los costes y la energía perdida.</p>
+  <p><span class="art">7. Retirada.</span> Al terminar el contrato, la Comunidad retirará la instalación y dejará la cubierta en buen estado, salvo que las partes acuerden su transmisión.</p>
+  <p class="nota">Si la cubierta es de una comunidad de propietarios, el acuerdo de instalar en elementos comunes se adopta en junta de propietarios con la mayoría que fije el artículo 17 de la Ley de Propiedad Horizontal en su redacción vigente.</p>
+  ${firmas([["El Cedente", V(i.propietario, "propietario")], ["Por la Comunidad", V(cargo("pres").nombre, "Presidencia")]])}` + refs([["cc", "arts. 1091, 1255 y 1543"], ["lph", "art. 17"], ["rebt", ""], ["est", "art. 16"]]); } },
+
+ { id: "convocatoria", fase: "Gobierno", t: "Convocatoria de Asamblea General", d: "Aviso a los socios con el orden del día", r() { const a = S.a; return cabecera("Convocatoria de Asamblea General ordinaria") + `
+  <p>Por acuerdo de la Junta Directiva, se convoca a todos los socios de ${nombreC()} a la Asamblea General ordinaria que se celebrará el ${fecha(a.fecha, "fecha")} en ${V(a.lugar, "lugar")}, a las ${V(a.hora, "hora")} en primera convocatoria y a las ${V(a.hora2, "hora")} en segunda, con el siguiente</p>
+  <h2>Orden del día</h2><ol>${(a.orden || "").split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("") || `<li>${V("", "puntos del orden del día")}</li>`}</ol>
+  <p>Cada socio tiene un voto, sea cual sea su β. Puede delegar su voto por escrito en otro socio. La documentación de los puntos del orden del día está a disposición de los socios en ${V(S.c.domicilio, "domicilio")} y por correo electrónico.</p>
+  <p>Para modificar los estatutos, reducir coeficientes β, vender instalaciones o disolver la Comunidad hace falta la mayoría de dos tercios de los votos presentes y representados; si el orden del día incluye una modificación de estatutos, la propuesta se envía al menos ${P("propuesta")} días antes (estatutos, arts. 29 y 35).</p>
+  <p>${lugarFecha()}</p>${firmas([firmaCargo("secr", "La Secretaría"), ["V.º B.º La Presidencia", V(cargo("pres").nombre, "Presidencia")]])}` + refs([["loda", "arts. 11 y 12"], ["est", "arts. 29 y 35"]]); } },
+
+ { id: "actaAsamblea", fase: "Gobierno", t: "Acta de Asamblea General", d: "Borrador para el libro de actas", r() { const a = S.a, n = S.socios.length; return cabecera("Acta de la Asamblea General ordinaria") + `
+  <p>En ${V(a.lugar, "lugar")}, el ${fecha(a.fecha, "fecha")}, a las ${V("", "hora")}, en ${V("", "primera / segunda")} convocatoria, se reúne la Asamblea General de ${nombreC()}, con la asistencia, presentes o representados, de ${V("", "n.º")} de los ${n} socios, por lo que queda válidamente constituida.</p>
+  <p>Preside ${V(cargo("pres").nombre, "Presidencia")} y actúa como secretario/a ${V(cargo("secr").nombre, "Secretaría")}.</p>
+  <h2>Acuerdos</h2>${(a.orden || "").split("\n").filter(Boolean).map((x, k) => `<h3>${k + 1}. ${esc(x)}</h3><p>${V("", "deliberación y acuerdo")} Votos a favor: ${V("", "n.º")}; en contra: ${V("", "n.º")}; abstenciones: ${V("", "n.º")}.</p>`).join("")}
+  <p>Y sin más asuntos que tratar, se levanta la sesión a las ${V("", "hora")}, de lo que como Secretario/a doy fe con el visto bueno de la Presidencia.</p>
+  ${firmas([firmaCargo("secr", "La Secretaría"), ["V.º B.º La Presidencia", V(cargo("pres").nombre, "Presidencia")]])}` + refs([["loda", "arts. 11, 12 y 14"], ["est", "arts. 29 y 37"]]); } },
+
+ { id: "gestor", fase: "Gobierno", t: "Contrato con el gestor", d: "Servicios de gestión y encargo de tratamiento de datos", r() { const g = S.g; return cabecera("Contrato de prestación de servicios de gestión") + `
+  <p>${lugarFecha()} REUNIDOS ${nombreC()}, con NIF ${V(S.c.nif, "NIF")}, representada por ${V(cargo("pres").nombre, "Presidencia")} según acuerdo de la Asamblea General de ${V("", "fecha")} (la <b>Comunidad</b>), y ${V(g.nombre, "gestor")}, con NIF ${V(g.nif, "NIF")} y domicilio en ${V(g.domicilio, "domicilio")} (el <b>Gestor</b>), ACUERDAN:</p>
+  <p><span class="art">1. Objeto.</span> El Gestor presta a la Comunidad estos servicios (estatutos, art. 31): mantener el registro de socios, CUPS, instalaciones y coeficientes; estudiar solicitudes y calcular β recomendadas; preparar y comunicar acuerdos y ficheros de coeficientes; supervisar producción, lecturas, averías y mantenimiento; emitir cuotas, gestionar cobros e informar de impagos; y entregar a cada socio su informe y a la Junta los datos de cierre.</p>
+  <p><span class="art">2. Gestor de autoconsumo.</span> Con autorización de los socios, el Gestor actuará como gestor de autoconsumo y representará a los consumidores asociados en los trámites con distribuidora y comercializadoras, en los términos de la Ley 24/2013 en la redacción dada por el RDL 7/2026 y de su desarrollo reglamentario.</p>
+  <p><span class="art">3. Retribución.</span> ${g.retribucion ? eur(num(g.retribucion)) : V("", "importe")} (${V(g.forma, "precio fijo o por socio")}), más los impuestos aplicables. No depende de la potencia instalada, de las β ni de la energía repartida, y figura en el presupuesto (art. 32).</p>
+  <p><span class="art">4. Fondos.</span> El dinero de la Comunidad se gestiona en cuentas a su nombre, separadas de las del Gestor.</p>
+  <p><span class="art">5. Decisiones reservadas.</span> El Gestor no aprueba β, presupuestos, inversiones, admisiones ni expulsiones: prepara la información para la Junta y la Asamblea.</p>
+  <p><span class="art">6. Conflictos de interés.</span> El Gestor declara por escrito cualquier interés en instaladores, comercializadoras o proveedores contratados: ${V("", "declaración")}.</p>
+  <p><span class="art">7. Duración.</span> ${P("gestorAnos")} años, renovables. La Comunidad puede resolverlo con ${P("gestorAviso")} días de aviso.</p>
+  <p><span class="art">8. Traspaso.</span> Al terminar, el Gestor entrega todos los datos, ficheros y accesos en un formato reutilizable.</p>
+  <h2>Anexo: encargo del tratamiento de datos (RGPD, art. 28)</h2>
+  <p>El Gestor trata por cuenta de la Comunidad, como encargado, los datos de identificación, contacto, CUPS, contrato y curvas de consumo de los socios, solo para prestar los servicios de este contrato y siguiendo instrucciones documentadas de la Comunidad. Se compromete a: guardar confidencialidad y exigirla a su personal; aplicar medidas de seguridad adecuadas (art. 32 RGPD); no recurrir a otro encargado sin autorización previa por escrito; ayudar a la Comunidad a atender los derechos de los socios y a notificar brechas de seguridad sin dilación; suprimir o devolver los datos al terminar; y poner a su disposición la información necesaria para demostrar el cumplimiento.</p>
+  ${firmas([["Por la Comunidad", V(cargo("pres").nombre, "Presidencia")], ["El Gestor", V(g.nombre, "gestor")]])}` + refs([["est", "arts. 31 y 32"], ["lse", "gestor de autoconsumo"], ["rdl7", ""], ["rgpd", "arts. 28 y 32"], ["cc", "art. 1544"]]); } },
+
+ { id: "presupuesto", fase: "Gobierno", t: "Presupuesto y cuotas", d: "Costes del año y cuota de cada socio según su β", r() { const i = S.inst, c = costes(); return cabecera("Presupuesto anual y cuotas") + avisoBeta() + `
+  <h2>Costes anuales</h2>
+  <table><tr><th>Concepto</th><th class="n">Importe</th></tr>
+   <tr><td>Amortización de la instalación</td><td class="n">${eur(num(i.amort))}</td></tr><tr><td>Mantenimiento</td><td class="n">${eur(num(i.mant))}</td></tr>
+   <tr><td>Gestión</td><td class="n">${eur(num(i.gestion))}</td></tr><tr><td>Seguros</td><td class="n">${eur(num(i.seguros))}</td></tr>
+   <tr><td>Dotación al fondo</td><td class="n">${eur(num(i.dotFondo))}</td></tr><tr><th>Total</th><th class="n">${eur(c)}</th></tr></table>
+  <div class="formula">Cuotaᵢ = βᵢ × (amortización + mantenimiento + gestión + seguros + dotación al fondo)</div>
+  <h2>Cuotas por socio</h2>${tablaSocios(true)}
+  <p>La cuota se paga por la parte de instalación asignada, no por los kWh consumidos, en ${P("pagos")} pagos. Producción estimada: ${kwh(num(i.produccion))} al año. Las diferencias con el gasto real se regularizan en el cierre anual (estatutos, art. 23).</p>
+  <p>Objetivo mínimo del fondo: ${P("fondo")} % de la inversión (${eur(num(i.coste) * num(S.p.fondo) / 100)}). Valor pendiente de la instalación para las cesiones de β: ${eur(num(i.pendiente))} (art. 24).</p>` + refs([["est", "arts. 23 a 27"], ["loda", "art. 14"]]); } },
+
+ { id: "informe", fase: "Gobierno", socio: true, t: "Informe periódico al socio", d: "Energía asignada, excedentes y cuota", r() { const s = socio(), prod = num(S.inst.produccion), asig = num(s.beta) * prod, o = S.o; return cabecera("Informe al socio", `${V(s.nombre, "socio")} · ${V(o.periodo, "periodo")}`) + `
+  <table><tr><th>Concepto</th><th class="n">Valor</th></tr>
+   <tr><td>Coeficiente β en vigor</td><td class="n">${coef(s.beta)}</td></tr>
+   <tr><td>Energía asignada${o.energiaReal ? "" : " (estimada con la producción prevista)"}</td><td class="n">${o.energiaReal ? kwh(num(o.energiaReal)) : kwh(asig)}</td></tr>
+   <tr><td>Excedentes (asignada y no consumida)</td><td class="n">${o.excedReal ? kwh(num(o.excedReal)) : V("", "kWh, de las lecturas")}</td></tr>
+   <tr><td>Cuota del periodo</td><td class="n">${eur(num(s.beta) * costes())}</td></tr>
+   <tr><td>Ahorro estimado en su factura</td><td class="n">${V("", "€, según su tarifa")}</td></tr></table>
+  ${o.excedReal && num(o.excedReal) > asig * num(S.p.excedentes) / 100 ? `<p><b>Sus excedentes superan el ${P("excedentes")} % de su energía asignada:</b> puede pedir la revisión de su β para la siguiente ventana (estatutos, art. 21).</p>` : `<p>Si sus excedentes superan el ${P("excedentes")} % de su energía asignada, puede pedir la revisión de su β (estatutos, art. 21).</p>`}
+  <p class="nota">Los datos de consumo proceden de Datadis. La Comunidad no garantiza un precio ni un importe mínimo por los excedentes, que se compensan en su propia factura según su contrato.</p>` + refs([["est", "arts. 12, 21 y 23"], ["rd244", "art. 14"]]); } },
+
+ { id: "libro", fase: "Gobierno", t: "Libro registro de socios", d: "Relación actualizada de socios obligatoria", r() { return cabecera("Libro registro de socios") + `
+  <table><tr><th>N.º</th><th>Nombre o razón social</th><th>NIF</th><th>Tipo</th><th>CUPS</th><th class="n">β</th><th>Alta</th><th>Baja</th></tr>
+   ${S.socios.map((s, k) => `<tr><td>${k + 1}</td><td>${V(s.nombre, "nombre")}</td><td>${V(s.nif, "NIF")}</td><td>${V(s.tipo, "tipo")}</td><td>${V(s.cups, "CUPS")}</td><td class="n">${coef(s.beta)}</td><td>${s.alta ? fecha(s.alta) : V("", "fecha")}</td><td></td></tr>`).join("")}</table>
+  <p class="nota">La asociación debe llevar una relación actualizada de sus socios, además del libro de actas, la contabilidad y el inventario de bienes (LO 1/2002, art. 14). Los socios pueden consultarla según el artículo 21 de la misma ley, con los límites de la protección de datos.</p>` + refs([["loda", "arts. 14 y 21"], ["rgpd", "art. 5"]]); } },
+
+ { id: "rat", fase: "Protección de datos", t: "Registro de actividades de tratamiento", d: "Obligatorio con datos de consumo de los socios", r() { const c = S.c; const fila = (a, f, b, d, x) => `<tr><td><b>${a}</b></td><td>${f}</td><td>${b}</td><td>${d}</td><td>${x}</td></tr>`; return cabecera("Registro de actividades de tratamiento") + `
+  <p>Responsable: ${nombreC()}, NIF ${V(c.nif, "NIF")}, ${V(c.domicilio, "domicilio")}, ${V(c.municipio, "municipio")} · ${V(c.email, "email")}. Encargado: ${V(S.g.nombre, "gestor")}.</p>
+  <table><tr><th>Actividad</th><th>Finalidad</th><th>Base jurídica</th><th>Datos e interesados</th><th>Destinatarios y plazos</th></tr>
+   ${fila("Gestión de socios", "Admisión, bajas, libro de socios, convocatorias", "Art. 6.1.b RGPD (relación asociativa)", "Identificación y contacto de socios y solicitantes", "Gestor. Mientras sea socio y plazos legales después")}
+   ${fila("Reparto de la energía", "Cálculo de β, reparto, excedentes, informes", "Art. 6.1.b y 6.1.c RGPD", "CUPS, contrato y curvas de consumo horarias", "Distribuidora, comercializadoras, gestor. Mientras sea socio")}
+   ${fila("Cuotas y cobros", "Emisión de cuotas, cobros, impagos", "Art. 6.1.b y 6.1.c RGPD", "Identificación, datos bancarios, importes", "Entidad bancaria, gestor, Agencia Tributaria. Plazos contables y fiscales")}
+   ${fila("Órganos de gobierno", "Actas, votaciones, certificados", "Art. 6.1.c RGPD (LO 1/2002)", "Identificación de socios y cargos", "Registro de asociaciones. Permanente (libro de actas)")}</table>
+  <p><b>Medidas de seguridad:</b> acceso a las curvas de consumo limitado a su titular, al Gestor y a quien lo necesite; información a los demás socios solo agregada; copias de seguridad; contraseñas personales; contrato de encargo con el Gestor (estatutos, art. 33).</p>` + refs([["rgpd", "arts. 5, 6, 28, 30 y 32"], ["lopd", "art. 31"], ["est", "art. 33"]]); } },
+];
+
+// ---------------- estatutos (texto completo) ----------------
+function estatutos() {
+  const c = S.c, i = S.inst, cce = c.tipo === "CCE";
+  return cabecera("Estatutos", nombreC() + " · Asociación sin ánimo de lucro") + `
+  <h2>Título I. Disposiciones generales</h2>
+  <p><span class="art">Artículo 1. Denominación y forma jurídica.</span> Se constituye ${nombreC()} (en adelante, la Comunidad) como asociación sin ánimo de lucro, conforme a la Ley Orgánica 1/2002, reguladora del Derecho de Asociación, con personalidad jurídica propia y plena capacidad de obrar. La Comunidad actúa como ${tipoTxt()} ${cce ? "según la Directiva (UE) 2019/944" : "según el artículo 6.1.j de la Ley 24/2013, del Sector Eléctrico, y la Directiva (UE) 2018/2001"}.</p>
+  <p><span class="art">Artículo 2. Domicilio, ámbito y duración.</span> Su domicilio está en ${V(c.domicilio, "domicilio")}, ${V(c.cp, "CP")} ${V(c.municipio, "municipio")} (${V(c.provincia, "provincia")}). Actúa en ${V(c.ambito, "ámbito territorial")}, dentro de los límites de proximidad exigidos por la normativa aplicable. Su duración es ${V(c.duracion, "duración")}.</p>
+  <p><span class="art">Artículo 3. Finalidad.</span> Su finalidad primordial es proporcionar beneficios medioambientales, económicos y sociales a sus socios y a su entorno, en lugar de ganancias financieras.${cce ? "" : " La Comunidad es autónoma y está efectivamente controlada por socios situados en las proximidades de sus proyectos de energía renovable."}</p>
+  <p><span class="art">Artículo 4. Actividades.</span> La Comunidad podrá:</p>
+  <ul><li>Promover, adquirir, explotar y mantener instalaciones de energía renovable.</li><li>Organizar el autoconsumo colectivo de sus socios.</li>
+   <li>Informar y formar sobre eficiencia y energía renovable.</li><li>Colaborar con administraciones y entidades para combatir la pobreza energética.</li></ul>
+  <p><span class="art">Artículo 5. Ausencia de lucro.</span> Ningún excedente del ejercicio se repartirá entre los socios. Se aplicará a los fines de la Comunidad según el artículo 25. El ahorro de cada socio en su propia factura no se considera reparto de beneficios de la Comunidad.</p>
+
+  <h2>Título II. Socios y admisión</h2>
+  <p><span class="art">Artículo 6. Participación abierta y voluntaria.</span> Pueden solicitar la admisión las personas físicas, pymes y entidades locales que cumplan estos Estatutos. Nadie será discriminado por motivos ajenos a los requisitos del artículo 7.</p>
+  <p><span class="art">Artículo 7. Requisitos.</span> La persona solicitante debe:</p>
+  <ul><li>Tener un punto de suministro con CUPS dentro del ámbito de proximidad.</li><li>Cumplir los requisitos técnicos de la modalidad de autoconsumo.</li>
+   <li>Aceptar los Estatutos y firmar el acuerdo de reparto.</li><li>Pagar la cuota de entrada, salvo bonificación.</li><li>No tener deudas vencidas con la Comunidad.</li></ul>
+  <p><span class="art">Artículo 8. Solicitud.</span> La solicitud incluirá identificación, CUPS, consumo de los últimos 12 meses y autorización para tratar sus datos. Si no hay 12 meses de historial, el Gestor usará un perfil estimado.</p>
+  <p><span class="art">Artículo 9. Procedimiento de admisión.</span></p>
+  <ol><li>El Gestor comprueba los requisitos y calcula la β recomendada.</li><li>El Gestor informa del efecto de la entrada sobre los socios afectados.</li>
+   <li>La Junta Directiva resuelve en un máximo de ${P("resolver")} días.</li><li>Si se admite, la persona firma la adhesión y paga la cuota de entrada.</li>
+   <li>El Gestor tramita los nuevos coeficientes según el artículo 19.</li></ol>
+  <p>La condición de socio con derecho a energía empieza cuando su β entra en vigor. Antes, tiene la consideración de socio admitido pendiente de activación.</p>
+  <p><span class="art">Artículo 10. Denegación.</span> Solo podrá denegarse la admisión por: incumplir algún requisito del artículo 7; falta de capacidad, en cuyo caso se aplicará el artículo 11; o haber sido expulsado por impago sin haber saldado la deuda. La denegación será por escrito y motivada. Podrá recurrirse ante la próxima Asamblea General, en un plazo de ${P("recurso")} días.</p>
+  <p><span class="art">Artículo 11. Lista de espera.</span> Si no hay β disponible, la solicitud entra en una lista pública para los socios, ordenada por fecha de solicitud completa. La Asamblea podrá aprobar prioridad para hogares en situación de vulnerabilidad. Esta prioridad no podrá superar el ${P("prioridad")} % de la capacidad de la instalación. Se revisará la lista antes de cada ventana de cambio de coeficientes. Si la lista supera el ${P("espera")} % de la capacidad, la Junta estudiará una ampliación.</p>
+
+  <h2>Título III. Derechos, obligaciones y salida</h2>
+  <p><span class="art">Artículo 12. Derechos.</span> Cada socio tiene derecho a: recibir la energía que corresponda a su β en vigor; votar en la Asamblea, con un voto por socio, sea cual sea su β; consultar sus datos, las cuentas y el contrato del Gestor; recibir un informe periódico de energía asignada, excedentes, cuotas y ahorro estimado; solicitar la revisión de su β; y darse de baja según el artículo 14.</p>
+  <p><span class="art">Artículo 13. Obligaciones.</span> Cada socio debe: pagar sus cuotas en plazo; mantener actualizados sus datos, su CUPS y su comercializadora; firmar o autorizar los trámites necesarios para aplicar los coeficientes aprobados; y comunicar con ${P("cambioSuministro")} días de antelación cualquier cambio de suministro que afecte al reparto.</p>
+  <p><span class="art">Artículo 14. Baja voluntaria.</span> El socio puede darse de baja en cualquier momento, avisando por escrito con ${P("avisoBaja")} días de antelación.</p>
+  <ul><li><b>Efecto:</b> su β se retira en la siguiente ventana disponible del artículo 19.</li>
+   <li><b>Costes:</b> pagará la cuota de su β hasta esa fecha, salvo que otro socio o solicitante asuma antes esa parte.</li>
+   <li><b>Deuda de instalación:</b> seguirá respondiendo de su parte del préstamo vigente, salvo que otra persona la asuma.</li>
+   <li><b>Aportación:</b> se devolverá su valor pendiente según el artículo 24, cuando otra persona adquiera su β.</li>
+   <li><b>Fondo:</b> el socio saliente no tendrá derecho a parte del fondo de la Comunidad.</li></ul>
+  <p><span class="art">Artículo 15. Impagos y expulsión.</span></p>
+  <ol><li>A los ${P("requerimiento")} días del vencimiento, el Gestor envía un primer requerimiento.</li><li>A los ${P("suspension")} días, la Junta puede suspender el derecho de voto.</li>
+   <li>A los ${P("expulsion")} días, la Junta puede iniciar la expulsión, tras dar audiencia al socio.</li><li>La Asamblea resuelve la expulsión. El socio puede recurrirla ante la jurisdicción competente.</li>
+   <li>La β del expulsado se retira en la siguiente ventana disponible.</li></ol>
+  <p>Hasta esa fecha, el fondo de la Comunidad podrá cubrir la cuota impagada. La Comunidad reclamará después la deuda al socio.</p>
+
+  <h2>Título IV. Instalaciones y reparto de energía</h2>
+  <p><span class="art">Artículo 16. Titularidad.</span> Las instalaciones son propiedad de la Comunidad. Su adquisición, ampliación o venta requiere acuerdo de la Asamblea. Si un socio cede su cubierta, firmará un contrato con duración mínima de ${P("cubierta")} años, con las condiciones de acceso y retirada. La cubierta sigue siendo suya. Si un socio aporta una instalación existente, se transmitirá por un valor basado en tasación independiente y aprobado por la Asamblea, sin el voto del aportante.</p>
+  <p><span class="art">Artículo 17. Coeficiente β.</span> La β es la parte de cada socio en la generación de una instalación y en sus costes. La suma de todas las β será siempre 1, también en cada hora si son variables. La Comunidad podrá usar coeficientes constantes o variables por hora, fijados siempre por adelantado.</p>
+  <p><span class="art">Artículo 18. Asignación de β.</span> Al entrar, cada socio recibe la menor de estas dos cantidades: la β recomendada por el Gestor según su curva de consumo, o la β disponible. La β se limita para evitar que el socio pague por energía que previsiblemente acabaría en su mayoría como excedente. Un socio podrá pedir una β inferior a la recomendada. Ningún socio tendrá más del ${P("maxBeta")} % del total, salvo acuerdo de la Asamblea o falta de otros socios.</p>
+  <p><span class="art">Artículo 19. Modificación de coeficientes.</span> Los coeficientes se modificarán en ventanas programadas por la Junta, con este límite:</p>
+  <ul><li><b>Periodicidad:</b> al menos el plazo mínimo legal desde el último cambio, actualmente ${P("plazoBeta")} meses.</li>
+   <li><b>Comunicación:</b> se notifica a la distribuidora, directamente o por la comercializadora, con antelación suficiente.</li>
+   <li><b>Firma:</b> el acuerdo lo firman los participantes exigidos por la norma. Actualmente, todos.</li>
+   <li><b>Sin retroactividad:</b> las cuotas y la energía cambian desde la fecha de entrada en vigor.</li></ul>
+  <p>Cada cambio pasará por los estados de propuesto, aprobado, firmado, comunicado y en vigor. Si la norma reduce el plazo, se aplicará el nuevo sin modificar estos Estatutos. Cada socio autoriza al Gestor a tramitar los coeficientes aprobados, en la medida que permita la norma.</p>
+  <p><span class="art">Artículo 20. Apertura de capacidad.</span> Si no queda β disponible, la Comunidad puede:</p>
+  <ol><li><b>Cesión voluntaria:</b> un socio cede parte de su β, con la compensación del artículo 24.</li>
+   <li><b>Reducción proporcional:</b> la Asamblea reduce las β existentes, hasta un máximo de ${P("reduccion")} % de cada una en cada ejercicio. Los afectados dejan de pagar la parte reducida y reciben su compensación.</li>
+   <li><b>Ampliación:</b> la Asamblea aprueba añadir potencia, su financiación y las nuevas β.</li></ol>
+  <p>Ningún socio cederá β sin su consentimiento, salvo el supuesto 2 o los casos de baja y expulsión.</p>
+  <p><span class="art">Artículo 21. Excedentes.</span> La energía asignada a un socio y no consumida por él es su excedente. El socio obtiene su compensación o valor en su propia factura, según su contrato y la modalidad vigente. La Comunidad no garantiza un precio ni un importe mínimo. El socio asume los límites de compensación que aplique su comercializadora. Cualquier socio puede pedir la revisión de su β si sus excedentes superan el ${P("excedentes")} % de su energía asignada. Cuando la norma lo permita, un socio podrá destinar sus excedentes a hogares vulnerables.</p>
+
+  <h2>Título V. Régimen económico</h2>
+  <p><span class="art">Artículo 22. Patrimonio y recursos.</span> La Comunidad se constituye con un patrimonio fundacional de ${V(c.patrimonio, "importe")} €. Son recursos de la Comunidad las cuotas, las aportaciones, los préstamos, las subvenciones y cualquier otro ingreso lícito.</p>
+  <p><span class="art">Artículo 23. Cuota anual.</span> Cada socio paga una cuota proporcional a su β, en ${P("pagos")} pagos:</p>
+  <div class="formula">Cuotaᵢ = βᵢ × (amortización + mantenimiento + gestión + seguros + dotación al fondo)</div>
+  <p>La cuota se paga por la parte de instalación asignada, no por los kWh consumidos. Si cambia la β durante el año, la cuota se calcula por periodos. La Asamblea aprueba cada año el presupuesto. Cualquier diferencia con el gasto real se regulariza en el cierre anual.</p>
+  <p><span class="art">Artículo 24. Cuota de entrada y cesión de β.</span> La cuota de entrada cubre los gastos de alta y podrá ser de hasta ${P("cuotaEntrada")} €. El socio entrante asume además su parte de la instalación por una de estas vías:</p>
+  <ul><li><b>Instalación pendiente de financiar:</b> asume la parte de cuota correspondiente a su β.</li><li><b>Instalación pagada por otros socios:</b> paga a quien cede β este importe:</li></ul>
+  <div class="formula">Pago = β cedida × valor pendiente de la instalación</div>
+  <p>El valor pendiente será el coste de inversión menos la amortización acumulada, sin ganancia para el cedente. Si la Comunidad compensa al cedente, el pago irá a su fondo.</p>
+  <p><span class="art">Artículo 25. Fondo de la Comunidad.</span> Las dotaciones y los excedentes del ejercicio irán al fondo. Se destinará, en este orden, a: averías y sustitución de equipos; cobertura temporal de impagos y β sin titular; bonificación a hogares vulnerables; y ampliación de instalaciones y formación. El fondo tendrá un objetivo mínimo de ${P("fondo")} % de los costes de inversión. Alcanzado este objetivo, la Asamblea podrá reducir la dotación anual.</p>
+  <p><span class="art">Artículo 26. Bonificación a hogares vulnerables.</span> La Asamblea podrá reducir la cuota de entrada o la cuota anual a socios que acrediten vulnerabilidad, con criterios públicos. El coste se cubre con el fondo o con ayudas, y nunca superará el ${P("vulnPresup")} % del presupuesto anual sin acuerdo expreso.</p>
+  <p><span class="art">Artículo 27. Cuentas y documentación.</span> El ejercicio coincide con el año natural y se cierra el 31 de diciembre. La Comunidad llevará una relación actualizada de socios, contabilidad que permita conocer su situación financiera, inventario de bienes y libro de actas. La Junta presenta a la Asamblea las cuentas, una liquidación por socio y el presupuesto, en los ${P("cuentas")} meses siguientes al cierre.</p>
+
+  <h2>Título VI. Gobierno y gestión</h2>
+  <p><span class="art">Artículo 28. Órganos.</span> Son órganos de la Comunidad la Asamblea General y la Junta Directiva. El Gestor es un prestador de servicios y no forma parte de ellos.</p>
+  <p><span class="art">Artículo 29. Asamblea General.</span> Es el órgano supremo y se reúne al menos una vez al año, convocada por la Junta con al menos ${V("", "n.º")} días de antelación. Queda válidamente constituida en primera convocatoria con un tercio de los socios, presentes o representados, y en segunda con cualquier número. Cada socio tiene un voto. Le corresponde: aprobar cuentas, presupuestos y cuotas; aprobar inversiones, ampliaciones y venta de instalaciones; aprobar los criterios de β y las reducciones proporcionales; nombrar y cesar a la Junta y al Gestor; resolver expulsiones y recursos; y modificar los Estatutos y acordar la disolución. Los acuerdos se adoptan por mayoría simple. Modificar los Estatutos, reducir β, vender instalaciones y disolver la Comunidad requieren dos tercios de los votos presentes y representados.</p>
+  <p><span class="art">Artículo 30. Junta Directiva.</span> La forman al menos ${P("juntaMin")} socios elegidos por la Asamblea durante ${P("juntaAnos")} años, con los cargos de Presidencia, Secretaría y Tesorería. Cesan por fin del mandato, renuncia, baja como socio o acuerdo de la Asamblea. Le corresponde resolver admisiones, programar ventanas, aprobar cambios de β dentro de los criterios fijados y supervisar al Gestor. Un socio se abstendrá en los acuerdos que le afecten directamente.</p>
+  <p><span class="art">Artículo 31. Gestor.</span> La Comunidad podrá contratar a una persona física o jurídica como gestor, también en la figura de gestor de autoconsumo, con autorización de los socios. Sus funciones son:</p>
+  <ol><li>Mantener el registro de socios, CUPS, instalaciones y coeficientes.</li><li>Estudiar solicitudes y calcular β recomendadas.</li><li>Preparar y comunicar acuerdos y ficheros de coeficientes.</li>
+   <li>Supervisar producción, lecturas, averías y mantenimiento.</li><li>Emitir cuotas, gestionar cobros e informar de impagos.</li><li>Entregar a cada socio su informe y a la Junta los datos de cierre.</li></ol>
+  <p><span class="art">Artículo 32. Contrato y límites del Gestor.</span> El contrato del Gestor debe ser escrito, aprobado por la Asamblea y consultable por los socios. Además:</p>
+  <ul><li><b>Retribución:</b> será un precio fijo o por socio. No dependerá de la potencia instalada, de las β ni de la energía repartida.</li>
+   <li><b>Coste:</b> se incluye en la cuota, con su importe visible en el presupuesto.</li>
+   <li><b>Fondos:</b> el dinero se gestionará en cuentas a nombre de la Comunidad, separadas de las del Gestor.</li>
+   <li><b>Decisiones reservadas:</b> no podrá aprobar β, presupuestos, inversiones, admisiones ni expulsiones.</li>
+   <li><b>Conflictos:</b> declarará cualquier interés en instaladores, comercializadoras o proveedores contratados.</li>
+   <li><b>Duración:</b> será de hasta ${P("gestorAnos")} años, renovable, y la Comunidad podrá resolverlo con ${P("gestorAviso")} días de aviso.</li>
+   <li><b>Traspaso:</b> al terminar, entregará todos los datos y accesos en un formato reutilizable.</li></ul>
+  <p>El Gestor no votará en la Asamblea sobre su contrato o retribución, aunque también sea socio.</p>
+
+  <h2>Título VII. Datos, conflictos, cambios y disolución</h2>
+  <p><span class="art">Artículo 33. Protección de datos.</span> Las curvas de consumo son datos personales. Solo se usarán para reparto, liquidación e informes, con acceso limitado a su titular, al Gestor y a quien lo necesite. La información compartida con otros socios irá agregada, salvo la β y los importes necesarios para aprobar el reparto.</p>
+  <p><span class="art">Artículo 34. Resolución de conflictos.</span> Las discrepancias se plantean primero ante la Junta, que responde en ${P("conflictos")} días. Después, los socios pueden acudir a mediación antes de la vía judicial.</p>
+  <p><span class="art">Artículo 35. Modificación de los Estatutos.</span> Requiere el acuerdo reforzado del artículo 29, con la propuesta enviada al menos ${P("propuesta")} días antes, y se comunicará al registro de asociaciones. Los cambios legales obligatorios se aplican desde su entrada en vigor, y la Junta adaptará el texto.</p>
+  <p><span class="art">Artículo 36. Disolución.</span> La Comunidad se disuelve por acuerdo reforzado de la Asamblea, por causa legal o por resolución judicial. La liquidación seguirá este orden: pago de deudas, incluidas las del contrato del Gestor y los préstamos; devolución a los socios de las aportaciones pendientes, sin ganancia; y entrega del remanente a una entidad sin ánimo de lucro con fines similares. Las instalaciones se podrán vender o transmitir. Tendrán preferencia, a igualdad de condiciones, una entidad de fines similares o los socios interesados, por el valor de tasación.</p>
+  <p><span class="art">Artículo 37. Representación y certificación.</span> La Presidencia representa legalmente a la Comunidad. La Secretaría levanta las actas y expide los certificados de los acuerdos, con el visto bueno de la Presidencia.</p>
+  <p><span class="art">Disposición final.</span> Estos Estatutos se adaptarán al reglamento de las comunidades de energías renovables y al nuevo real decreto de autoconsumo cuando se aprueben.</p>
+
+  <h2>Anexo I. Parámetros aprobados</h2>
+  <table><tr><th>Parámetro</th><th>Valor</th><th class="n">Artículo</th></tr>
+   <tr><td>Plazo mínimo entre cambios de β</td><td>${P("plazoBeta")} meses</td><td class="n">19</td></tr><tr><td>Máximo de β por socio</td><td>${P("maxBeta")} %</td><td class="n">18</td></tr>
+   <tr><td>Revisión por excedentes altos</td><td>${P("excedentes")} % de la energía asignada</td><td class="n">21</td></tr><tr><td>Reducción proporcional máxima</td><td>${P("reduccion")} % de cada β por ejercicio</td><td class="n">20</td></tr>
+   <tr><td>Aviso de baja voluntaria</td><td>${P("avisoBaja")} días</td><td class="n">14</td></tr><tr><td>Inicio de expulsión por impago</td><td>${P("expulsion")} días</td><td class="n">15</td></tr>
+   <tr><td>Objetivo mínimo del fondo</td><td>${P("fondo")} % de la inversión</td><td class="n">25</td></tr><tr><td>Cuota de entrada máxima</td><td>${P("cuotaEntrada")} €</td><td class="n">24</td></tr></table>
+  <h2>Anexo II. Socios fundadores y reparto inicial</h2>
+  <p>Instalación: ${V(i.nombre, "instalación")}, ${V(i.potencia, "kWp")} kWp, producción estimada ${kwh(num(i.produccion))} al año, costes anuales ${eur(costes())}.</p>
+  ${tablaSocios(true)}
+  ${avisoBeta()}
+  <p>${lugarFecha()}</p>
+  ${firmas(S.junta.map((j) => [esc(j.cargo || ""), V(j.nombre, "nombre")]))}
+  ${PENDIENTE}` + refs([["loda", "arts. 7, 11, 12, 14, 16 y 17"], ["lse", "art. 6.1.j"], ["rdl23", ""], [cce ? "dme" : "red2", cce ? "arts. 2.11 y 16" : "arts. 2.16 y 22"], ["red3", ""], ["rd244", "art. 4 y anexo I"], ["ted", ""], ["rdl7", ""], ["rgpd", ""], ["lopd", ""]]);
+}
+
+// ---------------- formulario de datos ----------------
+const CAMPOS = [
+  { t: "Comunidad", k: "c", f: [["nombre", "Nombre"], ["tipo", "Tipo de comunidad", [["CER", "Comunidad de energías renovables"], ["CCE", "Comunidad ciudadana de energía"]]],
+     ["domicilio", "Domicilio"], ["cp", "Código postal", null, 1], ["municipio", "Municipio", null, 1], ["provincia", "Provincia", null, 1], ["nif", "NIF", null, 1],
+     ["ambito", "Ámbito territorial"], ["email", "Correo electrónico"], ["registro", "Registro de asociaciones"], ["lugar", "Lugar de firma", null, 1], ["fecha", "Fecha de constitución", "date", 1],
+     ["patrimonio", "Patrimonio fundacional (€)", null, 1], ["duracion", "Duración", null, 1]] },
+  { t: "Junta directiva", k: "junta", tabla: [["cargo", "Cargo"], ["nombre", "Nombre"], ["nif", "NIF"]], nuevo: { cargo: "Vocalía", nombre: "", nif: "" } },
+  { t: "Socios", k: "socios", tabla: [["nombre", "Nombre"], ["tipo", "Tipo", ["Persona física", "Pyme", "Entidad local"]], ["nif", "NIF"], ["cups", "CUPS"], ["beta", "β", "n"], ["consumo", "kWh/año", "n"], ["domicilio", "Domicilio"], ["email", "Email"], ["alta", "Alta", "date"]],
+     nuevo: { nombre: "", tipo: "Persona física", nif: "", cups: "", beta: "0", consumo: "", domicilio: "", email: "", alta: "" } },
+  { t: "Instalación y costes", k: "inst", f: [["nombre", "Denominación"], ["ubicacion", "Ubicación"], ["potencia", "Potencia (kWp)", null, 1], ["cau", "Código CAU", null, 1],
+     ["modalidad", "Modalidad", [["con excedentes acogida a compensación", "Con excedentes, con compensación"], ["con excedentes no acogida a compensación", "Con excedentes, sin compensación"], ["sin excedentes", "Sin excedentes"]]],
+     ["reparto", "Coeficientes", [["fijo", "Constantes"], ["variable", "Variables por hora"]], 1], ["produccion", "Producción (kWh/año)", null, 1],
+     ["coste", "Inversión (€)", null, 1], ["pendiente", "Valor pendiente (€)", null, 1], ["amort", "Amortización (€/año)", null, 1], ["mant", "Mantenimiento (€/año)", null, 1],
+     ["gestion", "Gestión (€/año)", null, 1], ["seguros", "Seguros (€/año)", null, 1], ["dotFondo", "Dotación al fondo (€/año)", null, 1],
+     ["propietario", "Propietario de la cubierta"], ["propNif", "NIF del propietario", null, 1]] },
+  { t: "Parámetros de los estatutos", k: "p", f: [["plazoBeta", "Meses entre cambios de β", null, 1], ["maxBeta", "β máxima por socio (%)", null, 1], ["excedentes", "Revisión por excedentes (%)", null, 1],
+     ["reduccion", "Reducción proporcional (%)", null, 1], ["avisoBaja", "Aviso de baja (días)", null, 1], ["requerimiento", "Primer requerimiento (días)", null, 1], ["suspension", "Suspensión del voto (días)", null, 1],
+     ["expulsion", "Inicio de expulsión (días)", null, 1], ["fondo", "Objetivo del fondo (%)", null, 1], ["cuotaEntrada", "Cuota de entrada (€)", null, 1], ["pagos", "Pagos de la cuota al año", null, 1],
+     ["resolver", "Plazo de admisión (días)", null, 1], ["recurso", "Plazo de recurso (días)", null, 1], ["prioridad", "Prioridad vulnerables (%)", null, 1], ["espera", "Lista de espera para ampliar (%)", null, 1],
+     ["cubierta", "Cesión de cubierta (años)", null, 1], ["juntaMin", "Miembros de la Junta", null, 1], ["juntaAnos", "Mandato de la Junta (años)", null, 1], ["gestorAnos", "Contrato del gestor (años)", null, 1],
+     ["gestorAviso", "Aviso para resolverlo (días)", null, 1], ["conflictos", "Respuesta a conflictos (días)", null, 1], ["propuesta", "Aviso de cambio de estatutos (días)", null, 1],
+     ["cuentas", "Plazo de cuentas (meses)", null, 1], ["cambioSuministro", "Aviso de cambio de suministro (días)", null, 1], ["vulnPresup", "Tope de bonificaciones (%)", null, 1]] },
+  { t: "Gestor", k: "g", f: [["nombre", "Nombre o razón social"], ["nif", "NIF", null, 1], ["retribucion", "Retribución (€/año)", null, 1], ["domicilio", "Domicilio"], ["forma", "Forma de retribución"]] },
+  { t: "Asamblea General", k: "a", f: [["fecha", "Fecha", "date", 1], ["lugar", "Lugar"], ["hora", "1.ª convocatoria", "time", 1], ["hora2", "2.ª convocatoria", "time", 1], ["orden", "Orden del día (un punto por línea)", "area"]] },
+  { t: "Otros datos", k: "o", f: [["deuda", "Importe impagado (€)", null, 1], ["vencimiento", "Vencimiento", "date", 1], ["bajaEfecto", "Fecha de efecto de la baja", "date", 1],
+     ["periodo", "Periodo del informe", null, 1], ["energiaReal", "Energía asignada real (kWh)", null, 1], ["excedReal", "Excedentes reales (kWh)", null, 1]] },
+];
+const $ = (id) => document.getElementById(id);
+function campoHTML(k, [n, et, tipo, mitad]) {
+  const id = `f-${k}-${n}`, v = esc(S[k][n] ?? "");
+  let ctl;
+  if (Array.isArray(tipo)) ctl = `<select id="${id}" data-k="${k}" data-n="${n}">${tipo.map(([val, txt]) => `<option value="${esc(val)}"${String(S[k][n]) === val ? " selected" : ""}>${esc(txt)}</option>`).join("")}</select>`;
+  else if (tipo === "area") ctl = `<textarea id="${id}" data-k="${k}" data-n="${n}">${v}</textarea>`;
+  else ctl = `<input id="${id}" data-k="${k}" data-n="${n}" type="${tipo || "text"}" value="${v}">`;
+  return { html: `<label class="campo" for="${id}"><span>${esc(et)}</span>${ctl}</label>`, mitad };
+}
+function pintarDatos() {
+  $("p-datos").innerHTML = CAMPOS.map((sec, si) => {
+    let cuerpo;
+    if (sec.tabla) {
+      cuerpo = `<div class="tabla-w"><table class="ed"><tr>${sec.tabla.map((c) => `<th>${esc(c[1])}</th>`).join("")}<th></th></tr>${S[sec.k].map((fila, r) => `<tr>${sec.tabla.map(([n, et, tipo]) => {
+        const id = `t-${sec.k}-${r}-${n}`, v = esc(fila[n] ?? "");
+        const ctl = Array.isArray(tipo) ? `<select id="${id}" aria-label="${esc(et)}" data-t="${sec.k}" data-r="${r}" data-n="${n}">${tipo.map((o) => `<option${fila[n] === o ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`
+          : `<input id="${id}" aria-label="${esc(et)}" data-t="${sec.k}" data-r="${r}" data-n="${n}" type="${tipo === "date" ? "date" : "text"}" ${tipo === "n" ? 'inputmode="decimal"' : ""} value="${v}">`;
+        return `<td${tipo === "n" ? ' class="n"' : ""}>${ctl}</td>`; }).join("")}<td><button class="quitar" type="button" title="Quitar" aria-label="Quitar fila" data-quitar="${sec.k}" data-r="${r}">×</button></td></tr>`).join("")}</table></div>
+        <div><button class="mini" type="button" data-nuevo="${sec.k}">Añadir ${sec.k === "socios" ? "socio" : "cargo"}</button></div>`;
+    } else {
+      const cs = sec.f.map((f) => campoHTML(sec.k, f)); let out = "", buf = [];
+      cs.forEach((c) => { if (c.mitad) { buf.push(c.html); if (buf.length === 2) { out += `<div class="dos">${buf.join("")}</div>`; buf = []; } } else { if (buf.length) { out += `<div class="dos">${buf.join("")}</div>`; buf = []; } out += c.html; } });
+      if (buf.length) out += `<div class="dos">${buf.join("")}</div>`;
+      cuerpo = out;
+    }
+    const chip = sec.k === "socios" ? `<span class="chip${Math.abs(sumaBeta() - 1) > 1e-6 ? " mal" : ""}" id="chip-beta">Σβ = ${coef(sumaBeta(), 3)}</span>` : "";
+    return `<details class="sec"${si === 0 ? " open" : ""}><summary>${esc(sec.t)} ${chip}</summary><div>${cuerpo}</div></details>`;
+  }).join("") + `<div><button class="mini" type="button" id="b-ejemplo">Volver a los datos de ejemplo</button></div>`;
+}
+function pintarLista() {
+  const fases = [...new Set(DOCS.map((d) => d.fase))];
+  $("p-docs").innerHTML = fases.map((f) => `<section class="fase"><h2>${esc(f)}</h2><ul>${DOCS.filter((d) => d.fase === f).map((d) =>
+    `<li><button class="doc" type="button" data-doc="${d.id}"${d.id === ACTUAL ? ' aria-current="true"' : ""}><b>${esc(d.t)}${S.personal[clave(d.id, 0)] || Object.keys(S.personal).some((k) => k.startsWith(d.id + ":")) ? ' <span class="chip">personalizado</span>' : ""}</b><small>${esc(d.d)}${d.socio ? " · uno por socio" : ""}</small></button></li>`).join("")}</ul></section>`).join("") +
+    `<div style="display:grid;gap:6px"><button class="btn" type="button" id="b-pdf-todo">Descargar todos en PDF</button><small class="pistas">Un PDF con los ${DOCS.length} documentos (los de socio, uno por cada socio), cada uno en su página.</small></div>`;
+}
+function pintarDoc() {
+  const d = DOCS.find((x) => x.id === ACTUAL) || DOCS[0]; ACTUAL = d.id;
+  if (SOCIO >= S.socios.length) SOCIO = 0;
+  $("doc-tit").textContent = d.t;
+  $("sel-socio-w").hidden = !d.socio;
+  $("sel-socio").innerHTML = S.socios.map((s, k) => `<option value="${k}"${k === SOCIO ? " selected" : ""}>${esc(s.nombre || "Socio " + (k + 1))}</option>`).join("");
+  const pers = S.personal[clave(d.id, SOCIO)];
+  $("folio").innerHTML = pers || d.r();
+  $("doc-pers").hidden = $("b-restaurar").hidden = !pers;
+  const n = $("folio").querySelectorAll(".hueco").length;
+  $("doc-huecos").textContent = n ? `${n} hueco${n > 1 ? "s" : ""} por completar` : "Completo";
+  $("doc-huecos").className = "chip" + (n ? " mal" : "");
+  let total = 0; const guardado = ACTUAL, gs = SOCIO;
+  DOCS.forEach((x) => { ACTUAL = x.id; const tmp = document.createElement("div"); tmp.innerHTML = S.personal[clave(x.id, 0)] || x.r(); total += tmp.querySelectorAll(".hueco").length; });
+  ACTUAL = guardado; SOCIO = gs;
+  $("cuenta-huecos").textContent = `${DOCS.length} documentos · ${total} huecos en total`;
+  $("cuenta-huecos").className = "chip" + (total ? " mal" : "");
+}
+function refrescar() { pintarDoc(); const ch = $("chip-beta"); if (ch) { ch.textContent = `Σβ = ${coef(sumaBeta(), 3)}`; ch.className = "chip" + (Math.abs(sumaBeta() - 1) > 1e-6 ? " mal" : ""); } guardar(); }
+
+// ---------------- eventos ----------------
+function pestana(cual) { const d = cual === "docs"; $("tab-docs").setAttribute("aria-selected", d); $("tab-datos").setAttribute("aria-selected", !d); $("p-docs").hidden = !d; $("p-datos").hidden = d; }
+$("tab-docs").onclick = () => pestana("docs");
+$("tab-datos").onclick = () => pestana("datos");
+$("p-docs").addEventListener("click", (e) => { const b = e.target.closest("[data-doc]"); if (!b) return; ACTUAL = b.dataset.doc; pintarLista(); pintarDoc(); guardar();
+  if (matchMedia("(max-width: 900px)").matches) $("folio").scrollIntoView({ behavior: "smooth", block: "start" }); });
+$("p-datos").addEventListener("input", (e) => { const t = e.target;
+  if (t.dataset.k) S[t.dataset.k][t.dataset.n] = t.value; else if (t.dataset.t) S[t.dataset.t][+t.dataset.r][t.dataset.n] = t.value; else return; refrescar(); });
+$("p-datos").addEventListener("click", (e) => { const t = e.target;
+  if (t.dataset.nuevo) { const sec = CAMPOS.find((s) => s.k === t.dataset.nuevo); S[sec.k].push(clonar(sec.nuevo)); pintarDatos(); abrir(sec.k); refrescar(); }
+  else if (t.dataset.quitar) { S[t.dataset.quitar].splice(+t.dataset.r, 1); pintarDatos(); abrir(t.dataset.quitar); refrescar(); }
+  else if (t.id === "b-ejemplo") { if (t.dataset.seguro) { S = clonar(EJEMPLO); pintarDatos(); refrescar(); toast("Datos de ejemplo recuperados"); } else { t.dataset.seguro = "1"; t.textContent = "Pulsa otra vez para borrar tus datos y volver al ejemplo"; } } });
+function abrir(k) { const i = CAMPOS.findIndex((s) => s.k === k); const d = $("p-datos").querySelectorAll("details")[i]; if (d) d.open = true; }
+$("sel-socio").onchange = (e) => { SOCIO = +e.target.value; pintarDoc(); };
+function toast(t) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (el.hidden = true), 2600); }
+function seleccionar() { const r = document.createRange(); r.selectNodeContents($("folio")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+// personalizar: lo escrito en el folio se guarda por documento y socio
+$("folio").addEventListener("input", () => {
+  S.personal[clave(ACTUAL, SOCIO)] = $("folio").innerHTML;
+  $("doc-pers").hidden = $("b-restaurar").hidden = false;
+  clearTimeout(guardar.h); guardar.h = setTimeout(() => { guardar(); pintarLista(); }, 400);
+});
+$("b-restaurar").onclick = () => { delete S.personal[clave(ACTUAL, SOCIO)]; guardar(); pintarLista(); pintarDoc(); toast("Documento regenerado con los datos"); };
+// nombre de fichero: documento y comunidad, sin acentos ni signos
+function slug(t) { return t.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 80); }
+function nombreFichero() { const d = DOCS.find((x) => x.id === ACTUAL), s = d.socio ? " " + (socio().nombre || "") : ""; return slug(`${d.t}${s} ${S.c.nombre || ""}`); }
+// PDF: el navegador imprime el folio (A4, texto seleccionable) y se elige «Guardar como PDF»
+function imprimir(titulo, todo) {
+  const antes = document.title; document.title = titulo;
+  document.body.classList.toggle("todo", !!todo);
+  const fin = () => { document.title = antes; document.body.classList.remove("todo"); if (todo) $("impresion").innerHTML = ""; window.removeEventListener("afterprint", fin); };
+  window.addEventListener("afterprint", fin);
+  window.print();
+  setTimeout(fin, 1000);
+}
+$("b-pdf").onclick = () => imprimir(nombreFichero());
+$("p-docs").addEventListener("click", (e) => { if (e.target.id !== "b-pdf-todo") return;
+  const guardado = ACTUAL, gs = SOCIO; let html = "";
+  DOCS.forEach((d) => { ACTUAL = d.id; (d.socio ? S.socios.map((_, k) => k) : [0]).forEach((k) => { SOCIO = k; html += `<article class="folio">${S.personal[clave(d.id, k)] || d.r()}</article>`; }); });
+  ACTUAL = guardado; SOCIO = gs;
+  $("impresion").innerHTML = html;
+  imprimir(slug("documentos " + (S.c.nombre || "comunidad")), true);
+});
+// Word: HTML con los estilos del folio, que Word y LibreOffice abren como documento
+$("b-word").onclick = () => {
+  const css = "body{font-family:Georgia,serif;font-size:12pt;line-height:1.5}h1{font-size:18pt}h2{font-size:13pt;border-bottom:1px solid #999}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4pt 6pt;text-align:left;vertical-align:top}.hueco{background:#fff3c4}.formula{background:#f1f1f1;text-align:center;padding:6pt}.firmas{margin-top:24pt}.firma{display:inline-block;width:45%;margin:30pt 2% 0 0;border-top:1px solid #000;padding-top:4pt}.nota,.donde{color:#555;font-size:10pt}.pendiente{background:#f6f0e0;padding:6pt}";
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(document.getElementById("doc-tit").textContent)}</title><style>${css}</style></head><body>${$("folio").innerHTML}</body></html>`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿", html], { type: "application/msword" }));
+  a.download = nombreFichero() + ".doc"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast("Descargado " + a.download);
+};
+$("b-copiar").onclick = () => {
+  const f = $("folio"), html = `<meta charset="utf-8"><div style="font-family:Georgia,serif;font-size:12pt;line-height:1.5">${f.innerHTML}</div>`, txt = f.innerText;
+  let p;
+  try { p = navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([txt], { type: "text/plain" }) })]); }
+  catch (e) { p = Promise.reject(e); }
+  p.then(() => toast("Copiado con formato: pégalo en Word o Google Docs"))
+   .catch(() => { seleccionar(); toast("Texto seleccionado: cópialo con Ctrl+C"); });
+};
+
+pintarLista(); pintarDatos(); pintarDoc();
+</script>
+</body>
+</html>
