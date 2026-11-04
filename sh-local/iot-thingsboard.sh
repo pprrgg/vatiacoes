@@ -11772,18 +11772,20 @@ rm -f config/fastapi/config-*.json
 # 5. Caddy (HTTPS en 443 -> ThingsBoard)
 # --------------------------------------------
 # Marca: logos SVG que sustituyen a los de ThingsBoard (sirve Caddy)
-RAYO='<path d="M22 2 8 22h9l-3 16 15-22h-9l2-14z" fill="#ffd54f"/>'
+# Icono: el sol con la placa solar de la web (pestaña Comunidades de vatiaco.es), dibujado en 24x24
+# y escalado a 40x40; el sol en amarillo y la placa en blanco
+RAYO='<g transform="scale(1.6667)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffd54f"><circle cx="6" cy="6" r="2.4"/><path d="M6 1.2v1.1M6 9.7v1.1M1.2 6h1.1M9.7 6h1.1M2.6 2.6l.8.8M8.6 8.6l.8.8M2.6 9.4l.8-.8M8.6 3.4l.8-.8"/></g><g stroke="#ffffff"><path d="M9 12h13l-3 7H6l3-7Z"/><path d="M13.3 12l-3 7M17.7 12l-3 7M7.5 15.5h13"/><path d="M12.5 19v3M10 22h5"/></g></g>'
 cat > config/branding/logo_title_white.svg <<EOF
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" width="200" height="40">
   $RAYO
-  <text x="40" y="29" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="700" fill="#ffffff">$BRAND</text>
+  <text x="46" y="29" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="700" fill="#ffffff">$BRAND</text>
 </svg>
 EOF
 cat > config/branding/logo_white.svg <<EOF
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">$RAYO</svg>
 EOF
 cat > config/branding/favicon.svg <<EOF
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="$COLOR_NAV"/>$RAYO</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="8" fill="$COLOR_NAV"/><g transform="translate(2 2) scale(.9)">$RAYO</g></svg>
 EOF
 
 # Tema de toda la interfaz (se inyecta en el index.html de ThingsBoard, ver paso 8)
@@ -11834,6 +11836,10 @@ EOF
 cat > config/branding/VatiaCo-alta.js <<'EOF'
 (function () {
   var API = '/cec-api', INFO = null, LISTA = null, ELEGIDA = null, ALTA = null, MODO = 'idae', PUNTO = null;
+  // Enlace directo desde la web: /login?alta=prueba abre el modal ya en «Comunidad de prueba» y
+  // /login?alta=comunidad en el de la lista del IDAE (una vez, al salir el inicio de sesion; se lee
+  // al cargar, antes de que ThingsBoard cambie la direccion)
+  var PEDIDO = (/[?&#]alta=(prueba|comunidad)\b/.exec(location.search + location.hash) || [])[1] || null;
   // Mapa de las comunidades (como https://vatiaco.es/comunidades/): Leaflet de cdnjs, la misma
   // version que la web y los paneles
   var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/', LF = null, MAPA = null;
@@ -12270,6 +12276,12 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     b.style.marginLeft = '0';
     b.onclick = abrir;
     r.parentNode.insertBefore(b, r);
+    if (PEDIDO) {
+      var pedido = PEDIDO; PEDIDO = null;
+      abrir();
+      var v = pedido === 'prueba' && document.querySelector('#vl-alta [name=modo][value=virtual]');
+      if (v) { v.checked = true; modo('virtual'); }
+    }
   }
   new MutationObserver(boton).observe(document.documentElement, { childList: true, subtree: true });
   boton();

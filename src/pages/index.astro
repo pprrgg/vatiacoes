@@ -1,77 +1,99 @@
 ---
 import TopNav from '../components/TopNav.astro';
 import PieSitio from '../components/PieSitio.astro';
-import DemoAcceso from '../components/DemoAcceso.astro';
+import { getDocsTree, type DocNode } from '../data/docs';
 import '../styles/sitio.css';
-// Pagina principal de VatiaCo: la plataforma para comunidades energeticas.
+// Pagina principal de VatiaCo: la plataforma para comunidades energeticas, la comunidad de
+// prueba y el blog interactivo.
 // El blog (visor de public/docs) esta en /blog/; los enlaces antiguos /?doc=... se
 // reenvian alli (script del <head>) para no romper QR ni enlaces compartidos.
-// Plataforma de socios: los enlaces con data-plataforma la abren en el visor comun
-// (/js/plataforma.js, cargado por TopNav), con el mismo inicio de sesion que el mapa
+// Plataforma: los enlaces con data-plataforma la abren en el visor comun (/js/plataforma.js,
+// cargado por TopNav); con data-plataforma-ruta="login?alta=prueba" se abre directamente el
+// alta de la comunidad de prueba (config/branding/VatiaCo-alta.js de iot-thingsboard.sh).
 const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
-const doc = (ruta: string) => `/blog/?doc=${encodeURIComponent(ruta)}`;
+const PRUEBA_RUTA = 'login?alta=prueba';
+const DEMO = { usuario: 'demo@vatiaco.es', clave: 'demo' };
+const doc = (url: string) => `/blog/?doc=${encodeURIComponent(url)}`;
 const CE = '/docs/A00_Blog_Interactivo/A02_Comunidades Energéticas/';
-const MAPA = '/comunidades/';
 
-const pilares = [
-  {
-    id: 'gestion', num: '01', icono: 'gestion',
-    titulo: 'Gestión de comunidades',
-    lema: 'Socios, instalaciones, documentación y administración.',
-    puntos: [
-      'Alta de cada socio con su usuario de acceso y sus puntos de medida.',
-      'Instalaciones por socio: red, fotovoltaica, eólica, batería, consumo y recarga de vehículo, situadas en un mapa.',
-      'Documentación de referencia para constituir la comunidad y tramitar el autoconsumo.',
-      'Panel de administración con todos los socios y acceso al detalle de cada uno.',
-    ],
-  },
-  {
-    id: 'reparto', num: '02', icono: 'reparto',
-    titulo: 'Reparto energético',
-    lema: 'Coeficientes, generación y consumo, según las capacidades reales del software.',
-    puntos: [
-      'Generación y consumo de cada socio medidos en continuo y agregados por hora y por día.',
-      'Neto de cada socio y de la comunidad: cuánto aporta y cuánto recibe en cada hora.',
-      'Datos horarios por socio como base para fijar y revisar los coeficientes de reparto del autoconsumo colectivo.',
-      'Histórico consultable por días y horas para contrastar el reparto con lo medido.',
-    ],
-  },
-  {
-    id: 'seguimiento', num: '03', icono: 'seguimiento',
-    titulo: 'Seguimiento',
-    lema: 'Energía compartida, ahorro estimado e indicadores de funcionamiento.',
-    puntos: [
-      'Energía horaria del día y potencia instantánea de cada hora, con navegación por días y horas.',
-      'Intercambio con la red y balance de la comunidad para conocer la energía compartida.',
-      'Valores diarios entre fechas para estimar el ahorro frente a comprar toda la energía a la red.',
-      'Indicadores por punto: energía que entra y sale, estado de carga de baterías y vehículos, lecturas de cada medidor.',
-    ],
-  },
-  {
-    id: 'portal', num: '04', icono: 'portal',
-    titulo: 'Portal de socios',
-    lema: 'Acceso a información, consumos y actividad de la comunidad.',
-    puntos: [
-      'Cada socio entra con su usuario y ve solo sus datos y su posición en el mapa.',
-      'Curvas de energía y potencia, y tabla con sus puntos de medida al momento.',
-      'Panel a pantalla completa, sin menús, en el ordenador o en el móvil.',
-      'Impresión y PDF del panel en un clic.',
-    ],
-  },
+// Blog interactivo: una tarjeta por seccion (carpetas de public/docs/A00_Blog_Interactivo),
+// con el numero de herramientas y las primeras; el texto y el icono de cada una van aqui
+const SECCIONES: Record<string, { t: string; d: string; ico: string; top: [string, string][] }> = {
+  'A01_FV': { t: 'Fotovoltaica', ico: 'sol', d: 'Diseño, generación, baterías, tramitación y presupuesto de una instalación fotovoltaica.',
+    top: [['C02_Generación_Fotovoltaica.html', 'Generación horaria con PVGIS y LCOE'], ['C04_Autoconsumo_FV_con_bateria.html', 'Autoconsumo con batería'], ['C10_Presupuesto_fotovoltaico_detallado.html', 'Presupuesto detallado']] },
+  'A02_Comunidades Energéticas': { t: 'Comunidades energéticas', ico: 'comunidad', d: 'Constitución, documentos, coeficientes de reparto y datos de Datadis.',
+    top: [['C01_Comunidades_Energeticas.html', 'Cómo constituir la comunidad'], ['C01_Documentos_CEC.html', 'Generador de documentos'], ['C04_Coeficientes_de_Reparto.html', 'Coeficientes de reparto']] },
+  'A02_Contrato_de_electricidad': { t: 'Contrato de electricidad', ico: 'factura', d: 'Factura eléctrica, peajes y optimización de la potencia contratada.',
+    top: [['B01_Hasta_50_kW/C01_Facturacion_Electrica_Completa.html', 'Factura eléctrica completa'], ['B01_Hasta_50_kW/C02_Optimizacion_Potencia.html', 'Optimización de la potencia'], ['C06_Peajes_Circular_3_2020.html', 'Peajes (Circular 3/2020)']] },
+  'A05_Vehiculo_Electrico': { t: 'Vehículo eléctrico', ico: 'coche', d: 'Qué vehículo te conviene, comparativa, funcionamiento y recarga según la ITC-BT-52.',
+    top: [['C01_Que_Vehiculo_Me_Conviene.html', '¿Qué vehículo me conviene?'], ['C02_Comparativa_Coches_Electricos.html', 'Comparativa de coches eléctricos'], ['C03_ INFRAESTRUCTURA PARA LA RECARGA DE VEHÍCULOS ELÉCTRICOS_Guia_BT_52.html', 'Infraestructura de recarga (ITC-BT-52)']] },
+  'A06_Auditoria_Energetica': { t: 'Auditoría energética', ico: 'lupa', d: 'Auditoría energética según la ISO 50002, con su informe.',
+    top: [['C01_Auditoria_Energetica.html', 'Auditoría energética ISO 50002']] },
+  'A07_Rehabilitacion_Energetica': { t: 'Rehabilitación energética', ico: 'casa', d: 'Simulador del comportamiento energético de edificios en España.',
+    top: [['C01_Simulador_Edificios_Espana.html', 'Simulador de rehabilitación de edificios']] },
+  'A08_Energia_Eolica': { t: 'Energía eólica', ico: 'viento', d: 'Estudio del recurso eólico de un emplazamiento en España.',
+    top: [['C01_Estudio_Recurso_Eolico.html', 'Estudio del recurso eólico']] },
+  'A08_Instalaciones': { t: 'Instalaciones eléctricas', ico: 'cable', d: 'Sección de conductores en baja tensión y baterías de condensadores.',
+    top: [['C01_Sección de conductores en BT.html', 'Sección de conductores en BT'], ['B02_Dimensionado de baterías de condensadores.html', 'Baterías de condensadores']] },
+  'A09_CAEs': { t: 'Certificados de Ahorro Energético', ico: 'cae', d: 'Fichas CAE del sector agrario, industrial, residencial, terciario y transporte.',
+    top: [['B03_Residencial/C02_CAE_Sustitucion_Caldera_BDC.html', 'Caldera por bomba de calor'], ['B02_Industrial/C04_CAE_Variador_De_Velocidad.html', 'Variador de velocidad'], ['B05_Transporte/C01_CAE_Vehiculo_Electrico.html', 'Vehículo eléctrico']] },
+  'ERP': { t: 'Herramientas de oficina', ico: 'erp', d: 'Documentos PDF con calidad LaTeX e inventario de materiales.',
+    top: [['A01_Crear documentos PDF con calidad Latex.html', 'Documentos PDF con calidad LaTeX'], ['A03_Inventario.html', 'Inventario de materiales']] },
+};
+const ICONOS: Record<string, string> = {
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  comunidad: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5a3 3 0 0 1 0 6M18 14.5c1.8.8 3 2.7 3 4.9"/>',
+  factura: '<path d="M6 2h9l4 4v16l-2.5-1.5L14 22l-2-1.5L10 22l-2.5-1.5L5 22V3a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  coche: '<path d="M5 17h14v-4l-2-5H7l-2 5v4Z"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/><path d="m12.5 9.5-1.5 2.5h2l-1.5 2.5"/>',
+  lupa: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6M11 8v6"/>',
+  casa: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+  viento: '<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/>',
+  cable: '<path d="M7 3v5a5 5 0 0 0 10 0V3M10 3v3M14 3v3M12 13v8"/>',
+  cae: '<circle cx="12" cy="9" r="6"/><path d="m9 14-1.5 8L12 20l4.5 2L15 14"/><path d="m10 9 1.5 1.5L14.5 7.5"/>',
+  erp: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>',
+};
+const archivos = (n: DocNode): Extract<DocNode, { type: 'file' }>[] =>
+  n.type === 'file' ? [n] : n.children.flatMap(archivos);
+const raiz = (await getDocsTree()).find((n) => n.type === 'folder' && n.name === 'A00_Blog_Interactivo');
+const blog = raiz && raiz.type === 'folder'
+  ? raiz.children.filter((n) => n.type === 'folder' && SECCIONES[n.name]).map((n) => {
+      const s = SECCIONES[n.name], fs = archivos(n), base = `/docs/A00_Blog_Interactivo/${n.name}/`;
+      const urls = new Set(fs.map((f) => f.url));
+      // los destacados que existen (si se renombra un documento, deja de salir en lugar de romperse)
+      const primeros = s.top.map(([f, t]) => ({ url: base + f, title: t })).filter((f) => urls.has(f.url));
+      return { ...s, n: fs.length, primeros, url: doc((primeros[0] || fs[0]).url) };
+    })
+  : [];
+const herramientas = blog.reduce((s, b) => s + b.n, 0);
+
+const accesos = [
+  { t: 'Comunidad de prueba', d: 'Créala en un minuto', ico: 'prueba', prueba: true },
+  { t: 'Alta de tu comunidad', d: 'Gratis, sin cuotas', ico: 'alta', href: '/alta/' },
+  { t: 'Mapa del IDAE', d: 'Comunidades de España', ico: 'mapa', href: '/comunidades/' },
+  { t: 'Documentos de la comunidad', d: 'Estatutos, actas y reparto', ico: 'docs', href: doc(CE + 'C01_Documentos_CEC.html') },
+  { t: 'Coeficientes de reparto', d: 'Calcula los β', ico: 'reparto', href: doc(CE + 'C04_Coeficientes_de_Reparto.html') },
+  { t: 'Blog interactivo', d: `${herramientas} herramientas`, ico: 'blog', href: '/blog/' },
+];
+const ICONOS_ACCESO: Record<string, string> = {
+  prueba: '<path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>',
+  alta: '<path d="M12 5v14M5 12h14"/>',
+  mapa: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/>',
+  docs: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+  reparto: '<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.4 6.4M12 12l-7.8 4.5"/>',
+  blog: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M8 7h8M8 11h6"/>',
+};
+
+const plataforma = [
+  { t: 'Socios e instalaciones', d: 'Alta de cada socio con su usuario, sus puntos de medida e instalaciones (fotovoltaica, eólica, batería, recarga) en un mapa.' },
+  { t: 'Reparto de la energía', d: 'Generación, consumo y neto de cada socio hora a hora: la base para fijar y revisar los coeficientes de reparto.' },
+  { t: 'Seguimiento y ahorro', d: 'Energía compartida, intercambio con la red y ahorro estimado de la comunidad, por días y por horas.' },
+  { t: 'Portal de cada socio', d: 'Cada socio ve solo sus datos, en el ordenador o en el móvil, y descarga su panel en PDF.' },
 ];
 
-const cadena = [
-  { t: 'Medidor por punto', d: 'Monofásico o trifásico, con transformadores de intensidad cuando hace falta' },
-  { t: 'Pasarela del socio', d: 'Recoge las lecturas de sus medidores' },
-  { t: 'Internet del socio', d: 'Envío cifrado de cada lectura' },
-  { t: 'Plataforma en la nube', d: 'Histórico, sumas por socio y comunidad' },
-  { t: 'Paneles', d: 'Uno por socio y uno para la comunidad' },
-];
-
-const recursos = [
-  { t: 'Mapa de comunidades energéticas', d: 'Las comunidades registradas en el IDAE en toda España.', href: MAPA },
-  { t: 'Constitución de comunidades energéticas', d: 'Forma jurídica, estatutos y pasos para crear la comunidad.', href: doc(CE + 'C01_Comunidades_Energeticas.html') },
-  { t: 'Tramitación del autoconsumo', d: 'Trámites de una instalación de autoconsumo, paso a paso.', href: doc(CE + 'C01_Autoconsumo_Tramitacion.html') },
+const pasos = [
+  { t: 'Ponle nombre y sitúala', d: 'Elige un nombre y marca en el mapa dónde estaría la comunidad.' },
+  { t: 'Confirma tu correo', d: 'Te enviamos un enlace; al pulsarlo se crea al momento.' },
+  { t: 'Explora la plataforma', d: 'Entra como gestor, con socios de prueba y datos simulados, durante un tiempo limitado.' },
 ];
 ---
 <!DOCTYPE html>
@@ -80,121 +102,209 @@ const recursos = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VatiaCo · Plataforma para comunidades energéticas</title>
-    <meta name="description" content="Gestión de comunidades energéticas, reparto de la energía, seguimiento y portal de socios con datos medidos hora a hora." />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <meta name="description" content="Crea y gestiona tu comunidad energética: socios, reparto de la energía y seguimiento hora a hora. Prueba gratis con una comunidad de prueba y usa las herramientas del blog interactivo." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script is:inline>
       // Enlaces antiguos al blog (/?doc=...): al blog, con el mismo documento
       if (new URLSearchParams(location.search).has('doc')) location.replace('/blog/' + location.search + location.hash);
     </script>
+    <style>
+      .ini-hero { padding: 4.5rem 0 3.5rem; border-bottom: 1px solid var(--gray-6);
+        background: radial-gradient(ellipse 60% 70% at 90% 0%, rgba(51, 105, 255, 0.16), transparent 70%),
+                    radial-gradient(ellipse 40% 50% at 0% 100%, rgba(255, 213, 79, 0.06), transparent 70%); }
+      .ini-hero .wrap { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 3rem; align-items: center; }
+      @media (max-width: 920px) { .ini-hero .wrap { grid-template-columns: 1fr; gap: 2.2rem; } .ini-hero { padding-top: 3rem; } }
+      .ini-hero h1 { margin-top: 0.8rem; }
+      .ini-hero .lead { font-size: 1.12rem; max-width: 38rem; margin: 0 0 1.8rem; }
+      .ini-demo { margin: 1.3rem 0 0; font-size: 0.9rem; color: var(--gray-3); }
+      .ini-demo a { color: var(--accent-high); font-weight: 600; text-decoration: none; }
+      .ini-demo a:hover { text-decoration: underline; }
+      .ini-demo code { color: var(--gray-1); background: var(--gray-6); border: 1px solid var(--gray-5); border-radius: 0.3rem; padding: 0.05rem 0.4rem; user-select: all; }
+
+      /* tarjeta de la comunidad de prueba */
+      .prueba { background: linear-gradient(160deg, rgba(255, 213, 79, 0.10), rgba(35, 38, 47, 0.9) 45%); border: 1px solid rgba(255, 213, 79, 0.4);
+        border-radius: 1rem; padding: 1.6rem; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35); }
+      .prueba .chip { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--black); background: var(--bolt); border-radius: 99px; padding: 0.15rem 0.6rem; }
+      .prueba h2 { font-size: 1.4rem; margin: 0.7rem 0 0.4rem; }
+      .prueba > p { margin: 0 0 1.1rem; font-size: 0.95rem; }
+      .prueba ol { list-style: none; margin: 0 0 1.3rem; padding: 0; display: grid; gap: 0.8rem; counter-reset: p; }
+      .prueba li { display: grid; grid-template-columns: 1.8rem 1fr; gap: 0.7rem; align-items: start; counter-increment: p; }
+      .prueba li::before { content: counter(p); display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+        border: 1px solid var(--bolt); color: var(--bolt); font-weight: 700; font-size: 0.85rem; }
+      .prueba li b { display: block; color: var(--white); font-size: 0.95rem; }
+      .prueba li span { font-size: 0.86rem; color: var(--gray-3); }
+      .prueba .btn { width: 100%; justify-content: center; }
+      .prueba small { display: block; margin-top: 0.7rem; font-size: 0.78rem; color: var(--gray-3); text-align: center; }
+
+      /* accesos rapidos */
+      .accesos { padding: 2rem 0 0; }
+      .accesos ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.75rem; }
+      @media (max-width: 1080px) { .accesos ul { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      @media (max-width: 560px) { .accesos ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      .acceso-r { display: flex; flex-direction: column; gap: 0.55rem; height: 100%; padding: 1rem; border-radius: 0.8rem; text-decoration: none;
+        background: var(--gray-6); border: 1px solid var(--gray-5); transition: border-color 0.15s, transform 0.15s, background 0.15s; }
+      .acceso-r:hover, .acceso-r:focus-visible { border-color: var(--accent); background: #262a36; transform: translateY(-2px); outline: none; }
+      .acceso-r .i { width: 2.2rem; height: 2.2rem; border-radius: 0.55rem; display: grid; place-items: center; background: var(--accent-low); color: var(--accent-high); }
+      .acceso-r.destacado .i { background: rgba(255, 213, 79, 0.14); color: var(--bolt); }
+      .acceso-r b { color: var(--white); font-size: 0.92rem; line-height: 1.3; }
+      .acceso-r span { font-size: 0.8rem; color: var(--gray-3); line-height: 1.35; }
+
+      .cabecera { display: flex; justify-content: space-between; align-items: end; gap: 1rem 2rem; flex-wrap: wrap; margin-bottom: 2rem; }
+      .cabecera .intro { margin: 0; }
+
+      /* plataforma */
+      .plat { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--gray-5);
+        border: 1px solid var(--gray-5); border-radius: 0.9rem; overflow: hidden; }
+      @media (max-width: 960px) { .plat { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (max-width: 560px) { .plat { grid-template-columns: 1fr; } }
+      .plat div { background: var(--gray-6); padding: 1.4rem 1.3rem; }
+      .plat .n { font-size: 0.75rem; font-weight: 700; color: var(--bolt); letter-spacing: 0.1em; }
+      .plat h3 { margin: 0.4rem 0 0.45rem; color: var(--white); font-size: 1.05rem; }
+      .plat p { margin: 0; font-size: 0.9rem; color: var(--gray-3); }
+      .flujo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 1.4rem; font-size: 0.85rem; color: var(--gray-3); }
+      .flujo span { padding: 0.3rem 0.7rem; border: 1px solid var(--gray-5); border-radius: 99px; color: var(--gray-2); }
+      .flujo i { font-style: normal; color: var(--gray-5); }
+
+      /* blog interactivo */
+      .secciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr)); gap: 1rem; }
+      .seccion { min-width: 0; display: flex; flex-direction: column; background: var(--gray-6); border: 1px solid var(--gray-5); border-radius: 0.85rem;
+        padding: 1.2rem 1.25rem; transition: border-color 0.15s; }
+      .seccion:hover { border-color: #4a5060; }
+      .seccion header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+      .seccion .i { flex: none; width: 2.2rem; height: 2.2rem; border-radius: 0.55rem; display: grid; place-items: center; background: var(--black); color: var(--bolt); }
+      .seccion h3 { margin: 0; font-size: 1rem; color: var(--white); line-height: 1.25; }
+      .seccion .cuantas { font-size: 0.75rem; color: var(--gray-3); }
+      .seccion > p { margin: 0 0 0.8rem; font-size: 0.86rem; color: var(--gray-3); }
+      .seccion ul { list-style: none; margin: auto 0 0; padding: 0.7rem 0 0; border-top: 1px solid var(--gray-5); display: grid; gap: 0.3rem; }
+      .seccion li a { display: block; font-size: 0.86rem; color: var(--gray-2); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .seccion li a::before { content: '→ '; color: var(--accent-high); }
+      .seccion li a:hover { color: var(--white); }
+
+      /* llamada final */
+      .final { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem 2rem; align-items: center; padding: 2.2rem;
+        border-radius: 1rem; border: 1px solid var(--gray-5); background: linear-gradient(135deg, var(--accent-low), var(--gray-6) 70%); }
+      @media (max-width: 760px) { .final { grid-template-columns: 1fr; padding: 1.6rem; } }
+      .final h2 { margin-top: 0; }
+      .final p { margin: 0; max-width: 40rem; }
+      .final .acciones { justify-content: flex-end; }
+      @media (max-width: 760px) { .final .acciones { justify-content: flex-start; } }
+      .final .contacto-linea { margin-top: 0.8rem; font-size: 0.9rem; color: var(--gray-3); }
+      .final .contacto-linea a { color: var(--gray-1); text-decoration: none; }
+      .final .contacto-linea a:hover { color: var(--white); text-decoration: underline; }
+    </style>
   </head>
   <body>
     <TopNav />
 
     <main>
-      <div class="hero">
+      <div class="ini-hero">
         <div class="wrap">
-          <div class="etiqueta">Plataforma para comunidades energéticas</div>
-          <h1>Tu comunidad energética, <em>con datos medidos hora a hora</em>.</h1>
-          <p>Socios, instalaciones y medidas de cada punto en una sola plataforma: generación, consumo y energía compartida en cada hora, un panel para cada socio y otro para la gestión de la comunidad.</p>
-          <div class="acciones">
-            <a class="btn principal" href={PORTAL_URL} data-plataforma="Acceso socios">Acceso socios</a>
-            <a class="btn" href="/servicios/">Nuestros servicios</a>
-            <a class="btn" href={MAPA}>Ver comunidades en el mapa</a>
-            <a class="btn" href="/blog/">Leer el blog</a>
+          <div>
+            <div class="etiqueta">Plataforma gratuita para comunidades energéticas</div>
+            <h1>Crea y gestiona tu comunidad energética, <em>con datos hora a hora</em>.</h1>
+            <p class="lead">Socios, instalaciones, reparto de la energía y seguimiento en una sola plataforma, con un panel para cada socio. Y un blog con herramientas para calcular, documentar y tramitar cada paso.</p>
+            <div class="acciones">
+              <a class="btn principal" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>Crear una comunidad de prueba</a>
+              <a class="btn" href="/alta/">Dar de alta mi comunidad</a>
+            </div>
+            <p class="ini-demo">¿Prefieres mirar primero? <a href={PORTAL_URL} data-plataforma="Demo de VatiaCo">Entra en la demo</a> con <code>{DEMO.usuario}</code> y <code>{DEMO.clave}</code>.</p>
           </div>
-          <DemoAcceso compacto />
+
+          <aside class="prueba" aria-labelledby="prueba-tit">
+            <span class="chip">Gratis · sin compromiso</span>
+            <h2 id="prueba-tit">Tu comunidad de prueba, en tres pasos</h2>
+            <p>Una comunidad completa, con socios simulados, para ver cómo funciona antes de dar de alta la tuya.</p>
+            <ol>
+              {pasos.map((p) => <li><div><b>{p.t}</b><span>{p.d}</span></div></li>)}
+            </ol>
+            <a class="btn principal" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>Empezar la prueba</a>
+            <small>Al terminar se borra todo y te avisamos por correo.</small>
+          </aside>
         </div>
       </div>
 
-      <section id="soluciones">
+      <nav class="accesos" aria-label="Accesos rápidos">
         <div class="wrap">
-          <div class="etiqueta">Soluciones</div>
-          <h2>Cuatro piezas para llevar una comunidad energética.</h2>
-          <p class="intro">Desde el alta de los socios hasta el panel que cada uno consulta en su móvil, con las capacidades que la plataforma ofrece hoy.</p>
-          <div class="pilares">
-            {pilares.map((p) => (
-              <article class="pilar" id={p.id}>
+          <ul>
+            {accesos.map((a) => (
+              <li>
+                {a.prueba ? (
+                  <a class="acceso-r destacado" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>
+                    <div class="i"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICONOS_ACCESO[a.ico]} /></div>
+                    <b>{a.t}</b><span>{a.d}</span>
+                  </a>
+                ) : (
+                  <a class="acceso-r" href={a.href}>
+                    <div class="i"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICONOS_ACCESO[a.ico]} /></div>
+                    <b>{a.t}</b><span>{a.d}</span>
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+
+      <section id="plataforma">
+        <div class="wrap">
+          <div class="cabecera">
+            <div>
+              <div class="etiqueta">La plataforma</div>
+              <h2>Todo lo que necesita una comunidad energética.</h2>
+              <p class="intro">Del medidor en el cuadro de cada socio al panel de la comunidad, con las lecturas guardadas y sumadas en la nube.</p>
+            </div>
+            <a class="btn" href={PORTAL_URL} data-plataforma="Acceso socios">Acceso socios →</a>
+          </div>
+          <div class="plat">
+            {plataforma.map((p, i) => (
+              <div><span class="n">0{i + 1}</span><h3>{p.t}</h3><p>{p.d}</p></div>
+            ))}
+          </div>
+          <div class="flujo" aria-label="Cómo llegan los datos">
+            <span>Medidor por punto</span><i>→</i><span>Pasarela del socio</span><i>→</i><span>Envío cifrado</span><i>→</i><span>Plataforma en la nube</span><i>→</i><span>Paneles</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="blog" style="padding-top: 1rem;">
+        <div class="wrap">
+          <div class="cabecera">
+            <div>
+              <div class="etiqueta">Blog interactivo</div>
+              <h2>{herramientas} herramientas para la energía, explicadas y calculadas.</h2>
+              <p class="intro">Calculadoras, simuladores, informes y presupuestos que funcionan en el navegador, escritos por un ingeniero.</p>
+            </div>
+            <a class="btn" href="/blog/">Ver todo el blog →</a>
+          </div>
+          <div class="secciones">
+            {blog.map((s) => (
+              <article class="seccion">
                 <header>
-                  <div class="ico" aria-hidden="true">
-                    {p.icono === 'gestion' && (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.2M18 14.5c1.8.8 3 2.7 3 4.9"/></svg>
-                    )}
-                    {p.icono === 'reparto' && (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/><path d="M12 12 5 16.5"/></svg>
-                    )}
-                    {p.icono === 'seguimiento' && (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></svg>
-                    )}
-                    {p.icono === 'portal' && (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m11 7.5-2 3.5h3l-2 3.5"/></svg>
-                    )}
-                  </div>
-                  <div>
-                    <div class="num">{p.num}</div>
-                    <h3>{p.titulo}</h3>
-                  </div>
+                  <div class="i"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICONOS[s.ico]} /></div>
+                  <div><h3><a href={s.url} style="color: inherit; text-decoration: none;">{s.t}</a></h3><span class="cuantas">{s.n} {s.n === 1 ? 'herramienta' : 'herramientas'}</span></div>
                 </header>
-                <p class="lema">{p.lema}</p>
-                <ul>{p.puntos.map((t) => <li>{t}</li>)}</ul>
+                <p>{s.d}</p>
+                <ul>{s.primeros.map((f) => <li><a href={doc(f.url)} title={f.title}>{f.title}</a></li>)}</ul>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="como-funciona" style="background: rgba(35, 38, 47, 0.35);">
-        <div class="wrap">
-          <div class="etiqueta">Cómo funciona</div>
-          <h2>Del medidor en el cuadro al panel de la comunidad.</h2>
-          <p class="intro">Cada punto de medida envía sus lecturas por la conexión a Internet del socio. En la nube se guardan, se suman por socio y por comunidad y se muestran en los paneles.</p>
-          <div class="cadena">
-            {cadena.map((c) => (
-              <div class="paso"><h4>{c.t}</h4><p>{c.d}</p></div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="recursos">
-        <div class="wrap">
-          <div class="etiqueta">Recursos</div>
-          <h2>Herramientas y guías para empezar.</h2>
-          <p class="intro">Calculadoras y documentación del blog para preparar y poner en marcha una comunidad energética.</p>
-          <div class="recursos">
-            {recursos.map((r) => (
-              <a class="recurso" href={r.href}><h4>{r.t}</h4><p>{r.d}</p><span>Abrir →</span></a>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="blog" style="padding-top: 0;">
-        <div class="wrap">
-          <div class="blog">
-            <div>
-              <div class="etiqueta">Blog de un ingeniero</div>
-              <h2>Control de la energía, explicado y calculado.</h2>
-              <p>Fotovoltaica, comunidades energéticas, contratos de electricidad, vehículo eléctrico, auditorías y más: guías interactivas con calculadoras, informes y presupuestos.</p>
-            </div>
-            <a class="btn principal" href="/blog/">Entrar al blog →</a>
-          </div>
-        </div>
-      </section>
-
       <section id="contacto" style="padding-top: 0;">
         <div class="wrap">
-          <div class="etiqueta">Contacto</div>
-          <h2>¿Montamos tu comunidad?</h2>
-          <p class="intro" style="margin-bottom: 0;">Cuéntanos cuántos socios y puntos de medida tiene tu comunidad y te preparamos una propuesta.</p>
-          <div class="contacto">
-            <a class="btn" href="tel:+34951733491">
-              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V21a1 1 0 0 1-1 1C10.61 22 2 13.39 2 3a1 1 0 0 1 1-1h4.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.24 1.01l-2.21 2.21Z"/></svg>
-              951 733 491
-            </a>
-            <a class="btn" href="mailto:info@vatiaco.es">
-              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z"/></svg>
-              info@vatiaco.es
-            </a>
+          <div class="final">
+            <div>
+              <div class="etiqueta">¿Empezamos?</div>
+              <h2>Pon en marcha tu comunidad energética.</h2>
+              <p>El uso de la plataforma es gratuito: sin cuotas, sin permanencia y sin datos bancarios. Si lo prefieres, te ayudamos con la constitución, los medidores y el reparto.</p>
+              <p class="contacto-linea"><a href="tel:+34951733491">951 733 491</a> · <a href="mailto:info@vatiaco.es">info@vatiaco.es</a></p>
+            </div>
+            <div class="acciones">
+              <a class="btn principal" href="/alta/">Dar de alta mi comunidad</a>
+              <a class="btn" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>Probar antes</a>
+            </div>
           </div>
         </div>
       </section>

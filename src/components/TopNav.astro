@@ -12,14 +12,13 @@
 interface Props { blog?: boolean }
 const { blog = false } = Astro.props;
 const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
-const MAPA = '/comunidades/';
 const DEMO = { usuario: 'demo@vatiaco.es', clave: 'demo' };
 const ruta = Astro.url.pathname;
 const actual = (p: string) => (ruta.startsWith(p) ? 'page' : undefined);
 ---
 <header class="topnav">
   <div class="title-wrapper">
-    <a class="site-title" href="/" aria-label="VatiaCo, página principal"><span class="brand-bolt" aria-hidden="true">⚡</span><span>VatiaCo</span></a>
+    <a class="site-title" href="/" aria-label="VatiaCo, página principal"><svg class="brand-bolt" aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffd54f"><circle cx="6" cy="6" r="2.4"/><path d="M6 1.2v1.1M6 9.7v1.1M1.2 6h1.1M9.7 6h1.1M2.6 2.6l.8.8M8.6 8.6l.8.8M2.6 9.4l.8-.8M8.6 3.4l.8-.8"/></g><path d="M9 12h13l-3 7H6l3-7Z"/><path d="M13.3 12l-3 7M17.7 12l-3 7M7.5 15.5h13"/><path d="M12.5 19v3M10 22h5"/></svg><span>VatiaCo</span></a>
   </div>
   <form class="header-search-group" action="/blog/" method="get" role="search" data-blog={blog ? '' : undefined}>
     <label class="search-trigger">
@@ -31,15 +30,7 @@ const actual = (p: string) => (ruta.startsWith(p) ? 'page' : undefined);
   </form>
   <div class="right-group">
     <nav class="contact-links" aria-label="Principal">
-      <a class="contact-link" href="/servicios/" aria-label="Servicios" aria-current={actual('/servicios')}>
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6Z"/></svg>
-        <span class="contact-link-label">Servicios</span>
-      </a>
-      <a class="contact-link" href={MAPA} aria-label="Mapa de comunidades energéticas" aria-current={actual(MAPA)}>
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffd54f"><circle cx="6" cy="6" r="2.4"/><path d="M6 1.2v1.1M6 9.7v1.1M1.2 6h1.1M9.7 6h1.1M2.6 2.6l.8.8M8.6 8.6l.8.8M2.6 9.4l.8-.8M8.6 3.4l.8-.8"/></g><path d="M9 12h13l-3 7H6l3-7Z"/><path d="M13.3 12l-3 7M17.7 12l-3 7M7.5 15.5h13"/><path d="M12.5 19v3M10 22h5"/></svg>
-        <span class="contact-link-label">Comunidades</span>
-      </a>
-      <a class="contact-link" href="/blog/" aria-label="Blog" aria-current={actual('/blog')}>
+            <a class="contact-link" href="/blog/" aria-label="Blog" aria-current={actual('/blog')}>
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M8 7h8M8 11h6"/></svg>
         <span class="contact-link-label">Blog</span>
       </a>
@@ -97,7 +88,7 @@ const actual = (p: string) => (ruta.startsWith(p) ? 'page' : undefined);
       @media (min-width: 800px) { .topnav { padding: 0 1.5rem; } }
       .title-wrapper { min-width: 0; overflow: hidden; }
       .site-title { display: inline-flex; align-items: center; font-size: 1.15rem; font-weight: 700; text-decoration: none; white-space: nowrap; color: var(--tn-white); }
-      .site-title .brand-bolt { margin-right: 0.4rem; font-size: 1.25em; line-height: 1; }
+      .site-title .brand-bolt { margin-right: 0.45rem; flex: none; }
       .header-search-group { min-width: 0; display: flex; justify-content: center; margin: 0; }
       .search-trigger {
         display: flex; align-items: center; gap: 0.5rem; height: 2.5rem; width: 100%; max-width: 22rem;
