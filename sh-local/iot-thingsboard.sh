@@ -88,7 +88,7 @@ SUPER_PASSWORD="super"
 # Comunidades de ejemplo que se crean en cada instalacion, todas del mismo gestor
 # (demo@vatiaco.es / demo, el usuario de la demo de la pagina de alta): la primera es su
 # principal (la crea el superusuario); las demas, otras comunidades suyas (como si las creara
-# el desde su pestaña Suministros autorizados). Sus socios son socios virtuales (pestaña Socios), con los
+# el desde su pestaña Suministros autorizados). Sus socios son socios de prueba (pestaña Socios), con los
 # datos de un perfil de prosumidor equivalente a su tipo de socio simulado. CSV separados por ";",
 # decimales con punto; sim_tipo: residencial, residencial_fv, comercial, industrial,
 # cargador_ve, cargador_ve_lento, estacion_ve (2 tomas de 22 kW), estacion_ve_fv o generador_fv; sim_kwh_mes: consumo mensual
@@ -124,6 +124,8 @@ albaicin;FV Polideportivo Albaicín;;;958 100 008;37.1852;-3.5940;generador_fv;7
 ALTA_ONLINE="si"                     # no = alta online desactivada (la pagina lo dice)
 ALTA_MAX_DIA="20"                    # tope de altas online en 24 h (cada una crea un tenant y una base)
 ALTA_APROBACION="si"                 # si = cada alta espera a que el superusuario la apruebe en su panel
+ALTA_PRUEBA_MINUTOS="${ALTA_PRUEBA_MINUTOS:-2}"   # vida de una comunidad de prueba (luego se borra entera; 60 = 1 h)
+ALTA_PRUEBA_MAX="${ALTA_PRUEBA_MAX:-3}"           # pruebas confirmadas por email; despues, que nos escriba
                                      # (no hay verificacion del email); no = se crea al momento
 
 # Vistas bloqueadas: salen inactivas y de un color algo distinto (sin marca) en las pestañas del
@@ -305,6 +307,8 @@ TENANT_DOMINIO=$HOSTNAME_LAN.local
 ALTA_ONLINE=$ALTA_ONLINE
 ALTA_MAX_DIA=$ALTA_MAX_DIA
 ALTA_APROBACION=$ALTA_APROBACION
+ALTA_PRUEBA_MINUTOS=$ALTA_PRUEBA_MINUTOS
+ALTA_PRUEBA_MAX=$ALTA_PRUEBA_MAX
 ALTA_URL_PUBLICA=https://${TB_DOMAIN:-$SERVE_IP}
 ALTA_NOMBRE_SERVICIO=$BRAND
 SERVICIOS_PREMIUM=$SERVICIOS_PREMIUM
@@ -516,7 +520,7 @@ ALTER TABLE socio ADD COLUMN IF NOT EXISTS origen text NOT NULL DEFAULT 'datadis
 ALTER TABLE socio DROP CONSTRAINT IF EXISTS socio_origen_check;
 ALTER TABLE socio ADD CONSTRAINT socio_origen_check CHECK (origen IN ('datadis', 'carpeta', 'virtual'));
 ALTER TABLE socio ADD COLUMN IF NOT EXISTS cups_origen text;
--- sim_perfil: socio virtual generado con un perfil desde el panel (cups_origen = 'perfil'): el
+-- sim_perfil: socio de prueba generado con un perfil desde el panel (cups_origen = 'perfil'): el
 -- perfil (forma del dia, meses, consumo, FV, reactiva, peaje) y el resumen de lo generado
 ALTER TABLE socio ADD COLUMN IF NOT EXISTS sim_perfil jsonb;
 -- Ajustes de la comunidad (clave -> valor JSON): reparto_modo (reparto elegido en la pestaña
@@ -674,11 +678,11 @@ def socios():
 
 
 
-VIRTUAL_ID, VIRTUAL_NOMBRE = "socio-virtual", "Socio virtual"
+VIRTUAL_ID, VIRTUAL_NOMBRE = "socio-virtual", "Socio de prueba"
 
 
 def socio_virtual(cx):
-    """Socio virtual de ejemplo (simulaciones), una sola vez por comunidad: si el gestor lo
+    """Socio de prueba de ejemplo (simulaciones), una sola vez por comunidad: si el gestor lo
     quita no vuelve. Su dispositivo de ThingsBoard se crea al aprovisionar (alta de la
     comunidad) o al cargarle el primer CSV. -> True si se ha creado ahora."""
     if cx.execute("SELECT 1 FROM ajuste WHERE clave = 'socio_virtual'").fetchone():
@@ -692,7 +696,7 @@ def socio_virtual(cx):
 
 
 def preparar(espera_s=300):
-    """Crea el esquema (espera a PostgreSQL), el socio virtual de ejemplo y cierra los trabajos
+    """Crea el esquema (espera a PostgreSQL), el socio de prueba de ejemplo y cierra los trabajos
     que un reinicio dejo a medias."""
     fin = time.time() + espera_s
     while True:
@@ -1687,9 +1691,9 @@ def ingesta_ficheros(cx, so, ficheros, nota):
 
 
 def _cups_virtual(cx, so, cups, todos):
-    """Socio virtual: los CSV pueden ser de cualquier CUPS (otro suministro, el generador de
+    """Socio de prueba: los CSV pueden ser de cualquier CUPS (otro suministro, el generador de
     datos de Datadis del blog); se guardan con el CUPS ficticio del socio, asi no se mezclan
-    con un socio real ni con otro virtual que cargue los mismos ficheros. Ficheros de otro CUPS
+    con un socio real ni con otro de prueba que cargue los mismos ficheros. Ficheros de otro CUPS
     que los de la carga anterior sustituyen todos sus datos. -> (cups, sustituido)"""
     if len(todos) != 1:
         raise ValueError("Los ficheros traen varios CUPS (o ninguno): carga los de un solo suministro cada vez")
@@ -1706,7 +1710,7 @@ def _cups_virtual(cx, so, cups, todos):
 
 def borrar_datos(cx, socio_id):
     """Borra el suministro del socio y sus datos de Datadis (curva, maximetro, reactiva y
-    contrato): socio simulado que pasa a real y socio virtual (otro CUPS, vaciarlo o quitarlo)."""
+    contrato): socio simulado que pasa a real y socio de prueba (otro CUPS, vaciarlo o quitarlo)."""
     for r0 in cx.execute("SELECT cups FROM suministro WHERE socio = %s", (socio_id,)).fetchall():
         for t in ("consumo", "potencias", "energia", "contrato"):
             cx.execute(f'DELETE FROM {t} WHERE "cups" = %s', (r0["cups"],))
@@ -1714,13 +1718,13 @@ def borrar_datos(cx, socio_id):
 
 
 def vaciar_virtual(socio_id):
-    """Deja al socio virtual sin datos, en PostgreSQL y en ThingsBoard (los totales de la
+    """Deja al socio de prueba sin datos, en PostgreSQL y en ThingsBoard (los totales de la
     comunidad se recalculan despues)."""
     so = next((x for x in config()["socios"] if x["id"] == socio_id), None)
     if not so:
         raise KeyError(socio_id)
     if so.get("origen") != "virtual":
-        raise ValueError("Solo se pueden vaciar los socios virtuales")
+        raise ValueError("Solo se pueden vaciar los socios de prueba")
     with db.conectar() as cx, cx.transaction():
         borrar_datos(cx, socio_id)
         cx.execute("UPDATE socio SET cups_origen = NULL, actualizado = now() WHERE id = %s", (socio_id,))
@@ -1750,7 +1754,7 @@ def cargar_ficheros(socio_id, ficheros):
             notas.append(f"{so['nombre']}: deja de ser simulado; sus datos son los de los CSV de Datadis")
             recargar = True
         r = ingesta_ficheros(cx, so, ficheros, notas.append)
-    if r["sustituido"]:   # socio virtual con otro CUPS: se recarga entero, sin los datos anteriores
+    if r["sustituido"]:   # socio de prueba con otro CUPS: se recarga entero, sin los datos anteriores
         notas.append(f"{so['nombre']}: sus datos anteriores se sustituyen por los de estos ficheros")
     return {**r, "notas": notas, "recargar": recargar or r["sustituido"]}
 
@@ -1766,7 +1770,7 @@ def fijar_origen(socio_id, origen):
         if so["simulado"]:
             raise ValueError("Los socios simulados no tienen origen")
         if cx.execute("SELECT 1 FROM socio WHERE id = %s AND origen = 'virtual'", (socio_id,)).fetchone():
-            raise ValueError("Los socios virtuales solo cargan CSV")
+            raise ValueError("Los socios de prueba solo cargan CSV")
         cx.execute("UPDATE socio SET origen = %s, actualizado = now() WHERE id = %s", (origen, socio_id))
 
 
@@ -2088,7 +2092,7 @@ def simular(cx, so, forzar, nota):
     return {"cups": cups, "rango": None if regenerar else rango}
 
 
-# ======================= socio virtual con un perfil (sin CSV) =======================
+# ======================= socio de prueba con un perfil (sin CSV) =======================
 # Como el generador de ficheros de Datadis del blog (C05_Generador_Datos_Datadis.html): el gestor
 # describe un prosumidor en el panel (forma del dia laborable y del festivo, peso de cada mes,
 # consumo medio, generacion fotovoltaica, reactiva y peaje) y se generan los CSV de los dos ultimos años de
@@ -2102,7 +2106,7 @@ PERFIL_PEAJES = {"2.0TD": ("BAJA TENSION y POTENCIA <= 15 kW", "Baja tensión", 
 
 
 def perfil_valido(p):
-    """Perfil de un socio virtual (el que envia el panel) -> perfil limpio, o ValueError."""
+    """Perfil de un socio de prueba (el que envia el panel) -> perfil limpio, o ValueError."""
     if not isinstance(p, dict):
         raise ValueError("Perfil no válido")
 
@@ -2315,7 +2319,7 @@ def perfil_de_tipo(tipo, kwh_mes, fv_mes=0.0):
     con su consumo mensual kwh_mes (en generador_fv, lo generado): las formas del dia de
     _forma y de las sesiones de recarga, la estacionalidad de simular() y su reactiva.
     estacion_ve_fv: el EV_FV_PARTE de fv_mes (kWh al mes de las FV de su comunidad) en las horas
-    de sol y EV_FV_SIN_SOL_KW el resto. Para las comunidades de ejemplo (socios virtuales)."""
+    de sol y EV_FV_SIN_SOL_KW el resto. Para las comunidades de ejemplo (socios de prueba)."""
     import math
     if tipo not in SIM_TIPOS:
         raise ValueError(f"Tipo de socio simulado no válido: {tipo}")
@@ -2380,7 +2384,7 @@ def perfil_de_tipo(tipo, kwh_mes, fv_mes=0.0):
 
 
 def cargar_perfil(socio_id, perfil):
-    """Socio virtual: genera los datos de su perfil (perfil_ficheros) y los carga en lugar de los
+    """Socio de prueba: genera los datos de su perfil (perfil_ficheros) y los carga en lugar de los
     que tuviera; el perfil se guarda (sim_perfil) para cambiarlo despues. Los publica en
     ThingsBoard, entero, la sincronizacion que lanza despues el panel. -> como cargar_ficheros"""
     from psycopg.types.json import Jsonb
@@ -2391,7 +2395,7 @@ def cargar_perfil(socio_id, perfil):
     if not so:
         raise KeyError(socio_id)
     if so.get("origen") != "virtual":
-        raise ValueError("Solo los socios virtuales se generan con un perfil")
+        raise ValueError("Solo los socios de prueba se generan con un perfil")
     ficheros, res = perfil_ficheros(p, cups_simulado(f"perfil|{comunidad()['id']}|{socio_id}"), socio_id)
     notas = []
     with db.conectar() as cx, cx.transaction():
@@ -2538,7 +2542,7 @@ def fijar_deshabilitado(socio_id, valor, por):
         if not cx.execute("UPDATE socio SET deshabilitado = %s, actualizado = now() WHERE id = %s RETURNING id",
                           (bool(valor), socio_id)).fetchone():
             raise KeyError(socio_id)
-    d = tb().dispositivo(socio_id)     # un socio virtual aun sin datos puede no tenerlo todavia
+    d = tb().dispositivo(socio_id)     # un socio de prueba aun sin datos puede no tenerlo todavia
     if d:
         tb().atributos(d["id"]["id"], {"deshabilitado": bool(valor)})
 
@@ -6159,8 +6163,8 @@ def optimizar_coeficientes(cx, d0, d1, generadores=None, generacion_anual=None):
                        for so, s in part]}
 
 
-# ---------------- socio virtual: tamaño que mas ahorra a la comunidad ----------------
-FACTOR_MAX = 10.0      # el consumo y la generacion del socio virtual se buscan entre 0 y 10 veces los cargados
+# ---------------- socio de prueba: tamaño que mas ahorra a la comunidad ----------------
+FACTOR_MAX = 10.0      # el consumo y la generacion del socio de prueba se buscan entre 0 y 10 veces los cargados
 
 
 def _tarifa_de(pj):
@@ -6169,7 +6173,7 @@ def _tarifa_de(pj):
 
 
 def optimizar_virtual(socio_id):
-    """Cuanto conviene que consuma y genere un socio virtual: los factores (0 a FACTOR_MAX) por
+    """Cuanto conviene que consuma y genere un socio de prueba: los factores (0 a FACTOR_MAX) por
     los que multiplicar su consumo y su generacion (las curvas cargadas) que dan a la comunidad
     el mayor porcentaje de ahorro en los ultimos 12 meses completos. Ahorro: lo que pagarian
     todos los socios comprando toda su energia a la red, menos el coste en comunidad; en
@@ -6180,14 +6184,14 @@ def optimizar_virtual(socio_id):
     dinamico (cada hora, la generacion en proporcion al consumo: el mejor posible) y la
     compensacion de cada mes limitada a lo que la comunidad compra a la red ese mes (RD
     244/2019). A igual ahorro, los factores menores. Generacion: la de los socios, o la de los
-    generadores si los hay (entonces la del socio virtual no cuenta y no se optimiza)."""
+    generadores si los hay (entonces la del socio de prueba no cuenta y no se optimiza)."""
     d0, d1 = _base_12()
     PR = {t: x for t, x in precios().items() if t not in ("defecto", "otros")}
     with db.conectar() as cx:
         act, part, gen_ids, G, D = _perfiles(cx, d0, d1, exigir_gen=False)
         so_v = next((so for so, _ in part if so["id"] == socio_id), None)
         if not so_v or so_v.get("origen") != "virtual":
-            raise ValueError("Solo se optimizan los socios virtuales con datos y que cuentan en la comunidad (sin Excluido)")
+            raise ValueError("Solo se optimizan los socios de prueba con datos y que cuentan en la comunidad (sin Excluido)")
         sv = next(s for so, s in part if so["id"] == socio_id)
         t0 = datetime.fromisoformat(d0).replace(tzinfo=TZL)
         t1 = datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
@@ -6198,7 +6202,7 @@ def optimizar_virtual(socio_id):
         gv = {}
     dv = D[socio_id]
     if not sum(dv.values()) and not sum(gv.values()):
-        raise ValueError("El socio virtual no tiene consumo ni generación en los últimos 12 meses completos")
+        raise ValueError("El socio de prueba no tiene consumo ni generación en los últimos 12 meses completos")
     precio = {}
     for so, s in part:
         pj = s.get("peaje") or "2.0TD"
@@ -6210,7 +6214,7 @@ def optimizar_virtual(socio_id):
     c_med = sum(tot[i] * float(precio[i][0]["comp"] or 0) for i in tot) / T     # horas sin consumo
     l_med = sum(tot[i] * float(precio[i][0].get("lcoe") or 0) for i in tot) / T
     # Cada hora: consumo y sumas ponderadas (consumo x precio, x compensacion, x LCOE) de los
-    # demas y del socio virtual, generacion de los demas y del virtual, y su mes
+    # demas y del socio de prueba, generacion de los demas y del de prueba, y su mes
     filas, meses = [], {}
     for h in sorted(set(G) | {h for d in D.values() for h in d}):
         lt = h.astimezone(TZL)
@@ -6272,7 +6276,7 @@ def optimizar_virtual(socio_id):
 
 
 def escalar_virtual(socio_id, kc, kg):
-    """Multiplica el consumo (curva, maximetro y reactiva) del socio virtual por kc y su
+    """Multiplica el consumo (curva, maximetro y reactiva) del socio de prueba por kc y su
     generacion por kg; su autoconsumo es lo menor de los dos cada cuarto de hora u hora, el
     resto, consumo de red o excedentes. El contrato no cambia."""
     if not (0 <= kc <= FACTOR_MAX and 0 <= kg <= FACTOR_MAX):
@@ -6282,10 +6286,10 @@ def escalar_virtual(socio_id, kc, kg):
         if not so:
             raise KeyError(socio_id)
         if so["origen"] != "virtual":
-            raise ValueError("Solo se pueden escalar los socios virtuales")
+            raise ValueError("Solo se pueden escalar los socios de prueba")
         s = cec.suministro_de(cx, socio_id)
         if not s:
-            raise ValueError("El socio virtual no tiene datos")
+            raise ValueError("El socio de prueba no tiene datos")
         nuevo = lambda col, v: f'CASE WHEN c."{col}" IS NULL AND {v} = 0 THEN NULL ELSE round(({v})::numeric, 3)::float8 END'
         n = cx.execute(f"""
             UPDATE consumo AS c SET "consumo_kWh" = {nuevo("consumo_kWh", "x.d - x.a")},
@@ -7290,8 +7294,14 @@ ALTER TABLE alta DROP CONSTRAINT IF EXISTS alta_periodo_check;
 ALTER TABLE alta ADD CONSTRAINT alta_periodo_check CHECK (periodo IN ('mensual', 'anual', 'gratuito'));
 -- revision: espera a que el superusuario la apruebe (ALTA_APROBACION); rechazada: no se crea
 ALTER TABLE alta DROP CONSTRAINT IF EXISTS alta_estado_check;
+-- confirmar: comunidad de prueba esperando a que el gestor pulse el enlace del correo (24 h);
+-- caducada: no lo pulso a tiempo (o pidio otra con el mismo email)
 ALTER TABLE alta ADD CONSTRAINT alta_estado_check
-  CHECK (estado IN ('revision', 'rechazada', 'pendiente', 'creando', 'creada', 'error'));
+  CHECK (estado IN ('confirmar', 'caducada', 'revision', 'rechazada', 'pendiente', 'creando', 'creada', 'error', 'finalizada'));
+-- caduca: fin de la vida de una comunidad de prueba (ALTA_PRUEBA_MINUTOS desde que se crea): entonces
+-- se borra entera y el alta pasa a finalizada
+ALTER TABLE alta ADD COLUMN IF NOT EXISTS caduca timestamptz;
+ALTER TABLE alta ADD COLUMN IF NOT EXISTS confirmacion text UNIQUE;   -- sha256 del enlace del correo
 -- Documento que acredita al gestor (acta, nombramiento...: PDF, JPG o PNG), lo revisa el superusuario
 ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento bytea;
 ALTER TABLE alta ADD COLUMN IF NOT EXISTS documento_nombre text;
@@ -7872,9 +7882,10 @@ def suspender_gestor(cid, suspendido):
     return _fila(cid)
 
 
-def borrar_comunidad(cid):
+def borrar_comunidad(cid, copia=True):
     """Borra al gestor y su comunidad: tenant de ThingsBoard (usuarios, dispositivos y paneles),
-    base de datos y registro. Antes guarda una copia "previa" de la base de la comunidad. Si era
+    base de datos y registro. Antes guarda una copia "previa" de la base de la comunidad (sin
+    copia: las comunidades de prueba al acabar su vida, que se borran del todo). Si era
     la principal de un gestor con mas comunidades, otra de ellas pasa a serlo (con su email y
     su contraseña de siempre)."""
     from . import cec, copias
@@ -7884,12 +7895,14 @@ def borrar_comunidad(cid):
         otra = next((x for x in mias(c) if x["id"] != cid), None)
     if con(c, db.job_activo):
         raise ValueError("Hay una sincronización en curso en esa comunidad; prueba cuando termine")
-    try:   # la copia previa lleva el registro de la comunidad: con ella se puede volver a crear
-        guardar_credenciales(c)
-        c = por_id(cid)
-    except Exception:
-        log.exception("credenciales de %s", cid)
-    previa = copias.crear([c["base"]], "previa", [c["base"]])[0]["nombre"]
+    previa = None
+    if copia:
+        try:   # la copia previa lleva el registro de la comunidad: con ella se puede volver a crear
+            guardar_credenciales(c)
+            c = por_id(cid)
+        except Exception:
+            log.exception("credenciales de %s", cid)
+        previa = copias.crear([c["base"]], "previa", [c["base"]])[0]["nombre"]
     sa = _sa()
     try:
         tid = c["tenant_id"] or TB(c["tenant_email"]).tenant_id()
@@ -7914,7 +7927,7 @@ def borrar_comunidad(cid):
         except Exception:
             log.exception("comunidad principal nueva de %s: %s", c["gestor_email"], otra["id"])
         log.info("%s pasa a ser la comunidad principal de %s", otra["id"], c["gestor_email"])
-    log.info("comunidad %s borrada (copia previa %s)", cid, previa)
+    log.info("comunidad %s borrada (%s)", cid, f"copia previa {previa}" if previa else "sin copia")
     return {"borrada": cid, "previa": previa}
 
 
@@ -8109,7 +8122,7 @@ def autorizaciones():
     """Suministros del gestor: los de la ultima lista de autorizaciones de Datadis de su cuenta
     (sin consultar a Datadis) y, ademas, los de todos los socios de sus comunidades que no
     estan en ella (simulados o sin autorizacion leida: estado SIMULADO o SOCIO), cada uno con
-    la comunidad y el socio que lo tienen. Los socios virtuales no: su CUPS es ficticio y se
+    la comunidad y el socio que lo tienen. Los socios de prueba no: su CUPS es ficticio y se
     gestionan en la pestaña Socios."""
     c = _comunidad(comunidad()["id"])
     todas = mias(c)
@@ -8755,7 +8768,7 @@ def suspender_socio(sid, suspendido):
 def baja_socio(sid):
     """Borra al socio de la comunidad y de ThingsBoard (dispositivo, cliente y usuario).
     Sus lecturas se quedan en PostgreSQL (informes de periodos pasados), salvo las de un socio
-    virtual (son copias de otros CUPS con su CUPS ficticio)."""
+    de prueba (son copias de otros CUPS con su CUPS ficticio)."""
     from . import cec
     c = comunidad()
     with db.conectar() as cx, cx.transaction():
@@ -8767,7 +8780,7 @@ def baja_socio(sid):
 
 
 def alta_virtual(nombre, por, d=None):
-    """Socio virtual nuevo (simulaciones), sin datos: se generan con un perfil (o se le cargan
+    """Socio de prueba nuevo (simulaciones), sin datos: se generan con un perfil (o se le cargan
     CSV de cualquier CUPS). d (opcional): email y password (su usuario, como un socio; los de las
     comunidades de ejemplo), telefono, lat y lon."""
     c = comunidad()
@@ -8775,7 +8788,7 @@ def alta_virtual(nombre, por, d=None):
     nombre = " ".join(str(nombre or "").split())
     sid = slug(nombre)
     if not 2 <= len(nombre) <= 80 or "|" in nombre or not sid or sid == "comunidad":
-        raise ValueError("Nombre del socio virtual no válido")
+        raise ValueError("Nombre del socio de prueba no válido")
     email = _email(d.get("email"), obligatorio=False)
     pw = _password(d.get("password"), obligatoria=bool(email))
     lat, lon = _num(d.get("lat")), _num(d.get("lon"))
@@ -8800,7 +8813,7 @@ def alta_virtual(nombre, por, d=None):
 
 
 def asegurar_dispositivo(sid):
-    """Dispositivo de ThingsBoard del socio (el virtual de ejemplo de una comunidad que ya
+    """Dispositivo de ThingsBoard del socio (el de prueba de ejemplo de una comunidad que ya
     existia se crea en la base al arrancar, sin ThingsBoard): si falta, se aprovisiona."""
     from . import cec
     so = next((x for x in db.socios() if x["id"] == sid), None)
@@ -8890,6 +8903,8 @@ El uso de la plataforma es gratuito y queda bajo la responsabilidad del gestor (
 de uso de la web)."""
 import base64
 import binascii
+import hashlib
+import html
 import re
 import secrets
 import smtplib
@@ -8926,6 +8941,28 @@ WEB = (E.get("ALTA_URL_WEB") or "").rstrip("/")              # la web con la pag
 MAX_DIA = int(E.get("ALTA_MAX_DIA") or 20)                   # altas online en 24 h (cada una crea tenant y base)
 APROBACION = (E.get("ALTA_APROBACION") or "si") != "no"      # el superusuario aprueba cada alta
 DOC_MAX_MB = 5                                               # documento acreditativo del gestor
+CONFIRMAR_HORAS = 24                                         # enlace de confirmacion de la de prueba
+PRUEBA_MIN = max(1, int(E.get("ALTA_PRUEBA_MINUTOS") or 60))  # vida de una comunidad de prueba
+PRUEBA_MAX = max(1, int(E.get("ALTA_PRUEBA_MAX") or 3))       # pruebas confirmadas por email
+
+
+def contacto():
+    return AVISOS[0] if AVISOS else "info@vatiaco.es"
+
+
+def pruebas_hechas(cx, email):
+    """Comunidades de prueba confirmadas con ese email (las que no se confirmaron no cuentan:
+    cualquiera puede escribir el email de otro)."""
+    return cx.execute("SELECT count(*) AS n FROM alta WHERE datos ? 'virtual' AND datos->>'email' = %s "
+                      "AND estado IN ('pendiente', 'creando', 'creada', 'error', 'finalizada')", (email,)).fetchone()["n"]
+
+
+def duracion(minutos=None):
+    """2 -> «2 minutos», 60 -> «1 hora», 90 -> «90 minutos», 1440 -> «24 horas»."""
+    m = PRUEBA_MIN if minutos is None else minutos
+    if m % 60 == 0:
+        return "1 hora" if m == 60 else f"{m // 60} horas"
+    return "1 minuto" if m == 1 else f"{m} minutos"
 DOC_TIPOS = ((b"%PDF-", "application/pdf", ".pdf"), (b"\x89PNG\r\n\x1a\n", "image/png", ".png"),
              (b"\xff\xd8\xff", "image/jpeg", ".jpg"))
 _CREAR = threading.Lock()      # una comunidad a la vez
@@ -8948,20 +8985,29 @@ def activa():
 AVISOS = [x.strip() for x in (E.get("AVISOS_EMAIL") or "").split(",") if x.strip()]
 
 
-def _enviar(asunto, lineas, responder=None, adjunto=None):
-    """Envia el aviso (se llama en un hilo: un fallo del correo no afecta a la peticion)."""
+def correo_activo():
+    return bool(E.get("SMTP_HOST"))
+
+
+def _enviar(asunto, lineas, responder=None, adjunto=None, para=None, html_=None):
+    """Envia el correo (se llama en un hilo: un fallo del correo no afecta a la peticion). Sin
+    para, es un aviso a AVISOS_EMAIL (con el pie del panel del superusuario)."""
     host = E.get("SMTP_HOST") or ""
-    if not host or not AVISOS:
-        log.info("aviso por correo no enviado (sin SMTP_HOST o AVISOS_EMAIL): %s", asunto)
+    destino = para or AVISOS
+    if not host or not destino:
+        log.info("correo no enviado (sin SMTP_HOST o AVISOS_EMAIL): %s", asunto)
         return
     seg, user = (E.get("SMTP_SEGURIDAD") or "starttls").lower(), E.get("SMTP_USER") or ""
     remite = E.get("SMTP_FROM") or user or f"plataforma@{host}"
     m = EmailMessage()
-    m["Subject"], m["From"], m["To"] = asunto, remite, ", ".join(AVISOS)
+    m["Subject"], m["From"], m["To"] = asunto, remite, ", ".join(destino)
     m["Date"], m["Message-ID"] = formatdate(localtime=True), make_msgid()
     if responder:
         m["Reply-To"] = responder
-    m.set_content("\n".join(x for x in lineas if x is not None) + f"\n\nSe atiende en el panel del superusuario: {URL or 'la plataforma'}\n")
+    pie = "" if para else f"\n\nSe atiende en el panel del superusuario: {URL or 'la plataforma'}"
+    m.set_content("\n".join(x for x in lineas if x is not None) + pie + "\n")
+    if html_:   # version HTML (los lectores que no la muestran usan el texto)
+        m.add_alternative(html_, subtype="html")
     if adjunto and adjunto[0]:
         b, nombre, tipo = adjunto
         m.add_attachment(b, maintype=tipo.split("/")[0], subtype=tipo.split("/")[1], filename=nombre)
@@ -8975,13 +9021,13 @@ def _enviar(asunto, lineas, responder=None, adjunto=None):
             if user:
                 s.login(user, E.get("SMTP_PASS") or "")
             s.send_message(m)
-        log.info("aviso por correo enviado a %s: %s", ", ".join(AVISOS), asunto)
+        log.info("correo enviado a %s: %s", ", ".join(destino), asunto)
     except Exception:
         log.exception("aviso por correo: %s", asunto)
 
 
-def avisar(asunto, lineas, responder=None, adjunto=None):
-    threading.Thread(target=_enviar, args=(asunto, lineas, responder, adjunto), name="aviso", daemon=True).start()
+def avisar(asunto, lineas, responder=None, adjunto=None, para=None, html_=None):
+    threading.Thread(target=_enviar, args=(asunto, lineas, responder, adjunto, para, html_), name="aviso", daemon=True).start()
 
 
 def _cx():
@@ -9001,7 +9047,7 @@ def info():
     return {"activa": activa(), "nombre_servicio": E.get("ALTA_NOMBRE_SERVICIO") or "Plataforma de comunidades energéticas",
             "gratuita": True, "aprobacion": APROBACION, "documento": APROBACION, "documento_max_mb": DOC_MAX_MB,
             "url_condiciones": E.get("ALTA_URL_CONDICIONES") or "",
-            "url_privacidad": E.get("ALTA_URL_PRIVACIDAD") or "", "url_plataforma": URL}
+            "url_privacidad": E.get("ALTA_URL_PRIVACIDAD") or "", "url_plataforma": URL, "prueba_vida": duracion()}
 
 
 def _idae():
@@ -9055,15 +9101,15 @@ def _texto(v, minimo, maximo):
 
 
 def _comunidad_virtual(sel):
-    """Comunidad virtual (no esta en el IDAE), para estudios con socios virtuales: nombre,
+    """Comunidad de prueba (no esta en el IDAE), para estudios con socios de prueba: nombre,
     ubicacion pulsada en el mapa (lat, lon) y municipio opcional. Su nombre en la plataforma
-    lleva "(virtual)" y no pide documento acreditativo."""
+    lleva "(prueba)" y no pide documento acreditativo."""
     sel = sel if isinstance(sel, dict) else {}
     err = {}
     n = _texto(sel.get("nombre"), 3, 100)
     m = _texto(sel.get("municipio"), 0, 60) or ""
     if not n:
-        err["virtual_nombre"] = "Pon un nombre a la comunidad virtual (de 3 a 100 caracteres)."
+        err["virtual_nombre"] = "Pon un nombre a la comunidad de prueba (de 3 a 100 caracteres)."
     try:
         lat, lon = float(sel.get("lat")), float(sel.get("lon"))
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
@@ -9072,7 +9118,7 @@ def _comunidad_virtual(sel):
         err["virtual_lugar"] = "Pulsa en el mapa dónde está la comunidad."
     if err:
         raise Errores(err)
-    return {"comunidad": f"{n} (virtual)", "idae_nombre": None, "municipio": m, "provincia": "", "autonomia": None,
+    return {"comunidad": f"{n} (prueba)", "idae_nombre": None, "municipio": m, "provincia": "", "autonomia": None,
             "lat": round(lat, 6), "lon": round(lon, 6), "socios_idae": None, "web": None, "virtual": True}
 
 
@@ -9130,12 +9176,19 @@ def _validar(f):
         if "gestor" in str(e) or "Email" in str(e):
             raise Errores({"email": str(e)})
         raise Errores({"virtual_nombre" if virtual else "comunidad":
-                       "Ya hay una comunidad virtual con ese nombre: elige otro." if virtual else
+                       "Ya hay una comunidad de prueba con ese nombre: elige otro." if virtual else
                        "Esta comunidad ya está dada de alta en la plataforma. Si eres su gestor, entra con tu usuario."})
     if plataforma._hashes_tb([d["email"]]):
         raise Errores({"email": "Ese email ya es usuario de la plataforma."})
     with _cx() as cx:   # otra alta con esa comunidad o ese gestor que aun no ha terminado
-        if cx.execute("SELECT 1 FROM alta WHERE estado IN ('revision', 'pendiente', 'creando') AND (comunidad_id = %s OR datos->>'email' = %s)",
+        # las de prueba sin confirmar a tiempo caducan, y la que espera confirmacion con este
+        # email se sustituye por la nueva (p. ej. no le llego el correo)
+        cx.execute("UPDATE alta SET estado = 'caducada', hash = NULL, actualizado = now() WHERE estado = 'confirmar' "
+                   "AND (creada < now() - make_interval(hours => %s) OR datos->>'email' = %s)", (CONFIRMAR_HORAS, d["email"]))
+        if virtual and pruebas_hechas(cx, d["email"]) >= PRUEBA_MAX:
+            raise Errores({"email": f"Ya has probado la plataforma {PRUEBA_MAX} veces con este email. Para seguir, escríbenos a "
+                                    f"{contacto()} y te ayudamos a dar de alta tu comunidad."})
+        if cx.execute("SELECT 1 FROM alta WHERE estado IN ('confirmar', 'revision', 'pendiente', 'creando') AND (comunidad_id = %s OR datos->>'email' = %s)",
                       (cid, d["email"])).fetchone():
             raise Errores({"general": "Ya hay un alta en curso con esta comunidad o este email."})
     return d, cid, pw, doc or (None, None, None)
@@ -9155,28 +9208,173 @@ def solicitud(f):
     anotar(email=str(f.get("email") or "").strip().lower()[:120])
     d, cid, pw, doc = _validar(f)
     aid = secrets.token_urlsafe(12)
-    anotar(alta=aid, nombre=d["comunidad"], municipio=d.get("municipio"), virtual=bool(d.get("virtual")))
+    # La de prueba no lleva documento: antes de nada el gestor confirma su email con el enlace
+    # que se le envia (sin servidor de correo no se puede: sigue como las demas)
+    confirmar = bool(d.get("virtual")) and correo_activo()
+    token = secrets.token_urlsafe(24) if confirmar else None
+    anotar(alta=aid, nombre=d["comunidad"], municipio=d.get("municipio"), virtual=bool(d.get("virtual")), confirmar=confirmar)
     with _cx() as cx:
         cx.execute("INSERT INTO alta (id, comunidad_id, datos, hash, socios, periodo, estado, documento, documento_nombre, "
-                   "documento_tipo) VALUES (%s, %s, %s, %s, %s, 'gratuito', %s, %s, %s, %s)",
+                   "documento_tipo, confirmacion) VALUES (%s, %s, %s, %s, %s, 'gratuito', %s, %s, %s, %s, %s)",
                    (aid, cid, Jsonb(d), plataforma._hash(pw), max(1, int(d["socios_idae"] or 0)),
-                    "revision" if APROBACION else "pendiente", *doc))
-    log.info("alta online: %s (%s) solicitada por %s", d["comunidad"], d["municipio"], d["email"])
+                    "confirmar" if confirmar else "revision" if APROBACION else "pendiente", *doc,
+                    _huella(token) if token else None))
+    log.info("alta online: %s (%s) solicitada por %s%s", d["comunidad"], d["municipio"], d["email"],
+             " (esperando confirmación por correo)" if confirmar else "")
+    if confirmar:
+        enlace = f"{URL or ''}/cec-api/alta/confirmar?t={token}"
+        e = html.escape
+        with _cx() as cx:
+            ultima = pruebas_hechas(cx, d["email"]) + 1 >= PRUEBA_MAX
+        aviso_ult = (f"Es tu última prueba: con cada email se pueden hacer {PRUEBA_MAX}. Para seguir después, escríbenos a {contacto()}."
+                     if ultima else None)
+        avisar(f"Confirma el alta de {d['comunidad']}", [
+            f"Hola, {d['contacto']}:", "",
+            f"Has pedido dar de alta la comunidad de prueba «{d['comunidad']}» en la plataforma de comunidades energéticas. "
+            f"Estará disponible {duracion()} desde que se cree; después se borra con todos sus datos.", "",
+            f"Para confirmarla, abre este enlace y pulsa «Confirmar el alta» (vale {CONFIRMAR_HORAS} horas):", "", enlace, "",
+            *([aviso_ult, ""] if aviso_ult else []),
+            "Si no has sido tú, ignora este correo: no se creará nada.",
+        ], responder=AVISOS[0] if AVISOS else None, para=[d["email"]], html_=(
+            "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1d2a33;max-width:560px\">"
+            f"<p>Hola, {e(d['contacto'])}:</p>"
+            f"<p>Has pedido dar de alta la comunidad de prueba <b>«{e(d['comunidad'])}»</b> en la plataforma de comunidades energéticas. "
+            f"Estará disponible <b>{duracion()}</b> desde que se cree; después se borra con todos sus datos.</p>"
+            f"<p>Para confirmarla, pulsa <b>Aquí</b> y después «Confirmar el alta» (vale {CONFIRMAR_HORAS} horas):</p>"
+            f"<p style=\"margin:22px 0\"><a href=\"{e(enlace)}\" style=\"background:#0b6e4f;color:#ffffff;text-decoration:none;"
+            "font-weight:bold;padding:12px 28px;border-radius:8px;display:inline-block\">Aquí</a></p>"
+            + (f"<p style=\"background:#fff4e0;border-left:4px solid #e0a030;padding:10px 14px\">{e(aviso_ult)}</p>" if aviso_ult else "")
+            + "<p style=\"color:#5b6770;font-size:13px\">Si no has sido tú, ignora este correo: no se creará nada.</p></div>"))
+        return {"alta": aid}
+    _recibida(aid, d, doc)
+    return {"alta": aid}
+
+
+def _huella(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _recibida(aid, d, doc=(None, None, None), directa=False):
+    """Alta lista para seguir: aviso a AVISOS_EMAIL y, sin revision (o directa: la de prueba con el
+    email confirmado), se crea."""
+    revision = APROBACION and not directa
     lugar = ", ".join(x for x in (d.get("municipio"), d.get("provincia")) if x)
     avisar(f"Alta de comunidad: {d['comunidad']}", [
         "Nueva solicitud de alta de una comunidad en la plataforma.", "",
-        f"Comunidad: {d['comunidad']}", "Tipo: " + ("virtual, para estudios con socios virtuales" if d.get("virtual") else "registrada en el IDAE"),
+        f"Comunidad: {d['comunidad']}", "Tipo: " + ("de prueba, para estudios con socios de prueba" if d.get("virtual") else "registrada en el IDAE"),
         f"Lugar: {lugar or '–'}" + (f" ({d['lat']}, {d['lon']})" if d.get("lat") is not None else ""),
         f"Socios (IDAE): {d['socios_idae']}" if d.get("socios_idae") else None,
         f"Web: {d['web']}" if d.get("web") else None,
         "", f"Gestor: {d['contacto']}", f"Email: {d['email']}", f"Teléfono: {d['telefono'] or '–'}", "",
         ("Estado: en revisión. " + ("Revisa el documento adjunto que acredita al gestor y apruébala"
                                      if doc[0] else "Apruébala") + " o recházala en Altas online."
-         if APROBACION else "Estado: se está creando (sin revisión)."),
+         if revision else "Estado: se está creando (email del gestor confirmado, sin revisión)." if directa
+         else "Estado: se está creando (sin revisión)."),
     ], responder=d["email"], adjunto=doc)
-    if not APROBACION:
+    if not revision:
         threading.Thread(target=crear, args=(aid,), name=f"alta-{aid}", daemon=True).start()
-    return {"alta": aid}
+
+
+def confirmar(token):
+    """El gestor pulsa «Confirmar el alta» en la pagina del enlace del correo: la de prueba se crea
+    ya, sin revision del superusuario (el correo confirmado sustituye al documento). Devuelve la
+    fila del alta (None si no existe)."""
+    with _cx() as cx:
+        a = cx.execute("UPDATE alta SET estado = 'pendiente', actualizado = now() WHERE confirmacion = %s AND estado = 'confirmar' "
+                       "AND creada > now() - make_interval(hours => %s) RETURNING *",
+                       (_huella(token), CONFIRMAR_HORAS)).fetchone()
+        if not a:   # ya confirmada antes (se vuelve a pulsar), caducada o inexistente
+            a = cx.execute("SELECT * FROM alta WHERE confirmacion = %s", (_huella(token),)).fetchone()
+            if a and a["estado"] == "confirmar":
+                cx.execute("UPDATE alta SET estado = 'caducada', hash = NULL, actualizado = now() WHERE id = %s", (a["id"],))
+                a = dict(a, estado="caducada")
+            if a:
+                anotar(alta=a["id"], nombre=a["datos"].get("comunidad"), email=a["datos"].get("email"), estado_alta=a["estado"])
+            return a
+    anotar(alta=a["id"], nombre=a["datos"].get("comunidad"), email=a["datos"].get("email"), confirmada=True)
+    log.info("alta online: %s confirmada por %s", a["datos"].get("comunidad"), a["datos"].get("email"))
+    _recibida(a["id"], a["datos"], directa=True)
+    return dict(a, estado="creando")
+
+
+def finalizar_pruebas():
+    """Tarea periodica: las comunidades de prueba que han llegado al final de su vida se borran
+    del todo (sin copia) y se despide al gestor por correo, invitandole a dar de alta la suya."""
+    with _cx() as cx:
+        filas = cx.execute("SELECT * FROM alta WHERE estado = 'creada' AND caduca IS NOT NULL AND caduca <= now() "
+                           "ORDER BY caduca").fetchall()
+    for a in filas:
+        d, cid = a["datos"], a["comunidad"]
+        t0 = time.monotonic()
+        try:
+            if cid and plataforma.por_id(cid):
+                with _CREAR:
+                    plataforma.borrar_comunidad(cid, copia=False)
+            with _cx() as cx:
+                cx.execute("UPDATE alta SET estado = 'finalizada', actualizado = now() WHERE id = %s", (a["id"],))
+        except Exception as ex:   # p. ej. una sincronizacion en curso: se reintenta en la siguiente vuelta
+            log.warning("comunidad de prueba %s: no se ha podido borrar todavía (%s)", cid, ex)
+            continue
+        log.info("comunidad de prueba %s finalizada y borrada (%s)", cid, d.get("email"))
+        plataforma.anotar_actividad({"quien": "plataforma", "perfil": "plataforma", "comunidad": cid, "metodo": "TAREA",
+                                     "ruta": "fin de comunidad de prueba", "accion": "Fin de la comunidad de prueba: se borra",
+                                     "estado": 200, "ms": int((time.monotonic() - t0) * 1000),
+                                     "datos": {"alta": a["id"], "nombre": d.get("comunidad"), "email": d.get("email")}})
+        _despedida(d)
+
+
+def _despedida(d):
+    contacto_ = contacto()
+    e = html.escape
+    alta_url = URL or ""
+    with _cx() as cx:
+        agotadas = pruebas_hechas(cx, d.get("email")) >= PRUEBA_MAX
+    fin = (f"Has hecho las {PRUEBA_MAX} pruebas que se pueden hacer con este email, así que no podrás crear más comunidades de prueba. "
+           f"Escríbenos a {contacto_} y te ayudamos a dar de alta tu comunidad energética.") if agotadas else None
+    avisar(f"Fin de la comunidad de prueba {d.get('comunidad')}", [
+        f"Hola, {d.get('contacto')}:", "",
+        f"La comunidad de prueba «{d.get('comunidad')}» ha terminado su periodo de prueba ({duracion()}) y se ha borrado con todos sus datos.", "",
+        "Gracias por probar la plataforma de comunidades energéticas.", "",
+        "Si quieres seguir, da de alta tu comunidad energética desde la plataforma (botón «Dar de alta una comunidad» "
+        "en la pantalla de inicio de sesión)" + (f": {alta_url}" if alta_url else "") + ".", "",
+        fin or f"Y si tienes cualquier duda o quieres que te ayudemos, escríbenos a {contacto_}.",
+    ], responder=contacto_, para=[d.get("email")], html_=(
+        "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1d2a33;max-width:560px\">"
+        f"<p>Hola, {e(d.get('contacto') or '')}:</p>"
+        f"<p>La comunidad de prueba <b>«{e(d.get('comunidad') or '')}»</b> ha terminado su periodo de prueba ({duracion()}) "
+        "y se ha borrado con todos sus datos.</p>"
+        "<p><b>Gracias por probar la plataforma de comunidades energéticas.</b></p>"
+        "<p>Si quieres seguir, da de alta tu comunidad energética:</p>"
+        + (f"<p style=\"margin:22px 0\"><a href=\"{e(alta_url)}\" style=\"background:#0b6e4f;color:#ffffff;text-decoration:none;"
+           "font-weight:bold;padding:12px 28px;border-radius:8px;display:inline-block\">Dar de alta mi comunidad</a></p>" if alta_url else "")
+        + (f"<p style=\"background:#fff4e0;border-left:4px solid #e0a030;padding:10px 14px\">{e(fin)}</p>" if fin else
+           f"<p>Y si tienes cualquier duda o quieres que te ayudemos, escríbenos a "
+           f"<a href=\"mailto:{e(contacto_)}\" style=\"color:#0b6e4f\">{e(contacto_)}</a>.</p>")
+        + "</div>"))
+    avisar(f"Comunidad de prueba finalizada: {d.get('comunidad')}", [
+        f"La comunidad de prueba «{d.get('comunidad')}» ha cumplido su vida ({duracion()}) y se ha borrado (sin copia).",
+        f"Se ha enviado la despedida a {d.get('contacto')} <{d.get('email')}>."
+        + (f" Ha agotado sus {PRUEBA_MAX} pruebas: no podrá crear más con ese email." if agotadas else "")])
+
+
+def pendiente_confirmar(token):
+    """Para la pagina del enlace: el alta si aun espera confirmacion (si no, None)."""
+    with _cx() as cx:
+        return cx.execute("SELECT * FROM alta WHERE confirmacion = %s AND estado = 'confirmar' "
+                          "AND creada > now() - make_interval(hours => %s)", (_huella(token), CONFIRMAR_HORAS)).fetchone()
+
+
+def pagina(titulo, cuerpo):
+    """Pagina sencilla (la del enlace de confirmacion), con la marca."""
+    return ("<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+            f"<meta name=\"robots\" content=\"noindex\"><title>{html.escape(titulo)}</title><style>"
+            "body{margin:0;background:#f4f6f8;font:16px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1d2a33}"
+            "main{max-width:520px;margin:8vh auto;padding:28px 24px;background:#fff;border-radius:14px;box-shadow:0 4px 24px #0001}"
+            "h1{font-size:1.3rem;margin:0 0 12px;color:#0b6e4f}p{margin:0 0 14px}"
+            "button,a.b{display:inline-block;background:#0b6e4f;color:#fff;border:0;border-radius:8px;padding:11px 20px;"
+            "font:inherit;font-weight:600;cursor:pointer;text-decoration:none}button:hover,a.b:hover{background:#09583f}"
+            "small{color:#5b6770}</style></head><body><main>"
+            f"<h1>{html.escape(titulo)}</h1>{cuerpo}</main></body></html>")
 
 
 def _fila(aid):
@@ -9212,8 +9410,9 @@ def crear(aid):
                 with _cx() as cx:
                     cx.execute("UPDATE gestor SET hash = %s WHERE comunidad = %s", (a["hash"], cid))
             with _cx() as cx:
-                cx.execute("UPDATE alta SET estado = 'creada', comunidad = %s, hash = NULL, actualizado = now() "
-                           "WHERE id = %s", (cid, aid))
+                cx.execute("UPDATE alta SET estado = 'creada', comunidad = %s, hash = NULL, actualizado = now(), "
+                           "caduca = CASE WHEN datos ? 'virtual' THEN now() + make_interval(mins => %s) END "
+                           "WHERE id = %s", (cid, PRUEBA_MIN, aid))
             log.info("alta online: comunidad %s creada (%s, gestor %s)", cid, d["municipio"], d["email"])
         except Exception as e:
             log.exception("alta online %s (%s)", aid, cid)
@@ -9229,7 +9428,8 @@ def estado(aid):
     if not a:
         raise KeyError(aid)
     return {"comunidad": a["datos"].get("comunidad"), "email": a["datos"].get("email"), "estado": a["estado"],
-            "url_plataforma": URL}
+            "url_plataforma": URL, "confirmar_horas": CONFIRMAR_HORAS, "prueba": bool(a["datos"].get("virtual")),
+            "vida": duracion(), "caduca": a["caduca"].isoformat() if a.get("caduca") else None}
 
 
 # ---------------- superusuario ----------------
@@ -9791,7 +9991,7 @@ datadis/<CUPS>/   Los datos de cada suministro con los mismos ficheros y el mism
                   vertida, generada y autoconsumida), Potencias_ (maximetro), Contrato_ y
                   Energia_ (reactiva mensual). Punto y coma, coma decimal, campos entre
                   comillas, fechas AAAA/MM/DD y horas de fin de periodo. Se pueden cargar
-                  en un socio virtual de la plataforma (pestaña Socios, Socios virtuales) o
+                  en un socio de prueba de la plataforma (pestaña Socios, Socios de prueba) o
                   abrir con cualquier herramienta que lea los ficheros de Datadis.
 gestion/          El resto de tablas de la base de la comunidad (socios, reparto, gestion,
                   documentos...), una por fichero, con cabecera (UTF-8, separado por comas).
@@ -9924,7 +10124,9 @@ sin CORS). Autenticacion:
 """
 import asyncio
 import base64
+import html
 import json
+import re
 import secrets
 import time
 from contextlib import asynccontextmanager
@@ -9934,8 +10136,9 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request, Response
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 from starlette.concurrency import iterate_in_threadpool
@@ -9959,6 +10162,9 @@ async def vida(app):
                  id="credenciales", coalesce=True, max_instances=1, misfire_grace_time=3600)
     PLAN.add_job(sync_programada, CronTrigger(hour=hh, minute=mm, timezone=TZL), id="diaria",
                  coalesce=True, max_instances=1, misfire_grace_time=3 * 3600)
+    # Comunidades de prueba al final de su vida (ALTA_PRUEBA_MINUTOS): se borran y se despide al gestor
+    PLAN.add_job(asyncio.to_thread, IntervalTrigger(seconds=30), args=[alta.finalizar_pruebas], id="pruebas",
+                 coalesce=True, max_instances=1, misfire_grace_time=60)
     PLAN.start()
     log.info("sincronización diaria a las %s (API de Datadis, cuenta de cada comunidad)", SYNC_HORA)
     yield
@@ -10280,6 +10486,63 @@ async def alta_estado(alta_id: str = Query(..., alias="alta", pattern=r"^[A-Za-z
         raise HTTPException(404, "Alta no encontrada")
 
 
+# Enlace del correo de confirmacion de una comunidad de prueba. El GET solo enseña el boton: los
+# correos (Gmail, Outlook) abren los enlaces para analizarlos y no deben confirmar nada.
+_TOKEN = r"^[A-Za-z0-9_-]{20,60}$"
+
+
+def _pag_confirmada(a):
+    nombre = html.escape((a or {}).get("datos", {}).get("comunidad") or "La comunidad")
+    url = html.escape(alta.URL or "/")
+    if not a:
+        return alta.pagina("Enlace no válido", "<p>Este enlace no corresponde a ningún alta. Si copiaste el enlace del correo, "
+                           "comprueba que está completo.</p>")
+    if a["estado"] == "caducada":
+        return alta.pagina("Enlace caducado", f"<p>El alta de <b>{nombre}</b> no se confirmó a tiempo (o se pidió otra después). "
+                           "Vuelve a darla de alta desde la plataforma.</p>"
+                           f"<p><a class=\"b\" href=\"{url}\">Ir a la plataforma</a></p>")
+    if a["estado"] == "finalizada":
+        return alta.pagina("Prueba terminada", f"<p>La comunidad de prueba <b>{nombre}</b> ya terminó su periodo de prueba y se ha borrado.</p>"
+                           f"<p><a class=\"b\" href=\"{url}\">Dar de alta mi comunidad</a></p>")
+    if a["estado"] == "creada":
+        return alta.pagina("Comunidad creada", f"<p><b>{nombre}</b> ya está creada. Entra con tu email y la contraseña que elegiste.</p>"
+                           f"<p><a class=\"b\" href=\"{url}\">Entrar en la plataforma</a></p>")
+    if a["estado"] in ("rechazada", "error", "revision"):
+        return alta.pagina("Alta confirmada", f"<p>Hemos recibido la confirmación de <b>{nombre}</b>. "
+                           "Te escribiremos en cuanto esté lista.</p>")
+    return alta.pagina("Alta confirmada", f"<p>Gracias: estamos creando <b>{nombre}</b>. Tarda alrededor de un minuto.</p>"
+                       f"<p>Después entra con tu email y la contraseña que elegiste. Estará disponible {alta.duracion()}.</p>"
+                       f"<p><a class=\"b\" href=\"{url}\">Ir a la plataforma</a></p>")
+
+
+@app.get("/alta/confirmar", summary="Enlace de confirmación del alta de una comunidad de prueba (pública)",
+         response_class=HTMLResponse)
+async def alta_confirmar_pagina(t: str = Query("", pattern=r"^[A-Za-z0-9_-]{0,60}$")):
+    a = await asyncio.to_thread(alta.pendiente_confirmar, t) if re.match(_TOKEN, t) else None
+    if not a:   # ya confirmada, caducada o no valida: lo que haya
+        a = await asyncio.to_thread(alta.confirmar, t) if re.match(_TOKEN, t) else None
+        return HTMLResponse(_pag_confirmada(a), 200 if a else 404)
+    d = a["datos"]
+    return HTMLResponse(alta.pagina("Confirma el alta", (
+        f"<p>Vas a dar de alta la comunidad de prueba <b>{html.escape(d.get('comunidad') or '')}</b> con el gestor "
+        f"<b>{html.escape(d.get('contacto') or '')}</b> ({html.escape(d.get('email') or '')}).</p>"
+        "<form method=\"post\"><input type=\"hidden\" name=\"t\" value=\"" + html.escape(t) + "\">"
+        "<p><button type=\"submit\">Confirmar el alta</button></p></form>"
+        f"<p><small>Al confirmar se crea la comunidad en un minuto y estará disponible {alta.duracion()}; después se borra con todos sus datos. "
+        "Si no has sido tú, cierra esta página: no se creará nada.</small></p>")))
+
+
+@app.post("/alta/confirmar", summary="Confirmar el alta de una comunidad de prueba: se crea (pública)",
+          response_class=HTMLResponse)
+async def alta_confirmar(request: Request):
+    _limitar(request.client.host if request.client else "?", time.time())
+    if int(request.headers.get("content-length") or 0) > 1024:
+        raise HTTPException(413, "Formulario demasiado grande")
+    t = (parse_qs((await request.body()).decode("utf-8", "replace")).get("t") or [""])[0]
+    a = await asyncio.to_thread(alta.confirmar, t) if re.match(_TOKEN, t) else None
+    return HTMLResponse(_pag_confirmada(a), 200 if a else 404)
+
+
 @app.post("/alta/clave", summary="Restablecer la contraseña: la petición queda en el panel del superusuario (pública)")
 async def alta_clave(request: Request):
     _limitar(request.client.host if request.client else "?", time.time())
@@ -10441,7 +10704,7 @@ class PeticionPerfil(BaseModel):
 
 
 @app.post("/socios/{socio_id}/perfil",
-          summary="Socio virtual: genera los dos últimos años de datos como los de Datadis con un perfil de prosumidor "
+          summary="Socio de prueba: genera los dos últimos años de datos como los de Datadis con un perfil de prosumidor "
                   "(consumo y generación; sustituyen a los que tenga); se publican en ThingsBoard con la siguiente sincronización")
 async def socio_perfil(socio_id: str, p: PeticionPerfil, quien: str = Depends(admin)):
     try:
@@ -10456,7 +10719,7 @@ async def socio_perfil(socio_id: str, p: PeticionPerfil, quien: str = Depends(ad
 
 
 class PeticionVirtual(BaseModel):
-    nombre: str = Field(..., min_length=2, max_length=80, description="Nombre del socio virtual")
+    nombre: str = Field(..., min_length=2, max_length=80, description="Nombre del socio de prueba")
     email: str | None = Field(None, description="Email de su usuario (opcional; con él, la contraseña)")
     password: str | None = Field(None, description="Contraseña de su usuario")
     telefono: str | None = Field(None, max_length=30)
@@ -10465,12 +10728,12 @@ class PeticionVirtual(BaseModel):
 
 
 @app.post("/socios/virtual", status_code=201,
-          summary="Socio virtual para simulaciones: sin datos; se le cargan CSV de Datadis de cualquier CUPS")
+          summary="Socio de prueba para simulaciones: sin datos; se le cargan CSV de Datadis de cualquier CUPS")
 async def socio_virtual_alta(p: PeticionVirtual, quien: str = Depends(admin)):
     return await asyncio.to_thread(_plat, plataforma.alta_virtual, p.nombre, quien, p.model_dump(exclude={"nombre"}))
 
 
-@app.post("/socios/{socio_id}/vaciar", summary="Deja sin datos a un socio virtual (después se recalcula la comunidad)")
+@app.post("/socios/{socio_id}/vaciar", summary="Deja sin datos a un socio de prueba (después se recalcula la comunidad)")
 async def socio_vaciar(socio_id: str, _: str = Depends(admin)):
     async with _LANZAR:
         if await asyncio.to_thread(db.job_activo):
@@ -10485,7 +10748,7 @@ async def socio_vaciar(socio_id: str, _: str = Depends(admin)):
 
 
 @app.post("/socios/{socio_id}/optimizar",
-          summary="Socio virtual: factores de su consumo y su generación que más ahorran a la comunidad (no cambia nada)")
+          summary="Socio de prueba: factores de su consumo y su generación que más ahorran a la comunidad (no cambia nada)")
 async def socio_optimizar(socio_id: str, _: str = Depends(admin)):
     return await asyncio.to_thread(_plat, gestion.optimizar_virtual, socio_id)
 
@@ -10496,7 +10759,7 @@ class PeticionEscalar(BaseModel):
 
 
 @app.post("/socios/{socio_id}/escalar",
-          summary="Socio virtual: multiplica su consumo y su generación (después se publica y se recalcula la comunidad)")
+          summary="Socio de prueba: multiplica su consumo y su generación (después se publica y se recalcula la comunidad)")
 async def socio_escalar(socio_id: str, p: PeticionEscalar, _: str = Depends(admin)):
     async with _LANZAR:
         if await asyncio.to_thread(db.job_activo):
@@ -11565,7 +11828,7 @@ EOF
 
 # Alta de comunidad desde el inicio de sesion de ThingsBoard (con ALTA_ONLINE): boton "Dar de
 # alta una comunidad" junto a "¿Olvidaste tu contraseña?" que abre un modal como el de los
-# paneles (el de Añadir socio virtual) con el formulario de la pagina de alta de la web
+# paneles (el de Añadir socio de prueba) con el formulario de la pagina de alta de la web
 # (src/pages/alta/index.astro): comunidad del IDAE, gestor, documento y condiciones. Llama a la
 # API de alta (/cec-api/alta/*, la misma que la web) y sigue el alta hasta que esta creada.
 cat > config/branding/VatiaCo-alta.js <<'EOF'
@@ -11642,7 +11905,8 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
   function cerrar() {
     if (MAPA) { try { MAPA.m.remove(); MAPA.c.remove(); } catch (e) { /* ya quitado */ } MAPA = null; }
     var m = document.getElementById('vl-alta'); if (m) m.remove();
-    document.removeEventListener('keydown', tecla); ALTA = null; PUNTO = null;
+    // al reabrir empieza de cero: el formulario nuevo sale con «De la lista del IDAE» marcado
+    document.removeEventListener('keydown', tecla); ALTA = null; PUNTO = null; MODO = 'idae'; ELEGIDA = null;
   }
   function tecla(e) { if (e.key === 'Escape') cerrar(); }
   function campo(k, txt, extra, ayuda, ancho) {
@@ -11662,7 +11926,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       '<div class="aviso" data-inactiva hidden></div>' +
       '<div class="sec">La comunidad</div>' +
       '<div class="modo" role="radiogroup"><label class="on"><input type="radio" name="modo" value="idae" checked>De la lista del IDAE</label>' +
-      '<label><input type="radio" name="modo" value="virtual">Comunidad virtual</label></div>' +
+      '<label><input type="radio" name="modo" value="virtual">Comunidad de prueba</label></div>' +
       '<small class="ayuda-mapa" data-modo="virtual" hidden>Pulsa en el mapa dónde está la comunidad (puedes arrastrar la chincheta para afinar).</small>' +
       '<div class="mapa-w" hidden><div class="m"></div><div class="ca"></div><div class="cargando">Cargando el mapa…</div></div>' +
       '<div class="leyenda" hidden></div>' +
@@ -11673,17 +11937,18 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       '<label class="ancho" data-campo="comunidad"><span class="req">Comunidad energética</span>' +
       '<select name="comunidad"><option value="">Cargando la lista del IDAE…</option></select>' +
       '<small>Las registradas en el IDAE: pulsa en ella en el mapa o elígela aquí (filtra por provincia o escribe en «Buscar» para acortar la lista). ¿No aparece? Crea una ' +
-      '<a href="#" data-a-virtual>comunidad virtual</a> o <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">escríbenos</a>.</small>' +
+      '<a href="#" data-a-virtual>comunidad de prueba</a> o <a href="mailto:info@vatiaco.es?subject=Alta%20de%20comunidad">escríbenos</a>.</small>' +
       '<span class="err"></span></label>' +
       '</div><div class="ficha" hidden></div></div>' +
       '<div data-modo="virtual" hidden><div class="campos">' +
-      campo('virtual_nombre', '<span class="req">Nombre de la comunidad virtual</span>', ' maxlength="100" autocomplete="off"', '', true) +
+      campo('virtual_nombre', '<span class="req">Nombre de la comunidad de prueba</span>', ' maxlength="100" autocomplete="off"', '', true) +
       '<label data-campo="virtual_lugar"><span class="req">Ubicación</span><input name="virtual_lugar" readonly placeholder="Pulsa en el mapa">' +
       '<span class="err"></span></label>' +
       campo('virtual_municipio', 'Municipio (opcional)', ' maxlength="60" autocomplete="address-level2"') +
-      '</div><small>Para estudios con socios virtuales (perfiles de consumo y generación simulados, sin Datadis): se crea con el nombre ' +
-      'que pongas y «(virtual)» al final, en la ubicación del mapa (allí se sitúan la comunidad y sus socios). ' +
-      'No pide documento acreditativo.</small></div>' +
+      '</div><small>Para estudios con socios de prueba (perfiles de consumo y generación simulados, sin Datadis): se crea con el nombre ' +
+      'que pongas y «(prueba)» al final, en la ubicación del mapa (allí se sitúan la comunidad y sus socios). ' +
+      'No pide documento acreditativo: te enviaremos un correo para confirmarla y se crea al momento. ' +
+      'Estará disponible <b class="vida">un tiempo limitado</b>; después se borra con todos sus datos.</small></div>' +
       '<div class="sec">Gestor de la comunidad</div><div class="campos">' +
       campo('contacto', '<span class="req">Nombre y apellidos</span>', ' maxlength="80" autocomplete="name"', '', true) +
       campo('email', '<span class="req">Email</span>', ' type="email" maxlength="120" autocomplete="email"', 'Es tu usuario para entrar en la plataforma.') +
@@ -11734,6 +11999,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       if (INFO.url_condiciones) $('.u-cond').href = INFO.url_condiciones;
       if (INFO.url_privacidad) $('.u-priv').href = INFO.url_privacidad;
       if (INFO.aprobacion === false) $('.cuando').textContent = 'al momento';
+      if (INFO.prueba_vida) $('.vida').textContent = INFO.prueba_vida;
       modo(MODO);
       $('.max').textContent = INFO.documento_max_mb || 5;
       if (!INFO.activa) { var a = $('[data-inactiva]'); a.textContent = 'El alta online no está disponible ahora mismo. Inténtalo más tarde.'; a.hidden = false; return; }
@@ -11746,13 +12012,15 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
   }
   // Sin acentos ni mayusculas, para buscar
   function norm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-  // IDAE o virtual: cada uno con sus campos (el mapa es de los dos: en el de la virtual se
-  // pulsa su ubicacion); la virtual no pide documento
+  // IDAE o de prueba: cada uno con sus campos (el mapa es de los dos: en el de la de prueba se
+  // pulsa su ubicacion); la de prueba no pide documento
   function modo(v) {
     MODO = v === 'virtual' ? 'virtual' : 'idae';
     [].forEach.call($('form').querySelectorAll('.modo label'), function (l) { l.classList.toggle('on', l.querySelector('input').checked); });
     [].forEach.call($('form').querySelectorAll('[data-modo]'), function (e) { e.hidden = e.dataset.modo !== MODO; });
     $('.mapa-w').classList.toggle('punto', MODO === 'virtual');
+    // la chincheta de la de prueba solo en su modo (vuelve si se regresa a el)
+    if (MAPA && MAPA.pin) { if (MODO === 'virtual') MAPA.pin.addTo(MAPA.m); else MAPA.pin.remove(); }
     if (MAPA) setTimeout(function () { MAPA.m.invalidateSize(); MAPA.c.invalidateSize(); MAPA.c.fitBounds(CANARIAS); }, 0);
     $('[data-campo=documento]').hidden = MODO === 'virtual' || (INFO && INFO.documento === false);
     var i = $(MODO === 'virtual' ? '[name=virtual_nombre]' : '[name=buscar]'); if (i && document.activeElement && document.activeElement.name === 'modo') i.focus({ preventScroll: true });
@@ -11841,7 +12109,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     return L.divIcon({ className: '', html: '<div class="vl-mk' + (on ? ' on' : '') + '" style="background:' + col + '">⚡</div>',
                        iconSize: [22, 22], iconAnchor: [11, 11] });
   }
-  // Ubicacion de la comunidad virtual: chincheta (arrastrable) en el mapa principal
+  // Ubicacion de la comunidad de prueba: chincheta (arrastrable) en el mapa principal
   function punto(ll) {
     PUNTO = { lat: Math.round(ll.lat * 1e6) / 1e6, lng: Math.round(ll.lng * 1e6) / 1e6 };
     var i = $('[name=virtual_lugar]');
@@ -11850,7 +12118,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     if (!MAPA) return;
     var L = MAPA.L;
     if (!MAPA.pin) {
-      MAPA.pin = L.marker([PUNTO.lat, PUNTO.lng], { draggable: true, zIndexOffset: 2000, title: 'Ubicación de la comunidad virtual',
+      MAPA.pin = L.marker([PUNTO.lat, PUNTO.lng], { draggable: true, zIndexOffset: 2000, title: 'Ubicación de la comunidad de prueba',
         icon: L.divIcon({ className: '', html: '<div class="vl-pin"></div>', iconSize: [26, 26], iconAnchor: [3, 30] }) }).addTo(MAPA.m);
       MAPA.pin.on('dragend', function () { punto(MAPA.pin.getLatLng()); });
     } else MAPA.pin.setLatLng([PUNTO.lat, PUNTO.lng]);
@@ -11919,7 +12187,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
     if (!virtual && !ELEGIDA) { errores({ comunidad: 'Elige tu comunidad en la lista (comunidades registradas en el IDAE).' }); return; }
     if (virtual) {
       var ev = {};
-      if (f.elements.virtual_nombre.value.trim().length < 3) ev.virtual_nombre = 'Pon un nombre a la comunidad virtual (al menos 3 caracteres).';
+      if (f.elements.virtual_nombre.value.trim().length < 3) ev.virtual_nombre = 'Pon un nombre a la comunidad de prueba (al menos 3 caracteres).';
       if (!PUNTO) ev.virtual_lugar = MAPA ? 'Pulsa en el mapa dónde está la comunidad.' : 'No se ha podido cargar el mapa para elegir la ubicación. Inténtalo de nuevo.';
       if (ev.virtual_nombre || ev.virtual_lugar) { errores(ev); return; }
     }
@@ -11949,7 +12217,7 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
   // con el email y la contraseña elegidos
   function seguir(aid, email) {
     ALTA = aid;
-    var f = $('form'), intentos = 0;
+    var f = $('form'), intentos = 0, esperas = 0;
     f.innerHTML = '<h4 id="vl-alta-tit">Alta de una comunidad energética</h4><div class="aviso info" data-estado></div>' +
       '<div class="pie"><button type="button" class="b sec" data-cerrar>Cerrar</button><button type="button" class="b" data-entrar hidden>Entrar</button></div>';
     $('[data-cerrar]').onclick = cerrar;
@@ -11964,11 +12232,20 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       fetch(API + '/alta/estado?alta=' + encodeURIComponent(aid)).then(json).then(function (x) {
         if (!x.ok) throw new Error();
         var d = x.c, c = '<b>' + esc(d.comunidad || 'La comunidad') + '</b>';
-        if (d.estado === 'creada') { estado(c + ' ya está creada. Entra con tu email' + (d.email ? ' (' + esc(d.email) + ')' : '') + ' y la contraseña que has elegido.', 'ok');
+        if (d.estado === 'creada') { estado(c + ' ya está creada. Entra con tu email' + (d.email ? ' (' + esc(d.email) + ')' : '') + ' y la contraseña que has elegido.' +
+          (d.caduca ? ' Estará disponible hasta las ' + new Date(d.caduca).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) +
+                      ' (' + esc(d.vida) + '); después se borra con todos sus datos.' : ''), 'ok');
           $('[data-entrar]').hidden = false; return; }
         if (d.estado === 'revision') { estado('Solicitud recibida: ' + c + ' está en revisión. Te escribiremos' + (d.email ? ' a ' + esc(d.email) : '') +
           ' en cuanto esté lista.', 'info'); return; }
         if (d.estado === 'rechazada') { estado('La solicitud de ' + c + ' no se ha aprobado. Si crees que es un error, escríbenos a info@vatiaco.es.', ''); return; }
+        // de prueba: espera a que el gestor pulse el enlace del correo (se sigue preguntando: al
+        // confirmarla en otra pestaña o en el movil, aqui pasa a «creando» y luego a «creada»)
+        if (d.estado === 'confirmar') { estado('Te hemos enviado un correo' + (d.email ? ' a <b>' + esc(d.email) + '</b>' : '') +
+          '. Abre el enlace y pulsa «Confirmar el alta» para crear ' + c + ' (el enlace vale ' + (d.confirmar_horas || 24) + ' horas). ' +
+          '¿No te llega? Mira en la carpeta de spam.', 'info', true);
+          if (++esperas < 360) setTimeout(consultar, 5000); return; }
+        if (d.estado === 'caducada') { estado('El alta de ' + c + ' no se confirmó a tiempo. Vuelve a darla de alta.', ''); return; }
         if (d.estado === 'error') { estado('Alta recibida. Estamos terminando de crear ' + c + ' y te escribiremos en cuanto esté lista.', ''); return; }
         estado('Creando ' + c + '… (un minuto)', 'info', true);
         if (++intentos < 60) setTimeout(consultar, 5000);
@@ -12247,11 +12524,13 @@ services:
       LWM2M_ENABLED: "false"
       SNMP_ENABLED: "false"
       EDGES_ENABLED: "false"
-      JAVA_OPTS: "-Xms512M -Xmx2048M"
+      # -Dloader.path: config/tb-correo va por delante del jar (plantillas de correo con la marca)
+      JAVA_OPTS: "-Xms512M -Xmx2048M -Dloader.path=/tb-correo"
     volumes:
       - ./data/thingsboard:/data
       - ./data/thingsboard-logs:/var/log/thingsboard
       - ./config/mqtt-certs:/mqtt-certs:ro
+      - ./config/tb-correo:/tb-correo:ro
     ports:
       - "${MQTTS_PORT}:${MQTTS_PORT}"
     depends_on:
@@ -12291,6 +12570,8 @@ services:
       ALTA_ONLINE: ${ALTA_ONLINE}
       ALTA_MAX_DIA: ${ALTA_MAX_DIA}
       ALTA_APROBACION: ${ALTA_APROBACION}
+      ALTA_PRUEBA_MINUTOS: ${ALTA_PRUEBA_MINUTOS}
+      ALTA_PRUEBA_MAX: ${ALTA_PRUEBA_MAX}
       ALTA_URL_PUBLICA: ${ALTA_URL_PUBLICA}
       ALTA_URL_WEB: ${ALTA_URL_WEB}
       ALTA_ORIGENES: ${ALTA_ORIGENES}
@@ -12495,6 +12776,41 @@ echo "==> Descargando imagenes..."
 docker compose pull -q --ignore-buildable
 echo "==> Construyendo la imagen de la API de la comunidad (FastAPI)..."
 docker compose build -q fastapi
+
+# Correos de ThingsBoard (restablecer contraseña, activacion...) con la marca: se copian del
+# jar de la imagen sus plantillas (templates/*.ftl) y asuntos (i18n/messages.properties)
+# cambiando "Thingsboard" por $BRAND; el contenedor las lee antes que el jar (-Dloader.path).
+# Si algo falla queda la carpeta vacia y ThingsBoard usa las suyas.
+echo "==> Correos de ThingsBoard con la marca $BRAND..."
+rm -rf config/tb-correo && mkdir -p config/tb-correo
+TBJAR="$(mktemp)"
+if docker run --rm --entrypoint cat "thingsboard/tb-node:$TB_VERSION" /usr/share/thingsboard/bin/thingsboard.jar > "$TBJAR" &&
+   python3 - "$TBJAR" config/tb-correo "$BRAND" <<'PY'
+import os, re, sys, zipfile
+jar, dest, marca = sys.argv[1:4]
+n_ = 0
+with zipfile.ZipFile(jar) as z:
+    for n in z.namelist():
+        if not re.match(r"BOOT-INF/classes/(templates/[^/]+\.ftl|i18n/messages\.properties)$", n):
+            continue
+        t = z.read(n).decode("utf-8")
+        # la marca en el texto, no en la licencia (SPDX) ni en media.thingsboard.io
+        t = "\n".join(l if "SPDX" in l else re.sub(r"(?i)thingsboard(?!\.io)", marca, l) for l in t.split("\n"))
+        t = t.replace("The " + marca, marca)
+        p = os.path.join(dest, n[len("BOOT-INF/classes/"):])
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(t)
+        n_ += 1
+if not n_:
+    raise SystemExit("sin plantillas en el jar")
+print(f"    {n_} ficheros")
+PY
+then :; else
+  echo "AVISO: no se pudieron preparar las plantillas: los correos dirán Thingsboard" >&2
+  rm -rf config/tb-correo && mkdir -p config/tb-correo
+fi
+rm -f "$TBJAR"
 
 # ThingsBoard no abre el MQTT con TLS sin certificado: se crea antes de levantarlo
 ./mqtt-cert.sh
@@ -15142,7 +15458,7 @@ ALTA_CSS = """
 .al-tab { font: inherit; font-weight: 700; padding: 6px 14px; border: 0; border-radius: 4px 4px 0 0; background: none;
   color: #777; cursor: pointer; margin-bottom: -2px; border-bottom: 2px solid transparent; }
 .al-tab.activa { color: #7b2fa8; border-bottom-color: #7b2fa8; }
-/* Perfil de un socio virtual (modal de la pestaña Socios) */
+/* Perfil de un socio de prueba (modal de la pestaña Socios) */
 .al.modal-on { overflow: hidden; }
 .al-modal { position: absolute; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: flex-start;
   justify-content: center; padding: 16px; z-index: 5; overflow: auto; }
@@ -15318,14 +15634,14 @@ PART_HTML = """<div class="al">
   <div class="al-tabla">Cargando…</div>
  </section>
  <section class="al-caja">
-  <h3>Socios virtuales (simulaciones)</h3>
-  <small>Para estudiar qué socios convienen a la comunidad. <b>Añadir socio virtual</b> abre su <b>perfil</b> de prosumidor: la
+  <h3>Socios de prueba (simulaciones)</h3>
+  <small>Para estudiar qué socios convienen a la comunidad. <b>Añadir socio de prueba</b> abre su <b>perfil</b> de prosumidor: la
    forma de su día laborable y de su fin de semana, el peso de cada mes, su consumo medio, su generación fotovoltaica, su
    reactiva y su peaje; con él se generan dos años de datos como los de Datadis (curva, maxímetro, reactiva y contrato), sin
    CSV. Cuenta en la comunidad como un socio más (totales, reparto e informes). <b>Perfil</b> vuelve a generar sus datos con
    otro perfil; <b>Quitar</b> lo borra con sus datos.</small>
   <div class="al-virt">Cargando…</div>
-  <div class="al-ctrl"><button class="al-b sec peq al-virt-nuevo">Añadir socio virtual</button></div>
+  <div class="al-ctrl"><button class="al-b sec peq al-virt-nuevo">Añadir socio de prueba</button></div>
  </section>
  <div class="al-modal"><div class="al-form" role="dialog" aria-modal="true" aria-labelledby="al-pf-tit">
   <h4 id="al-pf-tit" class="al-pf-tit"></h4><small class="al-pf-sub"></small>
@@ -15348,7 +15664,7 @@ var SIMT = { residencial: 'Residencial', residencial_fv: 'Residencial con FV', c
              cargador_ve_lento: 'Cargador VE lento', estacion_ve: 'Estación de recarga VE (2 × 22 kW)',
              estacion_ve_fv: 'Estación de recarga VE con la FV (70 % de lo generado; 3 kW sin sol)', generador_fv: 'FV de la comunidad' };
 var SIMKWH = { residencial: 300, residencial_fv: 300, comercial: 2500, industrial: 60000, cargador_ve: 4000, cargador_ve_lento: 1500, estacion_ve: 1000, estacion_ve_fv: 3000, generador_fv: 3000 };
-// Perfil de un socio virtual, como en el generador de ficheros de Datadis del blog: perfiles tipo
+// Perfil de un socio de prueba, como en el generador de ficheros de Datadis del blog: perfiles tipo
 // (forma de cada hora del dia laborable y del no laborable, peso de cada mes y consumo medio de
 // partida de los dias laborables y de los no laborables)
 function pfG(h, c, a) { return Math.exp(-Math.pow((h + 0.5 - c) / a, 2)); }
@@ -15534,12 +15850,12 @@ self.onInit = function () {
     return f.lecturas ? fecha(f.datos_desde) + ' – ' + fecha(f.datos_hasta) + '<br><small>' + f.lecturas.toLocaleString('es-ES') + ' lecturas</small>'
                       : '<span class="al-chip no">sin datos</span>';
   }
-  // Socios virtuales (simulaciones): sus datos se generan con un perfil de prosumidor (Perfil)
+  // Socios de prueba (simulaciones): sus datos se generan con un perfil de prosumidor (Perfil)
   function virtuales(vs) {
-    q('al-virt').innerHTML = !vs.length ? '<p>No hay socios virtuales.</p>' :
-      '<table><tr><th class="ck" title="Excluido: no cuenta en la comunidad">Excluido</th><th>Socio virtual</th><th>Datos de</th><th>Datos</th><th></th></tr>' + vs.map(function (f) {
+    q('al-virt').innerHTML = !vs.length ? '<p>No hay socios de prueba.</p>' :
+      '<table><tr><th class="ck" title="Excluido: no cuenta en la comunidad">Excluido</th><th>Socio de prueba</th><th>Datos de</th><th>Datos</th><th></th></tr>' + vs.map(function (f) {
         var sum = [f.peaje, f.potencia ? f.potencia + ' kW' : '', f.autoconsumo ? 'autoconsumo ' + f.autoconsumo : ''].filter(Boolean).map(esc).join(' · ');
-        return '<tr class="fila' + (f.deshabilitado ? ' off' : '') + '">' + casillaExcluido(f) + '<td><b>' + esc(f.nombre) + '</b> <span class="al-chip sim">virtual</span><br><small>' + esc(f.id) + '</small></td>' +
+        return '<tr class="fila' + (f.deshabilitado ? ' off' : '') + '">' + casillaExcluido(f) + '<td><b>' + esc(f.nombre) + '</b> <span class="al-chip sim">prueba</span><br><small>' + esc(f.id) + '</small></td>' +
           '<td>' + (f.cups_origen === 'perfil' ? 'perfil ' + esc(pfResumen(f.sim_perfil)) : f.cups_origen ? 'CSV de ' + esc(f.cups_origen) : '–') +
             (sum ? '<br><small>' + sum + '</small>' : '') + '</td>' +
           '<td>' + datosDe(f) + '</td><td class="al-virt-acc">' +
@@ -15550,7 +15866,7 @@ self.onInit = function () {
     [].forEach.call(c.querySelectorAll('[data-vperfil]'), function (b) { b.onclick = function () { abrirPerfil(socio(b.dataset.vperfil)); }; });
     [].forEach.call(c.querySelectorAll('[data-vquitar]'), function (b) { b.onclick = function () {
       var so = socio(b.dataset.vquitar);
-      if (!confirm('¿Quitar el socio virtual ' + so.nombre + '? Se borran él y sus datos.')) return;
+      if (!confirm('¿Quitar el socio de prueba ' + so.nombre + '? Se borran él y sus datos.')) return;
       msg('Quitando ' + so.nombre + '… (puede tardar un minuto)');
       tarea(api('DELETE', '/socios/' + encodeURIComponent(so.id)).then(function () {
         apunta(so.nombre + ': quitado.', 'ok');
@@ -15559,7 +15875,7 @@ self.onInit = function () {
       }));
     }; });
   }
-  // Perfil de un socio virtual: un modal con su forma de consumo (barras que se arrastran), su FV,
+  // Perfil de un socio de prueba: un modal con su forma de consumo (barras que se arrastran), su FV,
   // su reactiva y su peaje; la API genera con el dos años de datos como los de Datadis
   var PF = null;
   function pfDefecto() {
@@ -15581,7 +15897,7 @@ self.onInit = function () {
     p.lab = pfNorm(p.lab); p.fes = pfNorm(p.fes); p.mes = pfNorm(p.mes);
     ['resumen', 'tipo', 'aux_dia', 'modalidad', 'fv', 'var_dia', 'var_q'].forEach(function (k) { delete p[k]; });
     PF = { so: so, p: p };
-    q('al-pf-tit').textContent = so ? 'Perfil de ' + so.nombre : 'Nuevo socio virtual';
+    q('al-pf-tit').textContent = so ? 'Perfil de ' + so.nombre : 'Nuevo socio de prueba';
     q('al-pf-sub').textContent = 'Con este perfil se generan los dos últimos años de datos, como los que da Datadis: curva de carga, ' +
       'maxímetro, reactiva y contrato.' + (so && so.lecturas ? ' Sustituyen a los que tiene ahora.' : '');
     q('al-pf-ok').textContent = so ? 'Generar sus datos' : 'Crear y generar sus datos';
@@ -15601,8 +15917,8 @@ self.onInit = function () {
   function pintarPerfil() {
     var p = PF.p;
     var h = '';
-    if (!PF.so) h += '<div class="al-campos">' + campo('nombre', '<span class="req">Nombre del socio virtual</span>', PF.nombre || '',
-                     ' placeholder="p. ej. Virtual industrial 6.1TD" maxlength="80"') + '</div>';
+    if (!PF.so) h += '<div class="al-campos">' + campo('nombre', '<span class="req">Nombre del socio de prueba</span>', PF.nombre || '',
+                     ' placeholder="p. ej. Prueba industrial 6.1TD" maxlength="80"') + '</div>';
     h += '<div class="al-pf-sec">Consumo</div><div class="al-campos">' +
       '<label>Perfil tipo<select data-pf="plantilla"><option value="">Dibujado a mano</option>' +
           opciones(Object.keys(PF_PLANTILLAS).map(function (k) { return [k, PF_PLANTILLAS[k].n]; }), p.plantilla) + '</select></label>' +
@@ -15674,7 +15990,7 @@ self.onInit = function () {
   function validarPerfil() {
     leerCampos();
     var p = PF.p, e = '';
-    if (!PF.so && !(PF.nombre || '').trim()) e = 'Pon el nombre del socio virtual.';
+    if (!PF.so && !(PF.nombre || '').trim()) e = 'Pon el nombre del socio de prueba.';
     else if (!(p.kwh_dia > 0)) e = 'El consumo medio diario laborable debe ser mayor que 0.';
     else if (p.kwh_fes == null || !(p.kwh_fes >= 0)) e = 'Pon el consumo medio diario no laborable (0 si no consume esos días).';
     else if (!(p.gen_dia >= 0)) e = 'La generación media diaria no puede ser negativa.';
@@ -15700,7 +16016,7 @@ self.onInit = function () {
     var so = PF.so, p = PF.p, nombre = (PF.nombre || '').trim();
     cerrarPerfil();
     if (so) { tarea(generarPerfil(so, p)); return; }
-    msg('Creando el socio virtual ' + nombre + '… (puede tardar un minuto)');
+    msg('Creando el socio de prueba ' + nombre + '… (puede tardar un minuto)');
     tarea(api('POST', '/socios/virtual', { nombre: nombre }).then(function (so) {
       apunta(so.nombre + ': creado.', 'ok');
       return generarPerfil(so, p);
@@ -16116,11 +16432,11 @@ AYUDA = {
    ["¿De dónde se cargan los datos de un socio?",
     "De la API de Datadis, con tu cuenta, si el titular te ha autorizado (cada día y con <i>Actualizar desde Datadis</i>)."],
    ["¿Cómo simulo qué socios convienen a la comunidad?",
-    "Con los <i>Socios virtuales</i> de la pestaña <i>Socios</i>: cada comunidad trae uno, sin datos, y puedes añadir más. "
+    "Con los <i>Socios de prueba</i> de la pestaña <i>Socios</i>: cada comunidad trae uno, sin datos, y puedes añadir más. "
     "Con <i>Cargar carpeta</i> eliges la carpeta con los CSV de Datadis de cualquier suministro (la descarga de datadis.es o la "
     "del generador de datos de Datadis del blog, descomprimidas) y se cargan todos; si hay varios CUPS, eliges cuál. Mientras tiene datos cuenta como un socio más en los totales, "
     "el reparto y los informes; <i>Vaciar</i> lo deja sin datos y <i>Quitar</i> lo borra."],
-   ["¿Qué hace Optimizar en un socio virtual?",
+   ["¿Qué hace Optimizar en un socio de prueba?",
     "Busca por cuánto multiplicar su consumo y su generación (de 0 a 10 veces lo cargado) para que la comunidad ahorre el mayor "
     "porcentaje en los últimos 12 meses completos. Ahorro: lo que pagarían los socios comprando toda su energía a la red menos el "
     "coste en comunidad, en porcentaje de lo primero (compra a la red por periodos, menos la compensación de excedentes, más la generación a su LCOE), con "
@@ -16547,13 +16863,15 @@ self.onInit = function () {
   var EST = { activo: '<span class="al-chip ok">activo</span>', suspendido: '<span class="al-chip no">suspendido</span>' };
   var ALTA_EST = { creando: '<span class="al-chip">creando…</span>', creada: '<span class="al-chip ok">creada</span>',
                    error: '<span class="al-chip no">error</span>', pendiente: '<span class="al-chip">pendiente</span>',
-                   revision: '<span class="al-chip">en revisión</span>', rechazada: '<span class="al-chip no">rechazada</span>' };
+                   revision: '<span class="al-chip">en revisión</span>', rechazada: '<span class="al-chip no">rechazada</span>',
+                   confirmar: '<span class="al-chip">esperando confirmación del correo</span>', caducada: '<span class="al-chip no">sin confirmar</span>',
+                   finalizada: '<span class="al-chip">prueba terminada</span>' };
   function altas() {
     api('GET', '/plataforma/altas').then(function (filas) {
       q('al-altas').classList.toggle('al-oculto', !filas.length);
       q('al-atabla').innerHTML = '<table><tr><th>Comunidad</th><th>Municipio</th><th>Gestor</th><th class="n">Socios (IDAE)</th><th>Estado</th><th>Fecha</th><th></th></tr>' +
         filas.map(function (a) {
-          return '<tr><td><b>' + esc(a.nombre) + '</b>' + (a.virtual ? ' <span class="al-chip">virtual</span>' : '') + '<br><small>' + esc(a.comunidad_id) + '</small></td><td>' + esc(a.municipio) + '<br><small>' + esc(a.provincia) + '</small></td>' +
+          return '<tr><td><b>' + esc(a.nombre) + '</b>' + (a.virtual ? ' <span class="al-chip">prueba</span>' : '') + '<br><small>' + esc(a.comunidad_id) + '</small></td><td>' + esc(a.municipio) + '<br><small>' + esc(a.provincia) + '</small></td>' +
             '<td>' + esc(a.contacto) + '<br><small>' + esc(a.email) + '</small></td>' +
             '<td class="n">' + a.socios + '</td>' +
             '<td>' + (ALTA_EST[a.estado] || esc(a.estado)) + (a.error ? '<br><small title="' + esc(a.error) + '">' + esc(a.error.slice(-120)) + '</small>' : '') + '</td>' +
@@ -19481,7 +19799,7 @@ curl -skf -X POST -H "X-Api-Key: $FASTAPI_API_KEY" https://localhost/cec-api/pla
   || echo "    AVISO: no se pudo registrar el superusuario en PostgreSQL"
 
 # Comunidades de ejemplo (EJEMPLO_*): la principal del gestor como la crearia el superusuario y
-# las demas como las crearia el gestor; sus socios virtuales (con su perfil) y la publicacion de sus datos.
+# las demas como las crearia el gestor; sus socios de prueba (con su perfil) y la publicacion de sus datos.
 # EJEMPLOS_INFO: comunidades|usuario|contraseña de su gestor.
 EJEMPLOS_INFO=""
 if [ -n "$EJEMPLO_COMUNIDADES" ]; then
@@ -19529,7 +19847,7 @@ for co in filas(E["E_COMS"]):
     except RuntimeError as e:
         print(f"    AVISO: no se pudo crear {nombre}: {e}", file=sys.stderr)
         continue
-    # Socios virtuales con su usuario; sus datos, los de un perfil de prosumidor equivalente a su
+    # Socios de prueba con su usuario; sus datos, los de un perfil de prosumidor equivalente a su
     # tipo de socio simulado (la estacion ligada a la FV, con la generacion de las de su comunidad)
     socios = [so for so in filas(E["E_SOCIOS"]) if so["comunidad"] == cid]
     fv_mes = sum(num(so["sim_kwh_mes"]) or 0 for so in socios if so["sim_tipo"] == "generador_fv")
@@ -19547,7 +19865,7 @@ for co in filas(E["E_COMS"]):
         post("/sync", {"origen": "auto", "forzar": True}, cid)
     except RuntimeError as e:
         print(f"    AVISO: {nombre}: no se pudo lanzar la publicación de los datos: {e}", file=sys.stderr)
-    print(f"    {nombre}: {n} socios virtuales (sus datos se publican en segundo plano)", file=sys.stderr)
+    print(f"    {nombre}: {n} socios de prueba (sus datos se publican en segundo plano)", file=sys.stderr)
     creadas.append(nombre)
 if creadas:
     print(f"{' y '.join(creadas)}|{E['E_GEMAIL']}|{E['E_GPW']}")
@@ -19578,7 +19896,7 @@ cero** (sin preguntar); solo se conserva \`backups/postgres\`.
 | Servicio | Acceso | Credenciales |
 |---|---|---|
 | Superusuario (panel *Plataforma*) | https://$IP | $SUPER_EMAIL / $SUPER_PASSWORD |
-$( echo "$EJEMPLOS_INFO" | while IFS='|' read -r E_NOM E_MAIL E_PW; do if [ -n "$E_MAIL" ]; then echo "| Gestor de $E_NOM (ejemplo, socios virtuales) | https://${TB_DOMAIN:-$IP} | $E_MAIL / $E_PW |"; fi; done )
+$( echo "$EJEMPLOS_INFO" | while IFS='|' read -r E_NOM E_MAIL E_PW; do if [ -n "$E_MAIL" ]; then echo "| Gestor de $E_NOM (ejemplo, socios de prueba) | https://${TB_DOMAIN:-$IP} | $E_MAIL / $E_PW |"; fi; done )
 $( [ -n "$TB_DOMAIN" ] && echo "| ThingsBoard (Internet) | https://$TB_DOMAIN | (las mismas) |" )
 | Sysadmin de ThingsBoard | https://$IP | sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD |
 | Administrador del tenant de cada comunidad (lo usa la API) | https://$IP | api@<id>.$HOSTNAME_LAN.local / $TB_TENANT_PASSWORD |
