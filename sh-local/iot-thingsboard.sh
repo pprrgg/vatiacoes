@@ -162,6 +162,7 @@ SMTP_SEGURIDAD="${SMTP_SEGURIDAD:-starttls}"       # starttls, ssl o no
 SMTP_USER="${SMTP_USER:-}"                         # usuario del servidor (vacio = sin autenticacion)
 SMTP_PASS="${SMTP_PASS:-}"                         # contraseña (sin comillas simples)
 SMTP_FROM="${SMTP_FROM:-}"                         # remitente (vacio = SMTP_USER)
+SMTP_TLS_NOMBRE="${SMTP_TLS_NOMBRE:-}"             # nombre del certificado si no es SMTP_HOST
 
 # Sincronizacion diaria con Datadis de todas las comunidades (cada una con su cuenta)
 DATADIS_PAUSA_S="5"                  # segundos entre peticiones a Datadis
@@ -187,6 +188,10 @@ esac
 case "$SMTP_PASS" in      # tambien entre comillas simples
   *"'"*|*$'\n'*) echo "ERROR: SMTP_PASS no puede llevar comillas simples ni saltos de línea" >&2; exit 1 ;;
 esac
+if [ -n "$SMTP_HOST" ] && ! getent hosts "$SMTP_HOST" >/dev/null; then
+  echo "AVISO: el servidor de correo SMTP_HOST=$SMTP_HOST no existe en DNS: no saldrá ningún correo" >&2
+  echo "       (avisos ni enlaces de ThingsBoard). Revísalo en $SECRETOS." >&2
+fi
 
 # Reset: cada ejecucion empieza de cero. Se paran los contenedores del stack y se borran sus
 # datos (pertenecen a los usuarios de los contenedores: se borran con un contenedor) y su
@@ -315,6 +320,7 @@ SMTP_SEGURIDAD=$SMTP_SEGURIDAD
 SMTP_USER=$SMTP_USER
 SMTP_PASS='$SMTP_PASS'
 SMTP_FROM=$SMTP_FROM
+SMTP_TLS_NOMBRE=$SMTP_TLS_NOMBRE
 EOF
 chmod 600 .env
 
@@ -8887,6 +8893,7 @@ import binascii
 import re
 import secrets
 import smtplib
+import socket
 import ssl
 import threading
 import time
@@ -8900,6 +8907,19 @@ from psycopg.types.json import Jsonb
 
 from . import db, plataforma
 from .comun import E, anotar, log
+
+
+def _tls_nombre(host):
+    """Nombre que tiene que figurar en el certificado del servidor de correo: SMTP_TLS_NOMBRE
+    si el proveedor lo emite a su nombre y no al del dominio (Dinahosting: mail.vatiaco.es
+    presenta *.correoseguro.dinaserver.com). Se valida cadena y nombre igualmente."""
+    return E.get("SMTP_TLS_NOMBRE") or host
+
+
+class _SMTPSSL(smtplib.SMTP_SSL):
+    def _get_socket(self, host, port, timeout):
+        sock = socket.create_connection((host, port), timeout, self.source_address)
+        return self.context.wrap_socket(sock, server_hostname=_tls_nombre(host))
 
 URL = (E.get("ALTA_URL_PUBLICA") or "").rstrip("/")          # la plataforma (ThingsBoard)
 WEB = (E.get("ALTA_URL_WEB") or "").rstrip("/")              # la web con la pagina de alta
@@ -8948,7 +8968,8 @@ def _enviar(asunto, lineas, responder=None, adjunto=None):
     try:
         puerto = int(E.get("SMTP_PORT") or (465 if seg == "ssl" else 587))
         ctx = ssl.create_default_context()
-        with (smtplib.SMTP_SSL(host, puerto, context=ctx, timeout=30) if seg == "ssl" else smtplib.SMTP(host, puerto, timeout=30)) as s:
+        with (_SMTPSSL(host, puerto, context=ctx, timeout=30) if seg == "ssl" else smtplib.SMTP(host, puerto, timeout=30)) as s:
+            s._host = _tls_nombre(host)   # nombre con el que se valida el certificado (STARTTLS)
             if seg == "starttls":
                 s.starttls(context=ctx)
             if user:
@@ -12285,6 +12306,7 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM}
+      SMTP_TLS_NOMBRE: ${SMTP_TLS_NOMBRE}
     volumes:
       - ./config/fastapi/app:/srv/app:ro
       - ./config/fastapi/config.json:/srv/config.json:ro
@@ -12710,6 +12732,45 @@ if (pol.get("minimumLength") or 6) > min_len:
     print(f"    politica de contraseñas: minimo {min_len} caracteres")
 
 tb_password("sysadmin@thingsboard.org", "sysadmin", E["TB_SYSADMIN_PASSWORD"])
+
+
+def correo_tb():
+    """Correo saliente de ThingsBoard (enlaces de restablecer contraseña, activaciones) con
+    el mismo SMTP que los avisos (.env.secretos), y URL publica de esos enlaces."""
+    s = TBClient(tb_login("sysadmin@thingsboard.org", E["TB_SYSADMIN_PASSWORD"]))
+    url = (E.get("ALTA_URL_PUBLICA") or "").rstrip("/")
+    if url:
+        g = s.get("/api/admin/settings/general")
+        jv = g.get("jsonValue") or {}
+        if jv.get("baseUrl") != url or not jv.get("prohibitDifferentUrl"):
+            jv.update({"baseUrl": url, "prohibitDifferentUrl": True})
+            g["jsonValue"] = jv
+            s.post("/api/admin/settings", g)
+        print(f"    enlaces de ThingsBoard: {url}")
+    host = E.get("SMTP_HOST", "")
+    if not host:
+        print("    correo de ThingsBoard: sin SMTP_HOST (no envia correos)")
+        return
+    seg = (E.get("SMTP_SEGURIDAD") or "starttls").lower()
+    user = E.get("SMTP_USER", "")
+    remite = E.get("SMTP_FROM") or user
+    m = s.get("/api/admin/settings/mail")
+    jv = m.get("jsonValue") or {}
+    jv.update({"mailFrom": f"VatiaCo <{remite}>", "smtpProtocol": "smtps" if seg == "ssl" else "smtp",
+               "smtpHost": host, "smtpPort": str(E.get("SMTP_PORT") or "587"), "timeout": "10000",
+               "enableTls": seg == "starttls", "tlsVersion": "TLSv1.2", "username": user,
+               "password": E.get("SMTP_PASS", ""), "enableProxy": False, "enableOauth2": False,
+               "showChangePassword": False})
+    m["jsonValue"] = jv
+    s.post("/api/admin/settings", m)
+    print(f"    correo de ThingsBoard: {host}:{jv['smtpPort']} ({seg}) desde {remite}")
+
+
+if not E.get("CEC_TENANT"):
+    try:
+        correo_tb()
+    except Exception as ex:
+        print(f"    AVISO: no se pudo configurar el correo de ThingsBoard: {ex}")
 
 
 def idioma(client, user):
@@ -19400,6 +19461,8 @@ echo "==> Configurando ThingsBoard..."
 TB_URL="https://localhost" \
 TB_SYSADMIN_PASSWORD="$TB_SYSADMIN_PASSWORD" TB_TENANT_PASSWORD="$TB_TENANT_PASSWORD" TB_LANG="$TB_LANG" \
 SUPER_EMAIL="$SUPER_EMAIL" SUPER_PASSWORD="$SUPER_PASSWORD" CEC_NOMBRE="" SOCIOS="" TZ="$TZ" \
+ALTA_URL_PUBLICA="https://${TB_DOMAIN:-$SERVE_IP}" SMTP_HOST="$SMTP_HOST" SMTP_PORT="$SMTP_PORT" \
+SMTP_SEGURIDAD="$SMTP_SEGURIDAD" SMTP_USER="$SMTP_USER" SMTP_PASS="$SMTP_PASS" SMTP_FROM="$SMTP_FROM" \
 python3 config/tb-config.py
 
 echo "==> Esperando a la API de las comunidades..."
