@@ -1,5 +1,6 @@
 ---
-// Pie comun de las paginas del sitio (principal, servicios)
+// Pie comun de las paginas del sitio (principal y legales). «Alta comunidad» abre el modal de alta
+// de la plataforma (como los botones de la portada)
 const MAPA = '/comunidades/';
 const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
 ---
@@ -7,11 +8,11 @@ const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
   <div class="wrap">
     <span>⚡ VatiaCo · Plataforma gratuita para comunidades energéticas
       <span class="legales"><a href="/aviso-legal/">Aviso legal</a><a href="/privacidad/">Privacidad</a><a href="/condiciones/">Condiciones de uso</a></span></span>
-    <span><a href="/servicios/">Servicios</a><a href="/alta/">Alta comunidad</a><a href="/blog/">Blog</a><a href={MAPA}>Comunidades</a><a href={PORTAL_URL} data-plataforma="Acceso socios">Acceso socios</a></span>
+    <span><a href={PORTAL_URL + 'login?alta=comunidad'} data-plataforma="Alta de una comunidad energética" data-plataforma-ruta="login?alta=comunidad">Alta comunidad</a><a href="/blog/">Blog</a><a href={MAPA}>Comunidades</a><a href={PORTAL_URL} data-plataforma="Acceso socios">Acceso socios</a></span>
   </div>
 </footer>
 
 <style>
   .legales { display: block; margin-top: 0.35rem; }
-  .legales a { margin: 0 1rem 0 0; color: var(--gray-3); }
+  .legales a { margin: 0 1rem 0 0; color: #a9b4c6; }
 </style>

@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --cyan:#2457e6; --cyan-dim:#a9bdf3; --green:#16894f; --amber:#c27c00; --red:#c62828;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--cyan); color:#0A121C;}
+  ::selection{background:var(--cyan); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(36,87,230,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(36,87,230,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
@@ -108,9 +108,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(55,207,255,0.1);}
-  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
-  .btn.primary:hover{background:#7fe1ff;}
+  .btn:hover{background:rgba(36,87,230,0.1);}
+  .btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .btn.primary:hover{background:#1b47c4;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn:disabled{opacity:0.4; cursor:not-allowed;}
@@ -119,7 +119,7 @@
   .seg-row{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px;}
   .seg-btn{font-family:var(--font-mono); font-size:12px; padding:9px 16px; border-radius:20px; border:1px solid var(--line); background:var(--panel2); color:var(--text-dim); cursor:pointer; transition:all .15s ease;}
   .seg-btn:hover{border-color:var(--text-dim); color:var(--text);}
-  .seg-btn.active{border-color:var(--cyan); color:var(--cyan); background:rgba(55,207,255,0.1);}
+  .seg-btn.active{border-color:var(--cyan); color:var(--cyan); background:rgba(36,87,230,0.1);}
 
   .vtype-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
   .vtype-card .vt-bar{position:absolute; top:0; left:0; right:0; height:3px;}
@@ -127,9 +127,9 @@
   .vtype-card .vt-sub{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:14px;}
 
   .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
-  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
-  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
-  .pill.bad{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
+  .pill.ok{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.warn{background:rgba(194,124,0,0.12); color:var(--amber); border:1px solid rgba(194,124,0,0.35);}
+  .pill.bad{background:rgba(198,40,40,0.12); color:var(--red); border:1px solid rgba(198,40,40,0.35);}
 
   table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
   table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
@@ -141,8 +141,8 @@
   .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--cyan);}
   .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
 
-  .reco-banner{border:1px solid rgba(87,217,163,0.4); background:rgba(87,217,163,0.07); border-radius:var(--radius); padding:22px 24px; margin:24px 0;}
-  .reco-banner.warn{border-color:rgba(255,176,32,0.4); background:rgba(255,176,32,0.07);}
+  .reco-banner{border:1px solid rgba(22,137,79,0.4); background:rgba(22,137,79,0.07); border-radius:var(--radius); padding:22px 24px; margin:24px 0;}
+  .reco-banner.warn{border-color:rgba(194,124,0,0.4); background:rgba(194,124,0,0.07);}
   .reco-banner .reco-title{font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--green); margin-bottom:8px;}
   .reco-banner.warn .reco-title{color:var(--amber);}
   .reco-banner .reco-main{font-family:var(--font-display); font-size:19px; margin-bottom:6px;}
@@ -855,11 +855,11 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 
 // ===================== CATALOGO DE MOTORIZACIONES =====================
 const VTYPES = [
-  {key:'gasolina', label:'Gasolina', color:'#FF6B6B', rgb:[255,107,107], fields:['precio','consumo','mant','seguro','ivtm','residual']},
-  {key:'diesel', label:'Diésel', color:'#FFB020', rgb:[255,176,32], fields:['precio','consumo','mant','seguro','ivtm','residual']},
-  {key:'hev', label:'Híbrido (HEV)', color:'#8FA3B8', rgb:[143,163,184], fields:['precio','consumo','mant','seguro','ivtm','residual']},
-  {key:'phev', label:'Híbrido enchufable (PHEV)', color:'#37CFFF', rgb:[55,207,255], fields:['precio','consumo_kwh','consumo_apoyo','mant','seguro','ivtm','residual','ayuda']},
-  {key:'bev', label:'Eléctrico (BEV)', color:'#57D9A3', rgb:[87,217,163], fields:['precio','consumo_kwh','mant','seguro','ivtm','residual','ayuda']},
+  {key:'gasolina', label:'Gasolina', color:'#c62828', rgb:[255,107,107], fields:['precio','consumo','mant','seguro','ivtm','residual']},
+  {key:'diesel', label:'Diésel', color:'#c27c00', rgb:[255,176,32], fields:['precio','consumo','mant','seguro','ivtm','residual']},
+  {key:'hev', label:'Híbrido (HEV)', color:'#4f5b6d', rgb:[143,163,184], fields:['precio','consumo','mant','seguro','ivtm','residual']},
+  {key:'phev', label:'Híbrido enchufable (PHEV)', color:'#2457e6', rgb:[55,207,255], fields:['precio','consumo_kwh','consumo_apoyo','mant','seguro','ivtm','residual','ayuda']},
+  {key:'bev', label:'Eléctrico (BEV)', color:'#16894f', rgb:[87,217,163], fields:['precio','consumo_kwh','mant','seguro','ivtm','residual','ayuda']},
 ];
 const FIELD_META = {
   precio:{label:'Precio de compra (€)', step:100},
@@ -1053,9 +1053,9 @@ function buildBarSVG(items, unitFmt){
   items.forEach((it,i)=>{
     const y = padT+i*rowH;
     const barW = Math.max((it.value/maxV)*chartW,2);
-    s+='<text x="'+(padL-12)+'" y="'+(y+rowH/2+4)+'" text-anchor="end" font-family="Inter, sans-serif" font-size="12" fill="#E7ECF2">'+esc(it.label)+'</text>';
+    s+='<text x="'+(padL-12)+'" y="'+(y+rowH/2+4)+'" text-anchor="end" font-family="Inter, sans-serif" font-size="12" fill="#1c2735">'+esc(it.label)+'</text>';
     s+='<rect x="'+padL+'" y="'+(y+9)+'" width="'+barW+'" height="'+(rowH-18)+'" fill="'+it.color+'" opacity="0.85" rx="2"/>';
-    s+='<text x="'+(padL+barW+8)+'" y="'+(y+rowH/2+4)+'" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="#8FA3B8">'+esc(unitFmt(it.value))+'</text>';
+    s+='<text x="'+(padL+barW+8)+'" y="'+(y+rowH/2+4)+'" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="#4f5b6d">'+esc(unitFmt(it.value))+'</text>';
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:760px;">'+s+'</svg>';
 }
@@ -1067,11 +1067,11 @@ function buildLineSVG(series, anios){
   const maxVal = Math.max(...series.flatMap(s=>s.values), 1);
   const scale = (rowH-8)/maxVal;
   let s='';
-  s += '<line x1="'+padL+'" y1="'+(padT+rowH-4)+'" x2="'+(W-padR)+'" y2="'+(padT+rowH-4)+'" stroke="#213348" stroke-width="1"/>';
+  s += '<line x1="'+padL+'" y1="'+(padT+rowH-4)+'" x2="'+(W-padR)+'" y2="'+(padT+rowH-4)+'" stroke="#dfe4eb" stroke-width="1"/>';
   for(let i=0;i<n;i++){
     if(i%Math.max(1,Math.round(n/8))===0){
       const cx = padL+step*i;
-      s += '<text x="'+cx+'" y="'+(padT+rowH+14)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#5B7086">'+i+'</text>';
+      s += '<text x="'+cx+'" y="'+(padT+rowH+14)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#7b8696">'+i+'</text>';
     }
   }
   series.forEach(ser=>{
@@ -1619,7 +1619,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

@@ -11,24 +11,24 @@
     rel="stylesheet">
   <style>
     :root {
-      --bg: #0A121C;
-      --bg2: #070D15;
-      --panel: #111E2E;
-      --panel2: #0E1826;
-      --line: #213348;
-      --line-soft: #182739;
-      --text: #E7ECF2;
-      --text-dim: #8FA3B8;
-      --text-dimmer: #5B7086;
-      --cyan: #37CFFF;
-      --cyan-dim: #1B6E86;
-      --green: #57D9A3;
-      --amber: #FFB020;
-      --red: #FF6B6B;
-      --font-display: 'Space Grotesk', sans-serif;
+      --bg: #ffffff;
+      --bg2: #f4f6f9;
+      --panel: #ffffff;
+      --panel2: #f6f8fb;
+      --line: #dfe4eb;
+      --line-soft: #eceff4;
+      --text: #1c2735;
+      --text-dim: #4f5b6d;
+      --text-dimmer: #7b8696;
+      --cyan: #2457e6;
+      --cyan-dim: #a9bdf3;
+      --green: #16894f;
+      --amber: #c27c00;
+      --red: #c62828;
+      --font-display: 'Inter', sans-serif;
       --font-body: 'Inter', sans-serif;
       --font-mono: 'IBM Plex Mono', monospace;
-      --radius: 2px;
+      --radius: 8px;
     }
 
     * {
@@ -51,7 +51,7 @@
 
     ::selection {
       background: var(--cyan);
-      color: #0A121C;
+      color: #ffffff;
     }
 
     .grid-bg {
@@ -59,7 +59,7 @@
       inset: 0;
       z-index: 0;
       pointer-events: none;
-      background-image: linear-gradient(rgba(55, 207, 255, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(55, 207, 255, 0.035) 1px, transparent 1px);
+      background-image: linear-gradient(rgba(36,87,230,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(36,87,230,0.035) 1px, transparent 1px);
       background-size: 42px 42px;
       mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);
     }
@@ -346,7 +346,7 @@
     }
 
     .btn:hover {
-      background: rgba(55, 207, 255, 0.1);
+      background: rgba(36,87,230,0.1);
     }
 
     .btn.ghost {
@@ -361,12 +361,12 @@
 
     .btn.primary {
       background: var(--cyan);
-      color: #0A121C;
+      color: #ffffff;
       border-color: var(--cyan);
     }
 
     .btn.primary:hover {
-      background: #7fe1ff;
+      background: #1b47c4;
     }
 
     .btn:disabled {
@@ -579,7 +579,7 @@
     }
 
     .link-action:hover {
-      color: #7fe1ff;
+      color: #1b47c4;
     }
 
     .brand-dropdown,
@@ -643,7 +643,7 @@
       background: var(--bg2);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 10px 30px rgba(11,31,58,0.12);
     }
 
     .brand-dropdown-actions,
@@ -734,7 +734,7 @@
       opacity: 0;
       transition: opacity .1s ease;
       white-space: nowrap;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 6px 20px rgba(11,31,58,0.12);
     }
 
     .chart-tooltip.show {
@@ -905,7 +905,7 @@
     .row-remove:hover {
       border-color: var(--red);
       color: var(--red);
-      background: rgba(255, 107, 107, 0.08);
+      background: rgba(198,40,40,0.08);
     }
 
     .source-cell {
@@ -958,7 +958,7 @@
     .link-btn:hover {
       border-color: var(--cyan);
       color: var(--cyan);
-      background: rgba(55, 207, 255, 0.08);
+      background: rgba(36,87,230,0.08);
     }
 
     .link-btn:disabled {
@@ -1108,7 +1108,7 @@
 
     .link-card:hover {
       border-color: var(--cyan);
-      background: rgba(55, 207, 255, 0.06);
+      background: rgba(36,87,230,0.06);
     }
 
     .link-card .lc-kicker {
@@ -4966,7 +4966,7 @@
     function fmtCoef(v) { return v.toLocaleString('es-ES', { maximumFractionDigits: Math.abs(v) < 10 ? 2 : 0 }); }
 
     const CHART_THEMES = {
-      dark: { grid: '#182739', tick: '#5B7086', axis: '#213348', axisTitle: '#8FA3B8', trend: '#FFB020', pointStroke: 'rgba(231,236,242,0.5)', empty: '#5B7086' },
+      dark: { grid: '#eceff4', tick: '#7b8696', axis: '#dfe4eb', axisTitle: '#4f5b6d', trend: '#c27c00', pointStroke: 'rgba(11,31,58,0.5)', empty: '#7b8696' },
       light: { grid: '#E2E8F0', tick: '#5B6472', axis: '#C3CBD6', axisTitle: '#33404D', trend: '#B45309', pointStroke: 'rgba(17,24,34,0.35)', empty: '#64748B' }
     };
 

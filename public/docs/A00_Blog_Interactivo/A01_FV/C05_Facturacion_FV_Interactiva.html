@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -83,9 +83,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(255,176,32,0.1);}
-  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
-  .btn.primary:hover{background:#ffc352;}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
+  .btn.primary:hover{background:#a86a00;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
 
@@ -95,7 +95,7 @@
   .result-chip .v{font-family:var(--font-mono); font-size:24px; color:var(--amber);}
   .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
 
-  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card{background:linear-gradient(135deg, rgba(194,124,0,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
   .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
   .example-table{width:100%; font-size:12px; border-collapse:collapse;}
   .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
@@ -260,7 +260,7 @@
         </div>
       </div>
 
-      <div class="theory-card" style="margin-top:24px; background:linear-gradient(135deg, rgba(255,176,32,0.12) 0%, rgba(37,99,235,0.12) 100%);">
+      <div class="theory-card" style="margin-top:24px; background:linear-gradient(135deg, rgba(194,124,0,0.12) 0%, rgba(37,99,235,0.12) 100%);">
         <h3 style="color:var(--amber);">Impacto en LCOE: ¿cuál es el modelo más económico?</h3>
         <p style="margin:12px 0;">La elección del marco tarifario es determinante en la viabilidad económica. Un mismo sistema fotovoltaico puede tener LCOEs radicalmente distintos según:</p>
         <ul>

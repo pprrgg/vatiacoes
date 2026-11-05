@@ -83,46 +83,35 @@ const MAPA_ANTIGUO = '/docs/A00_Blog_Interactivo/index/comunidades.html';
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style>
       :root {
-        color-scheme: dark;
-        font-family: Inter, system-ui, sans-serif;
+        /* tema claro, el mismo de la web (src/styles/sitio.css): --color-black es el fondo y
+           --color-white el texto fuerte */
+        color-scheme: light;
+        font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         --nav-height: 3.5rem;
 
-        --color-accent-low: #17264f;
-        --color-accent: #3369ff;
-        --color-accent-high: #b3c7ff;
-        --color-white: #ffffff;
-        --color-gray-1: #edeef3;
-        --color-gray-2: #c1c3c8;
-        --color-gray-3: #888c96;
-        --color-gray-4: #555962;
-        --color-gray-5: #353841;
-        --color-gray-6: #23262f;
-        --color-black: #17181c;
+        --color-accent-low: #edf2fe;
+        --color-accent: #2457e6;
+        --color-accent-high: #1a47c2;
+        --color-white: #0b1f3a;
+        --color-gray-1: #1c2735;
+        --color-gray-2: #3b4656;
+        --color-gray-3: #687385;
+        --color-gray-4: #b8bfca;
+        --color-gray-5: #e2e6ec;
+        --color-gray-6: #f4f6f9;
+        --color-black: #ffffff;
 
         --color-text: var(--color-gray-2);
         --color-text-accent: var(--color-accent-high);
         --color-bg: var(--color-black);
         --color-bg-nav: var(--color-gray-6);
         --color-bg-sidebar: var(--color-gray-6);
-        --color-hairline-shade: var(--color-black);
+        --color-hairline-shade: var(--color-gray-5);
 
         background: var(--color-bg);
         color: var(--color-text);
       }
-      :root[data-theme='light'] {
-        color-scheme: light;
-        --color-accent-low: #cfd4fc;
-        --color-accent: #3d50f5;
-        --color-accent-high: #0f1c8a;
-        --color-white: #17181c;
-        --color-gray-1: #23262f;
-        --color-gray-2: #353841;
-        --color-gray-3: #555962;
-        --color-gray-4: #888c96;
-        --color-gray-5: #c1c3c8;
-        --color-gray-6: #edeef3;
-        --color-black: #ffffff;
-      }
+      /* (el antiguo :root[data-theme='light'] ya es el tema por defecto) */
       @media (min-width: 800px) {
         :root {
           --nav-height: 4rem;
@@ -202,7 +191,7 @@ const MAPA_ANTIGUO = '/docs/A00_Blog_Interactivo/index/comunidades.html';
       }
       .sidebar-cta-icon {
         flex: none;
-        color: #ffd54f;
+        color: #9a6400;
       }
       .sidebar-cta strong {
         display: block;
@@ -383,7 +372,7 @@ const MAPA_ANTIGUO = '/docs/A00_Blog_Interactivo/index/comunidades.html';
         font-weight: 600;
         letter-spacing: 0.14em;
         text-transform: uppercase;
-        color: #ffd54f;
+        color: #9a6400;
       }
       .portada h1 {
         font-size: clamp(1.7rem, 3.5vw, 2.4rem);

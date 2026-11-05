@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF; --violet:#A78BFA;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6; --violet:#7c4dcc;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--cyan); color:#0A121C;}
+  ::selection{background:var(--cyan); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(55,207,255,0.04) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.04) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(36,87,230,0.04) 1px, transparent 1px),linear-gradient(90deg, rgba(36,87,230,0.04) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
@@ -128,9 +128,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(55,207,255,0.1);}
-  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
-  .btn.primary:hover{background:#7fe1ff;}
+  .btn:hover{background:rgba(36,87,230,0.1);}
+  .btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .btn.primary:hover{background:#1b47c4;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn:disabled{opacity:0.4; cursor:not-allowed;}
@@ -178,32 +178,32 @@
   .flow-row .editor-card{margin-bottom:0;}
   .flow-diagram-holder{position:relative;}
   .fv-kwp-overlay{position:absolute; left:58%; top:17%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; z-index:2;}
-  .fv-kwp-overlay input{width:64px; background:#0A121C; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
+  .fv-kwp-overlay input{width:64px; background:#ffffff; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
   .fv-kwp-overlay input:focus{outline:none; box-shadow:0 0 0 1px var(--cyan);}
   .fv-kwp-overlay .unit{color:var(--amber); font-weight:600; font-family:var(--font-mono); font-size:11px;}
   @media(max-width:520px){.fv-kwp-overlay{left:52%; top:14%;}}
   .con-kwh-overlay{position:absolute; left:58%; top:73%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; z-index:2;}
-  .con-kwh-overlay input{width:64px; background:#0A121C; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
+  .con-kwh-overlay input{width:64px; background:#ffffff; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
   .con-kwh-overlay input:focus{outline:none; box-shadow:0 0 0 1px var(--cyan);}
   .con-kwh-overlay .unit{color:var(--cyan); font-weight:600; font-family:var(--font-mono); font-size:11px; white-space:nowrap;}
   @media(max-width:520px){.con-kwh-overlay{left:52%; top:70%;}}
   .con-tipo-overlay{position:absolute; left:58%; top:84%; transform:translateY(-50%); z-index:2;}
-  .con-tipo-overlay select{background:#0A121C; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:11px; max-width:118px;}
+  .con-tipo-overlay select{background:#ffffff; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:11px; max-width:118px;}
   .con-tipo-overlay select:focus{outline:none; box-shadow:0 0 0 1px var(--cyan);}
   @media(max-width:520px){.con-tipo-overlay{left:52%; top:80%;}}
   .bat-cap-overlay,.bat-pot-overlay,.bat-soc-overlay{position:absolute; left:20%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; z-index:2;}
   .bat-cap-overlay{top:58%;} .bat-pot-overlay{top:68%;} .bat-soc-overlay{top:78%;}
-  .bat-cap-overlay input,.bat-pot-overlay input,.bat-soc-overlay input{width:56px; background:#0A121C; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
+  .bat-cap-overlay input,.bat-pot-overlay input,.bat-soc-overlay input{width:56px; background:#ffffff; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
   .bat-cap-overlay input:focus,.bat-pot-overlay input:focus,.bat-soc-overlay input:focus{outline:none; box-shadow:0 0 0 1px var(--cyan);}
   .bat-cap-overlay .unit,.bat-pot-overlay .unit,.bat-soc-overlay .unit{color:var(--violet); font-weight:600; font-family:var(--font-mono); font-size:11px;}
   @media(max-width:520px){.bat-cap-overlay{left:4%; top:64%;} .bat-pot-overlay{left:4%; top:73%;} .bat-soc-overlay{left:4%; top:82%;}}
   .pot-contratada-overlay{position:absolute; left:76%; top:28%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; z-index:2;}
-  .pot-contratada-overlay input{width:56px; background:#0A121C; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
+  .pot-contratada-overlay input{width:56px; background:#ffffff; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
   .pot-contratada-overlay input:focus{outline:none; box-shadow:0 0 0 1px var(--cyan);}
   .pot-contratada-overlay .unit{color:var(--cyan); font-weight:600; font-family:var(--font-mono); font-size:11px;}
   @media(max-width:520px){.pot-contratada-overlay{left:auto; right:2%; top:4%;}}
   .jornada-overlay{position:absolute; left:58%; top:90%; transform:translateY(-50%); z-index:2;}
-  .jornada-overlay select{background:#0A121C; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:11px; max-width:96px;}
+  .jornada-overlay select{background:#ffffff; border:1px solid var(--cyan); color:var(--text); padding:4px 6px; border-radius:var(--radius); font-family:var(--font-mono); font-size:11px; max-width:96px;}
   .jornada-overlay select:focus{outline:none; box-shadow:0 0 0 1px var(--cyan);}
   @media(max-width:520px){.jornada-overlay{left:52%; top:91%;}}
   /* Franja reservada al fondo del propio recuadro del diagrama para las marcas de hora,
@@ -1096,8 +1096,8 @@ function diaTipoActual(){
 
 // ===================== MODELO DE DATOS: 2 curvas horarias (24 valores cada una) =====================
 const CURVAS = {
-  gen: { valores: new Array(24).fill(0), color:'#FFB020', tipo:'generacion' },
-  con: { valores: new Array(24).fill(0), color:'#37CFFF', tipo:'consumo' },
+  gen: { valores: new Array(24).fill(0), color:'#c27c00', tipo:'generacion' },
+  con: { valores: new Array(24).fill(0), color:'#2457e6', tipo:'consumo' },
 };
 
 // Ambas curvas (generacion y consumo) se guardan tambien en
@@ -1571,24 +1571,24 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   const socPct = socHoraria ? socHoraria.map(v=> capacidadKwh ? 100*(v||0)/capacidadKwh : 0) : null;
   const ySoc = v => padT + chartH - (v/100)*chartH;
 
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#FFB020">■</tspan> generación &nbsp; <tspan fill="#A3E635">■</tspan> descarga batería &nbsp; <tspan fill="#FF3B30">■</tspan> importación &nbsp; entran (arriba)</text>';
-  s += '<text x="'+padL+'" y="30" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#37CFFF">■</tspan> demanda &nbsp; <tspan fill="#6366F1">■</tspan> carga batería &nbsp; <tspan fill="#22D46B">■</tspan> exportación &nbsp; salen (abajo)</text>';
+  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#c27c00">■</tspan> generación &nbsp; <tspan fill="#A3E635">■</tspan> descarga batería &nbsp; <tspan fill="#FF3B30">■</tspan> importación &nbsp; entran (arriba)</text>';
+  s += '<text x="'+padL+'" y="30" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#2457e6">■</tspan> demanda &nbsp; <tspan fill="#6366F1">■</tspan> carga batería &nbsp; <tspan fill="#22D46B">■</tspan> exportación &nbsp; salen (abajo)</text>';
   let legendY = 46;
   if(conBateria){
-    s += '<text x="'+padL+'" y="'+legendY+'" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8"><tspan fill="#FF6AC2">┅</tspan> SOC, % de la capacidad (nivel, no acumulado)</text>';
+    s += '<text x="'+padL+'" y="'+legendY+'" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d"><tspan fill="#FF6AC2">┅</tspan> SOC, % de la capacidad (nivel, no acumulado)</text>';
     legendY += 16;
   }
   if(hayRecorte){
-    s += '<text x="'+padL+'" y="'+legendY+'" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8"><tspan fill="#FF3B30">▨</tspan> recorte por límite de potencia contratada (esa parte no se aprovecha/cubre)</text>';
+    s += '<text x="'+padL+'" y="'+legendY+'" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d"><tspan fill="#FF3B30">▨</tspan> recorte por límite de potencia contratada (esa parte no se aprovecha/cubre)</text>';
     legendY += 16;
   }
   const niveles = [maxPos, maxPos/2, 0, -maxNeg/2, -maxNeg];
   niveles.forEach(gv=>{
     const gy = y(gv);
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+fmtNum(Math.abs(gv),1)+' kWh</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(Math.abs(gv),1)+' kWh</text>';
   });
   if(conBateria){
     [0,25,50,75,100].forEach(gv=>{
@@ -1611,11 +1611,11 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
     return '<path d="M'+pts.map(p=>p.join(',')).join('L')+'Z" fill="'+colorHex+'"/>';
   }
   // pila superior: entra al nudo (generacion + descarga + importacion), hora a hora
-  s += band(ZERO, genValores, 1, y, '#FFB020');
+  s += band(ZERO, genValores, 1, y, '#c27c00');
   s += band(genValores, nivelDescarga, 1, y, '#A3E635');
   s += band(nivelDescarga, nivelImport, 1, y, '#FF3B30');
   // pila inferior (espejo): sale del nudo (demanda + carga + exportacion), hora a hora
-  s += band(ZERO, conValores, -1, y, '#37CFFF');
+  s += band(ZERO, conValores, -1, y, '#2457e6');
   s += band(conValores, nivelCarga, -1, y, '#6366F1');
   s += band(nivelCarga, nivelExport, -1, y, '#22D46B');
   if(hayRecorte){
@@ -1624,7 +1624,7 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
     // tal cual, con conexion a red), la parte entre lo limitado y lo real que no se
     // aprovecha/cubre sin esa conexion.
     s = '<defs><pattern id="recorte-reparto" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'+
-      '<rect width="6" height="6" fill="#0A121C" opacity="0.65"/><line x1="0" y1="0" x2="0" y2="6" stroke="#FF3B30" stroke-width="2"/></pattern></defs>'+s;
+      '<rect width="6" height="6" fill="#ffffff" opacity="0.65"/><line x1="0" y1="0" x2="0" y2="6" stroke="#FF3B30" stroke-width="2"/></pattern></defs>'+s;
     s += band(genLimitada, genValores, 1, y, 'url(#recorte-reparto)');
     s += band(conLimitada, conValores, -1, y, 'url(#recorte-reparto)');
   }
@@ -1635,16 +1635,16 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   for(let i=0;i<24;i++){
     const lx = padL+step*i+step/2;
     const lyGen = Math.max(y(genValores[i]||0)-5, padT+2);
-    s += '<text x="'+lx+'" y="'+lyGen+'" text-anchor="start" transform="rotate(-90 '+lx+' '+lyGen+')" font-family="IBM Plex Mono" font-size="9" fill="#E7ECF2">'+fmtNum(genValores[i]||0,1)+'</text>';
+    s += '<text x="'+lx+'" y="'+lyGen+'" text-anchor="start" transform="rotate(-90 '+lx+' '+lyGen+')" font-family="IBM Plex Mono" font-size="9" fill="#1c2735">'+fmtNum(genValores[i]||0,1)+'</text>';
     const lyCon = Math.min(y(-(conValores[i]||0))+5, H-padB-2);
-    s += '<text x="'+lx+'" y="'+lyCon+'" text-anchor="end" transform="rotate(-90 '+lx+' '+lyCon+')" font-family="IBM Plex Mono" font-size="9" fill="#E7ECF2">'+fmtNum(conValores[i]||0,1)+'</text>';
+    s += '<text x="'+lx+'" y="'+lyCon+'" text-anchor="end" transform="rotate(-90 '+lx+' '+lyCon+')" font-family="IBM Plex Mono" font-size="9" fill="#1c2735">'+fmtNum(conValores[i]||0,1)+'</text>';
   }
   if(conBateria){
     s += '<polyline points="'+stepPts(socPct, ySoc).map(p=>p.join(',')).join(' ')+'" fill="none" stroke="#FF6AC2" stroke-width="1.8" stroke-dasharray="4 2"/>';
   }
   [0,6,12,18,23].forEach(i=>{
     const x = padL+step*i+step/2;
-    s += '<text x="'+x+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+i+'h</text>';
+    s += '<text x="'+x+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>';
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
@@ -1673,8 +1673,8 @@ function renderChartPrecio(){
   let s = '';
   for(let g=0; g<=4; g++){
     const gv = max*g/4, gy = padT+chartH-(gv/max)*chartH;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+fmtNum(gv,3)+'</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(gv,3)+'</text>';
   }
   PRECIO_HORARIO.forEach((v,i)=>{
     const x = padL+step*i;
@@ -1682,8 +1682,8 @@ function renderChartPrecio(){
     const y = padT+chartH-bh;
     s += '<rect class="barra" data-idx="'+i+'" x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#F2C94C" opacity="0.85" rx="1"/>';
     const lx = x+barW/2, ly = Math.max(y-5, padT+30);
-    s += '<text x="'+lx+'" y="'+ly+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')" font-family="IBM Plex Mono" font-size="10" fill="#E7ECF2">'+fmtNum(v,2)+'</text>';
-    if(i%3===0){ s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+i+'h</text>'; }
+    s += '<text x="'+lx+'" y="'+ly+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')" font-family="IBM Plex Mono" font-size="10" fill="#1c2735">'+fmtNum(v,2)+'</text>';
+    if(i%3===0){ s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
   });
   svg.innerHTML = s;
   guardarCurvasEnVatiaco();
@@ -1740,8 +1740,8 @@ function renderChartPrecioPotencia(){
   let s = '';
   for(let g=0; g<=4; g++){
     const gv = max*g/4, gy = padT+chartH-(gv/max)*chartH;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+fmtNum(gv,3)+'</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(gv,3)+'</text>';
   }
   PRECIO_POTENCIA_HORARIO.forEach((v,i)=>{
     const x = padL+step*i;
@@ -1749,8 +1749,8 @@ function renderChartPrecioPotencia(){
     const y = padT+chartH-bh;
     s += '<rect class="barra" data-idx="'+i+'" x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#8B5CF6" opacity="0.85" rx="1"/>';
     const lx = x+barW/2, ly = Math.max(y-5, padT+30);
-    s += '<text x="'+lx+'" y="'+ly+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')" font-family="IBM Plex Mono" font-size="10" fill="#E7ECF2">'+fmtNum(v,3)+'</text>';
-    if(i%3===0){ s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+i+'h</text>'; }
+    s += '<text x="'+lx+'" y="'+ly+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')" font-family="IBM Plex Mono" font-size="10" fill="#1c2735">'+fmtNum(v,3)+'</text>';
+    if(i%3===0){ s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
   });
   svg.innerHTML = s;
   guardarCurvasEnVatiaco();
@@ -1798,15 +1798,15 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costePotencia, costeSin
   const nivel4 = nivel3.map((v,i)=>v+(costePotencia?costePotencia[i]:0));
   const maxV = Math.max(Math.max.apply(null, nivel4), Math.max.apply(null, costeSinInstalacion), 0.01)*1.15;
   const y = v => padT+chartH-(v/maxV)*chartH;
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#FFB020">■</tspan> FV directa &nbsp; <tspan fill="#A3E635">■</tspan> batería &nbsp; <tspan fill="#FF3B30">■</tspan> red &nbsp; '+
+  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#c27c00">■</tspan> FV directa &nbsp; <tspan fill="#A3E635">■</tspan> batería &nbsp; <tspan fill="#FF3B30">■</tspan> red &nbsp; '+
     '<tspan fill="#8B5CF6">■</tspan> potencia contratada</text>';
-  s += '<text x="'+padL+'" y="30" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#8FA3B8">┅</tspan> sin instalación (total) &nbsp; <tspan fill="#5B7086">┄</tspan> — solo energía &nbsp; <tspan fill="#8B5CF6">┄</tspan> — solo potencia</text>';
+  s += '<text x="'+padL+'" y="30" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#4f5b6d">┅</tspan> sin instalación (total) &nbsp; <tspan fill="#7b8696">┄</tspan> — solo energía &nbsp; <tspan fill="#8B5CF6">┄</tspan> — solo potencia</text>';
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4, gy = y(gv);
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+fmtNum(gv,2)+' €</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(gv,2)+' €</text>';
   }
   function seg(y0v, y1v, color, i){
     const x = padL+step*i, yy0 = y(y0v), yy1 = y(y1v);
@@ -1814,7 +1814,7 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costePotencia, costeSin
     s += '<rect x="'+x+'" y="'+yy1+'" width="'+barW+'" height="'+(yy0-yy1)+'" fill="'+color+'" opacity="0.9"/>';
   }
   for(let i=0;i<24;i++){
-    seg(0, nivel1[i], '#FFB020', i);
+    seg(0, nivel1[i], '#c27c00', i);
     seg(nivel1[i], nivel2[i], '#A3E635', i);
     seg(nivel2[i], nivel3[i], '#FF3B30', i);
     seg(nivel3[i], nivel4[i], '#8B5CF6', i);
@@ -1827,11 +1827,11 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costePotencia, costeSin
     }
     s += '<polyline points="'+pts.map(p=>p.join(',')).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="'+width+'" stroke-dasharray="'+dash+'"/>';
   }
-  linea(costeSinInstalacion, '#8FA3B8', 1.8, '4 2');
-  linea(costeSinInstalacionEnergia, '#5B7086', 1.3, '2 2');
+  linea(costeSinInstalacion, '#4f5b6d', 1.8, '4 2');
+  linea(costeSinInstalacionEnergia, '#7b8696', 1.3, '2 2');
   linea(costeSinInstalacionPotencia, '#8B5CF6', 1.3, '2 2');
   for(let i=0;i<24;i++){
-    if(i%3===0){ s += '<text x="'+(padL+step*i+step/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#5B7086">'+i+'h</text>'; }
+    if(i%3===0){ s += '<text x="'+(padL+step*i+step/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
   }
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
@@ -2127,12 +2127,12 @@ function buildCashFlowSVG(filas){
   const zeroY = padT+chartH/2;
   const scale = (chartH/2-6)/maxAll;
 
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#22D46B">■</tspan> flujo neto + &nbsp; <tspan fill="#FF3B30">■</tspan> flujo neto − &nbsp; <tspan fill="#37CFFF">┅</tspan> acumulado</text>';
-  s += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="#213348" stroke-width="1"/>';
+  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#22D46B">■</tspan> flujo neto + &nbsp; <tspan fill="#FF3B30">■</tspan> flujo neto − &nbsp; <tspan fill="#2457e6">┅</tspan> acumulado</text>';
+  s += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="#dfe4eb" stroke-width="1"/>';
   [maxAll, maxAll/2, -maxAll/2, -maxAll].forEach(gv=>{
     const gy = zeroY-gv*scale;
-    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="11" fill="#5B7086">'+fmtNum(gv,0)+'</text>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="11" fill="#7b8696">'+fmtNum(gv,0)+'</text>';
   });
   const cadaCuanto = Math.max(1, Math.ceil(n/13));
   filas.forEach((f,i)=>{
@@ -2141,17 +2141,17 @@ function buildCashFlowSVG(filas){
     const by = f.flujoNeto>=0 ? zeroY-bh : zeroY;
     s += '<rect x="'+(cx-barW/2)+'" y="'+by+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="'+(f.flujoNeto>=0?'#22D46B':'#FF3B30')+'" opacity="0.85" rx="1"/>';
     if(i%cadaCuanto===0 || i===n-1){
-      s += '<text x="'+cx+'" y="'+(H-padB+18)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#5B7086">'+f.año+'</text>';
+      s += '<text x="'+cx+'" y="'+(H-padB+18)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#7b8696">'+f.año+'</text>';
     }
   });
   const pts = filas.map((f,i)=>{
     const cx = padL+step*i+step/2, cy = zeroY-f.acumulado*scale;
     return cx+','+cy;
   });
-  s += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#37CFFF" stroke-width="2"/>';
+  s += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#2457e6" stroke-width="2"/>';
   filas.forEach((f,i)=>{
     const cx = padL+step*i+step/2, cy = zeroY-f.acumulado*scale;
-    s += '<circle cx="'+cx+'" cy="'+cy+'" r="2" fill="#37CFFF"/>';
+    s += '<circle cx="'+cx+'" cy="'+cy+'" r="2" fill="#2457e6"/>';
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
@@ -2184,7 +2184,7 @@ function buildFlowDiagramSVG(f){
     dem: {x:390, y:420, rx:58, ry:27, label:'Demanda'},
     red: {x:660, y:250, rx:52, ry:24, label:'Red'},
   };
-  const C = {amber:'#FFB020', cyan:'#37CFFF', violet:'#6366F1', teal:'#A3E635', green:'#22D46B', crimson:'#FF3B30', magenta:'#D946EF'};
+  const C = {amber:'#c27c00', cyan:'#2457e6', violet:'#6366F1', teal:'#A3E635', green:'#22D46B', crimson:'#FF3B30', magenta:'#D946EF'};
   const dimBat = !f.conBateria;
   const dimRed = (f.potenciaContratada||0)<=0;
 
@@ -2205,13 +2205,13 @@ function buildFlowDiagramSVG(f){
   }
   function labelTag(x,y,text,ck){
     const w = text.length*7.8+10;
-    return '<rect x="'+(x-w/2)+'" y="'+(y-11)+'" width="'+w+'" height="17" rx="2" fill="#0A121C" stroke="#182739" stroke-width="0.6"/>'+
+    return '<rect x="'+(x-w/2)+'" y="'+(y-11)+'" width="'+w+'" height="17" rx="2" fill="#ffffff" stroke="#eceff4" stroke-width="0.6"/>'+
       '<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-weight="700" font-size="13" fill="'+C[ck]+'">'+text+'</text>';
   }
   function nodeEl(n, dim){
     return '<g opacity="'+(dim?0.35:1)+'">'+
-      '<ellipse cx="'+n.x+'" cy="'+n.y+'" rx="'+n.rx+'" ry="'+n.ry+'" fill="#0E1826" stroke="#37CFFF" stroke-width="1.4"/>'+
-      '<text x="'+n.x+'" y="'+(n.y+4.5)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" font-weight="600" fill="#E7ECF2">'+n.label+'</text></g>';
+      '<ellipse cx="'+n.x+'" cy="'+n.y+'" rx="'+n.rx+'" ry="'+n.ry+'" fill="#f6f8fb" stroke="#2457e6" stroke-width="1.4"/>'+
+      '<text x="'+n.x+'" y="'+(n.y+4.5)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" font-weight="600" fill="#1c2735">'+n.label+'</text></g>';
   }
   function oneWay(a,b,ck,text,labelOff){
     const p1=edgePoint(a,b), p2=edgePoint(b,a);
@@ -2253,17 +2253,17 @@ function buildFlowDiagramSVG(f){
   s += nodeEl(N.bat, dimBat);
   s += nodeEl(N.red, dimRed);
   if(dimBat){
-    s += '<text x="'+N.bat.x+'" y="'+(N.bat.y+N.bat.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">(desactivada)</text>';
+    s += '<text x="'+N.bat.x+'" y="'+(N.bat.y+N.bat.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">(desactivada)</text>';
   }
   if(dimRed){
-    s += '<text x="'+N.red.x+'" y="'+(N.red.y+N.red.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">(aislada, sin red)</text>';
+    s += '<text x="'+N.red.x+'" y="'+(N.red.y+N.red.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">(aislada, sin red)</text>';
   }
 
   // Leyenda arriba, con el mismo tamano de letra que la del grafico de reparto horario de
   // al lado.
-  s += '<text x="10" y="14" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#FFB020">━</tspan> generación FV &nbsp; <tspan fill="#37CFFF">━</tspan> demanda &nbsp; <tspan fill="#6366F1">━</tspan> carga batería &nbsp; <tspan fill="#A3E635">━</tspan> descarga batería</text>';
-  s += '<text x="10" y="30" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
+  s += '<text x="10" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#c27c00">━</tspan> generación FV &nbsp; <tspan fill="#2457e6">━</tspan> demanda &nbsp; <tspan fill="#6366F1">━</tspan> carga batería &nbsp; <tspan fill="#A3E635">━</tspan> descarga batería</text>';
+  s += '<text x="10" y="30" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
     '<tspan fill="#22D46B">━</tspan> exportación a red &nbsp; <tspan fill="#FF3B30">━</tspan> importación de red</text>';
 
   return '<svg viewBox="0 0 780 538" width="100%" style="max-width:740px;">'+s+'</svg>';
@@ -3471,7 +3471,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

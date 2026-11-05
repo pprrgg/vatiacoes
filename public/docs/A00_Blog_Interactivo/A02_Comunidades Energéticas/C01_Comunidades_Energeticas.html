@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --green:#57D9A3; --green-dim:#1E6E52; --cyan:#37CFFF; --amber:#FFB020; --red:#FF6B6B;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --green:#16894f; --green-dim:#b5dcc6; --cyan:#2457e6; --amber:#c27c00; --red:#c62828;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--green); color:#0A121C;}
+  ::selection{background:var(--green); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(87,217,163,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(87,217,163,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(22,137,79,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(22,137,79,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--green);}
@@ -123,8 +123,8 @@
   .checkline input{accent-color:var(--green);}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--green); background:transparent; color:var(--green); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(87,217,163,0.1);}
-  .btn.primary{background:var(--green); color:#0A121C; border-color:var(--green);}
+  .btn:hover{background:rgba(22,137,79,0.1);}
+  .btn.primary{background:var(--green); color:#ffffff; border-color:var(--green);}
   .btn.primary:hover{background:#7ee6bb;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
@@ -151,8 +151,8 @@
   .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
 
   .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
-  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
-  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
+  .pill.ok{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.warn{background:rgba(194,124,0,0.12); color:var(--amber); border:1px solid rgba(194,124,0,0.35);}
 
   table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
   table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
@@ -1091,14 +1091,14 @@ function buildFlowSVG(stages, highlighted){
   const centers = [];
   stages.forEach((st,i)=>{
     if(i>0){
-      s += '<line x1="'+cx+'" y1="'+(centers[i-1])+'" x2="'+cx+'" y2="'+y+'" stroke="'+(highlighted?'#3a4a5e':'#213348')+'" stroke-width="1.3"/>';
+      s += '<line x1="'+cx+'" y1="'+(centers[i-1])+'" x2="'+cx+'" y2="'+y+'" stroke="'+(highlighted?'#3a4a5e':'#dfe4eb')+'" stroke-width="1.3"/>';
     }
-    s += '<text x="'+cx+'" y="'+(y+10)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="'+(highlighted?'#8FA3B8':'#5B7086')+'">'+esc(st.title)+'</text>';
+    s += '<text x="'+cx+'" y="'+(y+10)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="'+(highlighted?'#4f5b6d':'#7b8696')+'">'+esc(st.title)+'</text>';
     let boxY = y+18;
     let boxH = 28;
     if(st.simple){
-      s += '<rect x="'+(cx-90)+'" y="'+boxY+'" width="180" height="'+boxH+'" rx="3" fill="'+(highlighted?'rgba(87,217,163,0.12)':'#111E2E')+'" stroke="'+(highlighted?'#57D9A3':'#213348')+'" stroke-width="'+(highlighted?1.6:1)+'"/>';
-      s += '<text x="'+cx+'" y="'+(boxY+boxH/2+4)+'" text-anchor="middle" font-family="Inter" font-size="10.5" fill="'+(highlighted?'#57D9A3':'#8FA3B8')+'" font-weight="600">'+esc(st.title.replace(/^\d+\.\s*/,''))+'</text>';
+      s += '<rect x="'+(cx-90)+'" y="'+boxY+'" width="180" height="'+boxH+'" rx="3" fill="'+(highlighted?'rgba(22,137,79,0.12)':'#ffffff')+'" stroke="'+(highlighted?'#16894f':'#dfe4eb')+'" stroke-width="'+(highlighted?1.6:1)+'"/>';
+      s += '<text x="'+cx+'" y="'+(boxY+boxH/2+4)+'" text-anchor="middle" font-family="Inter" font-size="10.5" fill="'+(highlighted?'#16894f':'#4f5b6d')+'" font-weight="600">'+esc(st.title.replace(/^\d+\.\s*/,''))+'</text>';
     } else {
       const n = st.options.length;
       const boxW = n===3?170:210;
@@ -1107,9 +1107,9 @@ function buildFlowSVG(stages, highlighted){
       let bx = cx-totalW/2;
       st.options.forEach(opt=>{
         const act = highlighted && opt.active;
-        s += '<rect x="'+bx+'" y="'+boxY+'" width="'+boxW+'" height="'+boxH+'" rx="3" fill="'+(act?'rgba(87,217,163,0.14)':'#111E2E')+'" stroke="'+(act?'#57D9A3':'#213348')+'" stroke-width="'+(act?1.6:1)+'" opacity="'+((highlighted&&!opt.active)?0.45:1)+'"/>';
+        s += '<rect x="'+bx+'" y="'+boxY+'" width="'+boxW+'" height="'+boxH+'" rx="3" fill="'+(act?'rgba(22,137,79,0.14)':'#ffffff')+'" stroke="'+(act?'#16894f':'#dfe4eb')+'" stroke-width="'+(act?1.6:1)+'" opacity="'+((highlighted&&!opt.active)?0.45:1)+'"/>';
         const lbl = opt.label.length>26? opt.label.slice(0,25)+'…' : opt.label;
-        s += '<text x="'+(bx+boxW/2)+'" y="'+(boxY+boxH/2+3.5)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.6" fill="'+(act?'#57D9A3':'#5B7086')+'">'+esc(lbl)+'</text>';
+        s += '<text x="'+(bx+boxW/2)+'" y="'+(boxY+boxH/2+3.5)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.6" fill="'+(act?'#16894f':'#7b8696')+'">'+esc(lbl)+'</text>';
         bx += boxW+gap;
       });
     }
@@ -1159,19 +1159,19 @@ function buildGanttSVG(gantt){
   let s='';
   for(let d=0; d<=gantt.total; d+=30){
     const x = labelW+d*scale;
-    s += '<line x1="'+x+'" y1="'+(padTop-6)+'" x2="'+x+'" y2="'+(H-padBottom)+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+x+'" y="'+(padTop-10)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">'+d+'d</text>';
+    s += '<line x1="'+x+'" y1="'+(padTop-6)+'" x2="'+x+'" y2="'+(H-padBottom)+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+x+'" y="'+(padTop-10)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">'+d+'d</text>';
   }
   tasks.forEach((t,i)=>{
     const y = padTop+i*rowH;
-    s += '<text x="'+(labelW-8)+'" y="'+(y+15)+'" text-anchor="end" font-family="Inter" font-size="9.5" fill="'+(t.skip?'#5B7086':'#E7ECF2')+'">'+esc(t.name)+'</text>';
+    s += '<text x="'+(labelW-8)+'" y="'+(y+15)+'" text-anchor="end" font-family="Inter" font-size="9.5" fill="'+(t.skip?'#7b8696':'#1c2735')+'">'+esc(t.name)+'</text>';
     if(t.skip){
-      s += '<text x="'+(labelW+8)+'" y="'+(y+15)+'" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086" font-style="italic">no aplica</text>';
+      s += '<text x="'+(labelW+8)+'" y="'+(y+15)+'" font-family="IBM Plex Mono" font-size="8.5" fill="#7b8696" font-style="italic">no aplica</text>';
     } else {
       const x = labelW+t.start*scale;
       const w = Math.max(2,t.duration*scale);
-      s += '<rect x="'+x+'" y="'+(y+4)+'" width="'+w+'" height="14" rx="2" fill="#57D9A3" opacity="0.85"/>';
-      s += '<text x="'+(x+w+6)+'" y="'+(y+15)+'" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">'+t.duration+'d</text>';
+      s += '<rect x="'+x+'" y="'+(y+4)+'" width="'+w+'" height="14" rx="2" fill="#16894f" opacity="0.85"/>';
+      s += '<text x="'+(x+w+6)+'" y="'+(y+15)+'" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">'+t.duration+'d</text>';
     }
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:680px;">'+s+'</svg>';
@@ -1767,7 +1767,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

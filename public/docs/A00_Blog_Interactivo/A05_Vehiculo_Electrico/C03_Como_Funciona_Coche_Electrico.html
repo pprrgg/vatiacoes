@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B; --gray:#5B7086;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --cyan:#2457e6; --cyan-dim:#a9bdf3; --green:#16894f; --amber:#c27c00; --red:#c62828; --gray:#7b8696;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--cyan); color:#0A121C;}
+  ::selection{background:var(--cyan); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(36,87,230,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(36,87,230,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
@@ -87,13 +87,13 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(55,207,255,0.1);}
-  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
+  .btn:hover{background:rgba(36,87,230,0.1);}
+  .btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
   .btn.primary:hover{background:#6fdcff;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
-  .btn.toggle.on{background:var(--cyan); color:#0A121C;}
-  .btn.toggle.regen-on{background:var(--green); border-color:var(--green); color:#0A121C;}
+  .btn.toggle.on{background:var(--cyan); color:#ffffff;}
+  .btn.toggle.regen-on{background:var(--green); border-color:var(--green); color:#ffffff;}
 
   .calculator{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:16px 0;}
   .calc-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:16px;}
@@ -126,9 +126,9 @@
     .flow-arrow{width:100%; height:26px; transform:rotate(90deg);}
   }
   .flow-note{font-size:12px; color:var(--text-dimmer); margin-top:14px; border-left:2px solid var(--line); padding-left:12px;}
-  .flow-diagram.traction .flow-step{border-color:var(--amber); box-shadow:0 0 0 1px rgba(255,176,32,0.25);}
+  .flow-diagram.traction .flow-step{border-color:var(--amber); box-shadow:0 0 0 1px rgba(194,124,0,0.25);}
   .flow-diagram.traction .flow-arrow{color:var(--amber);}
-  .flow-diagram.regenerative .flow-step{border-color:var(--green); box-shadow:0 0 0 1px rgba(87,217,163,0.25);}
+  .flow-diagram.regenerative .flow-step{border-color:var(--green); box-shadow:0 0 0 1px rgba(22,137,79,0.25);}
   .flow-diagram.regenerative .flow-arrow{color:var(--green);}
 
   /* Diagrama de señales (SVG) */
@@ -148,9 +148,9 @@
   .sim-step{background:var(--panel2); border:1.5px solid var(--line); border-radius:var(--radius); padding:14px 10px; width:126px; text-align:center; transition:all .18s ease;}
   .sim-step .fi{font-size:20px; margin-bottom:6px;}
   .sim-step h5{font-size:11px; margin-bottom:2px;}
-  .sim-step.active{border-color:var(--amber); box-shadow:0 0 12px rgba(255,176,32,0.35);}
-  .sim-step.active .fi{filter:drop-shadow(0 0 4px rgba(255,176,32,0.6));}
-  .sim-step.regen{border-color:var(--green); box-shadow:0 0 12px rgba(87,217,163,0.35);}
+  .sim-step.active{border-color:var(--amber); box-shadow:0 0 12px rgba(194,124,0,0.35);}
+  .sim-step.active .fi{filter:drop-shadow(0 0 4px rgba(194,124,0,0.6));}
+  .sim-step.regen{border-color:var(--green); box-shadow:0 0 12px rgba(22,137,79,0.35);}
   .sim-arrow{width:26px; text-align:center; flex-shrink:0; color:var(--text-dimmer); font-size:16px; transition:color .18s ease;}
   .sim-arrow.active{color:var(--amber);}
   .sim-arrow.regen{color:var(--green);}
@@ -391,116 +391,116 @@
       <div class="diagram-wrap">
         <svg viewBox="0 0 920 470" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arrCyan" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#37CFFF"/></marker>
-            <marker id="arrAmber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#FFB020"/></marker>
-            <marker id="arrGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#57D9A3"/></marker>
-            <marker id="arrGray" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#5B7086"/></marker>
+            <marker id="arrCyan" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#2457e6"/></marker>
+            <marker id="arrAmber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#c27c00"/></marker>
+            <marker id="arrGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#16894f"/></marker>
+            <marker id="arrGray" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#7b8696"/></marker>
           </defs>
 
           <!-- Cajas: dibujadas primero para que las etiquetas de las flechas queden siempre legibles por encima -->
           <g>
-            <rect x="20" y="30" width="190" height="56" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="20" y="30" width="190" height="56" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="115" y="54" text-anchor="middle" class="diag-title">Pedal acelerador</text>
             <text x="115" y="70" text-anchor="middle" class="diag-sub">sensor APPS (doble, redundante)</text>
           </g>
           <g>
-            <rect x="230" y="30" width="190" height="56" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="230" y="30" width="190" height="56" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="325" y="54" text-anchor="middle" class="diag-title">Pedal de freno</text>
             <text x="325" y="70" text-anchor="middle" class="diag-sub">sensor BLS + presión</text>
           </g>
           <g>
-            <rect x="440" y="30" width="190" height="56" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="440" y="30" width="190" height="56" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="535" y="54" text-anchor="middle" class="diag-title">Pantalla / cuadro</text>
             <text x="535" y="70" text-anchor="middle" class="diag-sub">autonomía, potencia, alarmas</text>
           </g>
 
           <g>
-            <rect x="20" y="170" width="350" height="80" rx="4" fill="#111E2E" stroke="#37CFFF" stroke-width="1.5"/>
-            <text x="195" y="200" text-anchor="middle" class="diag-title" fill="#37CFFF">VCU — Unidad de Control</text>
+            <rect x="20" y="170" width="350" height="80" rx="4" fill="#ffffff" stroke="#2457e6" stroke-width="1.5"/>
+            <text x="195" y="200" text-anchor="middle" class="diag-title" fill="#2457e6">VCU — Unidad de Control</text>
             <text x="195" y="218" text-anchor="middle" class="diag-sub">arbitra el par, aplica límites de seguridad</text>
             <text x="195" y="234" text-anchor="middle" class="diag-sub">y el modo de conducción (Eco/Normal/Sport)</text>
           </g>
           <g>
-            <rect x="440" y="170" width="180" height="80" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="440" y="170" width="180" height="80" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="530" y="203" text-anchor="middle" class="diag-title">Inversor (MCU)</text>
             <text x="530" y="221" text-anchor="middle" class="diag-sub">control vectorial FOC</text>
             <text x="530" y="235" text-anchor="middle" class="diag-sub">IGBT / SiC MOSFET</text>
           </g>
           <g>
-            <rect x="690" y="170" width="190" height="80" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="690" y="170" width="190" height="80" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="785" y="203" text-anchor="middle" class="diag-title">Motor eléctrico</text>
             <text x="785" y="221" text-anchor="middle" class="diag-sub">síncrono de imanes</text>
             <text x="785" y="235" text-anchor="middle" class="diag-sub">permanentes (PMSM)</text>
           </g>
 
           <g>
-            <rect x="20" y="300" width="350" height="60" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="20" y="300" width="350" height="60" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="195" y="326" text-anchor="middle" class="diag-title">BMS</text>
             <text x="195" y="344" text-anchor="middle" class="diag-sub">balanceo de celdas, límites térmicos y de corriente</text>
           </g>
           <g>
-            <rect x="440" y="300" width="180" height="60" rx="4" fill="#111E2E" stroke="#FFB020" stroke-width="1.5"/>
-            <text x="530" y="326" text-anchor="middle" class="diag-title" fill="#FFB020">Batería de tracción</text>
+            <rect x="440" y="300" width="180" height="60" rx="4" fill="#ffffff" stroke="#c27c00" stroke-width="1.5"/>
+            <text x="530" y="326" text-anchor="middle" class="diag-title" fill="#c27c00">Batería de tracción</text>
             <text x="530" y="344" text-anchor="middle" class="diag-sub">pack HV, Li-ion</text>
           </g>
           <g>
-            <rect x="690" y="300" width="190" height="60" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="690" y="300" width="190" height="60" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="785" y="326" text-anchor="middle" class="diag-title">Reductora</text>
             <text x="785" y="344" text-anchor="middle" class="diag-sub">una sola velocidad, sin embrague</text>
           </g>
 
           <g>
-            <rect x="690" y="400" width="190" height="50" rx="4" fill="#111E2E" stroke="#213348" stroke-width="1.5"/>
+            <rect x="690" y="400" width="190" height="50" rx="4" fill="#ffffff" stroke="#dfe4eb" stroke-width="1.5"/>
             <text x="785" y="422" text-anchor="middle" class="diag-title">Ruedas</text>
             <text x="785" y="438" text-anchor="middle" class="diag-sub">+ sensores de velocidad (ABS/ESC)</text>
           </g>
 
           <!-- Conectores y etiquetas: dibujados después, por encima de las cajas -->
           <!-- Pedal acelerador -> VCU -->
-          <line x1="115" y1="86" x2="115" y2="169" stroke="#37CFFF" stroke-width="2" marker-end="url(#arrCyan)"/>
-          <text x="122" y="130" class="diag-label" fill="#37CFFF">APPS ×2 · 0–5V</text>
+          <line x1="115" y1="86" x2="115" y2="169" stroke="#2457e6" stroke-width="2" marker-end="url(#arrCyan)"/>
+          <text x="122" y="130" class="diag-label" fill="#2457e6">APPS ×2 · 0–5V</text>
           <!-- Pedal freno -> VCU -->
-          <line x1="325" y1="86" x2="325" y2="169" stroke="#37CFFF" stroke-width="2" marker-end="url(#arrCyan)"/>
-          <text x="255" y="130" class="diag-label" fill="#37CFFF">Sensor freno + BLS</text>
+          <line x1="325" y1="86" x2="325" y2="169" stroke="#2457e6" stroke-width="2" marker-end="url(#arrCyan)"/>
+          <text x="255" y="130" class="diag-label" fill="#2457e6">Sensor freno + BLS</text>
           <!-- VCU -> Pantalla (arriba, fuera de la zona de las otras etiquetas) -->
-          <path d="M350,170 L350,100 L535,100 L535,87" fill="none" stroke="#37CFFF" stroke-width="1.5" marker-end="url(#arrCyan)"/>
-          <text x="358" y="94" class="diag-label" fill="#37CFFF" font-size="9">CAN: autonomía / alarmas</text>
+          <path d="M350,170 L350,100 L535,100 L535,87" fill="none" stroke="#2457e6" stroke-width="1.5" marker-end="url(#arrCyan)"/>
+          <text x="358" y="94" class="diag-label" fill="#2457e6" font-size="9">CAN: autonomía / alarmas</text>
           <!-- VCU -> Inversor (comando) -->
-          <line x1="370" y1="197" x2="439" y2="197" stroke="#37CFFF" stroke-width="2.5" marker-end="url(#arrCyan)"/>
-          <text x="378" y="190" class="diag-label" fill="#37CFFF" font-size="9">CAN: par pedido (Nm)</text>
+          <line x1="370" y1="197" x2="439" y2="197" stroke="#2457e6" stroke-width="2.5" marker-end="url(#arrCyan)"/>
+          <text x="378" y="190" class="diag-label" fill="#2457e6" font-size="9">CAN: par pedido (Nm)</text>
           <!-- Inversor -> VCU (feedback) -->
-          <line x1="439" y1="228" x2="370" y2="228" stroke="#57D9A3" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
-          <text x="378" y="244" class="diag-label" fill="#57D9A3" font-size="9">CAN: par real, rpm, fallos</text>
+          <line x1="439" y1="228" x2="370" y2="228" stroke="#16894f" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
+          <text x="378" y="244" class="diag-label" fill="#16894f" font-size="9">CAN: par real, rpm, fallos</text>
           <!-- Inversor -> Motor (potencia) -->
-          <line x1="620" y1="197" x2="689" y2="197" stroke="#FFB020" stroke-width="3" marker-end="url(#arrAmber)"/>
-          <text x="628" y="190" class="diag-label" fill="#FFB020" font-size="9">3~ AC · PWM (0-800V)</text>
+          <line x1="620" y1="197" x2="689" y2="197" stroke="#c27c00" stroke-width="3" marker-end="url(#arrAmber)"/>
+          <text x="628" y="190" class="diag-label" fill="#c27c00" font-size="9">3~ AC · PWM (0-800V)</text>
           <!-- Motor -> Inversor (feedback resolver) -->
-          <line x1="689" y1="228" x2="620" y2="228" stroke="#57D9A3" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
-          <text x="628" y="244" class="diag-label" fill="#57D9A3" font-size="9">resolver, Iu / Iv / Iw</text>
+          <line x1="689" y1="228" x2="620" y2="228" stroke="#16894f" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
+          <text x="628" y="244" class="diag-label" fill="#16894f" font-size="9">resolver, Iu / Iv / Iw</text>
           <!-- VCU <-> BMS -->
-          <line x1="195" y1="250" x2="195" y2="299" stroke="#37CFFF" stroke-width="2" marker-end="url(#arrCyan)" marker-start="url(#arrCyan)"/>
-          <text x="203" y="278" class="diag-label" fill="#37CFFF" font-size="9.5">CAN: SOC/SOH, I máx.</text>
+          <line x1="195" y1="250" x2="195" y2="299" stroke="#2457e6" stroke-width="2" marker-end="url(#arrCyan)" marker-start="url(#arrCyan)"/>
+          <text x="203" y="278" class="diag-label" fill="#2457e6" font-size="9.5">CAN: SOC/SOH, I máx.</text>
           <!-- Inversor <-> Batería (DC HV) -->
-          <line x1="530" y1="250" x2="530" y2="299" stroke="#FFB020" stroke-width="3" marker-end="url(#arrAmber)" marker-start="url(#arrAmber)"/>
-          <text x="538" y="278" class="diag-label" fill="#FFB020" font-size="9.5">DC HV</text>
+          <line x1="530" y1="250" x2="530" y2="299" stroke="#c27c00" stroke-width="3" marker-end="url(#arrAmber)" marker-start="url(#arrAmber)"/>
+          <text x="538" y="278" class="diag-label" fill="#c27c00" font-size="9.5">DC HV</text>
           <!-- BMS -> Bateria (monitorizacion) -->
-          <line x1="370" y1="330" x2="439" y2="330" stroke="#FFB020" stroke-width="1.5" marker-end="url(#arrAmber)"/>
-          <text x="378" y="313" class="diag-label" fill="#FFB020" font-size="8.5">medición celdas</text>
+          <line x1="370" y1="330" x2="439" y2="330" stroke="#c27c00" stroke-width="1.5" marker-end="url(#arrAmber)"/>
+          <text x="378" y="313" class="diag-label" fill="#c27c00" font-size="8.5">medición celdas</text>
           <!-- Motor -> Reductora (mecanico) -->
-          <line x1="785" y1="250" x2="785" y2="299" stroke="#5B7086" stroke-width="2.5" marker-end="url(#arrGray)"/>
-          <text x="793" y="278" class="diag-label" fill="#5B7086" font-size="9.5">par mecánico</text>
+          <line x1="785" y1="250" x2="785" y2="299" stroke="#7b8696" stroke-width="2.5" marker-end="url(#arrGray)"/>
+          <text x="793" y="278" class="diag-label" fill="#7b8696" font-size="9.5">par mecánico</text>
           <!-- Reductora -> Ruedas -->
-          <line x1="785" y1="360" x2="785" y2="399" stroke="#5B7086" stroke-width="2.5" marker-end="url(#arrGray)"/>
-          <text x="793" y="384" class="diag-label" fill="#5B7086" font-size="9.5">relación ~9:1</text>
+          <line x1="785" y1="360" x2="785" y2="399" stroke="#7b8696" stroke-width="2.5" marker-end="url(#arrGray)"/>
+          <text x="793" y="384" class="diag-label" fill="#7b8696" font-size="9.5">relación ~9:1</text>
           <!-- Ruedas -> VCU (velocidad, feedback, rodea por la izquierda) -->
-          <path d="M690,425 L10,425 L10,210 L19,210" fill="none" stroke="#57D9A3" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
-          <text x="30" y="440" class="diag-label" fill="#57D9A3" font-size="9.5">velocidad de rueda (CAN · ABS/ESC)</text>
+          <path d="M690,425 L10,425 L10,210 L19,210" fill="none" stroke="#16894f" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrGreen)"/>
+          <text x="30" y="440" class="diag-label" fill="#16894f" font-size="9.5">velocidad de rueda (CAN · ABS/ESC)</text>
         </svg>
         <div class="legend">
-          <div class="legend-item"><span class="legend-swatch" style="background:#37CFFF;"></span>Señal de control (CAN / analógica)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#2457e6;"></span>Señal de control (CAN / analógica)</div>
           <div class="legend-item"><span class="legend-swatch dashed"></span>Señal de realimentación (sensor)</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#FFB020;"></span>Potencia eléctrica</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#5B7086;"></span>Par mecánico</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#c27c00;"></span>Potencia eléctrica</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#7b8696;"></span>Par mecánico</div>
         </div>
       </div>
 

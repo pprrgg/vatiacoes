@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --cyan:#2457e6; --cyan-dim:#a9bdf3; --green:#16894f; --amber:#c27c00; --red:#c62828;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--cyan); color:#0A121C;}
+  ::selection{background:var(--cyan); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(36,87,230,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(36,87,230,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
@@ -108,9 +108,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(55,207,255,0.1);}
-  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
-  .btn.primary:hover{background:#7fe1ff;}
+  .btn:hover{background:rgba(36,87,230,0.1);}
+  .btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .btn.primary:hover{background:#1b47c4;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn:disabled{opacity:0.4; cursor:not-allowed;}
@@ -136,9 +136,9 @@
   .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
 
   .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
-  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
-  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
-  .pill.bad{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
+  .pill.ok{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.warn{background:rgba(194,124,0,0.12); color:var(--amber); border:1px solid rgba(194,124,0,0.35);}
+  .pill.bad{background:rgba(198,40,40,0.12); color:var(--red); border:1px solid rgba(198,40,40,0.35);}
 
   table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
   table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
@@ -1046,13 +1046,13 @@ function buildCashFlowSVG(filas){
   const scale = (rowH/2-10)/maxAll;
 
   let s = '';
-  s += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="#213348" stroke-width="1"/>';
+  s += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="#dfe4eb" stroke-width="1"/>';
   filas.forEach((f,i)=>{
     const cx = padL + step*i + step/2;
     const bh = Math.abs(f.flujoNeto)*scale;
     const by = f.flujoNeto>=0 ? zeroY-bh : zeroY;
-    s += '<rect x="'+(cx-barW/2)+'" y="'+by+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="'+(f.flujoNeto>=0?'#57D9A3':'#FF6B6B')+'" opacity="0.75" rx="1"/>';
-    s += '<text x="'+cx+'" y="'+(H-padB+14)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086">'+f.año+'</text>';
+    s += '<rect x="'+(cx-barW/2)+'" y="'+by+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="'+(f.flujoNeto>=0?'#16894f':'#c62828')+'" opacity="0.75" rx="1"/>';
+    s += '<text x="'+cx+'" y="'+(H-padB+14)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.5" fill="#7b8696">'+f.año+'</text>';
   });
   // linea acumulado
   let pts = filas.map((f,i)=>{
@@ -1060,13 +1060,13 @@ function buildCashFlowSVG(filas){
     const cy = zeroY - f.acumulado*scale;
     return cx+','+cy;
   });
-  s += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#37CFFF" stroke-width="2"/>';
+  s += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#2457e6" stroke-width="2"/>';
   filas.forEach((f,i)=>{
     const cx = padL + step*i + step/2;
     const cy = zeroY - f.acumulado*scale;
-    s += '<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#37CFFF"/>';
+    s += '<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#2457e6"/>';
   });
-  s += '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="9" fill="#8FA3B8">Barras: flujo neto anual (verde/rojo) &nbsp;·&nbsp; Línea: flujo acumulado (cian)</text>';
+  s += '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="9" fill="#4f5b6d">Barras: flujo neto anual (verde/rojo) &nbsp;·&nbsp; Línea: flujo acumulado (cian)</text>';
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:700px;">'+s+'</svg>';
 }
 
@@ -1076,15 +1076,15 @@ function buildSchemeSVG(){
   };
   const edges = [['Entrada','Rectif'],['Rectif','Inversor'],['Inversor','Bypass'],['Bypass','Salida'],['Rectif','Bateria'],['Bateria','Inversor'],['Entrada','Bypass']];
   const labels = {Entrada:'Entrada', Rectif:'Rectificador', Inversor:'Inversor', Bypass:'Bypass', Salida:'Salida', Bateria:'Batería'};
-  let s = '<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#5B7086"/></marker></defs>';
+  let s = '<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#7b8696"/></marker></defs>';
   edges.forEach(([a,b])=>{
     const [x1,y1]=boxes[a], [x2,y2]=boxes[b];
-    s += '<line x1="'+(x1+45)+'" y1="'+(y1+15)+'" x2="'+x2+'" y2="'+(y2+15)+'" stroke="#5B7086" stroke-width="1.5" marker-end="url(#arrow)"/>';
+    s += '<line x1="'+(x1+45)+'" y1="'+(y1+15)+'" x2="'+x2+'" y2="'+(y2+15)+'" stroke="#7b8696" stroke-width="1.5" marker-end="url(#arrow)"/>';
   });
   Object.keys(boxes).forEach(k=>{
     const [x,y]=boxes[k];
-    s += '<rect x="'+x+'" y="'+y+'" width="90" height="30" rx="3" fill="#111E2E" stroke="#37CFFF" stroke-width="1.3"/>';
-    s += '<text x="'+(x+45)+'" y="'+(y+19)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#E7ECF2">'+labels[k]+'</text>';
+    s += '<rect x="'+x+'" y="'+y+'" width="90" height="30" rx="3" fill="#ffffff" stroke="#2457e6" stroke-width="1.3"/>';
+    s += '<text x="'+(x+45)+'" y="'+(y+19)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#1c2735">'+labels[k]+'</text>';
   });
   return '<svg viewBox="0 0 700 230" width="100%" style="max-width:700px;">'+s+'</svg>';
 }
@@ -1701,7 +1701,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

@@ -43,7 +43,7 @@
         body {
             display: flex;
             flex-direction: column;
-            background: #f3f4f6;
+            background: #ffffff;
         }
 
         header {
@@ -52,8 +52,9 @@
             align-items: center;
             gap: 12px;
             padding: 0 20px;
-            background: #111827;
-            color: white;
+            background: #ffffff;
+            color: #0b1f3a;
+            border-bottom: 1px solid #e2e6ec;
         }
 
         header h1 {
@@ -63,20 +64,21 @@
 
         header button {
             border: 0;
-            border-radius: 6px;
-            padding: 9px 15px;
+            border-radius: 999px;
+            padding: 9px 18px;
             cursor: pointer;
             font-weight: 600;
         }
 
         #compile {
-            background: #2563eb;
+            background: #2457e6;
             color: white;
         }
 
         #download {
-            background: #16a34a;
-            color: white;
+            background: #ffffff;
+            color: #2457e6;
+            box-shadow: inset 0 0 0 1.5px #2457e6;
         }
 
         button:disabled {
@@ -87,7 +89,7 @@
         #status {
             margin-left: auto;
             font-size: 13px;
-            color: #d1d5db;
+            color: #687385;
         }
 
         main {
@@ -109,8 +111,9 @@
             display: flex;
             align-items: center;
             padding: 0 12px;
-            background: #e5e7eb;
-            border-bottom: 1px solid #d1d5db;
+            background: #f4f6f9;
+            border-bottom: 1px solid #e2e6ec;
+            color: #3b4656;
             font-size: 13px;
             font-weight: 600;
         }
@@ -122,8 +125,9 @@
             border: 0;
             outline: none;
             padding: 20px;
-            background: #111827;
-            color: #e5e7eb;
+            background: #ffffff;
+            color: #1c2735;
+            border-right: 1px solid #e2e6ec;
             font-family:
                 "Fira Code",
                 "Cascadia Code",
@@ -137,7 +141,7 @@
         #preview {
             flex: 1;
             overflow: auto;
-            background: #d1d5db;
+            background: #eef1f5;
             padding: 30px;
         }
 
@@ -150,7 +154,7 @@
             margin: 0 auto 30px auto;
             background: white;
             box-shadow:
-                0 3px 12px rgba(0, 0, 0, 0.15);
+                0 3px 12px rgba(11,31,58,0.12);
         }
 
         #error {

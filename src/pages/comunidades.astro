@@ -21,17 +21,18 @@ const { comunidades, actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" />
 <style is:global>
   :root {
-    color-scheme: dark;
-    font-family: Inter, system-ui, sans-serif;
+    /* tema claro, el de la web (src/styles/sitio.css): --color-black es el fondo */
+    color-scheme: light;
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --nav-height: 3.5rem;
-    --color-accent: #3369ff;
-    --color-white: #ffffff;
-    --color-gray-1: #edeef3;
-    --color-gray-2: #c1c3c8;
-    --color-gray-3: #888c96;
-    --color-gray-5: #353841;
-    --color-gray-6: #23262f;
-    --color-black: #17181c;
+    --color-accent: #2457e6;
+    --color-white: #0b1f3a;
+    --color-gray-1: #1c2735;
+    --color-gray-2: #3b4656;
+    --color-gray-3: #687385;
+    --color-gray-5: #e2e6ec;
+    --color-gray-6: #ffffff;
+    --color-black: #ffffff;
   }
   @media (min-width: 800px) { :root { --nav-height: 4rem; } }
   * { box-sizing: border-box; }
@@ -65,9 +66,9 @@ const { comunidades, actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
     min-height: 420px;
     height: calc(100vh - var(--nav-height) - var(--tab-bar-height, 0px) - 11rem);
     isolation: isolate;   /* los controles de Leaflet no tapan la barra inferior del movil */
-    border-radius: 0.6rem;
+    border-radius: 1rem;
     border: 1px solid var(--color-gray-5);
-    background: #1b1d22;
+    background: #eef2f6;
   }
   /* Recuadro de Canarias (como en los mapas de España) */
   #canarias {
@@ -76,15 +77,15 @@ const { comunidades, actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
     bottom: 1.6rem;
     width: min(240px, 42%);
     height: 150px;
-    border: 1px solid var(--color-gray-3);
-    border-radius: 0.4rem;
-    background: #1b1d22;
+    border: 1px solid var(--color-gray-5);
+    border-radius: 0.6rem;
+    background: #eef2f6;
     z-index: 500;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 16px rgba(11, 31, 58, 0.15);
   }
   #canarias .leaflet-control-attribution { display: none; }
-  /* Teselas de OpenStreetMap oscurecidas para el tema del sitio */
-  .mapa-oscuro { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6); }
+  /* Teselas de OpenStreetMap algo apagadas, para que destaquen los marcadores */
+  .mapa-oscuro { filter: saturate(0.55) brightness(1.03); }
   .ce-marker {
     width: 34px;
     height: 34px;
@@ -92,8 +93,8 @@ const { comunidades, actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
     display: grid;
     place-items: center;
     font-size: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.85);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(11, 31, 58, 0.3);
     cursor: pointer;
     transition: transform 0.15s;
   }
@@ -102,24 +103,25 @@ const { comunidades, actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
     display: grid;
     place-items: center;
     border-radius: 50%;
-    background: rgba(51, 105, 255, 0.85);
+    background: rgba(36, 87, 230, 0.92);
     color: #fff;
     font: 600 13px/1 Inter, system-ui, sans-serif;
-    border: 2px solid rgba(255, 255, 255, 0.85);
-    box-shadow: 0 0 0 5px rgba(51, 105, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.5);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 5px rgba(36, 87, 230, 0.18), 0 2px 6px rgba(11, 31, 58, 0.25);
   }
   .intro p a { color: var(--color-gray-1); }
   .cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.35rem; }
   .cabecera h1 { margin: 0; }
-  .btn-alta { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1rem; border-radius: 0.5rem;
-    background: var(--color-accent); color: var(--color-white); font-size: 0.9rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
-  .btn-alta:hover, .btn-alta:focus-visible { background: #4a7bff; outline: none; }
+  .btn-alta { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.2rem; border-radius: 999px;
+    background: var(--color-accent); color: #fff; font-size: 0.9rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .btn-alta:hover, .btn-alta:focus-visible { background: #1b47c4; outline: none; }
   .legend small { color: var(--color-gray-3); }
   .leaflet-tooltip.ce-tip {
     background: var(--color-gray-6);
     color: var(--color-gray-1);
     border: 1px solid var(--color-gray-5);
-    border-radius: 0.4rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 14px rgba(11, 31, 58, 0.12);
     font: 13px/1.4 Inter, system-ui, sans-serif;
     padding: 0.5rem 0.65rem;
   }
@@ -140,7 +142,7 @@ const { comunidades, actualizado: ACTUALIZADO, fuente: FUENTE } = IDAE;
   <section class="intro">
     <div class="cabecera">
       <h1>Comunidades energéticas en España</h1>
-      <a class="btn-alta" href="/alta/">
+      <a class="btn-alta" href="https://VatiaCo.duckdns.org/login?alta=comunidad" data-plataforma="Alta de una comunidad energética" data-plataforma-ruta="login?alta=comunidad">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M19 8v6M16 11h6"/></svg>
         Da de alta tu comunidad
       </a>
