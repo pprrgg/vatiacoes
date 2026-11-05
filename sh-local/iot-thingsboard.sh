@@ -80,7 +80,7 @@ IOT_USER="pk"
 # Superusuario de la plataforma: el unico usuario que crea el script (tenant "Plataforma",
 # solo ve su panel). Crea comunidades y gestores, asigna las cuentas de Datadis y hace
 # copias de PostgreSQL. Su contraseña (SUPER_PASSWORD), en .env.secretos.
-SUPER_EMAIL="super@vatiaco.es"
+SUPER_EMAIL="kgnete@gmail.com"
 
 # Alta online de comunidades, gratuita: el modal «Alta de una comunidad energética» del inicio de
 # sesion de la plataforma (la web lo abre con login?alta=comunidad o login?alta=prueba) llama a la
@@ -9274,6 +9274,53 @@ def _huella(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _al_gestor(d, asunto, parrafos, boton=None, nota=None):
+    """Correo al solicitante del alta (texto y HTML, con el estilo de los demas). parrafos: lista
+    de textos; boton: (texto, url); nota: recuadro destacado."""
+    e = html.escape
+    lineas = [f"Hola, {d.get('contacto')}:", ""]
+    for x in parrafos:
+        lineas += [x, ""]
+    if boton and boton[1]:
+        lineas += [f"{boton[0]}: {boton[1]}", ""]
+    if nota:
+        lineas += [nota, ""]
+    lineas.append(f"Si tienes cualquier duda, escríbenos a {contacto()}.")
+    cuerpo = "".join(f"<p>{e(x)}</p>" for x in parrafos)
+    if boton and boton[1]:
+        cuerpo += (f"<p style=\"margin:22px 0\"><a href=\"{e(boton[1])}\" style=\"background:#0b6e4f;color:#ffffff;"
+                   "text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:8px;display:inline-block\">"
+                   f"{e(boton[0])}</a></p>")
+    if nota:
+        cuerpo += f"<p style=\"background:#eef4ff;border-left:4px solid #2457e6;padding:10px 14px\">{e(nota)}</p>"
+    avisar(asunto, lineas, responder=contacto(), para=[d.get("email")], html_=(
+        "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1d2a33;max-width:560px\">"
+        f"<p>Hola, {e(d.get('contacto') or '')}:</p>{cuerpo}"
+        f"<p style=\"color:#5b6770;font-size:13px\">Si tienes cualquier duda, escríbenos a "
+        f"<a href=\"mailto:{e(contacto())}\" style=\"color:#0b6e4f\">{e(contacto())}</a>.</p></div>"))
+
+
+def _correo_tramite(d):
+    """Al solicitante: su alta se esta tramitando (queda en revision del superusuario)."""
+    _al_gestor(d, f"Estamos tramitando el alta de {d['comunidad']}", [
+        f"Hemos recibido tu solicitud de alta de la comunidad energética «{d['comunidad']}» en la plataforma "
+        "y la estamos tramitando.",
+        "Vamos a revisar los datos" + (" y el documento que nos has enviado" if not d.get("virtual") else "")
+        + ". Cuando la aprobemos te enviaremos otro correo y ya podrás entrar con tu email y la contraseña que elegiste.",
+    ], nota="No tienes que hacer nada más por ahora. Si necesitamos algo, te escribiremos a este email.")
+
+
+def _correo_aprobada(d, revisada):
+    """Al solicitante: su comunidad esta creada (aprobada por el superusuario si estaba en revision)."""
+    _al_gestor(d, f"Tu comunidad {d['comunidad']} ya está " + ("aprobada" if revisada else "creada"), [
+        f"La comunidad energética «{d['comunidad']}» " + ("ha sido aprobada y " if revisada else "")
+        + "ya está creada en la plataforma.",
+        f"Para entrar, usa tu email ({d['email']}) y la contraseña que elegiste al pedir el alta. Desde tu panel de gestor "
+        "puedes dar de alta a los socios, conectar sus suministros de Datadis y ver los informes de la comunidad.",
+    ], boton=("Entrar en la plataforma", URL + "/login" if URL else None),
+       nota="Si no recuerdas la contraseña, pulsa «¿Olvidaste tu contraseña?» en la pantalla de inicio de sesión.")
+
+
 def _recibida(aid, d, doc=(None, None, None), directa=False):
     """Alta lista para seguir: aviso a AVISOS_EMAIL y, sin revision (o directa: la de prueba con el
     email confirmado), se crea."""
@@ -9292,7 +9339,9 @@ def _recibida(aid, d, doc=(None, None, None), directa=False):
          if revision else "Estado: se está creando (email del gestor confirmado, sin revisión)." if directa
          else "Estado: se está creando (sin revisión)."),
     ], responder=d["email"], adjunto=doc)
-    if not revision:
+    if revision:
+        _correo_tramite(d)
+    else:
         threading.Thread(target=crear, args=(aid,), name=f"alta-{aid}", daemon=True).start()
 
 
@@ -9493,6 +9542,8 @@ def crear(aid):
                            "caduca = CASE WHEN datos ? 'virtual' THEN now() + make_interval(mins => %s) END "
                            "WHERE id = %s", (cid, PRUEBA_MIN, aid))
             log.info("alta online: comunidad %s creada (%s, gestor %s)", cid, d["municipio"], d["email"])
+            if not d.get("virtual"):
+                _correo_aprobada(d, APROBACION or bool(d.get("nueva")))
         except Exception as e:
             log.exception("alta online %s (%s)", aid, cid)
             with _cx() as cx:
@@ -16853,9 +16904,9 @@ AYUDA = {
     "Pulsa <i>Entrar</i> en su fila de <i>Gestores y sus comunidades</i>: abres su panel como el gestor. Para volver, "
     "cierra la sesión y entra de nuevo con tu usuario."]]],
   ["Gestores y comunidades", "groups", [
-   ["¿Cómo creo un gestor y su comunidad?",
-    "En <i>Nuevo gestor y su comunidad</i>, pon el nombre del gestor, su email (será su usuario), su contraseña y el "
-    "nombre de la comunidad. En un minuto se crean la comunidad, su base de datos, sus paneles y el usuario del gestor. "
+   ["¿Cómo se crea un gestor y su comunidad?",
+    "El gestor la pide con <i>Dar de alta una comunidad</i> en el inicio de sesión y tú la apruebas en <i>Altas online</i>. "
+    "También puedes crear varias a la vez con <i>Importar CSV</i>. "
     "La cuenta de Datadis la pone después el propio gestor en su pestaña <i>Gestor</i>."],
    ["¿Qué hacen Editar, Suspender y Borrar?",
     "<i>Editar</i> cambia el nombre, el email, el teléfono o la contraseña del gestor (en todas sus comunidades). "
@@ -17002,20 +17053,15 @@ PLAT_HTML = """<div class="al">
    teléfono que tenéis de ella, no solo al que ha puesto aquí) y después avísale de que ya puede entrar. <i>Rechazar</i> no
    cambia nada. Solo llegan las de usuarios de la plataforma (las demás se ignoran), y las que no se atienden caducan a los 7 días.</p>
  </section>
- <section class="al-caja al-form">
-  <h3 class="al-titulo">Nuevo gestor y su comunidad</h3>
+ <section class="al-caja al-form al-oculto">
+  <h3 class="al-titulo">Editar gestor</h3>
   <div class="al-campos">
    <label><span class="req">Nombre del gestor</span><input class="f-gnombre" maxlength="80"></label>
    <label><span class="req">Email del gestor (usuario)</span><input class="f-email" type="email"></label>
-   <label><span class="req f-pwreq">Contraseña</span><input class="f-password" type="text" autocomplete="new-password"></label>
-   <label class="f-edita">Teléfono<input class="f-tel" maxlength="30"></label>
-   <label class="f-com"><span class="req">Nombre de la comunidad</span><input class="f-nombre" maxlength="80"></label>
+   <label><span class="f-pwreq">Contraseña</span><input class="f-password" type="text" autocomplete="new-password" placeholder="vacía = no cambia"></label>
+   <label>Teléfono<input class="f-tel" maxlength="30"></label>
   </div>
-  <p class="f-ayuda">Se crea la comunidad (su espacio en la plataforma, base de datos y paneles) y el usuario del gestor, que entra
-   directamente en su comunidad y da de alta a sus socios. La <b>cuenta de Datadis</b>, con la que la comunidad descarga
-   los datos de los suministros, la pone el gestor en su pestaña <i>Gestor</i>; el teléfono, con <i>Editar</i>.
-   Tarda un minuto.</p>
-  <div class="al-ctrl"><button class="al-b al-guardar">Crear gestor y comunidad</button><button class="al-b sec al-cancelar al-oculto">Cancelar</button></div>
+  <div class="al-ctrl"><button class="al-b al-guardar">Guardar cambios</button><button class="al-b sec al-cancelar">Cancelar</button></div>
  </section>
  </div>
  <div class="al-pest" data-pest="cop">
@@ -17314,41 +17360,25 @@ self.onInit = function () {
   }
   function fila(id) { return P.filas.filter(function (f) { return f.id === id; })[0] || { id: id, nombre: id }; }
 
-  // Formulario: alta de gestor y comunidad, o edicion del gestor (su comunidad no cambia)
-  var CAMPOS = { gnombre: 'gestor_nombre', email: 'gestor_email', password: 'gestor_password', tel: 'gestor_telefono',
-                 nombre: 'nombre' };
+  // Formulario: edicion del gestor (su comunidad no cambia); oculto si no se esta editando.
+  // Las comunidades nuevas llegan por las altas online (o el CSV)
+  var CAMPOS = { gnombre: 'gestor_nombre', email: 'gestor_email', password: 'gestor_password', tel: 'gestor_telefono' };
   function form(f) {
     P.edita = f || null;
-    q('al-titulo').textContent = f ? 'Editar gestor de ' + f.nombre : 'Nuevo gestor y su comunidad';
-    q('al-guardar').textContent = f ? 'Guardar cambios' : 'Crear gestor y comunidad';
-    q('al-cancelar').classList.toggle('al-oculto', !f);
-    q('f-ayuda').classList.toggle('al-oculto', !!f);
-    q('f-pwreq').className = f ? 'f-pwreq' : 'req f-pwreq';
-    q('f-password').placeholder = f ? 'vacía = no cambia' : '';
-    [].forEach.call(c.querySelectorAll('.f-com'), function (l) { l.classList.toggle('al-oculto', !!f); });
-    [].forEach.call(c.querySelectorAll('.f-edita'), function (l) { l.classList.toggle('al-oculto', !f); });
-    Object.keys(CAMPOS).forEach(function (k) { q('f-' + k).value = f && f[CAMPOS[k]] != null && k !== 'password' ? f[CAMPOS[k]] : ''; });
-    if (f) { pestana('com'); q('al-form').scrollIntoView({ behavior: 'smooth' }); }
+    q('al-form').classList.toggle('al-oculto', !f);
+    if (!f) return;
+    q('al-titulo').textContent = 'Editar gestor de ' + f.nombre;
+    Object.keys(CAMPOS).forEach(function (k) { q('f-' + k).value = f[CAMPOS[k]] != null && k !== 'password' ? f[CAMPOS[k]] : ''; });
+    pestana('com'); q('al-form').scrollIntoView({ behavior: 'smooth' });
   }
   q('al-cancelar').onclick = function () { form(null); };
   q('al-guardar').onclick = function () {
+    var f = P.edita;
+    if (!f) return;
     var v = {}; Object.keys(CAMPOS).forEach(function (k) { v[CAMPOS[k]] = q('f-' + k).value.trim(); });
-    if (P.edita) {
-      var f = P.edita;
-      if (v.gestor_email.toLowerCase() !== (f.gestor_email || '') && !v.gestor_password) { msg('Al cambiar el email pon también la contraseña.', 'err'); return; }
-      msg('Guardando el gestor de ' + f.nombre + '…');
-      return tarea(api('PUT', ruta(f.id) + '/gestor', { gestor_nombre: v.gestor_nombre, gestor_email: v.gestor_email,
-                                                       gestor_telefono: v.gestor_telefono, gestor_password: v.gestor_password })
-        .then(function () { form(null); msg('Gestor de ' + f.nombre + ' guardado.', 'ok'); }));
-    }
-    if (!v.gestor_nombre || !v.gestor_email || !v.gestor_password || !v.nombre) {
-      msg('Rellena el nombre, el email y la contraseña del gestor y el nombre de la comunidad.', 'err'); return; }
-    delete v.gestor_telefono;
-    msg('Creando ' + v.nombre + ' y su gestor… (tenant, base de datos y paneles; un minuto)');
-    tarea(api('POST', '/plataforma/comunidades', v).then(function (r) {
-      form(null);
-      msg('Comunidad ' + r.nombre + ' creada. Su gestor entra con ' + r.gestor_email + ' y da de alta a sus socios.', 'ok');
-    }));
+    if (v.gestor_email.toLowerCase() !== (f.gestor_email || '') && !v.gestor_password) { msg('Al cambiar el email pon también la contraseña.', 'err'); return; }
+    msg('Guardando el gestor de ' + f.nombre + '…');
+    tarea(api('PUT', ruta(f.id) + '/gestor', v).then(function () { form(null); msg('Gestor de ' + f.nombre + ' guardado.', 'ok'); }));
   };
 
   // CSV de gestores y comunidades
@@ -20118,8 +20148,8 @@ edita, suspende (no puede entrar; no se borra nada) y borra a sus hijos en una t
 | Gestor | sus comunidades (las crea en su pestaña *Gestor*) y sus socios | \`socio\` (\`cec_<id>\`) | socio, usuario y teléfono, estado (y si cuenta en los totales), CUPS y contrato, datos cargados, origen |
 | Socio | — (solo ve su panel) | | |
 
-- **Nuevo gestor**: con su comunidad (nombre del gestor, email, contraseña y nombre de la
-  comunidad). Se crean su tenant de ThingsBoard, su base \`cec_<id>\`, sus paneles y el usuario
+- **Nuevo gestor**: con su comunidad, desde el alta online (la aprueba el superusuario en *Altas
+  online*) o con *Importar CSV*. Se crean su tenant de ThingsBoard, su base \`cec_<id>\`, sus paneles y el usuario
   del gestor (un minuto). La **cuenta de Datadis** la pone el gestor en su pestaña *Gestor*; en *Suministros
   autorizados* reparte entre sus comunidades los suministros que le han autorizado.
 - **Gestor de varias comunidades**: las crea él mismo (pestaña *Suministros autorizados* → *Mis comunidades*) con
