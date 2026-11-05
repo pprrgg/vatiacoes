@@ -94,7 +94,7 @@ SUPER_PASSWORD="super"
 ALTA_ONLINE="si"                     # no = alta online desactivada (la pagina lo dice)
 ALTA_MAX_DIA="20"                    # tope de altas online en 24 h (cada una crea un tenant y una base)
 ALTA_APROBACION="si"                 # si = cada alta espera a que el superusuario la apruebe en su panel
-ALTA_PRUEBA_MINUTOS="${ALTA_PRUEBA_MINUTOS:-2}"   # vida de una comunidad de prueba (luego se borra entera; 60 = 1 h)
+ALTA_PRUEBA_MINUTOS="${ALTA_PRUEBA_MINUTOS:-60}"   # vida de una comunidad de prueba (luego se borra entera; 60 = 1 h)
 ALTA_PRUEBA_MAX="${ALTA_PRUEBA_MAX:-3}"           # pruebas confirmadas por email; despues, que nos escriba
                                      # (no hay verificacion del email); no = se crea al momento
 
@@ -2388,7 +2388,7 @@ def cargar_perfil(socio_id, perfil):
 def _dispositivo(nombre):
     d = tb().dispositivo(nombre)
     if not d:
-        raise RuntimeError(f"no existe el dispositivo '{nombre}' en ThingsBoard (ejecuta iot-thingsboard.sh)")
+        raise RuntimeError(f"no existe el dispositivo '{nombre}' en la plataforma (ejecuta iot-thingsboard.sh)")
     return d["id"]["id"]
 
 
@@ -2655,7 +2655,7 @@ def _ejecutar(j):
     if origen == "comunidad":
         nota("Recalculo de los totales de la comunidad (socios habilitados)")
     elif solo_tb:
-        nota(f"Recarga de ThingsBoard con los datos de PostgreSQL (copia restaurada), {len(socios)} socios")
+        nota(f"Recarga de los paneles con los datos de PostgreSQL (copia restaurada), {len(socios)} socios")
     else:
         nota(f"API de Datadis ({f'{desde}-{hasta}' if desde else 'todo lo disponible de cada CUPS, superpuesto a lo que ya hay'}), "
              f"{len(socios)} socios{', forzada' if j['forzar'] else ''}")
@@ -2693,7 +2693,7 @@ def _ejecutar(j):
                 p = publicar_socio(cx, so, r and r["rango"], forzar, version)
                 if p:
                     rangos.append(None if p["completo"] else (p["d0"], p["d1"]))
-                    nota(f"{so['nombre']}: ThingsBoard {'actualizado con todos sus datos' if p['completo'] else 'actualizado'} "
+                    nota(f"{so['nombre']}: paneles {'actualizados con todos sus datos' if p['completo'] else 'actualizados'} "
                          f"({p['n']} lecturas)")
             except Detenida as d:
                 detenida = str(d)
@@ -7691,7 +7691,7 @@ def aprovisionar(c, gestor_password="", passwords=None):
     salida = (r.stdout + ("\n" + r.stderr if r.stderr else "")).strip()
     log.info("aprovisionamiento de %s:\n%s", c["id"], salida)
     if r.returncode:
-        raise RuntimeError(f"ThingsBoard ({c['nombre']}): " + salida[-1500:])
+        raise RuntimeError(f"Plataforma ({c['nombre']}): " + salida[-1500:])
     if recuperar:
         _poner_hashes(recuperar)
         salida += "\n    contraseñas recuperadas de la base de datos: " + ", ".join(sorted(recuperar))
@@ -8027,12 +8027,12 @@ def entrar(cid):
     sa = _sa()
     u = _usuario_tb(sa, c, c["gestor_tb_email"])
     if not u:
-        raise ValueError("El gestor aún no está en ThingsBoard (vuelve a restaurar la copia de la comunidad)")
+        raise ValueError("El gestor aún no está en la plataforma (vuelve a restaurar la copia de la comunidad)")
     u = sa.req("GET", f"/api/user/{u['id']['id']}") or u
     panel = (u.get("additionalInfo") or {}).get("defaultDashboardId")
     t = sa.req("GET", f"/api/user/{u['id']['id']}/token")
     if not t or not t.get("token"):
-        raise RuntimeError("ThingsBoard no permite entrar como otro usuario (SECURITY_USER_TOKEN_ACCESS_ENABLED)")
+        raise RuntimeError("La plataforma no permite entrar como otro usuario (SECURITY_USER_TOKEN_ACCESS_ENABLED)")
     log.info("el superusuario entra en %s como su gestor %s", cid, c["gestor_email"])
     return {"token": t["token"], "refreshToken": t.get("refreshToken"), "comunidad": c["nombre"], "panel": panel}
 
@@ -9389,9 +9389,60 @@ def _fila(aid):
     return a
 
 
+# Socios de prueba con que nace cada comunidad de prueba (nombre, tipo simulado de SIM_TIPOS y
+# kWh al mes): dos consumidores y una instalacion FV que genera en el año lo mismo que consumen
+# los dos (300 + 700 = 1.000 kWh al mes de media; unos 7 kWp con FV_KWH_MES_KWP), para que la
+# comunidad salga lo mas equilibrada posible. Sin email: no tienen usuario.
+PRUEBA_SOCIOS = [("Vivienda", "residencial", 300),
+                 ("Pequeño comercio", "comercial", 700),
+                 ("Instalación fotovoltaica", "generador_fv", 1000)]
+
+
+def _socios_prueba(c):
+    """Comunidad de prueba recien creada: sus PRUEBA_SOCIOS con los datos de su perfil (dos años
+    simulados, como los de Datadis) y sin el socio de prueba vacio con que nace toda comunidad.
+    -> True si hay algo que publicar en ThingsBoard."""
+    from . import cec
+
+    def hacer():
+        hechos = 0
+        for nombre, tipo, kwh in PRUEBA_SOCIOS:
+            try:
+                so = plataforma.alta_virtual(nombre, "plataforma (comunidad de prueba)")
+                cec.cargar_perfil(so["id"], {"sim_tipo": tipo, "sim_kwh_mes": kwh})
+                hechos += 1
+            except Exception:
+                log.exception("comunidad de prueba %s: socio %s", c["id"], nombre)
+        if hechos:
+            try:
+                plataforma.baja_socio(db.VIRTUAL_ID)
+            except KeyError:
+                pass
+            except Exception:
+                log.exception("comunidad de prueba %s: socio de prueba vacío", c["id"])
+        return hechos > 0
+    return plataforma.con(c, hacer)
+
+
+def _publicar(c):
+    """Publica en ThingsBoard los datos de la comunidad (en segundo plano: tarda un rato)."""
+    from . import cec
+
+    def hacer():
+        if db.job_activo():
+            return
+        cec.ejecutar(db.crear_job("auto", None, None, True, None, "alta online (comunidad de prueba)"))
+    try:
+        plataforma.con(c, hacer)
+    except Exception:
+        log.exception("comunidad de prueba %s: publicación de los datos", c["id"])
+
+
 def crear(aid):
     """Crea la comunidad igual que el superusuario (plataforma.crear_comunidad) y pone al
-    gestor la contraseña que eligio. Un reintento retoma la que se quedo a medias."""
+    gestor la contraseña que eligio. Un reintento retoma la que se quedo a medias. La de prueba
+    nace con sus PRUEBA_SOCIOS (sus datos se publican en segundo plano)."""
+    publicar = None
     with _CREAR:
         with _cx() as cx:
             a = cx.execute("UPDATE alta SET estado = 'creando', error = NULL, actualizado = now() "
@@ -9413,6 +9464,13 @@ def crear(aid):
                 plataforma._poner_hashes({d["email"]: a["hash"]})
                 with _cx() as cx:
                     cx.execute("UPDATE gestor SET hash = %s WHERE comunidad = %s", (a["hash"], cid))
+            if d.get("virtual"):
+                c = plataforma.por_id(cid)
+                try:
+                    if c and _socios_prueba(c):
+                        publicar = c
+                except Exception:   # la comunidad sirve igual, aunque sin sus socios
+                    log.exception("comunidad de prueba %s: socios", cid)
             with _cx() as cx:
                 cx.execute("UPDATE alta SET estado = 'creada', comunidad = %s, hash = NULL, actualizado = now(), "
                            "caduca = CASE WHEN datos ? 'virtual' THEN now() + make_interval(mins => %s) END "
@@ -9423,6 +9481,9 @@ def crear(aid):
             with _cx() as cx:
                 cx.execute("UPDATE alta SET estado = 'error', error = %s, actualizado = now() WHERE id = %s",
                            (str(e)[-2000:], aid))
+            publicar = None
+    if publicar:
+        threading.Thread(target=_publicar, args=(publicar,), name=f"alta-datos-{cid}", daemon=True).start()
     return _fila(aid)
 
 
@@ -10176,7 +10237,7 @@ async def vida(app):
 
 
 app = FastAPI(title="API de la comunidad energética", version="1.0", lifespan=vida,
-              description="Sincronización de Datadis (PostgreSQL → ThingsBoard), informes, gestión y plataforma.")
+              description="Sincronización de Datadis (PostgreSQL → paneles), informes, gestión y plataforma.")
 
 
 # ---------------- autenticacion ----------------
@@ -10192,7 +10253,7 @@ def _api_key(x_api_key):
 async def _usuario_tb(x_authorization, authorization):
     cab = x_authorization or authorization or ""
     if not cab.lower().startswith("bearer "):
-        raise HTTPException(401, "Falta el token de ThingsBoard (X-Authorization: Bearer ...)")
+        raise HTTPException(401, "Falta el token de sesión (X-Authorization: Bearer ...)")
     token = cab[7:].strip()
     hit = _TOKENS.get(token)
     if hit and hit[0] > time.time():
@@ -10203,7 +10264,7 @@ async def _usuario_tb(x_authorization, authorization):
             _TOKENS.clear()
         _TOKENS[token] = (time.time() + 60, u)
     if not u:
-        raise HTTPException(401, "Token de ThingsBoard no válido o caducado")
+        raise HTTPException(401, "Token no válido o caducado")
     _quien(u.get("email"), {"TENANT_ADMIN": "gestor", "CUSTOMER_USER": "socio"}.get(u.get("authority"), u.get("authority")))
     return u
 
@@ -10344,10 +10405,10 @@ class PeticionSync(BaseModel):
     origen: Literal["auto", "datadis", "comunidad", "thingsboard"] = Field(
         "auto", description="auto / datadis: API de Datadis con la cuenta de la comunidad (y los socios "
                             "simulados). comunidad: solo recalcula los totales de la comunidad (socios habilitados). "
-                            "thingsboard: recarga ThingsBoard entero con los datos de PostgreSQL (sin Datadis)")
+                            "thingsboard: recarga los paneles enteros con los datos de PostgreSQL (sin Datadis)")
     desde: str | None = Field(None, pattern=MES, description="Primer mes (AAAA/MM), solo API de Datadis")
     hasta: str | None = Field(None, pattern=MES, description="Último mes (AAAA/MM), solo API de Datadis")
-    forzar: bool = Field(False, description="Repetir consultas de las últimas 24 h y recargar ThingsBoard entero")
+    forzar: bool = Field(False, description="Repetir consultas de las últimas 24 h y recargar los paneles enteros")
     socios: list[str] | None = Field(None, description="Solo estos socios (ids); vacío = todos")
 
 
@@ -10687,7 +10748,7 @@ class PeticionFicheros(BaseModel):
 
 @app.post("/socios/{socio_id}/ficheros",
           summary="Carga CSV de la descarga web de Datadis de un socio, uno a uno o varios (consumos, potencias máximas, "
-                  "reactiva y contrato); se publican en ThingsBoard con la siguiente sincronización")
+                  "reactiva y contrato); se publican en los paneles con la siguiente sincronización")
 async def socio_ficheros(socio_id: str, p: PeticionFicheros, quien: str = Depends(admin)):
     try:
         await asyncio.to_thread(_plat, plataforma.asegurar_dispositivo, socio_id)
@@ -10709,7 +10770,7 @@ class PeticionPerfil(BaseModel):
 
 @app.post("/socios/{socio_id}/perfil",
           summary="Socio de prueba: genera los dos últimos años de datos como los de Datadis con un perfil de prosumidor "
-                  "(consumo y generación; sustituyen a los que tenga); se publican en ThingsBoard con la siguiente sincronización")
+                  "(consumo y generación; sustituyen a los que tenga); se publican en los paneles con la siguiente sincronización")
 async def socio_perfil(socio_id: str, p: PeticionPerfil, quien: str = Depends(admin)):
     try:
         await asyncio.to_thread(_plat, plataforma.asegurar_dispositivo, socio_id)
@@ -11469,7 +11530,7 @@ async def plataforma_lista(_: str = Depends(superusuario)):
 
 
 @app.post("/plataforma/comunidades", status_code=201,
-          summary="Crea una comunidad: tenant de ThingsBoard, base de datos, paneles y su gestor")
+          summary="Crea una comunidad: su espacio en la plataforma, base de datos, paneles y su gestor")
 async def plataforma_crear(datos: dict, quien: str = Depends(superusuario)):
     try:
         return await asyncio.to_thread(plataforma.crear_comunidad, datos, quien)
@@ -11480,7 +11541,7 @@ async def plataforma_crear(datos: dict, quien: str = Depends(superusuario)):
 
 
 @app.post("/plataforma/comunidades/{cid}/aprovisionar",
-          summary="Vuelve a crear o actualizar en ThingsBoard lo de una comunidad (paneles, usuarios...)")
+          summary="Vuelve a crear o actualizar en la plataforma lo de una comunidad (paneles, usuarios...)")
 async def plataforma_aprovisionar(cid: str, _: str = Depends(superusuario)):
     c = await asyncio.to_thread(plataforma.por_id, cid)
     if not c:
@@ -11615,10 +11676,10 @@ def _aprovisionar_tras_restaurar(c):
     restauracion (se puede repetir restaurando otra vez la copia)."""
     try:
         plataforma.aprovisionar(c)
-        return f"{c['nombre']}: ThingsBoard actualizado"
+        return f"{c['nombre']}: paneles actualizados"
     except Exception as e:
         log.exception("aprovisionamiento tras restaurar %s", c["id"])
-        return f"{c['nombre']}: ThingsBoard no se pudo actualizar ({e}); vuelve a restaurar la copia"
+        return f"{c['nombre']}: los paneles no se pudieron actualizar ({e}); vuelve a restaurar la copia"
 
 
 @app.get("/plataforma/copias/bases", summary="Bases de datos que copia y restaura el superusuario")
@@ -11749,7 +11810,7 @@ async def plat_copias_restaurar(nombre: str, p: PeticionComunidadCopia | None = 
 
 
 @app.post("/plataforma/superusuario",
-          summary="Copia a PostgreSQL los datos del superusuario de ThingsBoard (lo usa iot-thingsboard.sh)")
+          summary="Copia a PostgreSQL los datos del superusuario de la plataforma (lo usa iot-thingsboard.sh)")
 async def plataforma_superusuario(_: str = Depends(superusuario)):
     return await asyncio.to_thread(plataforma.preparar_superusuario)
 
@@ -11977,7 +12038,8 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       '<label data-campo="virtual_lugar"><span class="req">Ubicación</span><input name="virtual_lugar" readonly placeholder="Pulsa en el mapa">' +
       '<span class="err"></span></label>' +
       campo('virtual_municipio', 'Municipio (opcional)', ' maxlength="60" autocomplete="address-level2"') +
-      '</div><small>Para estudios con socios de prueba (perfiles de consumo y generación simulados, sin Datadis): se crea con el nombre ' +
+      '</div><small>Para estudios con socios de prueba (perfiles de consumo y generación simulados, sin Datadis). Nace con tres: ' +
+      'una vivienda, un pequeño comercio y una instalación fotovoltaica que genera en el año lo mismo que consumen los dos. Se crea con el nombre ' +
       'que pongas y «(prueba)» al final, en la ubicación del mapa (allí se sitúan la comunidad y sus socios). ' +
       'No pide documento acreditativo: te enviaremos un correo para confirmarla y se crea al momento. ' +
       'Estará disponible <b class="vida">un tiempo limitado</b>; después se borra con todos sus datos.</small></div>' +
@@ -12993,6 +13055,20 @@ titulo = ("<script>(function(){var B=" + repr(brand) + ";var t=document.querySel
           "document.title=document.title.replace(/ThingsBoard/g,B);}"
           "new MutationObserver(f).observe(t,{childList:true,characterData:true,subtree:true});f();})();"
           "</script>")
+# La palabra "ThingsBoard" no se ve en ningun sitio: en cualquier texto visible (y en los atributos
+# title, placeholder, aria-label y alt) se cambia por la marca, tambien en lo que se va pintando
+# (menus, avisos, dialogos, widgets). No toca scripts, estilos ni campos de texto.
+marca = ("<script>(function(){var B=" + repr(brand) + ",R=/ThingsBoard/g,A=['title','placeholder','aria-label','alt'];"
+         "function tx(n){var p=n.parentNode;if(!p||/^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName))return;"
+         "if(n.nodeValue&&n.nodeValue.indexOf('ThingsBoard')>=0)n.nodeValue=n.nodeValue.replace(R,B);}"
+         "function at(e){if(!e.getAttribute)return;for(var i=0;i<A.length;i++){var v=e.getAttribute(A[i]);"
+         "if(v&&v.indexOf('ThingsBoard')>=0)e.setAttribute(A[i],v.replace(R,B));}}"
+         "function re(n){if(n.nodeType===3){tx(n);return;}if(n.nodeType!==1||/^(SCRIPT|STYLE)$/.test(n.nodeName))return;"
+         "at(n);var w=document.createTreeWalker(n,5,null),x;while((x=w.nextNode())){if(x.nodeType===3)tx(x);else at(x);}}"
+         "new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='characterData')tx(m.target);"
+         "else if(m.type==='attributes')at(m.target);else m.addedNodes.forEach(re);});})"
+         ".observe(document,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:A});"
+         "document.addEventListener('DOMContentLoaded',function(){re(document.body);});})();</script>")
 # Web de la marca: la enlaza el logo de la barra lateral de los paneles (VL_WEB, widgets
 # VatiaCo.nav) y el de ThingsBoard (login y menu lateral) en lugar de thingsboard.io
 home = ("<script>(function(){var U=" + repr(web) + ";window.VL_WEB=U;"
@@ -13044,7 +13120,7 @@ idioma += ("<script>(function(){function f(){document.querySelectorAll('tb-dashb
            "</script>")
 html = html.replace("<head>", "<head>\n  " + idioma, 1)
 html = html.replace("</head>", '  <link rel="stylesheet" href="/branding/VatiaCo.css"/>\n  '
-                    + titulo + "\n  " + home + "\n</head>", 1)
+                    + titulo + "\n  " + marca + "\n  " + home + "\n</head>", 1)
 sys.stdout.write(html)
 PY
   rm -f config/branding/index.orig.html
@@ -15339,8 +15415,8 @@ BD_HTML = """<div class="bd">
   <div class="bd-tabla">Cargando…</div>
   <p><b>Restaurar</b> sustituye todos los datos de la comunidad (lecturas, socios, gestión y documentos) por los de la copia,
    en una sola operación: si algo falla no se cambia nada. Antes se guarda el estado actual como copia <i>previa</i>.
-   ThingsBoard se pone al día en la siguiente sincronización (pestaña Socios).</p>
-  <p class="bd-tbnota bd-oculto">La base de ThingsBoard no se restaura desde aquí (hay que pararlo): en el servidor,
+   Los paneles se ponen al día en la siguiente sincronización (pestaña Socios).</p>
+  <p class="bd-tbnota bd-oculto">La base de los paneles no se restaura desde aquí (hay que pararla): en el servidor,
    <code>docker compose stop thingsboard &amp;&amp; docker compose exec -T postgres pg_restore -U &lt;usuario&gt; -d thingsboard --clean --if-exists &lt; backups/postgres/&lt;fichero&gt; &amp;&amp; docker compose start thingsboard</code></p>
  </section>
  <section class="bd-caja">
@@ -15424,7 +15500,7 @@ self.onInit = function () {
         filas.map(function (f) {
           var n = esc(f.nombre);
           return '<tr><td>' + fecha(f.fecha) + '</td><td><span class="bd-chip' + (f.restaurable ? ' cec' : '') + '">' +
-            (f.restaurable ? 'Comunidad' : 'ThingsBoard') + '</span></td>' +
+            (f.restaurable ? 'Comunidad' : 'Paneles') + '</span></td>' +
             '<td>' + (f.tipo === 'previa' ? '<span class="bd-chip previa">' + TIPOS[f.tipo] + '</span>' : TIPOS[f.tipo] || f.tipo) + '</td>' +
             '<td class="n">' + tam(f.bytes) + '</td><td>' + n + '</td><td class="acc">' +
             '<button class="bd-b sec peq" data-d="' + n + '">Descargar</button> ' +
@@ -15481,7 +15557,7 @@ self.onInit = function () {
   q('bd-hacer').onclick = function () {
     var bases = [].map.call(c.querySelectorAll('.bd-bases input:checked'), function (i) { return i.value; });
     if (!bases.length) { msg('Elige al menos una base de datos.', 'err'); return; }
-    tarea('Haciendo la copia… (la de ThingsBoard puede tardar un poco)', api('POST', '/copias', { bases: bases }),
+    tarea('Haciendo la copia… (la de los paneles puede tardar un poco)', api('POST', '/copias', { bases: bases }),
       function (r) { return 'Copia hecha: ' + r.map(function (f) { return f.nombre + ' (' + tam(f.bytes) + ')'; }).join(', ') + '.'; });
   };
   q('bd-subir').onclick = function () {
@@ -16858,7 +16934,7 @@ PLAT_HTML = """<div class="al">
    <label class="f-edita">Teléfono<input class="f-tel" maxlength="30"></label>
    <label class="f-com"><span class="req">Nombre de la comunidad</span><input class="f-nombre" maxlength="80"></label>
   </div>
-  <p class="f-ayuda">Se crea la comunidad (tenant de ThingsBoard, base de datos y paneles) y el usuario del gestor, que entra
+  <p class="f-ayuda">Se crea la comunidad (su espacio en la plataforma, base de datos y paneles) y el usuario del gestor, que entra
    directamente en su comunidad y da de alta a sus socios. La <b>cuenta de Datadis</b>, con la que la comunidad descarga
    los datos de los suministros, la pone el gestor en su pestaña <i>Gestor</i>; el teléfono, con <i>Editar</i>.
    Tarda un minuto.</p>
@@ -16915,7 +16991,7 @@ PLAT_HTML = """<div class="al">
  <section class="al-caja">
   <h3>Cómo funcionan</h3>
   <p><b>Restaurar</b> sustituye todos los datos de esa base por los de la copia, en una sola operación, y vuelve a crear en
-   ThingsBoard su tenant, sus paneles y sus usuarios, que entran con su contraseña de siempre (las copias guardan su hash).
+   la plataforma su espacio, sus paneles y sus usuarios, que entran con su contraseña de siempre (las copias guardan su hash).
    Cada día a las 03:00 se hace una copia automática de todas las bases, que se guarda 7 días; las manuales, subidas y previas
    se guardan hasta que las borres. Para llevar la plataforma a otro servidor: <i>Copia completa y descargar</i> aquí y, allí,
    <i>Restaurar desde un archivo</i> con el <code>.tar</code>.</p>
@@ -17119,7 +17195,7 @@ self.onInit = function () {
             '<td>' + esc(f.gestor_email || '–') + (f.gestor_telefono ? '<br><small>' + esc(f.gestor_telefono) + '</small>' : '') + '</td>' +
             '<td>' + (EST[f.gestor_estado] || '<span class="al-chip">' + esc(f.gestor_estado) + '</span>') + '</td>' +
             '<td><b>' + esc(f.nombre) + '</b><br><small>' + id + ' · base ' + esc(f.base) +
-              (f.aprovisionada ? '' : ' · <span class="al-chip no">ThingsBoard pendiente</span>') + '</small></td>' +
+              (f.aprovisionada ? '' : ' · <span class="al-chip no">paneles pendientes</span>') + '</small></td>' +
             '<td>' + dd + '</td>' +
             '<td>' + sub + '</td>' +
             '<td class="n">' + (f.socios == null ? '–' : f.socios) + (f.suspendidos ? '<br><small>' + f.suspendidos + ' suspendidos</small>' : '') + '</td>' +
@@ -17150,7 +17226,7 @@ self.onInit = function () {
       [].forEach.call(c.querySelectorAll('[data-x]'), function (b) { b.onclick = function () {
         var f = fila(b.dataset.x);
         if (!confirm('¿Borrar la comunidad ' + f.nombre + '?\n\n' +
-                     'Se borran su gestor' + (f.gestor_email ? ' (' + f.gestor_email + ')' : '') + ', su tenant de ThingsBoard (usuarios, ' +
+                     'Se borran su gestor' + (f.gestor_email ? ' (' + f.gestor_email + ')' : '') + ', su espacio en la plataforma (usuarios, ' +
                      'dispositivos y paneles) y su base de datos (' + f.base + ').\n\n' +
                      'Antes se guarda una copia previa: con ella se puede restaurar desde la pestaña Copias.')) return;
         msg('Borrando ' + f.nombre + '…');
@@ -17496,7 +17572,7 @@ self.onInit = function () {
             throw e;
           });
         }, false).then(function () {
-          fin('Restauradas ' + fs.length + (fs.length === 1 ? ' copia' : ' copias') + ' y ThingsBoard actualizado (usuarios con su contraseña). ' +
+          fin('Restauradas ' + fs.length + (fs.length === 1 ? ' copia' : ' copias') + ' y paneles actualizados (usuarios con su contraseña). ' +
               'Los consumos de cada comunidad se vuelven a cargar en sus paneles en segundo plano (unos minutos).', fs.length, 0);
         });
       });
@@ -17726,7 +17802,7 @@ ADMIN_HTML = """<div class="ad">
   <div class="ad-ctrl">
    <label>Desde <input type="month" class="ad-desde"></label>
    <label>Hasta <input type="month" class="ad-hasta"></label>
-   <label title="Repite consultas de las últimas 24 h y recarga ThingsBoard entero"><input type="checkbox" class="ad-forzar"> Forzar</label>
+   <label title="Repite consultas de las últimas 24 h y recarga los paneles enteros"><input type="checkbox" class="ad-forzar"> Forzar</label>
    <button class="ad-b sec ad-rango">Recargar rango</button>
   </div>
   <pre class="ad-log"></pre>
@@ -17962,7 +18038,7 @@ self.onInit = function () {
                                 { id: 'socio', params: { entityId: dev.id, entityName: dev.name, entityLabel: dev.label || nombre } }]);
         var url = '/dashboard/' + p.id.id + '?state=' + encodeURIComponent(btoa(unescape(encodeURIComponent(j))));
         if (self.ctx.router) self.ctx.router.navigateByUrl(url); else location.href = url;
-      }, function () { msg('ad-amsg', nombre + ': aún no está en ThingsBoard.', true); });
+      }, function () { msg('ad-amsg', nombre + ': aún no está en la plataforma.', true); });
     }, function () { msg('ad-amsg', 'No se pudo abrir el panel de la comunidad.', true); });
   }
   api('GET', '/datadis/autorizaciones').then(pintarAut).catch(function (e) { q('ad-aut-tabla').textContent = e.message; });

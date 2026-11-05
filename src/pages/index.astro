@@ -15,6 +15,8 @@ const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
 // «De la lista del IDAE» o en «Comunidad de prueba»
 const ALTA_RUTA = 'login?alta=comunidad';
 const PRUEBA_RUTA = 'login?alta=prueba';
+// Vida de la comunidad de prueba: la de ALTA_PRUEBA_MINUTOS (iot-thingsboard.sh); si cambia alli, aqui tambien
+const PRUEBA_VIDA = '1 hora';
 const doc = (url: string) => `/blog/?doc=${encodeURIComponent(url)}`;
 const CE = '/docs/A00_Blog_Interactivo/A02_Comunidades Energéticas/';
 
@@ -69,7 +71,7 @@ const blog = raiz && raiz.type === 'folder'
 const herramientas = blog.reduce((s, b) => s + b.n, 0);
 
 const accesos = [
-  { t: 'Comunidad de prueba', d: 'Créala en un minuto', ico: 'prueba', prueba: true },
+  { t: 'Comunidad de prueba', d: `Gratis durante ${PRUEBA_VIDA}`, ico: 'prueba', prueba: true },
   { t: 'Alta de tu comunidad', d: 'De la lista del IDAE', ico: 'alta', alta: true },
   { t: 'Mapa del IDAE', d: 'Comunidades de España', ico: 'mapa', href: '/comunidades/' },
   { t: 'Documentos de la comunidad', d: 'Estatutos, actas y reparto', ico: 'docs', href: doc(CE + 'C01_Documentos_CEC.html') },
@@ -95,7 +97,7 @@ const plataforma = [
 const pasos = [
   { t: 'Ponle nombre y sitúala', d: 'Elige un nombre y marca en el mapa dónde estaría la comunidad.' },
   { t: 'Confirma tu correo', d: 'Te enviamos un enlace; al pulsarlo se crea al momento.' },
-  { t: 'Explora la plataforma', d: 'Entra como gestor, con socios de prueba y datos simulados, durante un tiempo limitado.' },
+  { t: 'Explora la plataforma', d: `Entra como gestor, con socios de prueba y datos simulados, durante ${PRUEBA_VIDA}.` },
 ];
 ---
 <!DOCTYPE html>
@@ -117,6 +119,10 @@ const pasos = [
       .ini-hero .wrap { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 3rem; align-items: center; }
       @media (max-width: 920px) { .ini-hero .wrap { grid-template-columns: 1fr; gap: 2.5rem; } .ini-hero { padding: 3rem 0 3.5rem; } }
       .ini-hero h1 { margin-top: 0.9rem; }
+      /* «gratuita» resaltada: pastilla amarilla (el color del sol) */
+      .gratis { display: inline-block; padding: 0.22rem 0.7rem; margin: 0 0.15rem; border-radius: 999px; background: var(--sol);
+        color: var(--white); font-weight: 800; letter-spacing: 0.1em; box-shadow: 0 2px 8px rgba(255, 184, 0, 0.3); }
+      .gratis-f { color: #fff; background: rgba(255, 255, 255, 0.16); padding: 0.05rem 0.45rem; border-radius: 0.35rem; }
       .ini-hero .lead { font-size: 1.15rem; max-width: 38rem; margin: 0 0 2rem; color: var(--gray-2); }
 
       /* los dos botones principales: alta (lista del IDAE) y comunidad de prueba */
@@ -225,7 +231,7 @@ const pasos = [
       <div class="ini-hero">
         <div class="wrap">
           <div>
-            <div class="etiqueta">Plataforma gratuita para comunidades energéticas</div>
+            <div class="etiqueta">Plataforma <span class="gratis">gratuita</span> para comunidades energéticas</div>
             <h1>Crea y gestiona tu comunidad energética, <em>con datos hora a hora</em>.</h1>
             <p class="lead">Socios, instalaciones, reparto de la energía y seguimiento en una sola plataforma, con un panel para cada socio. Y un blog con herramientas para calcular, documentar y tramitar cada paso.</p>
             <div class="grandes">
@@ -235,20 +241,20 @@ const pasos = [
               </a>
               <a class="gran prueba-b" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>
                 <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/></svg>
-                <span><b>Probar la plataforma</b><small>Comunidad de prueba · en un minuto</small></span>
+                <span><b>Probar la plataforma</b><small>Comunidad de prueba · {PRUEBA_VIDA} gratis</small></span>
               </a>
             </div>
           </div>
 
           <aside class="prueba" aria-labelledby="prueba-tit">
-            <span class="chip">Gratis · sin compromiso</span>
+            <span class="chip">Gratis · {PRUEBA_VIDA} · sin compromiso</span>
             <h2 id="prueba-tit">Tu comunidad de prueba, en tres pasos</h2>
             <p>Una comunidad completa, con socios simulados, para ver cómo funciona antes de dar de alta la tuya.</p>
             <ol>
               {pasos.map((p) => <li><div><b>{p.t}</b><span>{p.d}</span></div></li>)}
             </ol>
             <a class="btn amarillo" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>Empezar la prueba</a>
-            <small>Al terminar se borra todo y te avisamos por correo.</small>
+            <small>Pasada {PRUEBA_VIDA} se borra todo y te avisamos por correo.</small>
           </aside>
         </div>
       </div>
@@ -328,7 +334,7 @@ const pasos = [
             <div>
               <div class="etiqueta">¿Empezamos?</div>
               <h2>Pon en marcha tu comunidad energética.</h2>
-              <p>El uso de la plataforma es gratuito: sin cuotas, sin permanencia y sin datos bancarios. Si lo prefieres, te ayudamos con la constitución, los medidores y el reparto.</p>
+              <p>El uso de la plataforma es <strong class="gratis-f">gratuito</strong>: sin cuotas, sin permanencia y sin datos bancarios. Si lo prefieres, te ayudamos con la constitución, los medidores y el reparto.</p>
               <p class="contacto-linea"><a href="tel:+34951733491">951 733 491</a> · <a href="mailto:info@vatiaco.es">info@vatiaco.es</a></p>
             </div>
             <div class="grandes">
@@ -338,7 +344,7 @@ const pasos = [
             </a>
             <a class="gran prueba-b" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>
               <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/></svg>
-              <span><b>Probar la plataforma</b><small>Comunidad de prueba · en un minuto</small></span>
+              <span><b>Probar la plataforma</b><small>Comunidad de prueba · {PRUEBA_VIDA} gratis</small></span>
             </a>
           </div>
           </div>
