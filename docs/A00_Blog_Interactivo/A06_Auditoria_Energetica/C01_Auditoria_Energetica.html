@@ -9,19 +9,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -87,9 +87,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(255,176,32,0.1);}
-  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
-  .btn.primary:hover{background:#ffc352;}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
+  .btn.primary:hover{background:#a86a00;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn.small{padding:7px 12px; font-size:11.5px;}
@@ -100,7 +100,7 @@
   .result-chip .v{font-family:var(--font-mono); font-size:22px; color:var(--amber);}
   .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
 
-  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card{background:linear-gradient(135deg, rgba(194,124,0,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
   .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
   .example-table{width:100%; font-size:12px; border-collapse:collapse;}
   .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
@@ -135,7 +135,7 @@
   .bench-track{position:relative; height:12px; background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); margin:34px 0 8px;}
   .bench-zone{position:absolute; top:0; bottom:0;}
   .bench-zone.z-good{background:rgba(22,163,74,0.30);}
-  .bench-zone.z-mid{background:rgba(255,176,32,0.30);}
+  .bench-zone.z-mid{background:rgba(194,124,0,0.30);}
   .bench-zone.z-bad{background:rgba(220,38,38,0.30);}
   .bench-marker{position:absolute; top:-7px; width:2px; height:26px; background:var(--text); z-index:2;}
   .bench-marker .mk-label{position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:10.5px; color:var(--text); white-space:nowrap; background:var(--bg2); padding:1px 5px; border:1px solid var(--line); border-radius:var(--radius);}
@@ -143,11 +143,11 @@
 
   .badge{display:inline-block; font-family:var(--font-mono); font-size:11px; padding:4px 11px; border-radius:var(--radius); text-transform:uppercase; letter-spacing:0.05em;}
   .badge.good{background:rgba(22,163,74,0.15); color:var(--green); border:1px solid var(--green);}
-  .badge.mid{background:rgba(255,176,32,0.15); color:var(--amber); border:1px solid var(--amber);}
+  .badge.mid{background:rgba(194,124,0,0.15); color:var(--amber); border:1px solid var(--amber);}
   .badge.bad{background:rgba(220,38,38,0.15); color:var(--red); border:1px solid var(--red);}
 
   .stack-bar{display:flex; height:28px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); margin:12px 0;}
-  .stack-seg{display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; color:#0A121C; white-space:nowrap; overflow:hidden;}
+  .stack-seg{display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; color:#ffffff; white-space:nowrap; overflow:hidden;}
   .stack-legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:8px;}
   .stack-legend .li{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
   .stack-legend .sw{width:10px; height:10px; border-radius:2px; flex-shrink:0;}
@@ -322,7 +322,7 @@
       <div class="grid3" id="fasesGrid"></div>
 
       <div class="fieldset-title">Metodología VATIACOScreen: caso base vs. caso propuesto</div>
-      <div class="theory-card" style="background:linear-gradient(135deg, rgba(255,176,32,0.10) 0%, rgba(37,99,235,0.10) 100%);">
+      <div class="theory-card" style="background:linear-gradient(135deg, rgba(194,124,0,0.10) 0%, rgba(37,99,235,0.10) 100%);">
         <h3 style="color:var(--amber);">La lógica central del análisis energético-financiero</h3>
         <p style="margin:10px 0;">VATIACOScreen (software de Recursos Naturales de Canadá para el análisis de proyectos de eficiencia y energías limpias) compara dos escenarios de modelización energética:</p>
         <div class="grid2" style="margin-top:14px;">
@@ -787,7 +787,7 @@ function calcularDiagnostico(){
       {l:'Gasóleo C', v:gasoleoKwh, color:'#DC2626'},
       {l:'Biomasa', v:biomasaKwh, color:'#16A34A'},
       {l:'GLP', v:glpKwh, color:'#8B5CF6'},
-      {l:'Otros', v:otrosKwh, color:'#5B7086'},
+      {l:'Otros', v:otrosKwh, color:'#7b8696'},
     ].filter(v=>v.v>0)
   };
 
@@ -1288,7 +1288,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #c27c00; background:#ffffff; color:#c27c00; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

@@ -9,22 +9,15 @@
 <style>
 /* Mesa de trabajo de despacho: panel de datos y documentos a la izquierda, el documento como folio a la derecha */
 :root {
-  --bg: #e9eeec; --surface: #ffffff; --paper: #fffefa; --ink: #17232a; --muted: #586870; --line: #cfd9d6;
-  --accent: #0d6a5b; --accent-ink: #ffffff; --accent-soft: #dcefe9;
+  --bg: #f4f6f9; --surface: #ffffff; --paper: #fffefa; --ink: #0b1f3a; --muted: #5a6576; --line: #dfe4eb;
+  --accent: #2457e6; --accent-ink: #ffffff; --accent-soft: #edf2fe;
   --warn-bg: #fff0d1; --warn: #7d5300; --hueco: #ffe59a; --hueco-ink: #5a4100; --ok: #1f7a3a; --bad: #a3361f;
   --f-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-disp: "IBM Plex Sans Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
   --f-doc: "Source Serif 4", Georgia, "Times New Roman", serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0f161a; --surface: #162026; --paper: #1b262c; --ink: #e2eae7; --muted: #98a8ad; --line: #2b3a41;
-  --accent: #4cc0a5; --accent-ink: #052620; --accent-soft: #173a33;
-  --warn-bg: #3a2c0e; --warn: #f1c46b; --hueco: #5b470f; --hueco-ink: #ffe7a3; --ok: #6fd28d; --bad: #ff8f75; color-scheme: dark } }
-:root[data-theme="dark"] {
-  --bg: #0f161a; --surface: #162026; --paper: #1b262c; --ink: #e2eae7; --muted: #98a8ad; --line: #2b3a41;
-  --accent: #4cc0a5; --accent-ink: #052620; --accent-soft: #173a33;
-  --warn-bg: #3a2c0e; --warn: #f1c46b; --hueco: #5b470f; --hueco-ink: #ffe7a3; --ok: #6fd28d; --bad: #ff8f75; color-scheme: dark }
+/* (siempre en claro, como la web: sin modo oscuro) */
 * { box-sizing: border-box }
 [hidden] { display: none !important }
 img { max-width: 100% }
@@ -81,7 +74,7 @@ table.ed td.n input { width: 72px; font-family: var(--f-mono) }
 .btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 7px; padding: 8px 14px; font: 600 13px var(--f-ui); cursor: pointer }
 .btn.sec2 { background: none; color: var(--accent); border: 1px solid var(--accent) }
 .folio-w { overflow-x: auto }
-.folio { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 28px rgba(15,40,35,.08);
+.folio { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 1px 2px rgba(11,31,58,0.05), 0 8px 28px rgba(15,40,35,.08);
   max-width: 820px; margin: 0 auto; padding: clamp(22px, 5vw, 64px) clamp(18px, 6vw, 72px); font: 16px/1.62 var(--f-doc); min-width: 0 }
 .folio:focus { outline: 2px dashed var(--line); outline-offset: 4px }
 .folio h1 { font: 700 1.55rem/1.2 var(--f-doc); margin: 0 0 .2em; text-wrap: balance }

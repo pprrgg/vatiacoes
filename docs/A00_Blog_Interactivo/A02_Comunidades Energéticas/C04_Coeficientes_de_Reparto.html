@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:var(--cyan);}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -59,7 +59,7 @@
   .comp-card ul{padding-left:18px;}
   .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:26px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
   .note{font-size:11.5px; color:var(--text-dimmer); margin-top:10px; border-left:2px solid var(--line); padding-left:10px; max-width:880px;}
-  .callout{max-width:880px; margin:18px 0; padding:14px 18px; border:1px dashed var(--amber); background:rgba(255,176,32,0.05); font-size:13px; color:var(--text-dim);}
+  .callout{max-width:880px; margin:18px 0; padding:14px 18px; border:1px dashed var(--amber); background:rgba(194,124,0,0.05); font-size:13px; color:var(--text-dim);}
   .callout b{color:var(--amber);}
 
   /* ---------- formula ---------- */
@@ -77,21 +77,21 @@
   .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
   input[type=range]{width:100%; accent-color:var(--amber);}
   .btn{font-family:var(--font-mono); font-size:12px; padding:9px 16px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s;}
-  .btn:hover{background:var(--amber); color:#0A121C;}
-  .btn.primary{background:var(--amber); color:#0A121C;}
+  .btn:hover{background:var(--amber); color:#ffffff;}
+  .btn.primary{background:var(--amber); color:#ffffff;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);} .btn.ghost:hover{border-color:var(--text-dim); color:var(--text); background:transparent;}
   .btn:disabled{opacity:.4; cursor:default;}
   .btn-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
   .seg{display:inline-flex; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
   .seg button{font-family:var(--font-mono); font-size:11.5px; padding:7px 12px; border:0; background:transparent; color:var(--text-dim); cursor:pointer;}
-  .seg button.on{background:var(--amber); color:#0A121C;}
+  .seg button.on{background:var(--amber); color:#ffffff;}
 
   /* ---------- reparto (diagrama) ---------- */
   .reparto{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:20px; align-items:start;}
   @media(max-width:1000px){.reparto{grid-template-columns:1fr;}}
   .diagrama svg{width:100%; height:auto; display:block;}
   .socio-row{display:grid; grid-template-columns:28px 1fr 64px 74px; gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:12.5px;}
-  .socio-row .dot{width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:#0A121C;}
+  .socio-row .dot{width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:#ffffff;}
   .socio-row .pc{font-family:var(--font-mono); color:var(--amber); text-align:right;}
   .socio-row .kwh{font-family:var(--font-mono); color:var(--text-dim); text-align:right;}
   .socio-row.con-x{grid-template-columns:28px 1fr 64px 74px 26px;}
@@ -127,7 +127,7 @@
   @media(max-width:420px){.socios-grid{grid-template-columns:1fr;}}
   .perfil-card{background:var(--panel); border:1px solid var(--line); border-top:2px solid var(--c); border-radius:var(--radius); padding:12px 14px 10px;}
   .perfil-cab{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; font-size:11.5px; color:var(--text-dim);}
-  .perfil-cab .dot{width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:#0A121C;}
+  .perfil-cab .dot{width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:#ffffff;}
   .perfil-cab input, .perfil-cab select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:5px 6px; font-family:var(--font-mono); font-size:11.5px; border-radius:var(--radius);}
   .perfil-cab input{width:72px;} .perfil-cab select{max-width:150px;}
   .perfil-cab .btn-x{margin-left:auto;}
@@ -407,7 +407,7 @@ const fmt = (v,d=1) => (+v).toLocaleString('es-ES',{minimumFractionDigits:d, max
 const esc = t => String(t==null?'':t).replace(/[&<>"]/g, x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
 
 // ===================== ESTADO =====================
-const COLORES = ['#FFB020','#37CFFF','#16A34A','#E05AA6','#9B7BFF','#FF7A45','#5ED6B5','#C9D46B'];
+const COLORES = ['#c27c00','#2457e6','#16A34A','#E05AA6','#9B7BFF','#FF7A45','#5ED6B5','#C9D46B'];
 const PERFILES = {
   familia:   {n:'Familia (mañana y noche)', f:h=> .25 + (h>=7&&h<9?.6:0) + (h>=13&&h<15?.35:0) + (h>=19&&h<23?.9:0)},
   teletrabajo:{n:'Teletrabajo (de día)',    f:h=> .25 + (h>=8&&h<19?.75:0) + (h>=20&&h<23?.4:0)},
@@ -442,21 +442,21 @@ function diagrama(cont, pcs, prod, sub){
   const xs = pcs.map((_,i)=> n===1 ? W/2 : x0 + (x1-x0)*i/(n-1));
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reparto de la producción entre viviendas">`;
   // sol y panel
-  s += `<g transform="translate(${W/2},44)" stroke="#FFB020" fill="none" stroke-width="2">
+  s += `<g transform="translate(${W/2},44)" stroke="#c27c00" fill="none" stroke-width="2">
     <circle cx="0" cy="-12" r="9"/>${[0,45,90,135,180,225,270,315].map(a=>{const r=a*Math.PI/180;return `<line x1="${Math.cos(r)*13}" y1="${-12+Math.sin(r)*13}" x2="${Math.cos(r)*18}" y2="${-12+Math.sin(r)*18}"/>`;}).join('')}
-    <path d="M-30 10 h60 l8 26 h-76 z" stroke="#E7ECF2"/><line x1="-34" y1="23" x2="34" y2="23" stroke="#E7ECF2"/>
-    <line x1="-10" y1="10" x2="-13" y2="36" stroke="#E7ECF2"/><line x1="10" y1="10" x2="13" y2="36" stroke="#E7ECF2"/>
-    <line x1="0" y1="36" x2="0" y2="46" stroke="#E7ECF2"/></g>`;
-  s += `<text x="${W/2+60}" y="70" fill="#8FA3B8" font-family="IBM Plex Mono" font-size="13">${esc(sub||'')}${fmt(prod,1)} kWh</text>`;
+    <path d="M-30 10 h60 l8 26 h-76 z" stroke="#1c2735"/><line x1="-34" y1="23" x2="34" y2="23" stroke="#1c2735"/>
+    <line x1="-10" y1="10" x2="-13" y2="36" stroke="#1c2735"/><line x1="10" y1="10" x2="13" y2="36" stroke="#1c2735"/>
+    <line x1="0" y1="36" x2="0" y2="46" stroke="#1c2735"/></g>`;
+  s += `<text x="${W/2+60}" y="70" fill="#4f5b6d" font-family="IBM Plex Mono" font-size="13">${esc(sub||'')}${fmt(prod,1)} kWh</text>`;
   pcs.forEach((p,i)=>{
     const x = xs[i], y = 250, w = Math.max(1.2, p/100*16);
     s += `<path d="M${W/2} 92 C ${W/2} 170, ${x} 150, ${x} ${y-14}" fill="none" stroke="${COLORES[i]}" stroke-width="${w}" stroke-opacity="${p>0?.9:.15}"/>`;
     s += `<path d="M${x-6} ${y-20} L${x} ${y-10} L${x+6} ${y-20}" fill="none" stroke="${COLORES[i]}" stroke-width="2"/>`;
     const lx = (W/2 + x)/2 + (x<W/2?-14:x>W/2?14:18), ly = 160;
-    s += `<text x="${lx}" y="${ly}" text-anchor="middle" fill="#E7ECF2" font-family="IBM Plex Mono" font-size="13">${fmt(p,p%1?1:0)}%</text>`;
-    s += `<g transform="translate(${x},${y})" fill="none" stroke="#E7ECF2" stroke-width="1.6"><path d="M-22 8 L0 -10 L22 8"/><path d="M-16 4 V34 H16 V4"/></g>`;
-    s += `<text x="${x}" y="${y+30}" text-anchor="middle" fill="${COLORES[i]}" font-family="Space Grotesk" font-weight="600" font-size="17">${letra(i)}</text>`;
-    s += `<text x="${x}" y="${y+64}" text-anchor="middle" fill="#8FA3B8" font-family="IBM Plex Mono" font-size="12">${fmt(prod*p/100,2)} kWh</text>`;
+    s += `<text x="${lx}" y="${ly}" text-anchor="middle" fill="#1c2735" font-family="IBM Plex Mono" font-size="13">${fmt(p,p%1?1:0)}%</text>`;
+    s += `<g transform="translate(${x},${y})" fill="none" stroke="#1c2735" stroke-width="1.6"><path d="M-22 8 L0 -10 L22 8"/><path d="M-16 4 V34 H16 V4"/></g>`;
+    s += `<text x="${x}" y="${y+30}" text-anchor="middle" fill="${COLORES[i]}" font-family="Inter" font-weight="600" font-size="17">${letra(i)}</text>`;
+    s += `<text x="${x}" y="${y+64}" text-anchor="middle" fill="#4f5b6d" font-family="IBM Plex Mono" font-size="12">${fmt(prod*p/100,2)} kWh</text>`;
   });
   cont.innerHTML = s + '</svg>';
 }
@@ -523,10 +523,10 @@ function editorBarras(cont, vals, o){
   const W=o.W||480, H=o.H||150, L=34, R=6, T=8, B=20, bw=(W-L-R)/24, max=o.max, y=v=>T+(H-T-B)*(1-v/max);
   const dec = max<2 ? 2 : max<20 ? 1 : 0;
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.titulo)}">`;
-  [0, max/2, max].forEach(v=>{ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-5}" y="${y(v)+3}" fill="#5B7086" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${fmt(v,dec)}</text>`; });
+  [0, max/2, max].forEach(v=>{ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#eceff4"/><text x="${L-5}" y="${y(v)+3}" fill="#7b8696" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${fmt(v,dec)}</text>`; });
   for(let h=0; h<24; h++){
     s += `<rect class="bar" data-h="${h}" x="${L+h*bw+1}" width="${bw-2}" y="${y(0)}" height="0" fill="${o.color}"><title></title></rect>`;
-    if(h%3===0) s += `<text x="${L+h*bw+bw/2}" y="${H-6}" fill="#5B7086" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${h}h</text>`;
+    if(h%3===0) s += `<text x="${L+h*bw+bw/2}" y="${H-6}" fill="#7b8696" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${h}h</text>`;
   }
   cont.innerHTML = s + '</svg>';
   const svg = cont.firstChild, bars = svg.querySelectorAll('rect.bar');
@@ -590,7 +590,7 @@ function grafico(cont, C, r){
   const max = Math.max(1, ...C.G, ...dem)*1.1, bw=(W-L-R)/24, y=v=>T+(H-T-B)*(1-v/max);
   let s = `<svg viewBox="0 0 ${W} ${H}">`;
   const paso = max>20?5:max>8?2:1;
-  for(let v=0; v<=max; v+=paso){ s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#182739"/><text x="${L-5}" y="${y(v)+3}" fill="#5B7086" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${v}</text>`; }
+  for(let v=0; v<=max; v+=paso){ s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#eceff4"/><text x="${L-5}" y="${y(v)+3}" fill="#7b8696" font-size="9" text-anchor="end" font-family="IBM Plex Mono">${v}</text>`; }
   for(let h=0; h<24; h++){
     let acc=0; const x=L+h*bw+1;
     for(let i=0;i<n;i++){
@@ -598,10 +598,10 @@ function grafico(cont, C, r){
       if(auto>0){ s+=`<rect x="${x}" width="${bw-2}" y="${y(acc+auto)}" height="${y(acc)-y(acc+auto)}" fill="${COLORES[i]}"><title>${letra(i)} · ${h}h: ${fmt(auto,2)} kWh autoconsumidos</title></rect>`; acc+=auto; }
       if(exc>0.0005){ s+=`<rect x="${x}" width="${bw-2}" y="${y(acc+exc)}" height="${y(acc)-y(acc+exc)}" fill="${COLORES[i]}" fill-opacity=".25"><title>${letra(i)} · ${h}h: ${fmt(exc,2)} kWh de excedente</title></rect>`; acc+=exc; }
     }
-    if(h%3===0) s+=`<text x="${x+bw/2}" y="${H-10}" fill="#5B7086" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${h}h</text>`;
+    if(h%3===0) s+=`<text x="${x+bw/2}" y="${H-10}" fill="#7b8696" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${h}h</text>`;
   }
-  s += `<polyline fill="none" stroke="#E7ECF2" stroke-width="1.5" stroke-dasharray="4 3" points="${dem.map((v,h)=>`${L+h*bw+bw/2},${y(v)}`).join(' ')}"/>`;
-  s += `<text x="${L}" y="${T+8}" fill="#5B7086" font-size="9" font-family="IBM Plex Mono">kWh</text>`;
+  s += `<polyline fill="none" stroke="#1c2735" stroke-width="1.5" stroke-dasharray="4 3" points="${dem.map((v,h)=>`${L+h*bw+bw/2},${y(v)}`).join(' ')}"/>`;
+  s += `<text x="${L}" y="${T+8}" fill="#7b8696" font-size="9" font-family="IBM Plex Mono">kWh</text>`;
   cont.innerHTML = s+'</svg>';
 }
 
@@ -616,7 +616,7 @@ function pintarComparar(){
   grafico($('chartFijo'), C, C.rF);
   grafico($('chartDin'), C, C.rD);
   $('leyenda').innerHTML = ST.pc.map((_,i)=>`<span><i style="background:${COLORES[i]}"></i>${letra(i)} autoconsumo</span>`).join('') +
-    `<span><i style="background:#8FA3B8; opacity:.35"></i>excedente (parte clara)</span><span><i style="background:none; border-top:2px dashed #E7ECF2; height:0; width:14px;"></i>consumo total</span>`;
+    `<span><i style="background:#4f5b6d; opacity:.35"></i>excedente (parte clara)</span><span><i style="background:none; border-top:2px dashed #1c2735; height:0; width:14px;"></i>consumo total</span>`;
   pintarPerfiles(C);
   return C;
 }
@@ -624,7 +624,7 @@ function pintarComparar(){
 function pintarPerfiles(C){
   const k = kwp(), totFv = ()=> $('fvTotal').textContent = fmt(k*sum24(ST.fv),1)+' kWh/día';
   totFv();
-  editorBarras($('edFv'), ST.fv.map(x=>x*k), {color:'#FFB020', max:Math.max(k,.5), paso:Math.max(k,.5)/100, titulo:'Generación FV por horas', W:900, H:160,
+  editorBarras($('edFv'), ST.fv.map(x=>x*k), {color:'#c27c00', max:Math.max(k,.5), paso:Math.max(k,.5)/100, titulo:'Generación FV por horas', W:900, H:160,
     alCambiar: v=>{ ST.fv = v.map(x=> k ? Math.min(1, x/k) : 0); $('epoca').value = 'personal'; totFv(); },
     alSoltar: ()=> pintarTodo()});
   $('perfiles').innerHTML = ST.dem.map((d,i)=>{
@@ -695,7 +695,7 @@ const coma6 = m => (m/1e6).toFixed(6).replace('.',',');
 function pintarCups(){
   while(ST.cups.length < ST.pc.length) ST.cups.push('');
   $('tablaCups').innerHTML = `<tr><th>Socio</th><th>CUPS</th><th>Coef. fijo (sección 01)</th></tr>` + ST.pc.map((p,i)=>
-    `<tr><td><span class="dot" style="background:${COLORES[i]}; display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center; justify-content:center; color:#0A121C; font-family:var(--font-mono); font-size:11px; font-weight:600;">${letra(i)}</span></td>
+    `<tr><td><span class="dot" style="background:${COLORES[i]}; display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center; justify-content:center; color:#ffffff; font-family:var(--font-mono); font-size:11px; font-weight:600;">${letra(i)}</span></td>
      <td><input type="text" data-cups="${i}" value="${esc(ST.cups[i])}" placeholder="ES0021000000000001AA" maxlength="22"></td>
      <td class="n">${coma6(redondear6(ST.pc)[i])}</td></tr>`).join('');
   $('tablaCups').querySelectorAll('[data-cups]').forEach(el=>el.addEventListener('input', ()=>{

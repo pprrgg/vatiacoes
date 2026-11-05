@@ -8,20 +8,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --amber-dim:#8A6220; --cyan:#37CFFF; --cyan-dim:#1B6E86;
-    --green:#57D9A3; --red:#FF6B6B;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --amber-dim:#ecd08f; --cyan:#2457e6; --cyan-dim:#a9bdf3;
+    --green:#16894f; --red:#c62828;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -114,9 +114,9 @@
   .result-row .lbl{color:var(--text-dim);}
   .result-row .val{font-family:var(--font-mono); color:var(--text);}
   .pill{font-family:var(--font-mono); font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600;}
-  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
-  .pill.bad{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
-  .pill.info{background:rgba(55,207,255,0.12); color:var(--cyan); border:1px solid rgba(55,207,255,0.35);}
+  .pill.ok{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.bad{background:rgba(198,40,40,0.12); color:var(--red); border:1px solid rgba(198,40,40,0.35);}
+  .pill.info{background:rgba(36,87,230,0.12); color:var(--cyan); border:1px solid rgba(36,87,230,0.35);}
 
   /* diagrama de bombeo */
   .pump-diagram{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:20px;}
@@ -135,8 +135,8 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(255,176,32,0.1);}
-  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
   .btn.primary:hover{background:#ffc24d;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
@@ -1016,66 +1016,66 @@ activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
   const ns='http://www.w3.org/2000/svg';
   function el(tag,attrs){const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e;}
   function txt(x,y,s,opts={}){
-    const t=el('text',Object.assign({x:x,y:y,'text-anchor':opts.anchor||'start','font-family':'IBM Plex Mono','font-size':opts.size||11,fill:opts.color||'#8FA3B8'},{}));
+    const t=el('text',Object.assign({x:x,y:y,'text-anchor':opts.anchor||'start','font-family':'IBM Plex Mono','font-size':opts.size||11,fill:opts.color||'#4f5b6d'},{}));
     t.textContent=s; return t;
   }
 
   // ground line
-  svg.appendChild(el('line',{x1:20,y1:150,x2:620,y2:150,stroke:'#213348','stroke-width':2}));
-  svg.appendChild(txt(24,144,'nivel del suelo',{size:9,color:'#5B7086'}));
+  svg.appendChild(el('line',{x1:20,y1:150,x2:620,y2:150,stroke:'#dfe4eb','stroke-width':2}));
+  svg.appendChild(txt(24,144,'nivel del suelo',{size:9,color:'#7b8696'}));
 
   // sun + PV panel top-left
-  svg.appendChild(el('circle',{cx:70,cy:40,r:14,fill:'none',stroke:'#FFB020','stroke-width':1.6}));
+  svg.appendChild(el('circle',{cx:70,cy:40,r:14,fill:'none',stroke:'#c27c00','stroke-width':1.6}));
   [0,45,90,135,180,225,270,315].forEach(a=>{
     const r1=18,r2=24, rad=a*Math.PI/180;
-    svg.appendChild(el('line',{x1:70+Math.cos(rad)*r1,y1:40+Math.sin(rad)*r1,x2:70+Math.cos(rad)*r2,y2:40+Math.sin(rad)*r2,stroke:'#FFB020','stroke-width':1.4}));
+    svg.appendChild(el('line',{x1:70+Math.cos(rad)*r1,y1:40+Math.sin(rad)*r1,x2:70+Math.cos(rad)*r2,y2:40+Math.sin(rad)*r2,stroke:'#c27c00','stroke-width':1.4}));
   });
-  svg.appendChild(el('rect',{x:30,y:70,width:90,height:34,rx:2,fill:'#0E1826',stroke:'#FFB020','stroke-width':1.4}));
-  svg.appendChild(txt(75,91,'PV',{anchor:'middle',size:12,color:'#FFB020'}));
+  svg.appendChild(el('rect',{x:30,y:70,width:90,height:34,rx:2,fill:'#f6f8fb',stroke:'#c27c00','stroke-width':1.4}));
+  svg.appendChild(txt(75,91,'PV',{anchor:'middle',size:12,color:'#c27c00'}));
 
   // regulador/inversor box
-  svg.appendChild(el('line',{x1:120,y1:87,x2:170,y2:87,stroke:'#213348','stroke-width':1.4}));
-  svg.appendChild(el('rect',{x:170,y:70,width:96,height:34,rx:2,fill:'#0E1826',stroke:'#37CFFF','stroke-width':1.4}));
-  svg.appendChild(txt(218,87,'Regulador /',{anchor:'middle',size:9,color:'#37CFFF'}));
-  svg.appendChild(txt(218,98,'Inversor',{anchor:'middle',size:9,color:'#37CFFF'}));
+  svg.appendChild(el('line',{x1:120,y1:87,x2:170,y2:87,stroke:'#dfe4eb','stroke-width':1.4}));
+  svg.appendChild(el('rect',{x:170,y:70,width:96,height:34,rx:2,fill:'#f6f8fb',stroke:'#2457e6','stroke-width':1.4}));
+  svg.appendChild(txt(218,87,'Regulador /',{anchor:'middle',size:9,color:'#2457e6'}));
+  svg.appendChild(txt(218,98,'Inversor',{anchor:'middle',size:9,color:'#2457e6'}));
 
   // cable down to pump
-  svg.appendChild(el('line',{x1:218,y1:104,x2:218,y2:150,stroke:'#213348','stroke-width':1.4}));
-  svg.appendChild(el('line',{x1:218,y1:150,x2:218,y2:250,stroke:'#213348','stroke-width':1.4,'stroke-dasharray':'3,3'}));
+  svg.appendChild(el('line',{x1:218,y1:104,x2:218,y2:150,stroke:'#dfe4eb','stroke-width':1.4}));
+  svg.appendChild(el('line',{x1:218,y1:150,x2:218,y2:250,stroke:'#dfe4eb','stroke-width':1.4,'stroke-dasharray':'3,3'}));
 
   // well shaft
-  svg.appendChild(el('rect',{x:198,y:150,width:40,height:170,fill:'#0E1826',stroke:'#213348','stroke-width':1.4}));
+  svg.appendChild(el('rect',{x:198,y:150,width:40,height:170,fill:'#f6f8fb',stroke:'#dfe4eb','stroke-width':1.4}));
   // static level line
-  svg.appendChild(el('line',{x1:198,y1:200,x2:280,y2:200,stroke:'#57D9A3','stroke-width':1.2,'stroke-dasharray':'4,3'}));
-  svg.appendChild(txt(284,203,'H_ST — nivel estático',{size:9,color:'#57D9A3'}));
+  svg.appendChild(el('line',{x1:198,y1:200,x2:280,y2:200,stroke:'#16894f','stroke-width':1.2,'stroke-dasharray':'4,3'}));
+  svg.appendChild(txt(284,203,'H_ST — nivel estático',{size:9,color:'#16894f'}));
   // dynamic level line
-  svg.appendChild(el('line',{x1:198,y1:245,x2:280,y2:245,stroke:'#FF6B6B','stroke-width':1.2,'stroke-dasharray':'4,3'}));
-  svg.appendChild(txt(284,248,'H_DT — nivel dinámico',{size:9,color:'#FF6B6B'}));
+  svg.appendChild(el('line',{x1:198,y1:245,x2:280,y2:245,stroke:'#c62828','stroke-width':1.2,'stroke-dasharray':'4,3'}));
+  svg.appendChild(txt(284,248,'H_DT — nivel dinámico',{size:9,color:'#c62828'}));
   // water fill
-  svg.appendChild(el('rect',{x:199,y:245,width:38,height:74,fill:'#37CFFF',opacity:'0.15'}));
+  svg.appendChild(el('rect',{x:199,y:245,width:38,height:74,fill:'#2457e6',opacity:'0.15'}));
 
   // pump (MB) at bottom of well
-  svg.appendChild(el('rect',{x:203,y:290,width:30,height:20,rx:2,fill:'#0E1826',stroke:'#FFB020','stroke-width':1.4}));
-  svg.appendChild(txt(218,304,'MB',{anchor:'middle',size:9,color:'#FFB020'}));
+  svg.appendChild(el('rect',{x:203,y:290,width:30,height:20,rx:2,fill:'#f6f8fb',stroke:'#c27c00','stroke-width':1.4}));
+  svg.appendChild(txt(218,304,'MB',{anchor:'middle',size:9,color:'#c27c00'}));
 
   // pipe rising from pump to deposito
-  svg.appendChild(el('line',{x1:233,y1:300,x2:470,y2:300,stroke:'#5B7086','stroke-width':2}));
-  svg.appendChild(el('line',{x1:470,y1:300,x2:470,y2:110,stroke:'#5B7086','stroke-width':2}));
-  svg.appendChild(el('line',{x1:470,y1:110,x2:520,y2:110,stroke:'#5B7086','stroke-width':2}));
+  svg.appendChild(el('line',{x1:233,y1:300,x2:470,y2:300,stroke:'#7b8696','stroke-width':2}));
+  svg.appendChild(el('line',{x1:470,y1:300,x2:470,y2:110,stroke:'#7b8696','stroke-width':2}));
+  svg.appendChild(el('line',{x1:470,y1:110,x2:520,y2:110,stroke:'#7b8696','stroke-width':2}));
 
   // deposito
-  svg.appendChild(el('rect',{x:520,y:60,width:80,height:60,rx:2,fill:'#0E1826',stroke:'#57D9A3','stroke-width':1.6}));
-  svg.appendChild(txt(560,94,'Depósito',{anchor:'middle',size:10,color:'#57D9A3'}));
+  svg.appendChild(el('rect',{x:520,y:60,width:80,height:60,rx:2,fill:'#f6f8fb',stroke:'#16894f','stroke-width':1.6}));
+  svg.appendChild(txt(560,94,'Depósito',{anchor:'middle',size:10,color:'#16894f'}));
 
   // H_D bracket
-  svg.appendChild(el('line',{x1:505,y1:150,x2:505,y2:90,stroke:'#5B7086','stroke-width':1,'stroke-dasharray':'2,2'}));
-  svg.appendChild(txt(500,120,'H_D',{anchor:'end',size:9,color:'#5B7086'}));
+  svg.appendChild(el('line',{x1:505,y1:150,x2:505,y2:90,stroke:'#7b8696','stroke-width':1,'stroke-dasharray':'2,2'}));
+  svg.appendChild(txt(500,120,'H_D',{anchor:'end',size:9,color:'#7b8696'}));
 
   // label pozo
-  svg.appendChild(txt(218,335,'pozo (no a escala)',{anchor:'middle',size:9,color:'#5B7086'}));
+  svg.appendChild(txt(218,335,'pozo (no a escala)',{anchor:'middle',size:9,color:'#7b8696'}));
 
   // Qd label near deposito
-  svg.appendChild(txt(560,42,'Q_d — volumen diario',{anchor:'middle',size:9,color:'#8FA3B8'}));
+  svg.appendChild(txt(560,42,'Q_d — volumen diario',{anchor:'middle',size:9,color:'#4f5b6d'}));
 })();
 
 // ===================== PROYECTO E INFORME =====================
@@ -1728,7 +1728,7 @@ function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'…' : (s||''); }
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

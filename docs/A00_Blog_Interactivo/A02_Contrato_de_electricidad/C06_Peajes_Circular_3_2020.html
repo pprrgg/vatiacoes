@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF; --purple:#9370DB; --orange:#F97316;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6; --purple:#9370DB; --orange:#F97316;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -83,9 +83,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(255,176,32,0.1);}
-  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
-  .btn.primary:hover{background:#ffc352;}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
+  .btn.primary:hover{background:#a86a00;}
 
   .calculator{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:16px 0;}
   [id^="teor_"]{scroll-margin-top:76px;}
@@ -94,7 +94,7 @@
   .result-chip .v{font-family:var(--font-mono); font-size:24px; color:var(--amber);}
   .result-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:6px;}
 
-  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card{background:linear-gradient(135deg, rgba(194,124,0,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
   .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
   .example-table{width:100%; font-size:12px; border-collapse:collapse;}
   .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
@@ -142,24 +142,24 @@
   .nav-item-dropdown.open > a{color:var(--amber); border-bottom-color:var(--amber);}
   .nav-dropdown-caret .caret-icon{width:13px; height:13px; transition:transform .15s ease;}
   .nav-item-dropdown.open .caret-icon{transform:rotate(180deg);}
-  .nav-dropdown-menu{position:fixed; z-index:80; display:none; flex-direction:column; width:270px; max-height:min(70vh, 420px); overflow-y:auto; background:var(--panel); border:1px solid var(--amber); border-radius:6px; box-shadow:0 16px 36px rgba(0,0,0,0.5);}
+  .nav-dropdown-menu{position:fixed; z-index:80; display:none; flex-direction:column; width:270px; max-height:min(70vh, 420px); overflow-y:auto; background:var(--panel); border:1px solid var(--amber); border-radius:6px; box-shadow:0 16px 36px rgba(11,31,58,0.12);}
   .nav-dropdown-menu.open{display:flex;}
   .nav-dropdown-item{display:block; width:100%; text-align:left; font-family:var(--font-body); font-size:12.5px; padding:10px 14px; background:transparent; border:none; border-bottom:1px solid var(--line-soft); color:var(--text-dim); cursor:pointer; transition:background .1s ease;}
   .nav-dropdown-item:last-child{border-bottom:none;}
   .nav-dropdown-item:hover{background:var(--panel2); color:var(--text);}
-  .nav-dropdown-item.active{color:var(--amber); background:rgba(255,176,32,0.1); font-weight:600;}
+  .nav-dropdown-item.active{color:var(--amber); background:rgba(194,124,0,0.1); font-weight:600;}
   .teor-panel{display:none;}
   .teor-panel.active{display:block;}
   .mini-input{width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:5px 4px; font-family:var(--font-mono); font-size:10px; border-radius:2px; text-align:center;}
   .mini-input:focus{outline:none; border-color:var(--amber);}
 
   /* ---------- Informe final (carrito de ejemplos) ---------- */
-  .informe-fab{position:fixed; right:20px; bottom:20px; z-index:60; display:flex; align-items:center; gap:8px; background:var(--amber); color:#0A121C; border:none; border-radius:999px; padding:12px 18px; font-family:var(--font-mono); font-size:12.5px; font-weight:700; cursor:pointer; box-shadow:0 8px 24px rgba(0,0,0,0.35);}
-  .informe-fab:hover{background:#ffc352;}
-  .informe-fab .count{background:#0A121C; color:var(--amber); border-radius:999px; padding:2px 8px; font-size:11px;}
-  .informe-overlay{position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:65; opacity:0; pointer-events:none; transition:opacity .2s ease;}
+  .informe-fab{position:fixed; right:20px; bottom:20px; z-index:60; display:flex; align-items:center; gap:8px; background:var(--amber); color:#ffffff; border:none; border-radius:999px; padding:12px 18px; font-family:var(--font-mono); font-size:12.5px; font-weight:700; cursor:pointer; box-shadow:0 8px 24px rgba(11,31,58,0.12);}
+  .informe-fab:hover{background:#a86a00;}
+  .informe-fab .count{background:#ffffff; color:var(--amber); border-radius:999px; padding:2px 8px; font-size:11px;}
+  .informe-overlay{position:fixed; inset:0; background:rgba(11,31,58,0.12); z-index:65; opacity:0; pointer-events:none; transition:opacity .2s ease;}
   .informe-overlay.visible{opacity:1; pointer-events:auto;}
-  .informe-panel{position:fixed; top:0; right:-380px; width:360px; max-width:92vw; height:100vh; background:var(--panel); border-left:1px solid var(--line); z-index:70; display:flex; flex-direction:column; transition:right .25s ease; box-shadow:-8px 0 30px rgba(0,0,0,0.4);}
+  .informe-panel{position:fixed; top:0; right:-380px; width:360px; max-width:92vw; height:100vh; background:var(--panel); border-left:1px solid var(--line); z-index:70; display:flex; flex-direction:column; transition:right .25s ease; box-shadow:-8px 0 30px rgba(11,31,58,0.12);}
   .informe-panel.open{right:0;}
   .informe-header{padding:18px 20px; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;}
   .informe-header h3{font-size:14px; margin:0;}
@@ -330,7 +330,7 @@
         </div>
       </div>
 
-      <div class="theory-card" style="margin-top:24px; background:linear-gradient(135deg, rgba(255,176,32,0.12) 0%, rgba(37,99,235,0.12) 100%);">
+      <div class="theory-card" style="margin-top:24px; background:linear-gradient(135deg, rgba(194,124,0,0.12) 0%, rgba(37,99,235,0.12) 100%);">
         <h3 style="color:var(--amber);">Fórmula simplificada del peaje anual</h3>
         <div class="formula-box">
           <div class="f">Peaje anual = (Potencia contratada × Tarifa potencia) + (Energía consumida × Tarifa energía) + Cuota fija</div>
@@ -583,7 +583,7 @@
 
         <!-- FORMULARIO 1: PEAJE DE POTENCIA PURA -->
         <div class="form-content active" id="form1">
-        <div class="calculator" style="background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(55,207,255,0.08) 100%); border-left:3px solid var(--amber);">
+        <div class="calculator" style="background:linear-gradient(135deg, rgba(194,124,0,0.08) 0%, rgba(36,87,230,0.08) 100%); border-left:3px solid var(--amber);">
           <div style="font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; margin-bottom:16px;">Formulario 1 · Potencia + exceso de potencia (Circular 1/2025)</div>
           <div class="calc-row">
             <div class="field">
@@ -659,7 +659,7 @@
 
         <!-- FORMULARIO 2: PEAJE DE ENERGÍA REACTIVA -->
         <div class="form-content" id="form2">
-        <div class="calculator" style="background:linear-gradient(135deg, rgba(55,207,255,0.08) 0%, rgba(22,163,74,0.08) 100%); border-left:3px solid var(--cyan);">
+        <div class="calculator" style="background:linear-gradient(135deg, rgba(36,87,230,0.08) 0%, rgba(22,163,74,0.08) 100%); border-left:3px solid var(--cyan);">
           <div style="font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; margin-bottom:16px;">Formulario 2 · Peaje por energía reactiva</div>
           <p style="font-size:11px; color:var(--text-dimmer); margin-bottom:16px;"><b>Nota:</b> La energía reactiva (kVAr) es penalizada si excede cierto factor de potencia (típicamente >0,95). Genera peaje adicional.</p>
           <div class="calc-row">
@@ -772,7 +772,7 @@
 
         <!-- FORMULARIO 4: ANÁLISIS COMPARATIVO DE TARIFICACIÓN HORARIA -->
         <div class="form-content" id="form4">
-        <div class="calculator" style="background:linear-gradient(135deg, rgba(220,38,38,0.08) 0%, rgba(255,176,32,0.08) 100%); border-left:3px solid var(--red);">
+        <div class="calculator" style="background:linear-gradient(135deg, rgba(220,38,38,0.08) 0%, rgba(194,124,0,0.08) 100%); border-left:3px solid var(--red);">
           <div style="font-family:var(--font-mono); font-size:11px; color:var(--red); text-transform:uppercase; margin-bottom:16px;">Formulario 4 · Impacto de tarifa discriminada por horario</div>
           <p style="font-size:11px; color:var(--text-dimmer); margin-bottom:16px;"><b>Nota:</b> Compara coste total si consumes en Punta vs Valle. Util para decisiones de desplazamiento de carga (bombas solares, contadores inteligentes).</p>
           <div class="calc-row">
@@ -811,7 +811,7 @@
                 <td id="f4_res_punta_media">25,00</td>
                 <td>—</td>
               </tr>
-              <tr style="background:rgba(255,176,32,0.15);">
+              <tr style="background:rgba(194,124,0,0.15);">
                 <td><b>100% en Llano</b></td>
                 <td id="f4_res_llano"><b>36,00 €</b></td>
                 <td id="f4_res_llano_media"><b>12,00</b></td>
@@ -849,25 +849,25 @@
         <p style="font-size:11px; color:var(--text-dimmer); margin-bottom:4px;">📋 Cada fórmula es una pestaña independiente: pasa el ratón por «01 · Fundamento teórico» en el menú superior (o toca la flecha) para saltar directamente a F1–F7. Los ejemplos marcados con 📌 son interactivos: cambia los datos y el resultado se recalcula al instante y se añade automáticamente al informe final (botón 🧾 Informe).</p>
       </div>
 
-      <div id="teor_f1" class="calculator teor-panel" style="background:rgba(255,176,32,0.08); border:1px solid rgba(255,176,32,0.2); border-left:3px solid var(--amber);">
+      <div id="teor_f1" class="calculator teor-panel" style="background:rgba(194,124,0,0.08); border:1px solid rgba(194,124,0,0.2); border-left:3px solid var(--amber);">
         <h4 style="margin-top:0; color:var(--amber); font-size:13px;">🔸 Fórmula 1: Facturación por potencia contratada</h4>
         <p style="font-size:11px; color:var(--text-dim); margin-bottom:8px;"><b>Normativa:</b> <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2020-1066" target="_blank" style="color:var(--amber); text-decoration:underline;">Circular 3/2020</a> de la CNMC (BOE-A-2020-1066), artículo 9. Desarrollada en el <a href="https://www.cnmc.es/expedientes/cnsde146720" target="_blank" style="color:var(--amber); text-decoration:underline;">Acuerdo CNS/DE/1467/20</a>, apartado 6.1 «Facturación por potencia».</p>
         <p style="font-size:10px; color:var(--text-dimmer); margin-bottom:12px;">Es el sumatorio de multiplicar la potencia contratada en cada periodo horario por el precio del término de potencia correspondiente.</p>
 
-        <div style="background:var(--panel2); border-left:3px solid #FFB020; padding:12px; font-family:var(--font-mono); font-size:10px; color:var(--amber); overflow-x:auto; margin-bottom:12px;">
+        <div style="background:var(--panel2); border-left:3px solid #c27c00; padding:12px; font-family:var(--font-mono); font-size:10px; color:var(--amber); overflow-x:auto; margin-bottom:12px;">
 FP = Σ(p=1..i)  Tpp × Pcp   [€/período]
         </div>
 
         <table style="width:100%; font-size:10px; color:var(--text-dim); margin-bottom:12px; border-collapse:collapse;">
-          <tr style="border-bottom:1px solid rgba(255,176,32,0.2);">
+          <tr style="border-bottom:1px solid rgba(194,124,0,0.2);">
             <td style="padding:6px 0; width:18%; font-family:var(--font-mono); color:var(--amber);">FP</td>
             <td style="padding:6px 0;">Facturación de la potencia.</td>
           </tr>
-          <tr style="border-bottom:1px solid rgba(255,176,32,0.2);">
+          <tr style="border-bottom:1px solid rgba(194,124,0,0.2);">
             <td style="padding:6px 0; font-family:var(--font-mono); color:var(--amber);">Tpp</td>
             <td style="padding:6px 0;"><b>Precio del término de potencia</b> del periodo horario p (€/kW y año). Se publica anualmente en la Resolución de precios de la CNMC (Anexo I).</td>
           </tr>
-          <tr style="border-bottom:1px solid rgba(255,176,32,0.2);">
+          <tr style="border-bottom:1px solid rgba(194,124,0,0.2);">
             <td style="padding:6px 0; font-family:var(--font-mono); color:var(--amber);">Pcp</td>
             <td style="padding:6px 0;">Potencia contratada en el periodo horario p (kW).</td>
           </tr>
@@ -878,7 +878,7 @@ FP = Σ(p=1..i)  Tpp × Pcp   [€/período]
         </table>
         <p style="font-size:10px; color:var(--text-dimmer); margin-bottom:12px;">La facturación se prorratea por el número de días del periodo de facturación (día de lectura inicial excluido, día de lectura final incluido).</p>
 
-        <div style="background:rgba(255,176,32,0.1); padding:14px; border-left:2px solid var(--amber); margin-bottom:12px;">
+        <div style="background:rgba(194,124,0,0.1); padding:14px; border-left:2px solid var(--amber); margin-bottom:12px;">
           <b style="color:var(--amber); font-size:11px;">📌 Ejemplo interactivo — Peaje 2.0 TD (Cuadro 6.a, Acuerdo CNS/DE/1467/20):</b>
           <div class="calc-row" style="margin-top:12px; margin-bottom:4px;">
             <div class="field"><label>Pc punta (kW)</label><input type="number" id="teor1_pc_punta" value="3.45" step="0.01" oninput="actualizarTeorF1()"></div>
@@ -893,11 +893,11 @@ FP = Σ(p=1..i)  Tpp × Pcp   [€/período]
             <div class="result-chip"><div class="l"><b>Total facturación de potencia</b></div><div class="v" id="teor1_res_total" style="color:var(--green);">6,85 €</div></div>
           </div>
         </div>
-        <div style="background:rgba(255,176,32,0.06); padding:10px; border-left:2px solid var(--amber); margin-bottom:12px; font-size:10px; color:var(--text-dim);">
+        <div style="background:rgba(194,124,0,0.06); padding:10px; border-left:2px solid var(--amber); margin-bottom:12px; font-size:10px; color:var(--text-dim);">
           <b style="color:var(--amber);">📌 Mismo cálculo en otros peajes (Cuadro 6.b y 6.c, periodo de 30 días):</b>
           <table style="width:100%; font-size:9px; color:var(--text-dim); margin-top:8px; border-collapse:collapse;">
-            <tr style="border-bottom:1px solid rgba(255,176,32,0.2);"><th style="padding:4px; text-align:left;">Peaje</th><th style="padding:4px;">P1</th><th style="padding:4px;">P2</th><th style="padding:4px;">P3</th><th style="padding:4px;">P4</th><th style="padding:4px;">P5</th><th style="padding:4px;">P6</th><th style="padding:4px;">Total</th></tr>
-            <tr style="border-bottom:1px solid rgba(255,176,32,0.1);"><td style="padding:4px; font-family:var(--font-mono);">3.0 TD</td><td style="padding:4px;">17,50</td><td style="padding:4px;">30,59</td><td style="padding:4px;">12,33</td><td style="padding:4px;">9,38</td><td style="padding:4px;">9,41</td><td style="padding:4px;">9,41</td><td style="padding:4px; font-weight:bold;">88,62 €</td></tr>
+            <tr style="border-bottom:1px solid rgba(194,124,0,0.2);"><th style="padding:4px; text-align:left;">Peaje</th><th style="padding:4px;">P1</th><th style="padding:4px;">P2</th><th style="padding:4px;">P3</th><th style="padding:4px;">P4</th><th style="padding:4px;">P5</th><th style="padding:4px;">P6</th><th style="padding:4px;">Total</th></tr>
+            <tr style="border-bottom:1px solid rgba(194,124,0,0.1);"><td style="padding:4px; font-family:var(--font-mono);">3.0 TD</td><td style="padding:4px;">17,50</td><td style="padding:4px;">30,59</td><td style="padding:4px;">12,33</td><td style="padding:4px;">9,38</td><td style="padding:4px;">9,41</td><td style="padding:4px;">9,41</td><td style="padding:4px; font-weight:bold;">88,62 €</td></tr>
             <tr><td style="padding:4px; font-family:var(--font-mono);">6.1 TD</td><td style="padding:4px;">523,85</td><td style="padding:4px;">523,85</td><td style="padding:4px;">379,09</td><td style="padding:4px;">286,56</td><td style="padding:4px;">18,42</td><td style="padding:4px;">23,02</td><td style="padding:4px; font-weight:bold;">1.754,80 €</td></tr>
           </table>
           <p style="margin:6px 0 0; font-size:9px; color:var(--text-dimmer);">Valores ilustrativos con los términos de potencia de la Resolución CNMC de 18 de marzo de 2021 (se actualizan cada año).</p>
@@ -905,7 +905,7 @@ FP = Σ(p=1..i)  Tpp × Pcp   [€/período]
         <p style="font-size:10px; color:var(--text-dimmer); margin:0; font-style:italic;">✓ La Circular 1/2025 no modifica esta fórmula; solo afecta a la facturación por excesos de potencia (Fórmula 3).</p>
       </div>
 
-      <div id="teor_f2" class="calculator teor-panel" style="background:rgba(34,211,238,0.08); border:1px solid rgba(34,211,238,0.2); border-left:3px solid var(--cyan);">
+      <div id="teor_f2" class="calculator teor-panel" style="background:rgba(36,87,230,0.08); border:1px solid rgba(36,87,230,0.2); border-left:3px solid var(--cyan);">
         <h4 style="margin-top:0; color:var(--cyan); font-size:13px;">🔷 Fórmula 2: Facturación por energía activa</h4>
         <p style="font-size:11px; color:var(--text-dim); margin-bottom:8px;"><b>Normativa:</b> <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2020-1066" target="_blank" style="color:var(--cyan); text-decoration:underline;">Circular 3/2020</a> de la CNMC (BOE-A-2020-1066), artículo 9.3. Desarrollada en el <a href="https://www.cnmc.es/expedientes/cnsde146720" target="_blank" style="color:var(--cyan); text-decoration:underline;">Acuerdo CNS/DE/1467/20</a>, apartado 6.2 «Facturación por energía».</p>
 
@@ -914,15 +914,15 @@ FE = Σ(p=1..i)  Tep × Ep   [€]
         </div>
 
         <table style="width:100%; font-size:10px; color:var(--text-dim); margin-bottom:12px; border-collapse:collapse;">
-          <tr style="border-bottom:1px solid rgba(34,211,238,0.2);">
+          <tr style="border-bottom:1px solid rgba(36,87,230,0.2);">
             <td style="padding:6px 0; width:18%; font-family:var(--font-mono); color:var(--cyan);">FE</td>
             <td style="padding:6px 0;">Facturación por energía (€).</td>
           </tr>
-          <tr style="border-bottom:1px solid rgba(34,211,238,0.2);">
+          <tr style="border-bottom:1px solid rgba(36,87,230,0.2);">
             <td style="padding:6px 0; font-family:var(--font-mono); color:var(--cyan);">Tep</td>
             <td style="padding:6px 0;">Precio del término de energía del periodo horario p (€/kWh), publicado anualmente por la CNMC (Anexo I).</td>
           </tr>
-          <tr style="border-bottom:1px solid rgba(34,211,238,0.2);">
+          <tr style="border-bottom:1px solid rgba(36,87,230,0.2);">
             <td style="padding:6px 0; font-family:var(--font-mono); color:var(--cyan);">Ep</td>
             <td style="padding:6px 0;">Energía consumida o estimada en el periodo horario p (kWh). En importaciones/exportaciones, la energía programada en ese periodo.</td>
           </tr>
@@ -932,7 +932,7 @@ FE = Σ(p=1..i)  Tep × Ep   [€]
           </tr>
         </table>
 
-        <div style="background:rgba(34,211,238,0.1); padding:14px; border-left:2px solid var(--cyan); margin-bottom:12px;">
+        <div style="background:rgba(36,87,230,0.1); padding:14px; border-left:2px solid var(--cyan); margin-bottom:12px;">
           <b style="color:var(--cyan); font-size:11px;">📌 Ejemplo interactivo — Peaje 2.0 TD (Cuadro 7.a, Acuerdo CNS/DE/1467/20):</b>
           <div class="calc-row" style="margin-top:12px; margin-bottom:4px;">
             <div class="field"><label>P1 · Energía (kWh)</label><input type="number" id="teor2_e1" value="78" step="1" oninput="actualizarTeorF2()"></div>
@@ -949,11 +949,11 @@ FE = Σ(p=1..i)  Tep × Ep   [€]
             <div class="result-chip"><div class="l"><b>Total facturación de energía</b></div><div class="v" id="teor2_res_total" style="color:var(--green);">3,66 €</div></div>
           </div>
         </div>
-        <div style="background:rgba(34,211,238,0.06); padding:10px; border-left:2px solid var(--cyan); margin-bottom:12px; font-size:10px; color:var(--text-dim);">
+        <div style="background:rgba(36,87,230,0.06); padding:10px; border-left:2px solid var(--cyan); margin-bottom:12px; font-size:10px; color:var(--text-dim);">
           <b style="color:var(--cyan);">📌 Mismo cálculo en otros peajes (Cuadro 7.b y 7.c, mes de temporada alta):</b>
           <table style="width:100%; font-size:9px; color:var(--text-dim); margin-top:8px; border-collapse:collapse;">
-            <tr style="border-bottom:1px solid rgba(34,211,238,0.2);"><th style="padding:4px; text-align:left;">Peaje</th><th style="padding:4px;">P1 (kWh)</th><th style="padding:4px;">P2 (kWh)</th><th style="padding:4px;">P6 (kWh)</th><th style="padding:4px;">Total</th></tr>
-            <tr style="border-bottom:1px solid rgba(34,211,238,0.1);"><td style="padding:4px; font-family:var(--font-mono);">3.0 TD</td><td style="padding:4px;">1.349 → 24,94 €</td><td style="padding:4px;">1.169 → 18,30 €</td><td style="padding:4px;">1.566 → 0,53 €</td><td style="padding:4px; font-weight:bold;">43,77 €</td></tr>
+            <tr style="border-bottom:1px solid rgba(36,87,230,0.2);"><th style="padding:4px; text-align:left;">Peaje</th><th style="padding:4px;">P1 (kWh)</th><th style="padding:4px;">P2 (kWh)</th><th style="padding:4px;">P6 (kWh)</th><th style="padding:4px;">Total</th></tr>
+            <tr style="border-bottom:1px solid rgba(36,87,230,0.1);"><td style="padding:4px; font-family:var(--font-mono);">3.0 TD</td><td style="padding:4px;">1.349 → 24,94 €</td><td style="padding:4px;">1.169 → 18,30 €</td><td style="padding:4px;">1.566 → 0,53 €</td><td style="padding:4px; font-weight:bold;">43,77 €</td></tr>
             <tr><td style="padding:4px; font-family:var(--font-mono);">6.1 TD</td><td style="padding:4px;">21.124 → 397,92 €</td><td style="padding:4px;">15.235 → 235,81 €</td><td style="padding:4px;">12.792 → 4,19 €</td><td style="padding:4px; font-weight:bold;">637,92 €</td></tr>
           </table>
           <p style="margin:6px 0 0; font-size:9px; color:var(--text-dimmer);">En temporada alta solo hay consumo registrado en los periodos 1, 2 y 6; los periodos 3-5 quedan a cero en este ejemplo.</p>
@@ -1124,22 +1124,22 @@ cos φ = Ea / √(Ea² + Er²)
         <p style="font-size:10px; color:var(--text-dimmer); margin:0; font-style:italic;">✓ <b>Cambio con la Circular 1/2025:</b> se habilita a la CNMC a actualizar estos coeficientes mediante resolución (previo trámite de audiencia) cuando sea necesario, sin tener que modificar la Circular cada vez — los coeficientes originales de 2020 se basaban en datos de 2017-2018.</p>
       </div>
 
-      <div id="teor_f6" class="calculator teor-panel" style="background:rgba(255,176,32,0.08); border:1px solid rgba(255,176,32,0.2); border-left:3px solid var(--amber);">
+      <div id="teor_f6" class="calculator teor-panel" style="background:rgba(194,124,0,0.08); border:1px solid rgba(194,124,0,0.2); border-left:3px solid var(--amber);">
         <h4 style="margin-top:0; color:var(--amber); font-size:13px;">🔸 Fórmula 6: Recargo por contratos de duración inferior a un año</h4>
         <p style="font-size:11px; color:var(--text-dim); margin-bottom:8px;"><b>Normativa:</b> <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2020-1066" target="_blank" style="color:var(--amber); text-decoration:underline;">Circular 3/2020</a>, apartado 7. Aplica a contratos eventuales, de temporada y conexiones internacionales.</p>
         <p style="font-size:10px; color:var(--text-dimmer); margin-bottom:12px;">El término de potencia contratada se incrementa según la duración prevista del contrato. Se factura mensualmente con el recargo de "≤3 meses" (135%) y se regulariza en la última factura según la duración real.</p>
         <table style="width:100%; font-size:10px; color:var(--text-dim); margin-bottom:12px; border-collapse:collapse;">
-          <tr style="background:rgba(255,176,32,0.15); border-bottom:1px solid rgba(255,176,32,0.3);">
+          <tr style="background:rgba(194,124,0,0.15); border-bottom:1px solid rgba(194,124,0,0.3);">
             <th style="padding:6px; text-align:left; color:var(--text);">Duración (D)</th>
             <th style="padding:6px; text-align:left; color:var(--text);">Recargo</th>
           </tr>
-          <tr style="border-bottom:1px solid rgba(255,176,32,0.1);"><td style="padding:6px;">D ≤ 3 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">135%</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,176,32,0.1);"><td style="padding:6px;">3 &lt; D ≤ 4 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">90%</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,176,32,0.1);"><td style="padding:6px;">4 &lt; D ≤ 5 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">63%</td></tr>
-          <tr style="border-bottom:1px solid rgba(255,176,32,0.1);"><td style="padding:6px;">5 &lt; D ≤ 6 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">45%</td></tr>
+          <tr style="border-bottom:1px solid rgba(194,124,0,0.1);"><td style="padding:6px;">D ≤ 3 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">135%</td></tr>
+          <tr style="border-bottom:1px solid rgba(194,124,0,0.1);"><td style="padding:6px;">3 &lt; D ≤ 4 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">90%</td></tr>
+          <tr style="border-bottom:1px solid rgba(194,124,0,0.1);"><td style="padding:6px;">4 &lt; D ≤ 5 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">63%</td></tr>
+          <tr style="border-bottom:1px solid rgba(194,124,0,0.1);"><td style="padding:6px;">5 &lt; D ≤ 6 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">45%</td></tr>
           <tr><td style="padding:6px;">D &gt; 6 meses</td><td style="padding:6px; font-family:var(--font-mono); color:var(--amber);">32%</td></tr>
         </table>
-        <div style="background:rgba(255,176,32,0.1); padding:14px; border-left:2px solid var(--amber); margin-top:12px;">
+        <div style="background:rgba(194,124,0,0.1); padding:14px; border-left:2px solid var(--amber); margin-top:12px;">
           <b style="color:var(--amber); font-size:11px;">📌 Ejemplo interactivo (Cuadro 16): contrato de duración estimada inferior a un año.</b>
           <p style="font-size:10px; color:var(--text-dimmer); margin:10px 0;">Se factura mensualmente con el recargo provisional de "≤3 meses" (135%) y se regulariza en la última factura al recargo real según la duración efectiva.</p>
           <div class="calc-row" style="margin-bottom:4px;">
@@ -1154,7 +1154,7 @@ cos φ = Ea / √(Ea² + Er²)
         </div>
       </div>
 
-      <div id="teor_f7" class="calculator teor-panel" style="background:rgba(34,211,238,0.06); border:1px solid rgba(34,211,238,0.2); border-left:3px solid var(--cyan);">
+      <div id="teor_f7" class="calculator teor-panel" style="background:rgba(36,87,230,0.06); border:1px solid rgba(36,87,230,0.2); border-left:3px solid var(--cyan);">
         <h4 style="margin-top:0; color:var(--cyan); font-size:13px;">🔷 Fórmula 7: Particularidades y exenciones</h4>
         <p style="font-size:11px; color:var(--text-dim); margin-bottom:8px;"><b>Normativa:</b> <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2020-1066" target="_blank" style="color:var(--cyan); text-decoration:underline;">Circular 3/2020</a>, artículo 2 (ámbito) y artículo 9 (particularidades de facturación). <a href="https://www.cnmc.es/expedientes/cnsde146720" target="_blank" style="color:var(--cyan); text-decoration:underline;">Acuerdo CNS/DE/1467/20</a>, apartados 2-3 y 6.</p>
 
@@ -1222,44 +1222,44 @@ cos φ = Ea / √(Ea² + Er²)
         <p style="font-size:10px; color:var(--text-dimmer); margin-bottom:0; font-style:italic;">Otros cambios de la Circular 1/2025: ajustes complementarios para los puntos de recarga de vehículos eléctricos de acceso público (peajes 3.0 TDVE y 6.1 TDVE), a los que se aplican los mismos términos de exceso de potencia que a los peajes 3.0 TD y 6.1 TD respectivamente.</p>
       </div>
 
-      <div id="teor_refs" class="calculator teor-panel" style="background:rgba(34,211,238,0.08); border:1px solid rgba(34,211,238,0.2); border-left:3px solid var(--cyan);">
+      <div id="teor_refs" class="calculator teor-panel" style="background:rgba(36,87,230,0.08); border:1px solid rgba(36,87,230,0.2); border-left:3px solid var(--cyan);">
         <h4 style="margin-top:0; color:var(--cyan); font-size:13px;">📖 Referencias normativas</h4>
         <ul style="list-style:none; padding:0; margin:0; font-size:10px; color:var(--text-dim);">
-          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(34,211,238,0.2);">
+          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(36,87,230,0.2);">
             <b style="color:var(--cyan);">🔷 Circular 3/2020, de 15 de enero, de la CNMC</b>
             <br />Establece la metodología para el cálculo de los peajes de transporte y distribución de electricidad.
             <br /><b>BOE:</b> <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2020-1066" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2020-1066</a> (24 de enero de 2020).
             <br /><b>Expediente CNMC:</b> <a href="https://www.cnmc.es/expedientes/cirde00219" style="color:var(--cyan); text-decoration:underline;" target="_blank">cirde00219</a>
           </li>
-          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(34,211,238,0.2);">
+          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(36,87,230,0.2);">
             <b style="color:var(--cyan);">🔷 Circular 1/2025, de 28 de enero, de la CNMC</b>
             <br />Modifica la Circular 3/2020 (nuevo método de facturación de excesos de potencia para tipo 1/2/3, habilitación para actualizar coeficientes de pérdidas por resolución).
             <br /><b>BOE:</b> <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-2044" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2025-2044</a>.
             <br /><b>Expediente CNMC:</b> <a href="https://www.cnmc.es/expedientes/cirde00122" style="color:var(--cyan); text-decoration:underline;" target="_blank">cirde00122</a>
           </li>
-          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(34,211,238,0.2);">
+          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(36,87,230,0.2);">
             <b style="color:var(--cyan);">🔷 Acuerdo CNS/DE/1467/20 (18 de marzo de 2021)</b>
             <br />«Acuerdo por el que se contestan consultas relativas a la aplicación de la Circular 3/2020» — respuestas aclaratorias de la Sala de Supervisión Regulatoria de la CNMC a más de 100 cuestiones planteadas por 62 sujetos. Fuente de las fórmulas FP, FE, FEP y cos φ desarrolladas en esta página.
             <br /><b>Documento:</b> <a href="https://www.cnmc.es/sites/default/files/3417242_0.pdf" style="color:var(--cyan); text-decoration:underline;" target="_blank">PDF en cnmc.es</a> · <b>Expediente:</b> <a href="https://www.cnmc.es/expedientes/cnsde146720" style="color:var(--cyan); text-decoration:underline;" target="_blank">CNS/DE/1467/20</a>
           </li>
-          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(34,211,238,0.2);">
+          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(36,87,230,0.2);">
             <b style="color:var(--cyan);">🔷 Resoluciones anuales de precios</b>
             <br />Resolución de 4 de diciembre de 2024 (peajes 2025): <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-26218" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2024-26218</a>.
             <br />Resolución de 6 de marzo de 2025 (sustituye Anexo II, efectos desde 01/04/2025): <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-5341" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2025-5341</a>.
             <br />Resolución de 18 de diciembre de 2025 (peajes 2026): <a href="https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26348" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2025-26348</a>.
           </li>
-          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(34,211,238,0.2);">
+          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(36,87,230,0.2);">
             <b style="color:var(--cyan);">🔷 Real Decreto 1164/2001, de 26 de octubre</b>
             <br />Tarifas de acceso a las redes de transporte y distribución. Su artículo 9.3 regulaba la facturación por energía reactiva; la Circular 3/2020 mantuvo esas condiciones en tanto no concluyeran los trabajos de la CNMC sobre control de tensión.
             <br /><b>BOE:</b> <a href="https://www.boe.es/buscar/act.php?id=BOE-A-2001-20850" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2001-20850</a>
             <br /><b style="color:var(--amber);">⚠ Actualización 2026:</b> su artículo 9 (incluido el 9.3) fue derogado por el Real Decreto 88/2026, de 11 de febrero — ver más abajo. Los términos y la fórmula de cos φ siguen aplicándose en la práctica porque la propia Circular 3/2020 y la Resolución de precios de 2026 los incorporan directamente, con independencia de la derogación del RD 1164/2001.
           </li>
-          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(34,211,238,0.2);">
+          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(36,87,230,0.2);">
             <b style="color:var(--cyan);">🔷 Orden ITC/688/2011, de 30 de marzo</b>
             <br />Anexo I: términos de facturación por energía reactiva inductiva vigentes (0,041554 y 0,062332 €/kVArh).
             <br /><b>BOE:</b> <a href="https://www.boe.es/buscar/doc.php?id=BOE-A-2011-5757" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2011-5757</a>
           </li>
-          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(34,211,238,0.2);">
+          <li style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(36,87,230,0.2);">
             <b style="color:var(--amber);">🆕 Real Decreto 88/2026, de 11 de febrero (última publicación relevante de 2026)</b>
             <br />Aprueba el Reglamento general de suministro, comercialización y agregación de energía eléctrica. Deroga expresamente el artículo 9 del Real Decreto 1164/2001 (entre otros), que hasta entonces regulaba la facturación por energía reactiva.
             <br /><b>BOE:</b> <a href="https://www.boe.es/buscar/act.php?id=BOE-A-2026-3212" style="color:var(--cyan); text-decoration:underline;" target="_blank">BOE-A-2026-3212</a> (12 de febrero de 2026)
@@ -1358,7 +1358,7 @@ cos φ = Ea / √(Ea² + Er²)
               <td class="label"><b>Total anual</b></td>
               <td class="value"><b>3100 €</b></td>
             </tr>
-            <tr style="background:rgba(255,176,32,0.1);">
+            <tr style="background:rgba(194,124,0,0.1);">
               <td class="label"><b>€/MWh de acceso (peaje/consumo)</b></td>
               <td class="value"><b>20,67 €/MWh</b></td>
             </tr>
@@ -1387,14 +1387,14 @@ cos φ = Ea / √(Ea² + Er²)
               <td>—</td>
               <td>Bajo</td>
             </tr>
-            <tr style="background:rgba(255,176,32,0.08);">
+            <tr style="background:rgba(194,124,0,0.08);">
               <td><b>7 kW (reducida solar)</b></td>
               <td>50 MWh (consumo neto igual)</td>
               <td><b>437 €</b></td>
               <td><b>188 € (30%)</b></td>
               <td>Bajo-Medio</td>
             </tr>
-            <tr style="background:rgba(255,176,32,0.15);">
+            <tr style="background:rgba(194,124,0,0.15);">
               <td><b>5 kW (solar máximo)</b></td>
               <td>50 MWh (consumo neto igual)</td>
               <td><b>312 €</b></td>

@@ -9,20 +9,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --amber-dim:#8A6220; --cyan:#37CFFF; --cyan-dim:#1B6E86;
-    --green:#57D9A3; --red:#FF6B6B;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --amber-dim:#ecd08f; --cyan:#2457e6; --cyan-dim:#a9bdf3;
+    --green:#16894f; --red:#c62828;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -108,8 +108,8 @@
   .checkline input{accent-color:var(--amber);}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(255,176,32,0.1);}
-  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
   .btn.primary:hover{background:#ffc24d;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
@@ -117,10 +117,10 @@
   .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
 
   .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
-  .pill.mat{background:rgba(55,207,255,0.12); color:var(--cyan); border:1px solid rgba(55,207,255,0.35);}
-  .pill.mo{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
-  .pill.proyecto{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
-  .pill.tramitacion{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
+  .pill.mat{background:rgba(36,87,230,0.12); color:var(--cyan); border:1px solid rgba(36,87,230,0.35);}
+  .pill.mo{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.proyecto{background:rgba(194,124,0,0.12); color:var(--amber); border:1px solid rgba(194,124,0,0.35);}
+  .pill.tramitacion{background:rgba(198,40,40,0.12); color:var(--red); border:1px solid rgba(198,40,40,0.35);}
   .pill.otros{background:rgba(143,163,184,0.12); color:var(--text-dim); border:1px solid rgba(143,163,184,0.35);}
 
   table.budget-table{width:100%; border-collapse:collapse; font-size:12.5px;}
@@ -779,7 +779,7 @@ function buildInstalacionFlowSVG(cfg){
     dem: {x:390, y:420, rx:60, ry:27, label:'Vivienda'},
     red: {x:660, y:250, rx:52, ry:24, label:'Red'},
   };
-  const C = {amber:'#FFB020', cyan:'#37CFFF', violet:'#6366F1', teal:'#A3E635', crimson:'#FF3B30', green:'#22D46B', dim:'#3A4756'};
+  const C = {amber:'#c27c00', cyan:'#2457e6', violet:'#6366F1', teal:'#A3E635', crimson:'#FF3B30', green:'#22D46B', dim:'#3A4756'};
   const dimBat = !cfg.bateria;
   const dimExport = cfg.tipo==='sin_excedentes';
   const colectivo = cfg.tipo==='colectivo';
@@ -801,14 +801,14 @@ function buildInstalacionFlowSVG(cfg){
   }
   function labelTag(x,y,text,ck,dim){
     const w = text.length*7.2+10;
-    return '<g opacity="'+(dim?0.4:1)+'"><rect x="'+(x-w/2)+'" y="'+(y-11)+'" width="'+w+'" height="17" rx="2" fill="#0A121C" stroke="#182739" stroke-width="0.6"/>'+
+    return '<g opacity="'+(dim?0.4:1)+'"><rect x="'+(x-w/2)+'" y="'+(y-11)+'" width="'+w+'" height="17" rx="2" fill="#ffffff" stroke="#eceff4" stroke-width="0.6"/>'+
       '<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-weight="700" font-size="12" fill="'+C[dim?'dim':ck]+'">'+text+'</text></g>';
   }
   function nodeEl(n, dim, sub){
     return '<g opacity="'+(dim?0.35:1)+'">'+
-      '<ellipse cx="'+n.x+'" cy="'+n.y+'" rx="'+n.rx+'" ry="'+n.ry+'" fill="#0E1826" stroke="#37CFFF" stroke-width="1.4"/>'+
-      '<text x="'+n.x+'" y="'+(sub?n.y+1:n.y+4.5)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" font-weight="600" fill="#E7ECF2">'+n.label+'</text>'+
-      (sub?'<text x="'+n.x+'" y="'+(n.y+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8FA3B8">'+sub+'</text>':'')+
+      '<ellipse cx="'+n.x+'" cy="'+n.y+'" rx="'+n.rx+'" ry="'+n.ry+'" fill="#f6f8fb" stroke="#2457e6" stroke-width="1.4"/>'+
+      '<text x="'+n.x+'" y="'+(sub?n.y+1:n.y+4.5)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" font-weight="600" fill="#1c2735">'+n.label+'</text>'+
+      (sub?'<text x="'+n.x+'" y="'+(n.y+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#4f5b6d">'+sub+'</text>':'')+
     '</g>';
   }
   function oneWay(a,b,ck,text,labelOff,dim){
@@ -848,16 +848,16 @@ function buildInstalacionFlowSVG(cfg){
   s += nodeEl(N.dem, false, colectivo?'reparto β':null);
   s += nodeEl(N.bat, dimBat, dimBat?null:fmtNum(cfg.kwhBateria,1)+' kWh');
   s += nodeEl(N.red);
-  if(dimBat){ s += '<text x="'+N.bat.x+'" y="'+(N.bat.y+N.bat.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">(sin batería)</text>'; }
+  if(dimBat){ s += '<text x="'+N.bat.x+'" y="'+(N.bat.y+N.bat.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">(sin batería)</text>'; }
   if(dimExport){
     const mid = midOffset(N.bus, N.red, 0);
-    s += '<text x="'+mid.x+'" y="'+(mid.y-42)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#5B7086">⛔ dispositivo antivertido</text>';
+    s += '<text x="'+mid.x+'" y="'+(mid.y-42)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#7b8696">⛔ dispositivo antivertido</text>';
   }
 
-  s += '<text x="10" y="14" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#FFB020">━</tspan> generación FV &nbsp; <tspan fill="#37CFFF">━</tspan> autoconsumo &nbsp; <tspan fill="#6366F1">━</tspan> carga batería &nbsp; <tspan fill="#A3E635">━</tspan> descarga batería</text>';
-  s += '<text x="10" y="30" font-family="IBM Plex Mono" font-size="11" fill="#8FA3B8">'+
-    '<tspan fill="#22D46B">━</tspan> exportación a red &nbsp; <tspan fill="#FF3B30">━</tspan> importación de red &nbsp; <tspan fill="#5B7086">━</tspan> no aplica a esta configuración</text>';
+  s += '<text x="10" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#c27c00">━</tspan> generación FV &nbsp; <tspan fill="#2457e6">━</tspan> autoconsumo &nbsp; <tspan fill="#6366F1">━</tspan> carga batería &nbsp; <tspan fill="#A3E635">━</tspan> descarga batería</text>';
+  s += '<text x="10" y="30" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+    '<tspan fill="#22D46B">━</tspan> exportación a red &nbsp; <tspan fill="#FF3B30">━</tspan> importación de red &nbsp; <tspan fill="#7b8696">━</tspan> no aplica a esta configuración</text>';
 
   return '<svg viewBox="0 0 780 485" width="100%" style="max-width:740px;">'+s+'</svg>';
 }
@@ -869,7 +869,7 @@ function renderInstalacionFlow(){
 
 function buildProportionBarSVG(porCapitulo, total){
   const W=760, H=70, barY=24, barH=22;
-  const colors = {PROYECTO:'#FFB020', MAT:'#37CFFF', MO:'#57D9A3', TRAMITACION:'#FF6B6B', OTROS:'#8FA3B8'};
+  const colors = {PROYECTO:'#c27c00', MAT:'#2457e6', MO:'#16894f', TRAMITACION:'#c62828', OTROS:'#4f5b6d'};
   const t = total||1;
   let x=10, s='';
   CAP_ORDER.forEach(c=>{
@@ -1273,7 +1273,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #c27c00; background:#ffffff; color:#c27c00; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

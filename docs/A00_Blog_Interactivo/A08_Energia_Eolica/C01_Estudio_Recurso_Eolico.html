@@ -10,19 +10,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -88,9 +88,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(255,176,32,0.1);}
-  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
-  .btn.primary:hover{background:#ffc352;}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
+  .btn.primary:hover{background:#a86a00;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn.small{padding:7px 12px; font-size:11.5px;}
@@ -105,7 +105,7 @@
   .result-chip.good{border-color:var(--green);}
   .result-chip.good .v{color:var(--green);}
 
-  .example-card{background:linear-gradient(135deg, rgba(255,176,32,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
+  .example-card{background:linear-gradient(135deg, rgba(194,124,0,0.08) 0%, rgba(37,99,235,0.08) 100%); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin:16px 0;}
   .example-card h4{font-size:13px; color:var(--amber); margin-bottom:12px; font-family:var(--font-mono); text-transform:uppercase;}
   .example-table{width:100%; font-size:12px; border-collapse:collapse;}
   .example-table td{padding:8px; border-bottom:1px solid var(--line-soft);}
@@ -133,7 +133,7 @@
 
   .badge{display:inline-block; font-family:var(--font-mono); font-size:11px; padding:4px 11px; border-radius:var(--radius); text-transform:uppercase; letter-spacing:0.05em; border:1px solid var(--line);}
   .badge.good{background:rgba(22,163,74,0.15); color:var(--green); border-color:var(--green);}
-  .badge.mid{background:rgba(255,176,32,0.15); color:var(--amber); border-color:var(--amber);}
+  .badge.mid{background:rgba(194,124,0,0.15); color:var(--amber); border-color:var(--amber);}
   .badge.bad{background:rgba(220,38,38,0.15); color:var(--red); border-color:var(--red);}
   .badge.ok{color:var(--green); border-color:var(--green);}
   .badge.err{color:var(--red); border-color:var(--red);}
@@ -443,7 +443,7 @@
         <div class="subsection-title">Rosa de los vientos</div>
         <div class="chart-wrap" id="perfil_rosa" style="max-width:420px; margin-left:auto; margin-right:auto;"></div>
         <div class="legend-row">
-          <div class="li"><span class="sw" style="background:#37CFFF;"></span>Velocidades bajas (&lt; 5 m/s)</div>
+          <div class="li"><span class="sw" style="background:#2457e6;"></span>Velocidades bajas (&lt; 5 m/s)</div>
           <div class="li"><span class="sw" style="background:#16A34A;"></span>Velocidades medias (5-10 m/s)</div>
           <div class="li"><span class="sw" style="background:#DC2626;"></span>Velocidades altas (&gt; 10 m/s)</div>
         </div>
@@ -893,7 +893,7 @@ function calcularEstadistico(){
 
   document.getElementById('est_chart_mensual').innerHTML = buildDualLineChartSVG(
     mensual.map(m=>m.media), mensual.map(m=>m.var), mensual.map(m=>m.mes.slice(0,3)),
-    '#37CFFF', '#FFB020', 'Media', 'Varianza', 'Velocidad media y varianza por mes (10 m)'
+    '#2457e6', '#c27c00', 'Media', 'Varianza', 'Velocidad media y varianza por mes (10 m)'
   );
   document.querySelector('#est_tabla_mensual tbody').innerHTML = mensual.map(m=>`
     <tr><td>${m.mes}</td><td>${fmtNum(m.media,4)}</td><td>${fmtNum(m.var,4)}</td></tr>
@@ -901,7 +901,7 @@ function calcularEstadistico(){
 
   document.getElementById('est_chart_periodo').innerHTML = buildDualLineChartSVG(
     periodo.map(p=>p.mediaD), periodo.map(p=>p.mediaN), periodo.map(p=>p.mes.slice(0,3)),
-    '#37CFFF', '#FFB020', 'Media diurna', 'Media nocturna', 'Velocidad media por mes (periodo diurno y nocturno)'
+    '#2457e6', '#c27c00', 'Media diurna', 'Media nocturna', 'Velocidad media por mes (periodo diurno y nocturno)'
   );
   document.querySelector('#est_tabla_periodo tbody').innerHTML = periodo.map(p=>`
     <tr><td>${p.mes}</td><td>${fmtNum(p.mediaD,3)}</td><td>${fmtNum(p.varD,3)}</td><td>${fmtNum(p.mediaN,3)}</td><td>${fmtNum(p.varN,3)}</td></tr>
@@ -926,7 +926,7 @@ function calcularPerfil(){
 
   const wsAll = tmy.rows.map(r=>r.ws);
   const hist10 = histograma(wsAll, 1);
-  document.getElementById('perfil_hist10').innerHTML = buildHistogramSVG(hist10, '#37CFFF', 'Histograma de velocidades a 10 m', null);
+  document.getElementById('perfil_hist10').innerHTML = buildHistogramSVG(hist10, '#2457e6', 'Histograma de velocidades a 10 m', null);
 
   const rose = buildWindRoseData(tmy.rows);
   document.getElementById('perfil_rosa').innerHTML = buildWindRoseSVG(rose);
@@ -949,10 +949,10 @@ function calcularPerfil(){
 
   const alturas = [10,20,40,60,80,100,120,150,180,200];
   const perfilAlturas = alturas.map(h=> h<href ? null : vref*Math.log(h/z0)/Math.log(href/z0));
-  document.getElementById('perfil_chart_altura').innerHTML = buildProfileChartSVG(alturas, perfilAlturas, '#FFB020', 'Perfil de velocidades con la altura (z0='+z0+' m)');
+  document.getElementById('perfil_chart_altura').innerHTML = buildProfileChartSVG(alturas, perfilAlturas, '#c27c00', 'Perfil de velocidades con la altura (z0='+z0+' m)');
 
   const histBuje = histograma(wsBuje, 1);
-  document.getElementById('perfil_hist_buje').innerHTML = buildHistogramSVG(histBuje, '#FFB020', 'Histograma de velocidades a la altura de buje ('+fmtNum(hbuje,0)+' m)', null);
+  document.getElementById('perfil_hist_buje').innerHTML = buildHistogramSVG(histBuje, '#c27c00', 'Histograma de velocidades a la altura de buje ('+fmtNum(hbuje,0)+' m)', null);
 
   let acum = 0;
   const histAcum = histBuje.map(b=>{ acum += b.count; return { v0:b.v0, v1:b.v1, count: acum }; });
@@ -1027,7 +1027,7 @@ function calcularAjusteWeibull(){
   const histBuje = perfil.histBuje;
   const totalN = perfil.wsBuje.length;
   const densidadPts = histBuje.map(b=>weibullDensidad((b.v0+b.v1)/2, fit.k, fit.C));
-  document.getElementById('wb_chart_densidad').innerHTML = buildHistDensityOverlaySVG(histBuje, totalN, densidadPts, '#37CFFF', '#FFB020', 'Ajuste de Weibull sobre el histograma (altura de buje)');
+  document.getElementById('wb_chart_densidad').innerHTML = buildHistDensityOverlaySVG(histBuje, totalN, densidadPts, '#2457e6', '#c27c00', 'Ajuste de Weibull sobre el histograma (altura de buje)');
 
   return fit;
 }
@@ -1089,7 +1089,7 @@ function calcularEnergia(){
     </div>
   `;
 
-  document.getElementById('wb_chart_energia').innerHTML = buildEnergyChartSVG(curvaPuntos, '#37CFFF', '#FFB020', 'Densidad de Weibull y curva de potencia');
+  document.getElementById('wb_chart_energia').innerHTML = buildEnergyChartSVG(curvaPuntos, '#2457e6', '#c27c00', 'Densidad de Weibull y curva de potencia');
 
   let texto, clase;
   if(capacityFactor>0.35){ texto='Factor de capacidad excelente ('+fmtNum(capacityFactor*100,1)+' %): emplazamiento altamente favorable para un parque eólico, comparable a las mejores ubicaciones de España (corredores como el Estrecho de Gibraltar).'; clase='good'; }
@@ -1107,12 +1107,12 @@ function buildDualLineChartSVG(seriesA, seriesB, labels, colorA, colorB, labelA,
   const maxV = Math.max(...seriesA, ...seriesB, 1);
   const step = (W-padL-padR)/((labels.length-1)||1);
   const scale = (H-padT-padB)/maxV;
-  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">${esc(titulo)}</text>`;
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4;
     const gy = H-padB-gv*scale;
-    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
-    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${fmtNum(gv,1)}</text>`;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#eceff4" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">${fmtNum(gv,1)}</text>`;
   }
   function poly(vals, color){
     const pts = vals.map((v,i)=>[padL+step*i, H-padB-v*scale]);
@@ -1122,10 +1122,10 @@ function buildDualLineChartSVG(seriesA, seriesB, labels, colorA, colorB, labelA,
   s += poly(seriesA, colorA);
   s += poly(seriesB, colorB);
   labels.forEach((l,i)=>{
-    s += `<text x="${padL+step*i}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${esc(l)}</text>`;
+    s += `<text x="${padL+step*i}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">${esc(l)}</text>`;
   });
-  s += `<rect x="${W-150}" y="${padT-14}" width="9" height="9" fill="${colorA}"/><text x="${W-138}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">${esc(labelA)}</text>`;
-  s += `<rect x="${W-70}" y="${padT-14}" width="9" height="9" fill="${colorB}"/><text x="${W-58}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">${esc(labelB)}</text>`;
+  s += `<rect x="${W-150}" y="${padT-14}" width="9" height="9" fill="${colorA}"/><text x="${W-138}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">${esc(labelA)}</text>`;
+  s += `<rect x="${W-70}" y="${padT-14}" width="9" height="9" fill="${colorB}"/><text x="${W-58}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">${esc(labelB)}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
 }
 
@@ -1136,12 +1136,12 @@ function buildHistogramSVG(bins, color, titulo, unidad){
   const step = (W-padL-padR)/values.length;
   const scale = (H-padT-padB)/maxV;
   const barW = step*0.82;
-  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">${esc(titulo)}</text>`;
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4;
     const gy = H-padB-gv*scale;
-    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
-    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${Math.round(gv)}</text>`;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#eceff4" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">${Math.round(gv)}</text>`;
   }
   values.forEach((v,i)=>{
     const x = padL+step*i+(step-barW)/2;
@@ -1151,7 +1151,7 @@ function buildHistogramSVG(bins, color, titulo, unidad){
   const tickEvery = Math.max(1, Math.round(bins.length/12));
   bins.forEach((b,i)=>{
     if(i%tickEvery!==0) return;
-    s += `<text x="${padL+step*i+step/2}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${b.v0}</text>`;
+    s += `<text x="${padL+step*i+step/2}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">${b.v0}</text>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
 }
@@ -1164,12 +1164,12 @@ function buildHistDensityOverlaySVG(bins, totalN, densidadPts, colorHist, colorL
   const step = (W-padL-padR)/bins.length;
   const scale = (H-padT-padB)/maxV;
   const barW = step*0.82;
-  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">${esc(titulo)}</text>`;
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4;
     const gy = H-padB-gv*scale;
-    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
-    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${fmtNum(gv,2)}</text>`;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#eceff4" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">${fmtNum(gv,2)}</text>`;
   }
   freqRel.forEach((v,i)=>{
     const x = padL+step*i+(step-barW)/2;
@@ -1181,9 +1181,9 @@ function buildHistDensityOverlaySVG(bins, totalN, densidadPts, colorHist, colorL
   const tickEvery = Math.max(1, Math.round(bins.length/12));
   bins.forEach((b,i)=>{
     if(i%tickEvery!==0) return;
-    s += `<text x="${padL+step*i+step/2}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${b.v0}</text>`;
+    s += `<text x="${padL+step*i+step/2}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">${b.v0}</text>`;
   });
-  s += `<rect x="${W-190}" y="${padT-14}" width="9" height="9" fill="${colorHist}"/><text x="${W-178}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Histograma (frec. relativa)</text>`;
+  s += `<rect x="${W-190}" y="${padT-14}" width="9" height="9" fill="${colorHist}"/><text x="${W-178}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">Histograma (frec. relativa)</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
 }
 
@@ -1199,18 +1199,18 @@ function buildWeibullFitScatterSVG(pts, k, intercept, titulo){
   const scaleY = (H-padT-padB)/((maxY-minY)||1);
   const X = x => padL+(x-minX)*scaleX;
   const Y = y => H-padB-(y-minY)*scaleY;
-  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">${esc(titulo)}</text>`;
   for(let g=0; g<=4; g++){
     const gy = padT+(H-padT-padB)*g/4;
-    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#eceff4" stroke-width="1"/>`;
   }
-  s += pts.map(d=>`<circle cx="${X(d.p).toFixed(1)}" cy="${Y(d.q).toFixed(1)}" r="1.6" fill="#37CFFF" opacity="0.65"/>`).join('');
+  s += pts.map(d=>`<circle cx="${X(d.p).toFixed(1)}" cy="${Y(d.q).toFixed(1)}" r="1.6" fill="#2457e6" opacity="0.65"/>`).join('');
   const lx0=X(minX), ly0=Y(k*minX+intercept), lx1=X(maxX), ly1=Y(k*maxX+intercept);
-  s += `<line x1="${lx0}" y1="${ly0}" x2="${lx1}" y2="${ly1}" stroke="#FFB020" stroke-width="1.8"/>`;
-  s += `<text x="${padL}" y="${H-padB+16}" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">ln(v)</text>`;
-  s += `<text x="${padL-40}" y="${padT}" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">ln(-ln(1-F))</text>`;
-  s += `<rect x="${W-210}" y="${padT-14}" width="9" height="9" fill="#37CFFF"/><text x="${W-198}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Datos transformados</text>`;
-  s += `<rect x="${W-80}" y="${padT-14}" width="9" height="9" fill="#FFB020"/><text x="${W-68}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Ajuste lineal</text>`;
+  s += `<line x1="${lx0}" y1="${ly0}" x2="${lx1}" y2="${ly1}" stroke="#c27c00" stroke-width="1.8"/>`;
+  s += `<text x="${padL}" y="${H-padB+16}" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">ln(v)</text>`;
+  s += `<text x="${padL-40}" y="${padT}" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">ln(-ln(1-F))</text>`;
+  s += `<rect x="${W-210}" y="${padT-14}" width="9" height="9" fill="#2457e6"/><text x="${W-198}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">Datos transformados</text>`;
+  s += `<rect x="${W-80}" y="${padT-14}" width="9" height="9" fill="#c27c00"/><text x="${W-68}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">Ajuste lineal</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
 }
 
@@ -1221,19 +1221,19 @@ function buildProfileChartSVG(alturas, valores, color, titulo){
   const maxH = Math.max(...alturas);
   const scaleX = (W-padL-padR)/maxH;
   const scaleY = (H-padT-padB)/maxV;
-  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">${esc(titulo)}</text>`;
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4;
     const gy = H-padB-gv*scaleY;
-    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#182739" stroke-width="1"/>`;
-    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">${fmtNum(gv,1)}</text>`;
+    s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#eceff4" stroke-width="1"/>`;
+    s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">${fmtNum(gv,1)}</text>`;
   }
   const pts = validas.map(d=>[padL+d.h*scaleX, H-padB-d.v*scaleY]);
   s += `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="1.8"/>`;
   s += pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${color}"/>`).join('');
   [0,50,100,150,200].forEach(h=>{
     if(h>maxH) return;
-    s += `<text x="${padL+h*scaleX}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${h} m</text>`;
+    s += `<text x="${padL+h*scaleX}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">${h} m</text>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
 }
@@ -1248,7 +1248,7 @@ function buildEnergyChartSVG(pts, colorDensidad, colorPotencia, titulo){
   const scaleYd = (H-padT-padB)/maxDens;
   const scaleYp = (H-padT-padB)/maxPot;
   const scaleYe = (H-padT-padB)/maxEnergia;
-  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">${esc(titulo)}</text>`;
+  let s = `<text x="${padL}" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">${esc(titulo)}</text>`;
   // Area sombreada de energia (densidad x potencia, escala propia): la superficie bajo esta
   // curva representa, en cada tramo de velocidad, la contribucion relativa a la energia anual.
   const ptsE = pts.map(p=>[padL+p.v*scaleX, H-padB-(p.energia||0)*scaleYe]);
@@ -1261,11 +1261,11 @@ function buildEnergyChartSVG(pts, colorDensidad, colorPotencia, titulo){
   s += `<polyline points="${ptsP.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${colorPotencia}" stroke-width="1.8"/>`;
   pts.forEach((p,i)=>{
     if(i%4!==0) return;
-    s += `<text x="${padL+p.v*scaleX}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">${fmtNum(p.v,0)}</text>`;
+    s += `<text x="${padL+p.v*scaleX}" y="${H-padB+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">${fmtNum(p.v,0)}</text>`;
   });
-  s += `<rect x="${W-330}" y="${padT-14}" width="9" height="9" fill="#16A34A" opacity="0.6"/><text x="${W-318}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Energía (densidad × potencia)</text>`;
-  s += `<rect x="${W-160}" y="${padT-14}" width="9" height="9" fill="${colorDensidad}"/><text x="${W-148}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Densidad</text>`;
-  s += `<rect x="${W-80}" y="${padT-14}" width="9" height="9" fill="${colorPotencia}"/><text x="${W-68}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#8FA3B8">Potencia</text>`;
+  s += `<rect x="${W-330}" y="${padT-14}" width="9" height="9" fill="#16A34A" opacity="0.6"/><text x="${W-318}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">Energía (densidad × potencia)</text>`;
+  s += `<rect x="${W-160}" y="${padT-14}" width="9" height="9" fill="${colorDensidad}"/><text x="${W-148}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">Densidad</text>`;
+  s += `<rect x="${W-80}" y="${padT-14}" width="9" height="9" fill="${colorPotencia}"/><text x="${W-68}" y="${padT-6}" font-family="IBM Plex Mono" font-size="8" fill="#4f5b6d">Potencia</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px;">${s}</svg>`;
 }
 
@@ -1292,8 +1292,8 @@ function buildWindRoseSVG(rose){
   let s = '';
   for(let g=1; g<=4; g++){
     const r = rMax*g/4;
-    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#182739" stroke-width="1"/>`;
-    s += `<text x="${cx+3}" y="${cy-r+9}" font-family="IBM Plex Mono" font-size="7" fill="#5B7086">${Math.round(maxTotal*g/4)}</text>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eceff4" stroke-width="1"/>`;
+    s += `<text x="${cx+3}" y="${cy-r+9}" font-family="IBM Plex Mono" font-size="7" fill="#7b8696">${Math.round(maxTotal*g/4)}</text>`;
   }
   rose.forEach((b,i)=>{
     const centro = i*22.5;
@@ -1301,14 +1301,14 @@ function buildWindRoseSVG(rose){
     const rLow = rMax*b.low/maxTotal;
     const rMid = rMax*(b.low+b.mid)/maxTotal;
     const rHigh = rMax*(b.low+b.mid+b.high)/maxTotal;
-    if(b.low>0) s += `<path d="${wedgePath(cx,cy,0,rLow,a0,a1)}" fill="#37CFFF"/>`;
+    if(b.low>0) s += `<path d="${wedgePath(cx,cy,0,rLow,a0,a1)}" fill="#2457e6"/>`;
     if(b.mid>0) s += `<path d="${wedgePath(cx,cy,rLow,rMid,a0,a1)}" fill="#16A34A"/>`;
     if(b.high>0) s += `<path d="${wedgePath(cx,cy,rMid,rHigh,a0,a1)}" fill="#DC2626"/>`;
   });
   const marcas = [['N',0],['E',90],['S',180],['O',270]];
   marcas.forEach(([lbl,ang])=>{
     const [x,y] = polarXY(cx,cy,rMax+16,ang);
-    s += `<text x="${x}" y="${y+3}" text-anchor="middle" font-family="IBM Plex Mono" font-weight="600" font-size="11" fill="#8FA3B8">${lbl}</text>`;
+    s += `<text x="${x}" y="${y+3}" text-anchor="middle" font-family="IBM Plex Mono" font-weight="600" font-size="11" fill="#4f5b6d">${lbl}</text>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:380px; display:block; margin:0 auto;">${s}</svg>`;
 }
@@ -1862,7 +1862,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #FFB020; background:#0A121C; color:#FFB020; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #c27c00; background:#ffffff; color:#c27c00; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

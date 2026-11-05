@@ -8,37 +8,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C;
-    --bg2:#070D15;
-    --panel:#111E2E;
-    --panel2:#0E1826;
-    --line:#213348;
-    --line-soft:#182739;
-    --text:#E7ECF2;
-    --text-dim:#8FA3B8;
-    --text-dimmer:#5B7086;
-    --amber:#FFB020;
-    --amber-dim:#8A6220;
-    --cyan:#37CFFF;
-    --cyan-dim:#1B6E86;
-    --green:#57D9A3;
-    --red:#FF6B6B;
-    --violet:#B98CFF;
-    --font-display:'Space Grotesk',sans-serif;
+    --bg:#ffffff;
+    --bg2:#f4f6f9;
+    --panel:#ffffff;
+    --panel2:#f6f8fb;
+    --line:#dfe4eb;
+    --line-soft:#eceff4;
+    --text:#1c2735;
+    --text-dim:#4f5b6d;
+    --text-dimmer:#7b8696;
+    --amber:#c27c00;
+    --amber-dim:#ecd08f;
+    --cyan:#2457e6;
+    --cyan-dim:#a9bdf3;
+    --green:#16894f;
+    --red:#c62828;
+    --violet:#7c4dcc;
+    --font-display:'Inter',sans-serif;
     --font-body:'Inter',sans-serif;
     --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--green); color:#0A121C;}
+  ::selection{background:var(--green); color:#ffffff;}
 
   .grid-bg{
     position:fixed; inset:0; z-index:0; pointer-events:none;
     background-image:
-      linear-gradient(rgba(87,217,163,0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(87,217,163,0.035) 1px, transparent 1px);
+      linear-gradient(rgba(22,137,79,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(22,137,79,0.035) 1px, transparent 1px);
     background-size:42px 42px;
     mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
   }
@@ -114,7 +114,7 @@
   .filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;}
   .filter-btn{font-family:var(--font-mono); font-size:11.5px; padding:7px 13px; background:var(--panel2); border:1px solid var(--line); color:var(--text-dim); border-radius:20px; cursor:pointer; transition:all .15s ease;}
   .filter-btn:hover{border-color:var(--green); color:var(--text);}
-  .filter-btn.active{background:var(--green); border-color:var(--green); color:#0A121C; font-weight:600;}
+  .filter-btn.active{background:var(--green); border-color:var(--green); color:#ffffff; font-weight:600;}
 
   .scheme-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
   @media(max-width:900px){.scheme-grid{grid-template-columns:1fr;}}
@@ -144,9 +144,9 @@
   .result-row .lbl{color:var(--text-dim);}
   .result-row .val{font-family:var(--font-mono); color:var(--text);}
   .pill{font-family:var(--font-mono); font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600;}
-  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
-  .pill.bad{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
-  .pill.info{background:rgba(55,207,255,0.12); color:var(--cyan); border:1px solid rgba(55,207,255,0.35);}
+  .pill.ok{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.bad{background:rgba(198,40,40,0.12); color:var(--red); border:1px solid rgba(198,40,40,0.35);}
+  .pill.info{background:rgba(36,87,230,0.12); color:var(--cyan); border:1px solid rgba(36,87,230,0.35);}
 
   .chart-wrap{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:20px; position:relative;}
   .bars-chart{display:flex; align-items:flex-end; gap:14px; height:220px; padding-top:10px;}
@@ -209,8 +209,8 @@
   .checkline{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13.5px; color:var(--text-dim);}
   .checkline input{accent-color:var(--green);}
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--green); background:transparent; color:var(--green); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(87,217,163,0.1);}
-  .btn.primary{background:var(--green); color:#0A121C; border-color:var(--green);}
+  .btn:hover{background:rgba(22,137,79,0.1);}
+  .btn.primary{background:var(--green); color:#ffffff; border-color:var(--green);}
   .btn.primary:hover{background:#7ae4bb;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
@@ -1139,21 +1139,21 @@ activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
   function el(tag,attrs){const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e;}
   const W=1200,H=150;
   // baseline grid
-  const ref = el('line',{x1:0,x2:W,y1:H-30,y2:H-30,stroke:'#213348','stroke-width':1});
+  const ref = el('line',{x1:0,x2:W,y1:H-30,y2:H-30,stroke:'#dfe4eb','stroke-width':1});
   svg.appendChild(ref);
 
   // two bars: without SPL (1.0) vs with SPL (0.3), animated fill
   const barsData = [
-    {x:120, label:'Sin SPL · FS=1,0', color:'#FF6B6B', target:0.92},
-    {x:420, label:'Con SPL · FS=0,3', color:'#57D9A3', target:0.30},
+    {x:120, label:'Sin SPL · FS=1,0', color:'#c62828', target:0.92},
+    {x:420, label:'Con SPL · FS=0,3', color:'#16894f', target:0.30},
   ];
   const barW=90, baseY=H-30, maxH=95;
   barsData.forEach(b=>{
-    const bg = el('rect',{x:b.x,y:baseY-maxH,width:barW,height:maxH,fill:'#0E1826',stroke:'#213348','stroke-width':1});
+    const bg = el('rect',{x:b.x,y:baseY-maxH,width:barW,height:maxH,fill:'#f6f8fb',stroke:'#dfe4eb','stroke-width':1});
     svg.appendChild(bg);
     const fill = el('rect',{x:b.x,y:baseY,width:barW,height:0,fill:b.color});
     svg.appendChild(fill);
-    const lbl = el('text',{x:b.x+barW/2,y:H-8,'text-anchor':'middle',fill:'#5B7086','font-family':'IBM Plex Mono','font-size':'10'});
+    const lbl = el('text',{x:b.x+barW/2,y:H-8,'text-anchor':'middle',fill:'#7b8696','font-family':'IBM Plex Mono','font-size':'10'});
     lbl.textContent=b.label;
     svg.appendChild(lbl);
     const pct = el('text',{x:b.x+barW/2,y:baseY-maxH-10,'text-anchor':'middle',fill:b.color,'font-family':'IBM Plex Mono','font-size':'13','font-weight':'600'});
@@ -1173,9 +1173,9 @@ activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
   });
 
   // moving plug-bolt icon between the bars illustrating "distributed load"
-  const bolt = el('path',{d:'M700 40 L680 75 L700 75 L685 110 L720 65 L702 65 Z', fill:'#FFB020'});
+  const bolt = el('path',{d:'M700 40 L680 75 L700 75 L685 110 L720 65 L702 65 Z', fill:'#c27c00'});
   svg.appendChild(bolt);
-  const boltLbl = el('text',{x:700,y:130,'text-anchor':'middle',fill:'#5B7086','font-family':'IBM Plex Mono','font-size':'10'});
+  const boltLbl = el('text',{x:700,y:130,'text-anchor':'middle',fill:'#7b8696','font-family':'IBM Plex Mono','font-size':'10'});
   boltLbl.textContent='misma potencia instalada, distinta previsión';
   svg.appendChild(boltLbl);
 })();
@@ -1318,22 +1318,22 @@ function buildBars(containerId, data, colorKey){
 }
 
 buildBars('table1Bars', [
-  {w:2300, label:'230V<br>10A', color:'#37CFFF'},
-  {w:3680, label:'230V<br>16A', color:'#37CFFF'},
-  {w:4600, label:'230V<br>20A', color:'#37CFFF'},
-  {w:7360, label:'230V<br>32A', color:'#37CFFF'},
-  {w:9200, label:'230V<br>40A', color:'#37CFFF'},
-  {w:11085, label:'400V<br>16A', color:'#57D9A3'},
-  {w:13856, label:'400V<br>20A', color:'#57D9A3'},
-  {w:22170, label:'400V<br>32A', color:'#57D9A3'},
-  {w:27713, label:'400V<br>40A', color:'#57D9A3'},
+  {w:2300, label:'230V<br>10A', color:'#2457e6'},
+  {w:3680, label:'230V<br>16A', color:'#2457e6'},
+  {w:4600, label:'230V<br>20A', color:'#2457e6'},
+  {w:7360, label:'230V<br>32A', color:'#2457e6'},
+  {w:9200, label:'230V<br>40A', color:'#2457e6'},
+  {w:11085, label:'400V<br>16A', color:'#16894f'},
+  {w:13856, label:'400V<br>20A', color:'#16894f'},
+  {w:22170, label:'400V<br>32A', color:'#16894f'},
+  {w:27713, label:'400V<br>40A', color:'#16894f'},
 ]);
 
 buildBars('table2Bars', [
-  {w:11085, label:'16A<br>3 est.', color:'#FFB020'},
-  {w:22170, label:'32A<br>6 est.', color:'#FFB020'},
-  {w:34641, label:'50A<br>9 est.', color:'#FFB020'},
-  {w:43647, label:'63A<br>12 est.', color:'#FFB020'},
+  {w:11085, label:'16A<br>3 est.', color:'#c27c00'},
+  {w:22170, label:'32A<br>6 est.', color:'#c27c00'},
+  {w:34641, label:'50A<br>9 est.', color:'#c27c00'},
+  {w:43647, label:'63A<br>12 est.', color:'#c27c00'},
 ]);
 
 // ===================== CARGA CALCULATOR =====================
@@ -1959,7 +1959,7 @@ function trunc52(s,n){ return s && s.length>n ? s.slice(0,n-1)+'…' : (s||''); 
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

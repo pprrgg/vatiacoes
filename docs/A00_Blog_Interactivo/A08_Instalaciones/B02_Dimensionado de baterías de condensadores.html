@@ -9,19 +9,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --cyan:#37CFFF; --cyan-dim:#1B6E86; --green:#57D9A3; --amber:#FFB020; --red:#FF6B6B;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --cyan:#2457e6; --cyan-dim:#a9bdf3; --green:#16894f; --amber:#c27c00; --red:#c62828;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--cyan); color:#0A121C;}
+  ::selection{background:var(--cyan); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(55,207,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(36,87,230,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(36,87,230,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
@@ -104,9 +104,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(55,207,255,0.1);}
-  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
-  .btn.primary:hover{background:#7fe1ff;}
+  .btn:hover{background:rgba(36,87,230,0.1);}
+  .btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .btn.primary:hover{background:#1b47c4;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn:disabled{opacity:0.4; cursor:not-allowed;}
@@ -114,7 +114,7 @@
 
   .seg{display:inline-flex; background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px; margin-bottom:16px;}
   .seg button{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.02em; border:none; background:transparent; color:var(--text-dim); padding:7px 14px; border-radius:3px; cursor:pointer; transition:.15s;}
-  .seg button.active{background:var(--cyan); color:#0A121C; font-weight:700;}
+  .seg button.active{background:var(--cyan); color:#ffffff; font-weight:700;}
 
   .line-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden;}
   .line-head{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; cursor:pointer; gap:16px; flex-wrap:wrap;}
@@ -136,9 +136,9 @@
   .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
 
   .pill{font-family:var(--font-mono); font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; white-space:nowrap;}
-  .pill.ok{background:rgba(87,217,163,0.12); color:var(--green); border:1px solid rgba(87,217,163,0.35);}
-  .pill.warn{background:rgba(255,176,32,0.12); color:var(--amber); border:1px solid rgba(255,176,32,0.35);}
-  .pill.bad{background:rgba(255,107,107,0.12); color:var(--red); border:1px solid rgba(255,107,107,0.35);}
+  .pill.ok{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.warn{background:rgba(194,124,0,0.12); color:var(--amber); border:1px solid rgba(194,124,0,0.35);}
+  .pill.bad{background:rgba(198,40,40,0.12); color:var(--red); border:1px solid rgba(198,40,40,0.35);}
 
   table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
   table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
@@ -716,18 +716,18 @@ function buildTriangleSVG(){
   const scale = Math.min((W-90)/P, (H-40)/Math.max(Q1,Q2));
   const px = ox+P*scale, q1y = oy-Q1*scale, q2y = oy-Q2*scale;
   let s = '';
-  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+(W-14)+'" y2="'+oy+'" stroke="#213348" stroke-width="1"/>';
-  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+ox+'" y2="14" stroke="#213348" stroke-width="1"/>';
-  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+oy+'" stroke="#37CFFF" stroke-width="2.5"/>';
-  s += '<line x1="'+px+'" y1="'+oy+'" x2="'+px+'" y2="'+q1y+'" stroke="#FFB020" stroke-width="1.6" stroke-dasharray="4,3"/>';
-  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+q1y+'" stroke="#FFB020" stroke-width="1.6" stroke-dasharray="4,3"/>';
-  s += '<line x1="'+px+'" y1="'+oy+'" x2="'+px+'" y2="'+q2y+'" stroke="#57D9A3" stroke-width="2.5"/>';
-  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+q2y+'" stroke="#57D9A3" stroke-width="2.5"/>';
-  s += '<text x="'+((ox+px)/2)+'" y="'+(oy+16)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#37CFFF">P</text>';
-  s += '<text x="'+(px+6)+'" y="'+((oy+q1y)/2)+'" font-family="IBM Plex Mono" font-size="9.5" fill="#FFB020">Q₁ (antes)</text>';
-  s += '<text x="'+(px-6)+'" y="'+((oy+q2y)/2-4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="9.5" fill="#57D9A3">Q₂ (tras Qc)</text>';
-  s += '<text x="'+(W-16)+'" y="'+(oy+16)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086">eje P</text>';
-  s += '<text x="'+(ox-8)+'" y="20" text-anchor="end" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086">eje Q</text>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+(W-14)+'" y2="'+oy+'" stroke="#dfe4eb" stroke-width="1"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+ox+'" y2="14" stroke="#dfe4eb" stroke-width="1"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+oy+'" stroke="#2457e6" stroke-width="2.5"/>';
+  s += '<line x1="'+px+'" y1="'+oy+'" x2="'+px+'" y2="'+q1y+'" stroke="#c27c00" stroke-width="1.6" stroke-dasharray="4,3"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+q1y+'" stroke="#c27c00" stroke-width="1.6" stroke-dasharray="4,3"/>';
+  s += '<line x1="'+px+'" y1="'+oy+'" x2="'+px+'" y2="'+q2y+'" stroke="#16894f" stroke-width="2.5"/>';
+  s += '<line x1="'+ox+'" y1="'+oy+'" x2="'+px+'" y2="'+q2y+'" stroke="#16894f" stroke-width="2.5"/>';
+  s += '<text x="'+((ox+px)/2)+'" y="'+(oy+16)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#2457e6">P</text>';
+  s += '<text x="'+(px+6)+'" y="'+((oy+q1y)/2)+'" font-family="IBM Plex Mono" font-size="9.5" fill="#c27c00">Q₁ (antes)</text>';
+  s += '<text x="'+(px-6)+'" y="'+((oy+q2y)/2-4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="9.5" fill="#16894f">Q₂ (tras Qc)</text>';
+  s += '<text x="'+(W-16)+'" y="'+(oy+16)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8.5" fill="#7b8696">eje P</text>';
+  s += '<text x="'+(ox-8)+'" y="20" text-anchor="end" font-family="IBM Plex Mono" font-size="8.5" fill="#7b8696">eje Q</text>';
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:420px;">'+s+'</svg>';
 }
 document.getElementById('triSvgHolder').innerHTML = buildTriangleSVG();
@@ -746,26 +746,26 @@ function buildCashFlowSVG(filas){
   const scale = (rowH/2-10)/maxAll;
 
   let s = '';
-  s += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="#213348" stroke-width="1"/>';
+  s += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="#dfe4eb" stroke-width="1"/>';
   filas.forEach((f,i)=>{
     const cx = padL + stp*i + stp/2;
     const bh = Math.abs(f.flujoNeto)*scale;
     const by = f.flujoNeto>=0 ? zeroY-bh : zeroY;
-    s += '<rect x="'+(cx-barW/2)+'" y="'+by+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="'+(f.flujoNeto>=0?'#57D9A3':'#FF6B6B')+'" opacity="0.75" rx="1"/>';
-    s += '<text x="'+cx+'" y="'+(H-padB+14)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.5" fill="#5B7086">'+f.año+'</text>';
+    s += '<rect x="'+(cx-barW/2)+'" y="'+by+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="'+(f.flujoNeto>=0?'#16894f':'#c62828')+'" opacity="0.75" rx="1"/>';
+    s += '<text x="'+cx+'" y="'+(H-padB+14)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.5" fill="#7b8696">'+f.año+'</text>';
   });
   let pts = filas.map((f,i)=>{
     const cx = padL + stp*i + stp/2;
     const cy = zeroY - f.acumulado*scale;
     return cx+','+cy;
   });
-  s += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#37CFFF" stroke-width="2"/>';
+  s += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#2457e6" stroke-width="2"/>';
   filas.forEach((f,i)=>{
     const cx = padL + stp*i + stp/2;
     const cy = zeroY - f.acumulado*scale;
-    s += '<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#37CFFF"/>';
+    s += '<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#2457e6"/>';
   });
-  s += '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="9" fill="#8FA3B8">Barras: flujo neto anual (verde/rojo) &nbsp;·&nbsp; Línea: flujo acumulado (cian)</text>';
+  s += '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="9" fill="#4f5b6d">Barras: flujo neto anual (verde/rojo) &nbsp;·&nbsp; Línea: flujo acumulado (cian)</text>';
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:700px;">'+s+'</svg>';
 }
 

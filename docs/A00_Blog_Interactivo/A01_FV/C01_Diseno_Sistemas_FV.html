@@ -9,19 +9,19 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--amber); color:#0A121C;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(255,176,32,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,176,32,0.035) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
@@ -112,9 +112,9 @@
   .slider-row .slider-val{font-family:var(--font-mono); font-size:13px; color:var(--amber); width:56px; text-align:right; flex-shrink:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(255,176,32,0.1);}
-  .btn.primary{background:var(--amber); color:#0A121C; border-color:var(--amber);}
-  .btn.primary:hover{background:#ffc352;}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
+  .btn.primary:hover{background:#a86a00;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn:disabled{opacity:0.4; cursor:not-allowed;}
@@ -150,32 +150,32 @@
   .leaflet-popup-tip{background:var(--panel);}
   .leaflet-popup-content{font-size:12.5px;}
   .leaflet-popup-content b{color:var(--amber);}
-  .leaflet-tooltip.etiqueta-superficie-otras{background:transparent; border:none; box-shadow:none; padding:0; color:#fff; font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:0.02em; text-shadow:0 1px 3px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.9); pointer-events:none;}
+  .leaflet-tooltip.etiqueta-superficie-otras{background:transparent; border:none; box-shadow:none; padding:0; color:#fff; font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:0.02em; text-shadow:0 1px 3px rgba(11,31,58,0.12), 0 0 6px rgba(11,31,58,0.12); pointer-events:none;}
   .leaflet-tooltip.etiqueta-superficie-otras::before{display:none;}
 
-  .fv-info-flotante{position:absolute; top:10px; left:10px; z-index:900; background:rgba(10,18,28,0.88); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:11.5px; padding:8px 12px; border-radius:var(--radius); max-width:70%; pointer-events:none;}
+  .fv-info-flotante{position:absolute; top:10px; left:10px; z-index:900; background:rgba(255,255,255,0.88); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:11.5px; padding:8px 12px; border-radius:var(--radius); max-width:70%; pointer-events:none;}
   .fv-info-flotante b{color:var(--amber);}
   .fv-map-toolbar{position:absolute; top:10px; right:10px; bottom:10px; z-index:900; display:flex; flex-direction:column; gap:6px; width:270px; max-height:calc(100% - 20px); overflow-y:auto; overflow-x:visible;}
 
   /* Fila superior de acciones: solo icono (sin texto), con tooltip nativo al pasar
      el raton. Sustituye a los antiguos botones apilados con texto. */
   .fv-icon-toolbar{display:flex; gap:6px; flex-shrink:0;}
-  .fv-icon-toolbar-btn{flex:1; aspect-ratio:1; background:rgba(10,18,28,0.9); border:1px solid var(--line); color:var(--text); font-size:15px; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;}
+  .fv-icon-toolbar-btn{flex:1; aspect-ratio:1; background:rgba(255,255,255,0.9); border:1px solid var(--line); color:var(--text); font-size:15px; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;}
   .fv-icon-toolbar-btn:hover{border-color:var(--amber); color:var(--amber);}
-  .fv-icon-toolbar-btn--primary{background:var(--amber); color:#0A121C; border-color:var(--amber); font-weight:700;}
-  .fv-icon-toolbar-btn--primary:hover{background:#ffc352; color:#0A121C;}
+  .fv-icon-toolbar-btn--primary{background:var(--amber); color:#ffffff; border-color:var(--amber); font-weight:700;}
+  .fv-icon-toolbar-btn--primary:hover{background:#a86a00; color:#ffffff;}
 
   /* Acordeon de edicion de superficie: el selector desplegable (siempre visible,
      unica fuente del nombre) va arriba del todo; debajo, una cabecera compacta con
      el resumen (paneles/kWp) y una flecha que pliega/despliega el cuerpo; el cuerpo
      tiene un rail de iconos a la izquierda (solo icono + tooltip) que conmuta entre
      las 3 vistas, sin fondo oscuro sobre el mapa. */
-  .fv-acordeon{width:100%; background:rgba(10,18,28,0.96); border:1px solid var(--line); border-radius:var(--radius); box-shadow:0 8px 28px rgba(0,0,0,0.45); box-sizing:border-box; overflow:hidden;}
+  .fv-acordeon{width:100%; background:rgba(255,255,255,0.96); border:1px solid var(--line); border-radius:var(--radius); box-shadow:0 8px 28px rgba(11,31,58,0.12); box-sizing:border-box; overflow:hidden;}
   .fv-acordeon-selector{padding:10px 12px 8px;}
   .fv-acordeon-selector select{width:100%; background:var(--panel2); border:1px solid var(--amber); color:var(--text); padding:7px 8px; border-radius:2px; font-family:var(--font-mono); font-size:12px; font-weight:600; cursor:pointer;}
   .fv-acordeon-selector select:focus{outline:none;}
   .fv-acordeon-head{width:100%; display:flex; align-items:center; gap:8px; background:none; border:none; padding:0 12px 10px; cursor:pointer; text-align:left;}
-  .fv-acordeon-head:hover .fv-acordeon-subtitulo{color:#ffc352;}
+  .fv-acordeon-head:hover .fv-acordeon-subtitulo{color:#a86a00;}
   .fv-acordeon-subtitulo{flex:1; min-width:0; font-family:var(--font-mono); font-size:11px; color:var(--amber); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .fv-acordeon-chevron{flex-shrink:0; color:var(--text-dimmer); font-size:13px; transition:transform .15s ease;}
   .fv-acordeon.collapsed .fv-acordeon-chevron{transform:rotate(-90deg);}
@@ -185,7 +185,7 @@
   .fv-icon-rail{flex-shrink:0; width:38px; display:flex; flex-direction:column; border-right:1px solid var(--line-soft); background:rgba(255,255,255,0.015);}
   .fv-icon-tab{background:none; border:none; border-left:2px solid transparent; color:var(--text-dimmer); font-size:15px; padding:10px 0; cursor:pointer; text-align:center;}
   .fv-icon-tab:hover{color:var(--text); background:rgba(255,255,255,0.04);}
-  .fv-icon-tab.active{color:var(--cyan,var(--amber)); border-left-color:var(--amber); background:rgba(255,176,32,0.08);}
+  .fv-icon-tab.active{color:var(--cyan,var(--amber)); border-left-color:var(--amber); background:rgba(194,124,0,0.08);}
 
   .fv-icon-content{flex:1; min-width:0; min-height:0; max-height:min(58vh, 420px); overflow-y:auto; padding:12px 12px 16px;}
   .fv-panel-pane{display:none;}
@@ -194,7 +194,7 @@
 
   .fv-superficie-item{display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 9px; border-radius:var(--radius); border:1px solid var(--line); margin-bottom:6px; cursor:pointer; font-size:12px;}
   .fv-superficie-item:hover{border-color:var(--text-dim);}
-  .fv-superficie-item.activa{border-color:var(--amber); background:rgba(255,176,32,0.08);}
+  .fv-superficie-item.activa{border-color:var(--amber); background:rgba(194,124,0,0.08);}
   .fv-superficie-item .nom{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;}
   .fv-superficie-item .del{color:var(--red); font-family:var(--font-mono); font-size:11px; flex-shrink:0; background:none; border:none; cursor:pointer;}
   .fv-field-row{margin-bottom:10px;}
@@ -980,13 +980,13 @@ function renderSombraChart(){
   // grid fisico: elevacion cada 15 grados, acimut cada 30 grados (letra grande, ejes claros)
   for(let g=0; g<=90; g+=15){
     const gy = padT+chartH-(g/90)*chartH;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
     s += '<text x="'+(padL-10)+'" y="'+(gy+9)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="26" fill="#A8BBCE">'+g+'°</text>';
   }
   const primerMarcaAz = Math.ceil(azMin/30)*30;
   for(let az=primerMarcaAz; az<=azMax; az+=30){
     const x = xDeAzimut(az);
-    s += '<line x1="'+x+'" y1="'+padT+'" x2="'+x+'" y2="'+(H-padB)+'" stroke="#182739" stroke-width="1"/>';
+    s += '<line x1="'+x+'" y1="'+padT+'" x2="'+x+'" y2="'+(H-padB)+'" stroke="#eceff4" stroke-width="1"/>';
     s += '<text x="'+x+'" y="'+(H-padB+32)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="24" fill="#A8BBCE">'+az+'°</text>';
   }
   s += '<text x="'+(padL+chartW/2)+'" y="'+(H-8)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="19" fill="#7C93AA">acimut (° desde el Sur)</text>';
@@ -1016,7 +1016,7 @@ function renderSombraChart(){
     const x = padL+step*i+(step-barW)/2;
     const bh = (v/90)*chartH;
     const y = padT+chartH-bh;
-    s += '<rect class="barra" data-idx="'+i+'" x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#FFB020" opacity="0.85" rx="1"/>';
+    s += '<rect class="barra" data-idx="'+i+'" x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#c27c00" opacity="0.85" rx="1"/>';
   });
   svg.innerHTML = s;
 }
@@ -1132,12 +1132,12 @@ function generarGeoJSONPaneles(config, paneles){
 
 const iconoMoverGrid = L.divIcon({
   className: 'custom-drag-icon',
-  html: '<div style="background-color:#ff9800;width:22px;height:22px;border-radius:50%;display:flex;justify-content:center;align-items:center;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,.3);"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg></div>',
+  html: '<div style="background-color:#ff9800;width:22px;height:22px;border-radius:50%;display:flex;justify-content:center;align-items:center;border:2px solid white;box-shadow:0 0 8px rgba(11,31,58,0.12);"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg></div>',
   iconSize: [22, 22], iconAnchor: [11, 11],
 });
 const iconoRotarGrid = L.divIcon({
   className: 'custom-rotate-icon',
-  html: '<div style="background-color:#2196f3;width:22px;height:22px;border-radius:50%;display:flex;justify-content:center;align-items:center;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,.3);"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg></div>',
+  html: '<div style="background-color:#2196f3;width:22px;height:22px;border-radius:50%;display:flex;justify-content:center;align-items:center;border:2px solid white;box-shadow:0 0 8px rgba(11,31,58,0.12);"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg></div>',
   iconSize: [22, 22], iconAnchor: [11, 11],
 });
 
@@ -1461,7 +1461,7 @@ function redibujarOtrasSuperficies(){
       // No se puede editar (solo pintar/mover/rotar la activa), pero SI se puede
       // hacer clic para convertirla en la superficie activa.
       poligono.on('click', ()=>seleccionarSuperficie(s.id));
-      poligono.on('mouseover', ()=>poligono.setStyle({color:'#FFB020'}));
+      poligono.on('mouseover', ()=>poligono.setStyle({color:'#c27c00'}));
       poligono.on('mouseout', ()=>poligono.setStyle({color:'#0a1826'}));
     });
     // Una unica etiqueta permanente con el nombre, centrada sobre toda la superficie
@@ -1779,14 +1779,14 @@ function buildSombraMiniChartSVG(sombras){
   let s='';
   for(let g=0; g<=90; g+=30){
     const gy = padT+chartH-(g/90)*chartH;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-4)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="7" fill="#5B7086">'+g+'</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-4)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="7" fill="#7b8696">'+g+'</text>';
   }
   sombras.forEach((v,i)=>{
     const x = padL+step*i+(step-barW)/2;
     const bh = (v/90)*chartH;
     const y = padT+chartH-bh;
-    s += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#FFB020" opacity="0.8" rx="1"/>';
+    s += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#c27c00" opacity="0.8" rx="1"/>';
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:560px; display:block;">'+s+'</svg>';
 }
@@ -1992,7 +1992,7 @@ async function componerMapaConPaneles(items, anchoPx, altoPx, zoomFijo){
         const cx = sumX/nPts, cy = sumY/nPts;
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(11,31,58,0.12)';
         ctx.strokeText(nombre, cx, cy);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(nombre, cx, cy);
@@ -2586,7 +2586,7 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');

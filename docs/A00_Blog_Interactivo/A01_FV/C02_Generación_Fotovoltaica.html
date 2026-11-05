@@ -8,19 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A121C; --bg2:#070D15; --panel:#111E2E; --panel2:#0E1826;
-    --line:#213348; --line-soft:#182739;
-    --text:#E7ECF2; --text-dim:#8FA3B8; --text-dimmer:#5B7086;
-    --amber:#FFB020; --green:#16A34A; --red:#DC2626; --cyan:#37CFFF;
-    --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
-    --radius:2px;
+    --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
+    --line:#dfe4eb; --line-soft:#eceff4;
+    --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
+    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+    --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--cyan); color:#0A121C;}
+  ::selection{background:var(--cyan); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(55,207,255,0.04) 1px, transparent 1px),linear-gradient(90deg, rgba(55,207,255,0.04) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(36,87,230,0.04) 1px, transparent 1px),linear-gradient(90deg, rgba(36,87,230,0.04) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
   .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
@@ -108,9 +108,9 @@
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
   .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(55,207,255,0.1);}
-  .btn.primary{background:var(--cyan); color:#0A121C; border-color:var(--cyan);}
-  .btn.primary:hover{background:#7fe1ff;}
+  .btn:hover{background:rgba(36,87,230,0.1);}
+  .btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .btn.primary:hover{background:#1b47c4;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn:disabled{opacity:0.4; cursor:not-allowed;}
@@ -1266,12 +1266,12 @@ function buildDayHourlyChartSVG(diaDatos, color, titulo, unidad){
   const step = (W-padL-padR)/values.length;
   const barW = step*0.6;
   const scale = (H-padT-padB)/maxV;
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">'+esc(titulo)+'</text>';
+  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">'+esc(titulo)+'</text>';
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4;
     const gy = H-padB-gv*scale;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">'+Math.round(gv)+' '+unidad+'</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">'+Math.round(gv)+' '+unidad+'</text>';
   }
   values.forEach((v,i)=>{
     const x = padL+step*i+(step-barW)/2;
@@ -1281,7 +1281,7 @@ function buildDayHourlyChartSVG(diaDatos, color, titulo, unidad){
   [0,6,12,18,23].forEach(i=>{
     if(i>=diaDatos.length) return;
     const x = padL+step*i+step/2;
-    s += '<text x="'+x+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">'+diaDatos[i].hora+'h</text>';
+    s += '<text x="'+x+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">'+diaDatos[i].hora+'h</text>';
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
@@ -1292,12 +1292,12 @@ function buildDailyCurveChartSVG(values, color, titulo, unidad){
   const maxV = Math.max(...values, 1);
   const step = (W-padL-padR)/(values.length-1||1);
   const scale = (H-padT-padB)/maxV;
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">'+esc(titulo)+'</text>';
+  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">'+esc(titulo)+'</text>';
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4;
     const gy = H-padB-gv*scale;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">'+Math.round(gv)+' '+unidad+'</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">'+Math.round(gv)+' '+unidad+'</text>';
   }
   let pts = values.map((v,i)=>[padL+step*i, H-padB-v*scale]);
   s += '<polyline points="'+pts.map(p=>p.join(',')).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="1"/>';
@@ -1305,7 +1305,7 @@ function buildDailyCurveChartSVG(values, color, titulo, unidad){
   mesesInicioDia.forEach((d,i)=>{
     if(d>=values.length) return;
     const x = padL+step*d;
-    s += '<text x="'+x+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">'+MESES[i]+'</text>';
+    s += '<text x="'+x+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">'+MESES[i]+'</text>';
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
@@ -1319,19 +1319,19 @@ function buildMonthlyBarChartSVG(tablaMensual, color, titulo, unidad){
   const step = (W-padL-padR)/values.length;
   const scale = (H-padT-padB)/maxV;
   const barW = step*0.6;
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#8FA3B8">'+esc(titulo)+'</text>';
+  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">'+esc(titulo)+'</text>';
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4;
     const gy = H-padB-gv*scale;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#182739" stroke-width="1"/>';
-    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#5B7086">'+Math.round(gv)+' '+unidad+'</text>';
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">'+Math.round(gv)+' '+unidad+'</text>';
   }
   values.forEach((v,i)=>{
     const x = padL+step*i+(step-barW)/2;
     const y = H-padB-v*scale;
     s += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+(H-padB-y)+'" fill="'+color+'"/>';
-    s += '<text x="'+(x+barW/2)+'" y="'+(y-4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7" fill="#8FA3B8">'+Math.round(v)+'</text>';
-    s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#5B7086">'+tablaMensual[i].mes+'</text>';
+    s += '<text x="'+(x+barW/2)+'" y="'+(y-4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7" fill="#4f5b6d">'+Math.round(v)+'</text>';
+    s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">'+tablaMensual[i].mes+'</text>';
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
@@ -1392,7 +1392,7 @@ function renderInstallations(){
         '<div class="btn-row" style="margin-top:8px;"><button class="btn primary" type="button" onclick="usarJsonPegadoPorId('+s.id+')">Usar este JSON</button></div>';
     }
     if(s.estado==='ok'){      const r = s.resultado;
-      const chart = buildDailyCurveChartSVG(r.serieDiaria, '#37CFFF', 'Curva de carga anual — energía diaria generada (kWh/día)', 'kWh');
+      const chart = buildDailyCurveChartSVG(r.serieDiaria, '#2457e6', 'Curva de carga anual — energía diaria generada (kWh/día)', 'kWh');
       const chartDic = buildDayHourlyChartSVG(r.diaDiciembre, '#2563EB', 'Día representativo de diciembre — potencia horaria (W)', 'W');
       const chartJun = buildDayHourlyChartSVG(r.diaJunio, '#F59E0B', 'Día representativo de junio — potencia horaria (W)', 'W');
       const chartMensual = buildMonthlyBarChartSVG(r.tablaMensual, '#22C55E', 'Curva mensual de energía generada — PVcalc (kWh/mes)', 'kWh');
@@ -2048,7 +2048,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function crearBoton(texto){
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = texto;
-      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #37CFFF; background:#0A121C; color:#37CFFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);';
+      b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
     var btnExp = crearBoton('⬇');
