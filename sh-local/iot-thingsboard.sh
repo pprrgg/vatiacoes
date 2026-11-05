@@ -71,19 +71,16 @@ TB_DOMAIN="VatiaCo.duckdns.org"
 DUCKDNS_TOKEN=""        # si se rellena, se arranca un actualizador de DuckDNS
 ACME_EMAIL=""           # con un email, Caddy usa tambien ZeroSSL si Let's Encrypt no da el certificado
 
-# Credenciales de los servicios
+# Credenciales de los servicios. Las CONTRASEÑAS NO van aqui (este script se publica en GitHub):
+# IOT_PASSWORD (sysadmin de ThingsBoard, administradores api@<id>... de cada comunidad y
+# PostgreSQL) y SUPER_PASSWORD se leen de .env.secretos (mas abajo); si faltan, se generan al
+# azar y se guardan alli. Minimo 10 caracteres.
 IOT_USER="pk"
-IOT_PASSWORD="pk"
-TB_SYSADMIN_PASSWORD="$IOT_PASSWORD"   # sysadmin@thingsboard.org
-TB_TENANT_PASSWORD="$IOT_PASSWORD"     # administradores (api@<id>...) del tenant de cada comunidad, los usa la API
-PG_USER="$IOT_USER"
-PG_PASSWORD="$IOT_PASSWORD"
 
 # Superusuario de la plataforma: el unico usuario que crea el script (tenant "Plataforma",
 # solo ve su panel). Crea comunidades y gestores, asigna las cuentas de Datadis y hace
-# copias de PostgreSQL.
+# copias de PostgreSQL. Su contraseña (SUPER_PASSWORD), en .env.secretos.
 SUPER_EMAIL="super@vatiaco.es"
-SUPER_PASSWORD="super"
 
 # Alta online de comunidades, gratuita: el modal «Alta de una comunidad energética» del inicio de
 # sesion de la plataforma (la web lo abre con login?alta=comunidad o login?alta=prueba) llama a la
@@ -108,7 +105,7 @@ SERVICIOS_PREMIUM="potencias,reactiva,factura"
 # restaurarla). Pon la MISMA clave en los servidores entre los que quieras pasar copias de las
 # comunidades (p. ej. la salida de: openssl rand -hex 32; sin comillas simples). Vacia = una propia de este servidor,
 # que se guarda con las copias (backups/postgres/.clave-copias) y sobrevive a las reinstalaciones.
-COPIAS_CLAVE="para poder restaurar"
+COPIAS_CLAVE="${COPIAS_CLAVE:-}"     # en .env.secretos si se comparte entre servidores (no aqui: el script es publico)
 ALTA_URL_CONDICIONES="https://vatiaco.es/condiciones/"   # condiciones de uso y politica de privacidad
 ALTA_URL_PRIVACIDAD="https://vatiaco.es/privacidad/"
 ALTA_URL_WEB="https://vatiaco.es"     # web: publica la lista del IDAE y las condiciones de uso
@@ -133,6 +130,26 @@ SMTP_PORT="${SMTP_PORT:-587}"                      # 587 con STARTTLS, 465 con S
 SMTP_SEGURIDAD="${SMTP_SEGURIDAD:-starttls}"       # starttls, ssl o no
 SMTP_USER="${SMTP_USER:-}"                         # usuario del servidor (vacio = sin autenticacion)
 SMTP_PASS="${SMTP_PASS:-}"                         # contraseña (sin comillas simples)
+# Contraseñas del sistema: de .env.secretos; las que falten se generan al azar (24 caracteres) y
+# se guardan alli (chmod 600), para que la siguiente instalacion use las mismas.
+genera_clave_() { openssl rand -base64 36 2>/dev/null | tr -dc 'A-Za-z0-9' | cut -c1-24; }
+for v_ in IOT_PASSWORD SUPER_PASSWORD; do
+  if [ -z "${!v_:-}" ]; then
+    printf -v "$v_" '%s' "$(genera_clave_)"
+    [ -n "${!v_}" ] || { echo "ERROR: no se pudo generar $v_ (falta openssl)" >&2; exit 1; }
+    printf "%s='%s'\n" "$v_" "${!v_}" >> "$SECRETOS"
+    chmod 600 "$SECRETOS"
+    echo "AVISO: $v_ no estaba en $SECRETOS: se ha generado al azar y guardado allí." >&2
+  fi
+  if [ "$(printf %s "${!v_}" | wc -c)" -lt 10 ]; then
+    echo "ERROR: $v_ (en $SECRETOS) debe tener al menos 10 caracteres." >&2; exit 1
+  fi
+  case "${!v_}" in *"'"*|*'"'*|*' '*|*$'\n'*) echo "ERROR: $v_ no puede llevar comillas, espacios ni saltos de línea" >&2; exit 1 ;; esac
+done
+TB_SYSADMIN_PASSWORD="$IOT_PASSWORD"   # sysadmin@thingsboard.org
+TB_TENANT_PASSWORD="$IOT_PASSWORD"     # administradores (api@<id>...) del tenant de cada comunidad, los usa la API
+PG_USER="$IOT_USER"
+PG_PASSWORD="$IOT_PASSWORD"
 SMTP_FROM="${SMTP_FROM:-}"                         # remitente (vacio = SMTP_USER)
 SMTP_TLS_NOMBRE="${SMTP_TLS_NOMBRE:-}"             # nombre del certificado si no es SMTP_HOST
 
@@ -7521,8 +7538,8 @@ def _texto(d, k, maximo=80):
 def _password(pw, obligatoria=True):
     if not pw and not obligatoria:
         return None
-    if len(pw or "") < 4:
-        raise ValueError("La contraseña debe tener al menos 4 caracteres")
+    if len(pw or "") < 8:
+        raise ValueError("La contraseña debe tener al menos 8 caracteres")
     return pw
 
 
@@ -10466,6 +10483,64 @@ async def registro_actividad(request: Request, siguiente):
             t.add_done_callback(TAREAS.discard)
 
 
+# ---------------- acceso desde Internet ----------------
+# El inicio de sesion de ThingsBoard (/api/auth/login) pasa por aqui (Caddy): el sysadmin y las
+# cuentas internas de cada comunidad (api@<id>.<TENANT_DOMINIO>, gestor@<id>...) solo entran
+# desde la LAN; desde Internet se responde como a una contraseña incorrecta. La documentacion
+# de la API (/docs) tampoco se ve desde Internet.
+import ipaddress
+
+import requests
+
+TB_INTERNA = E.get("TB_URL", "http://thingsboard:8080").rstrip("/")
+DOMINIO_INTERNO = "." + (E.get("TENANT_DOMINIO") or "local").lower()
+SOLO_LAN = {"/docs", "/docs/oauth2-redirect", "/redoc", "/openapi.json"}
+
+
+def _desde_lan(request):
+    """Caddy pone en X-Forwarded-For la IP real del cliente (no se fia de la que traiga)."""
+    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() or (request.client.host if request.client else "")
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return a.is_private or a.is_loopback
+
+
+def _ruta(request):
+    ruta, raiz = request.scope.get("path") or "", request.scope.get("root_path") or ""
+    return ruta[len(raiz):] if raiz and ruta.startswith(raiz) else ruta
+
+
+@app.middleware("http")
+async def docs_solo_lan(request: Request, siguiente):
+    if _ruta(request) in SOLO_LAN and not _desde_lan(request):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    return await siguiente(request)
+
+
+@app.post("/tb-login", include_in_schema=False)
+async def tb_login(request: Request):
+    cuerpo = await request.body()
+    try:
+        usuario = str((json.loads(cuerpo or b"{}") or {}).get("username") or "").strip().lower()
+    except (ValueError, AttributeError):
+        usuario = ""
+    interna = usuario == "sysadmin@thingsboard.org" or usuario.endswith(DOMINIO_INTERNO)
+    if interna and not _desde_lan(request):
+        log.warning("inicio de sesión de %s desde Internet rechazado (%s)", usuario,
+                    request.headers.get("x-forwarded-for"))
+        return JSONResponse({"status": 401, "message": "Invalid username or password", "errorCode": 10,
+                             "timestamp": int(time.time() * 1000)}, status_code=401)
+    cab = {"Content-Type": request.headers.get("content-type") or "application/json"}
+    for k in ("x-forwarded-for", "user-agent", "accept-language"):
+        if request.headers.get(k):
+            cab[k] = request.headers[k]
+    r = await asyncio.to_thread(requests.post, TB_INTERNA + "/api/auth/login", data=cuerpo, headers=cab, timeout=30)
+    return Response(content=r.content, status_code=r.status_code,
+                    media_type=r.headers.get("content-type") or "application/json")
+
+
 # ---------------- alta online gratuita (publica: pagina de alta de la web) ----------------
 # La pagina esta en la web (Astro, otro origen): CORS solo para estas rutas y ALTA_ORIGENES.
 ORIGENES = {o.strip().rstrip("/") for o in (E.get("ALTA_ORIGENES") or "").split(",") if o.strip()}
@@ -12506,6 +12581,12 @@ EOF
   echo "		header Cache-Control no-cache"
   echo "		file_server"
   echo "	}"
+  echo "	# Inicio de sesion: por la API de las comunidades (el sysadmin y las cuentas internas solo"
+  echo "	# entran desde la LAN; ver app/main.py, tb_login)"
+  echo "	handle /api/auth/login {"
+  echo "		rewrite * /tb-login"
+  echo "		reverse_proxy fastapi:8000"
+  echo "	}"
   echo "	# API de ThingsBoard: antes de pasarla, la API de las comunidades decide si esta permitida"
   echo "	# (forward_auth): los gestores solo leen y consultan lo de sus paneles (app/main.py, acceso)"
   echo "	@apitb {"
@@ -13224,22 +13305,18 @@ for _ in range(60):
         break
     time.sleep(5)
 
-# Politica de contraseñas: permitir contraseñas cortas (por defecto exige 6)
+# Politica de contraseñas: al menos 8 caracteres (como el alta y los paneles) y, tras 5 intentos
+# fallidos, el usuario se bloquea (el superusuario o el gestor lo vuelven a activar desde su panel)
 sys_tok = tb_login("sysadmin@thingsboard.org", "sysadmin") or \
     tb_login("sysadmin@thingsboard.org", E["TB_SYSADMIN_PASSWORD"])
 sa = TBClient(sys_tok)
 sec = sa.get("/api/admin/securitySettings")
 pol = sec.setdefault("passwordPolicy", {})
-min_len = min(6, *(len(x) for x in [E["TB_SYSADMIN_PASSWORD"], E["TB_TENANT_PASSWORD"], E.get("CEC_ADMIN_PASSWORD", ""),
-                                     E.get("SUPER_PASSWORD", ""),
-                                     *(l.split("|")[2] for l in E.get("SOCIOS", "").splitlines()
-                                       if l.count("|") >= 2 and l.split("|")[1])] if x))
-if (pol.get("minimumLength") or 6) > min_len:
-    pol.update({"minimumLength": min_len, "minimumUppercaseLetters": None,
-                "minimumLowercaseLetters": None, "minimumDigits": None,
-                "minimumSpecialCharacters": None, "passwordReuseFrequencyDays": None})
-    sa.post("/api/admin/securitySettings", sec)
-    print(f"    politica de contraseñas: minimo {min_len} caracteres")
+pol.update({"minimumLength": 8, "minimumUppercaseLetters": None, "minimumLowercaseLetters": None,
+            "minimumDigits": None, "minimumSpecialCharacters": None, "passwordReuseFrequencyDays": None})
+sec["maxFailedLoginAttempts"] = 5
+sa.post("/api/admin/securitySettings", sec)
+print("    politica de contraseñas: minimo 8 caracteres; bloqueo tras 5 intentos fallidos")
 
 tb_password("sysadmin@thingsboard.org", "sysadmin", E["TB_SYSADMIN_PASSWORD"])
 
@@ -16399,7 +16476,7 @@ self.onInit = function () {
     if (!F) return;
     var pw = q('f-password').value, la = num(q('f-lat').value), lo = num(q('f-lon').value);
     if (pw !== q('f-password2').value) { msg('Las contraseñas no coinciden.', 'err'); return; }
-    if (pw && pw.length < 4) { msg('La contraseña debe tener al menos 4 caracteres.', 'err'); return; }
+    if (pw && pw.length < 8) { msg('La contraseña debe tener al menos 8 caracteres.', 'err'); return; }
     if ((la == null) !== (lo == null) || (la != null && (isNaN(la) || isNaN(lo)))) { msg('Pon latitud y longitud válidas (o ninguna).', 'err'); return; }
     var v = { telefono: q('f-telefono').value.trim(), nif: q('f-nif').value.trim(), direccion: q('f-direccion').value.trim(),
               tipo: q('f-tipo').value, password: pw };

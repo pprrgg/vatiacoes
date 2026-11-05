@@ -39,7 +39,13 @@ ADMINER_PORT="8082"     # Adminer, solo 127.0.0.1 (8081 lo usa iot-thingsboard.s
 HOMEPAGE_PORT="3001"    # Homepage, LAN (3000 lo usa iot-thingsboard.sh)
 
 PG_USER="pk"
-PG_PASSWORD="pk"
+# Contraseña: de .env.secretos (PG_ADMINER_PASSWORD) o, si no esta, la del sistema de
+# iot-thingsboard.sh (IOT_PASSWORD); nunca en este script, que se publica en GitHub
+SECRETOS_="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.secretos"
+# shellcheck disable=SC1090
+[ -f "$SECRETOS_" ] && . "$SECRETOS_"
+PG_PASSWORD="${PG_ADMINER_PASSWORD:-${IOT_PASSWORD:-}}"
+[ -n "$PG_PASSWORD" ] || { echo "ERROR: pon PG_ADMINER_PASSWORD (o IOT_PASSWORD) en $SECRETOS_" >&2; exit 1; }
 PG_DB="pk"              # base que se crea al iniciar PostgreSQL por primera vez
 
 # Copias de PostgreSQL de iot-thingsboard.sh (<base>-AAAA-MM-DD.dump y <base>-<tipo>-AAAAMMDD-HHMMSS.dump)

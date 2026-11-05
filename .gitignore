@@ -9,3 +9,6 @@ npm-debug.log*
 
 # Datadis: datos de consumo descargados
 datadis_out/
+
+# Copias de trabajo del script de la plataforma (no se publican: llevaban contraseñas)
+sh-local/*copy*.sh
