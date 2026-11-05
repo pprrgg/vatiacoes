@@ -93,12 +93,6 @@ const plataforma = [
   { t: 'Seguimiento y ahorro', d: 'Energía compartida, intercambio con la red y ahorro estimado de la comunidad, por días y por horas.' },
   { t: 'Portal de cada socio', d: 'Cada socio ve solo sus datos, en el ordenador o en el móvil, y descarga su panel en PDF.' },
 ];
-
-const pasos = [
-  { t: 'Ponle nombre y sitúala', d: 'Elige un nombre y marca en el mapa dónde estaría la comunidad.' },
-  { t: 'Confirma tu correo', d: 'Te enviamos un enlace; al pulsarlo se crea al momento.' },
-  { t: 'Explora la plataforma', d: `Entra como gestor, con socios de prueba y datos simulados, durante ${PRUEBA_VIDA}.` },
-];
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -116,14 +110,17 @@ const pasos = [
       /* Tema claro y sobrio (colores en src/styles/sitio.css): blanco, gris muy suave para
          alternar secciones, un azul de accion y el amarillo del sol solo en la prueba */
       .ini-hero { padding: 5rem 0 4.5rem; background: linear-gradient(180deg, #f5f8fd 0%, #fff 100%); }
-      .ini-hero .wrap { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 3rem; align-items: center; }
-      @media (max-width: 920px) { .ini-hero .wrap { grid-template-columns: 1fr; gap: 2.5rem; } .ini-hero { padding: 3rem 0 3.5rem; } }
-      .ini-hero h1 { margin-top: 0.9rem; }
+      @media (max-width: 920px) { .ini-hero { padding: 3rem 0 3.5rem; } }
+      /* cabecera centrada (sin el cuadro de la derecha) */
+      .ini-hero .wrap { text-align: center; }
+      .ini-hero h1 { margin: 0.9rem auto 1.1rem; max-width: 56rem; text-wrap: balance; }
+      .ini-hero .grandes { justify-content: center; }
+      .ini-hero .gran { text-align: left; }
       /* «gratuita» resaltada: pastilla amarilla (el color del sol) */
       .gratis { display: inline-block; padding: 0.22rem 0.7rem; margin: 0 0.15rem; border-radius: 999px; background: var(--sol);
         color: var(--white); font-weight: 800; letter-spacing: 0.1em; box-shadow: 0 2px 8px rgba(255, 184, 0, 0.3); }
       .gratis-f { color: #fff; background: rgba(255, 255, 255, 0.16); padding: 0.05rem 0.45rem; border-radius: 0.35rem; }
-      .ini-hero .lead { font-size: 1.15rem; max-width: 38rem; margin: 0 0 2rem; color: var(--gray-2); }
+      .ini-hero .lead { font-size: 1.15rem; max-width: 38rem; margin: 0 auto 2rem; color: var(--gray-2); }
 
       /* los dos botones principales: alta (lista del IDAE) y comunidad de prueba */
       .grandes { display: flex; flex-wrap: wrap; gap: 0.75rem; }
@@ -141,22 +138,6 @@ const pasos = [
       @media (max-width: 560px) { .grandes { flex-direction: column; } .gran { width: 100%; min-width: 0; } }
       .btn.amarillo { background: var(--sol); border-color: var(--sol); color: var(--white); }
       .btn.amarillo:hover { background: var(--sol-hover); border-color: var(--sol-hover); color: var(--white); }
-
-      /* tarjeta de la comunidad de prueba */
-      .prueba { background: #fff; border: 1px solid var(--gray-5); border-radius: 1.25rem; padding: 2rem; box-shadow: var(--sombra-alta); position: relative; overflow: hidden; }
-      .prueba::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--sol); }
-      .prueba .chip { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-        color: var(--bolt); background: #fff6db; border-radius: 99px; padding: 0.2rem 0.7rem; }
-      .prueba h2 { font-size: 1.4rem; margin: 0.8rem 0 0.4rem; }
-      .prueba > p { margin: 0 0 1.3rem; font-size: 0.95rem; }
-      .prueba ol { list-style: none; margin: 0 0 1.5rem; padding: 0; display: grid; gap: 0.9rem; counter-reset: p; }
-      .prueba li { display: grid; grid-template-columns: 2rem 1fr; gap: 0.75rem; align-items: start; counter-increment: p; }
-      .prueba li::before { content: counter(p); display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%;
-        background: var(--gray-6); color: var(--white); font-weight: 700; font-size: 0.88rem; }
-      .prueba li b { display: block; color: var(--white); font-size: 0.96rem; }
-      .prueba li span { font-size: 0.87rem; color: var(--gray-3); }
-      .prueba .btn { width: 100%; justify-content: center; padding: 0.85rem; }
-      .prueba small { display: block; margin-top: 0.8rem; font-size: 0.8rem; color: var(--gray-3); text-align: center; }
 
       /* accesos rapidos */
       .accesos { padding: 0 0 1rem; margin-top: -1.5rem; position: relative; }
@@ -232,7 +213,7 @@ const pasos = [
         <div class="wrap">
           <div>
             <div class="etiqueta">Plataforma <span class="gratis">gratuita</span> para comunidades energéticas</div>
-            <h1>Crea y gestiona tu comunidad energética, <em>con datos hora a hora</em>.</h1>
+            <h1>Crea y gestiona tu comunidad energética.</h1>
             <p class="lead">Socios, instalaciones, reparto de la energía y seguimiento en una sola plataforma, con un panel para cada socio. Y un blog con herramientas para calcular, documentar y tramitar cada paso.</p>
             <div class="grandes">
               <a class="gran alta" href={PORTAL_URL + ALTA_RUTA} data-plataforma="Alta de una comunidad energética" data-plataforma-ruta={ALTA_RUTA}>
@@ -241,21 +222,10 @@ const pasos = [
               </a>
               <a class="gran prueba-b" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>
                 <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/></svg>
-                <span><b>Probar la plataforma</b><small>Comunidad de prueba · {PRUEBA_VIDA} gratis</small></span>
+                <span><b>Probar la plataforma</b><small>Comunidad de prueba · {PRUEBA_VIDA} </small></span>
               </a>
             </div>
           </div>
-
-          <aside class="prueba" aria-labelledby="prueba-tit">
-            <span class="chip">Gratis · {PRUEBA_VIDA} · sin compromiso</span>
-            <h2 id="prueba-tit">Tu comunidad de prueba, en tres pasos</h2>
-            <p>Una comunidad completa, con socios simulados, para ver cómo funciona antes de dar de alta la tuya.</p>
-            <ol>
-              {pasos.map((p) => <li><div><b>{p.t}</b><span>{p.d}</span></div></li>)}
-            </ol>
-            <a class="btn amarillo" href={PORTAL_URL + PRUEBA_RUTA} data-plataforma="Comunidad de prueba" data-plataforma-ruta={PRUEBA_RUTA}>Empezar la prueba</a>
-            <small>Pasada {PRUEBA_VIDA} se borra todo y te avisamos por correo.</small>
-          </aside>
         </div>
       </div>
 
