@@ -2125,11 +2125,26 @@ def perfil_valido(p):
          "inversor": num("inversor", 0, 0, 1e6, "Potencia del inversor") or None,
          "cosphi": num("cosphi", 0.93, 0.6, 1, "Factor de potencia"),
          "peaje": p.get("peaje") if p.get("peaje") in PERFIL_PEAJES else "auto", "potencias": None}
-    # bateria (solo con FV: se carga con lo que sobra de la generacion y se descarga cuando falta)
-    bat = num("bat_kwh", 0, 0, 1e6, "Capacidad de la batería") if gen_dia > 0 else 0.0
+    # bateria: se carga con lo que sobra de la FV (y, en el despacho manual, de la red) y se
+    # descarga cuando falta
+    bat = num("bat_kwh", 0, 0, 1e6, "Capacidad de la batería")
     q["bat_kwh"] = bat or 0.0
     q["bat_kw"] = (num("bat_kw", 0, 0, 1e6, "Potencia de la batería") or round(bat / 2, 2)) if bat else None
     q["bat_ef"] = num("bat_ef", 90, 50, 100, "Rendimiento de la batería") if bat else None
+    q["bat_soc"] = num("bat_soc", 50, 0, 100, "Estado de carga inicial de la batería") if bat else None
+    # despacho: automatico (solo carga con la FV y cubre lo que puede del consumo) o manual por
+    # periodos (P1..P6): cargar con la FV, cargar de la red y descargar a la red (% de su potencia)
+    q["bat_modo"] = "manual" if bat and p.get("bat_modo") == "manual" else "auto"
+    q["bat_per"] = None
+    if q["bat_modo"] == "manual":
+        per = p.get("bat_per") if isinstance(p.get("bat_per"), list) else []
+        pct = lambda x: min(100.0, max(0.0, float(x if x not in (None, "") else 25)))
+        try:
+            q["bat_per"] = [{"fv": bool(x.get("fv")), "red": bool(x.get("red")), "red_pct": pct(x.get("red_pct")),
+                             "ver": bool(x.get("ver")), "ver_pct": pct(x.get("ver_pct"))}
+                            for x in (per + [{"fv": True}] * 6)[:6]]
+        except (AttributeError, TypeError, ValueError):
+            raise ValueError("Despacho de la batería por periodos no válido")
     # (perfiles de antes: el mismo consumo los dias no laborables)
     q["kwh_fes"] = num("kwh_fes", q["kwh_dia"], 0, 1e6, "Consumo medio diario no laborable")
     if q["peaje"] != "auto" and p.get("potencias"):
@@ -2227,34 +2242,56 @@ def perfil_ficheros(p, cups, semilla):
         sol = [min(x * kwp, inv / 4) for x in sol]
     else:
         sol = [0.0] * len(dem)
-    # Bateria (bat_kwh, bat_kw, bat_ef): cada cuarto de hora se carga con lo que sobra de la FV
-    # (hasta su potencia y su capacidad, con las perdidas del rendimiento) y se descarga cuando la
-    # FV no llega; empieza a medias. La red ve solo lo que queda: menos vertido y menos consumo.
-    bat = (p.get("bat_kwh") or 0.0) if fv else 0.0
-    soc, bkw, bef = bat / 2, (p.get("bat_kw") or bat / 2) / 4, (p.get("bat_ef") or 90) / 100
+    # Peaje: el elegido o el justo para la demanda (sus periodos los usa el despacho manual)
+    pj = p["peaje"]
+
+    def _peaje(red_):
+        pico = max(red_) * 4 * 1.05
+        if pj != "auto":
+            return pj
+        return "2.0TD" if pico <= POT_20TD[-1] else "3.0TD" if pico <= 50 else "3.0TD+" if pico <= 450 else "6.1TD"
+    # Bateria (bat_kwh, bat_kw, bat_ef, bat_soc %): cada cuarto de hora, en automatico, se carga
+    # con lo que sobra de la FV (hasta su potencia y su capacidad, con las perdidas del rendimiento)
+    # y se descarga cuando la FV no llega. En manual, cada periodo del peaje hace lo que diga
+    # bat_per: cargar con la FV, cargar de la red y descargar a la red (al % de su potencia); en
+    # los que no carga de la red cubre el consumo. La red ve solo lo que queda.
+    bat = p.get("bat_kwh") or 0.0
+    soc = bat * (50 if p.get("bat_soc") is None else p["bat_soc"]) / 100
+    bkw, bef = (p.get("bat_kw") or bat / 2) / 4, (p.get("bat_ef") or 90) / 100
+    manual = bool(bat) and p.get("bat_modo") == "manual" and bool(p.get("bat_per"))
+    per = None
+    if manual:      # (el peaje, con la demanda sin bateria)
+        pj = _peaje([max(0.0, x - g) for x, g in zip(dem, sol)])
+        per = [periodo(lt, pj.rstrip("+")) for lt in lts]
     descargada = 0.0
     red, vert, auto = [], [], []
-    for x, g in zip(dem, sol):
+    for k, (x, g) in enumerate(zip(dem, sol)):
         a = min(g, x)
         sobra, falta = g - a, x - a
+        de_red = ca_red = 0.0
         if bat:
-            ca = max(0.0, min(sobra, bkw, (bat - soc) / bef))
-            soc += ca * bef
-            de = max(0.0, min(falta, bkw, soc))
+            cf = p["bat_per"][per[k] - 1] if manual else {"fv": True}
+            ca = max(0.0, min(sobra, bkw, (bat - soc) / bef)) if cf["fv"] else 0.0
+            if cf.get("red"):
+                ca_red = max(0.0, min(bkw * cf["red_pct"] / 100, bkw - ca, (bat - soc) / bef - ca))
+            soc += (ca + ca_red) * bef
+            de = 0.0 if cf.get("red") else max(0.0, min(falta, bkw, soc))
             soc -= de
+            if cf.get("ver"):
+                de_red = max(0.0, min(bkw * cf["ver_pct"] / 100, bkw - de, soc))
+                soc -= de_red
             sobra, falta = sobra - ca, falta - de
-            descargada += de
-        red.append(falta)
-        vert.append(sobra)
+            descargada += de + de_red
+        red.append(falta + ca_red)
+        vert.append(sobra + de_red)
         auto.append(x - falta)     # lo que consume de su FV, directa o a traves de la bateria
 
-    # Peaje y potencias: los elegidos o los justos para la demanda (maximo de cada periodo y 5 %)
-    pj = p["peaje"]
-    pico = max(red) * 4 * 1.05
-    if pj == "auto":
-        pj = "2.0TD" if pico <= POT_20TD[-1] else "3.0TD" if pico <= 50 else "3.0TD+" if pico <= 450 else "6.1TD"
+    # Potencias: las elegidas o las justas para la demanda (maximo de cada periodo y 5 %)
+    if not manual:
+        pj = _peaje(red)
     pjn = pj.rstrip("+")
-    per = [periodo(lt, pjn) for lt in lts]
+    per = per or [periodo(lt, pjn) for lt in lts]
+    pots = p["potencias"]
     pots = p["potencias"]
     if not pots:
         mx = [0.0] * 6
@@ -6016,6 +6053,12 @@ for _t, _alq in (("2.0TD", 0.81), ("3.0TD", 9.0), ("6.1TD", 25.0)):
 # instalacion tipica de cada peaje (residencial, comercial, industrial)
 for _t, _lcoe in (("2.0TD", 0.06), ("3.0TD", 0.05), ("6.1TD", 0.045)):
     PRECIOS_DEFECTO[_t]["lcoe"] = _lcoe
+# LCOE del almacenamiento (coste nivelado de cada kWh que entrega una bateria, EUR/kWh: inversion,
+# sustituciones, operacion y perdidas repartidas entre la energia que descarga en su vida util).
+# Por defecto, valores aproximados en España segun el tamaño de la bateria tipica de cada peaje:
+# domestica de 5-10 kWh, comercial de 20-200 kWh e industrial de mas de 500 kWh
+for _t, _lcoe in (("2.0TD", 0.14), ("3.0TD", 0.11), ("6.1TD", 0.09)):
+    PRECIOS_DEFECTO[_t]["lcoe_bat"] = _lcoe
 OTROS_DEFECTO = {"iee": 5.11269632, "iva": 21.0, "reac1": 0.041554, "reac2": 0.062332}
 
 
@@ -6029,7 +6072,7 @@ def precios():
         if t in out and t != "otros":
             for campo in ("p", "pot", "tep45", "tep123"):
                 out[t][campo].update({k: float(y) for k, y in (x.get(campo) or {}).items() if k in out[t][campo]})
-            for campo in ("comp", "alquiler", "lcoe"):
+            for campo in ("comp", "alquiler", "lcoe", "lcoe_bat"):
                 if x.get(campo) is not None:
                     out[t][campo] = float(x[campo])
     return {**out, "defecto": not v}
@@ -6060,9 +6103,13 @@ def guardar_precios(d):
         lcoe = x.get("lcoe")
         if lcoe is not None and not 0 <= float(lcoe) <= 2:
             raise ValueError("El LCOE de la generación va de 0 a 2 €/kWh")
+        lcoe_bat = x.get("lcoe_bat")
+        if lcoe_bat is not None and not 0 <= float(lcoe_bat) <= 2:
+            raise ValueError("El LCOE del almacenamiento va de 0 a 2 €/kWh")
         limpio[t] = {"p": ps, "pot": pot, "tep45": tep45, "tep123": tep123, **({"comp": float(comp)} if comp is not None else {}),
                      **({"alquiler": float(alq)} if alq is not None else {}),
-                     **({"lcoe": float(lcoe)} if lcoe is not None else {})}
+                     **({"lcoe": float(lcoe)} if lcoe is not None else {}),
+                     **({"lcoe_bat": float(lcoe_bat)} if lcoe_bat is not None else {})}
     with db.conectar() as cx:
         if limpio:
             _poner_ajuste(cx, "precios", limpio)
@@ -13878,13 +13925,13 @@ var REPARTOS = { manual: 'coeficientes fijos', optimo: 'coeficientes fijos ópti
 // Potencia: termino de potencia (EUR/kW y año) por periodo y terminos de exceso de potencia de la
 // Resolucion de peajes de 2026 (anexo II): tep45 (EUR/kW y dia, puntos de medida tipo 4 y 5:
 // potencias <= 50 kW) y tep123 (EUR/kW, tipo 1, 2 y 3: alguna potencia > 50 kW)
-var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, lcoe: 0.06, pot: { 1: 30.0, 2: 3.0 },
+var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, lcoe: 0.06, lcoe_bat: 0.14, pot: { 1: 30.0, 2: 3.0 },
                            tep45: { 1: 0.279426, 2: 0.005316 }, tep123: { 1: 2.968850, 2: 0.056473 } },
-                '3.0TD': { p: { 1: 0.19, 2: 0.16, 3: 0.13, 4: 0.12, 5: 0.10, 6: 0.09 }, comp: 0.06, lcoe: 0.05,
+                '3.0TD': { p: { 1: 0.19, 2: 0.16, 3: 0.13, 4: 0.12, 5: 0.10, 6: 0.09 }, comp: 0.06, lcoe: 0.05, lcoe_bat: 0.11,
                            pot: { 1: 20.0, 2: 11.0, 3: 5.0, 4: 4.3, 5: 2.8, 6: 1.6 },
                            tep45: { 1: 0.171373, 2: 0.090584, 3: 0.028721, 4: 0.021891, 5: 0.006142, 6: 0.006142 },
                            tep123: { 1: 3.325715, 2: 1.757877, 3: 0.557353, 4: 0.424794, 5: 0.119179, 6: 0.119179 } },
-                '6.1TD': { p: { 1: 0.16, 2: 0.14, 3: 0.12, 4: 0.11, 5: 0.09, 6: 0.08 }, comp: 0.05, lcoe: 0.045,
+                '6.1TD': { p: { 1: 0.16, 2: 0.14, 3: 0.12, 4: 0.11, 5: 0.09, 6: 0.08 }, comp: 0.05, lcoe: 0.045, lcoe_bat: 0.09,
                            pot: { 1: 30.0, 2: 15.5, 3: 7.0, 4: 5.5, 5: 1.6, 6: 0.9 },
                            tep45: { 1: 0.275735, 2: 0.146094, 3: 0.054668, 4: 0.038455, 5: 0.000817, 6: 0.000722 },
                            tep123: { 1: 3.431797, 2: 1.818277, 3: 0.680379, 4: 0.478581, 5: 0.010172, 6: 0.008984 } } };
@@ -13910,18 +13957,24 @@ function editorPrecios() {
   var pn = q('.dd-prec1'), gestor = (S.ctx.currentUser || {}).authority === 'TENANT_ADMIN', P = S.prec || PRECIOS;
   var v = function (x) { return x == null ? '' : String(+(+x).toFixed(4)); };
   pn.innerHTML = '<table><tr><th>Peaje</th>' + [1, 2, 3, 4, 5, 6].map(function (p) { return '<th>P' + p + '</th>'; }).join('') +
-    '<th>Excedentes</th><th title="Coste nivelado de la energía generada (inversión, operación y mantenimiento en su vida útil)">LCOE generación</th></tr>' +
+    '<th>Excedentes</th><th title="Coste nivelado de la energía generada (inversión, operación y mantenimiento en su vida útil)">LCOE generación</th>' +
+    '<th title="Coste nivelado de cada kWh que entrega la batería (inversión, sustituciones, operación y pérdidas en su vida útil), según el tamaño típico de cada peaje">LCOE almacenamiento</th></tr>' +
     ['2.0TD', '3.0TD', '6.1TD'].map(function (t) {
       return '<tr><td><b>' + t + '</b></td>' + [1, 2, 3, 4, 5, 6].map(function (p) {
         return '<td>' + (P[t].p[p] == null ? '–' : '<input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="' + p +
           '" value="' + v(P[t].p[p]) + '"' + (gestor ? '' : ' disabled') + '>') + '</td>';
       }).join('') + '<td><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="comp" value="' + v(P[t].comp) + '"' +
         (gestor ? '' : ' disabled') + '></td><td><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="lcoe" value="' +
-        v(P[t].lcoe != null ? P[t].lcoe : PRECIOS[t].lcoe) + '"' + (gestor ? '' : ' disabled') + '></td></tr>';
+        v(P[t].lcoe != null ? P[t].lcoe : PRECIOS[t].lcoe) + '"' + (gestor ? '' : ' disabled') + '></td>' +
+        '<td title="' + { '2.0TD': 'Batería doméstica, 5 a 10 kWh', '3.0TD': 'Batería comercial, 20 a 200 kWh', '6.1TD': 'Batería industrial, más de 500 kWh' }[t] +
+        '"><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="lcoe_bat" value="' +
+        v(P[t].lcoe_bat != null ? P[t].lcoe_bat : PRECIOS[t].lcoe_bat) + '"' + (gestor ? '' : ' disabled') + '></td></tr>';
     }).join('') + '</table>' +
     '<div class="dd-prec-pie">€/kWh del término de energía (con peajes y cargos, sin impuestos) por periodo, precio de compensación de ' +
     'los excedentes y LCOE de la generación (coste de producir cada kWh fotovoltaico que corresponde al socio: el suyo propio en solitario, ' +
-    'el de su coeficiente en comunidad; por defecto, valores aproximados de autoconsumo FV). Se usan en esta pestaña, en la factura y en los informes.' +
+    'el de su coeficiente en comunidad; por defecto, valores aproximados de autoconsumo FV) y LCOE del almacenamiento (coste de cada kWh que ' +
+    'entrega una batería; por defecto, los típicos según su tamaño: doméstica de 5 a 10 kWh en 2.0TD, comercial de 20 a 200 kWh en 3.0TD e ' +
+    'industrial de más de 500 kWh en 6.1TD). Se usan en esta pestaña, en la factura y en los informes.' +
     (S.prec && S.prec.defecto ? ' Ahora: los aproximados por defecto.' : '') +
     (gestor ? ' <button type="button" class="dd-bprec dd-pg" disabled title="Guarda los precios cambiados y recalcula los costes">Recalcular</button> <button type="button" class="dd-bprec dd-pd">Valores por defecto</button>' : '') +
     ' <span class="dd-pmsg"></span></div>';
@@ -13932,12 +13985,13 @@ function editorPrecios() {
     var out = todosPrecios();
     qa('.dd-prec1 input').forEach(function (i) {
       var x = out[i.dataset.t], val = i.value === '' ? null : +i.value;
-      if (i.dataset.p === 'comp' || i.dataset.p === 'lcoe') x[i.dataset.p] = val; else x.p[i.dataset.p] = val;
+      if (i.dataset.p === 'comp' || i.dataset.p === 'lcoe' || i.dataset.p === 'lcoe_bat') x[i.dataset.p] = val; else x.p[i.dataset.p] = val;
     });
     guardar(out);
   };
   q('.dd-pd').onclick = function () { var out = todosPrecios(); ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
-    out[t].p = JSON.parse(JSON.stringify(PRECIOS[t].p)); out[t].comp = PRECIOS[t].comp; out[t].lcoe = PRECIOS[t].lcoe; }); guardar(out); };
+    out[t].p = JSON.parse(JSON.stringify(PRECIOS[t].p)); out[t].comp = PRECIOS[t].comp; out[t].lcoe = PRECIOS[t].lcoe;
+    out[t].lcoe_bat = PRECIOS[t].lcoe_bat; }); guardar(out); };
 }
 // Guarda los precios (PUT /precios) y vuelve a pintar los costes: mientras, el boton queda
 // deshabilitado y a su lado "Actualizando…" con un indicador que gira; si falla, el error y el
@@ -13969,7 +14023,8 @@ function todosPrecios() {
   ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
     var x = P[t] || PRECIOS[t];
     var c = function (k) { return JSON.parse(JSON.stringify(x[k] || PRECIOS[t][k])); };
-    out[t] = { p: c('p'), comp: x.comp, lcoe: x.lcoe != null ? x.lcoe : PRECIOS[t].lcoe, pot: c('pot'), tep45: c('tep45'), tep123: c('tep123'),
+    out[t] = { p: c('p'), comp: x.comp, lcoe: x.lcoe != null ? x.lcoe : PRECIOS[t].lcoe, lcoe_bat: x.lcoe_bat != null ? x.lcoe_bat : PRECIOS[t].lcoe_bat,
+               pot: c('pot'), tep45: c('tep45'), tep123: c('tep123'),
                alquiler: x.alquiler != null ? x.alquiler : { '2.0TD': 0.81, '3.0TD': 9, '6.1TD': 25 }[t] };
   });
   return out;
@@ -15832,6 +15887,13 @@ ALTA_CSS = """
 .al-pf-ley i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: -1px; }
 .al-pf-ley i:first-child { margin-left: 0; }
 .al-pf-ley i.soc { height: 0; border-top: 2px dashed #e0479e; border-radius: 0; vertical-align: 3px; }
+.al-pf-desp table { border-collapse: collapse; margin: 10px 0 4px; font-size: 12px; }
+.al-pf-desp th { font-weight: 600; color: #555; padding: 2px 10px; text-align: center; vertical-align: bottom; }
+.al-pf-desp th small { display: block; font-weight: 400; }
+.al-pf-desp td { padding: 3px 10px; text-align: center; }
+.al-pf-desp td:first-child { text-align: left; font-weight: 700; white-space: nowrap; }
+.al-pf-desp input[type=number] { width: 58px; }
+.al-pf-desp input:disabled { opacity: .45; }
 .al-pf-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 8px 0; }
 .al-pf-kpi div { background: #faf6fc; border-radius: 4px; padding: 6px 8px; font-size: 11.5px; color: #555; }
 .al-pf-kpi b { display: block; font-size: 15px; color: #1d2a33; }
@@ -16172,36 +16234,61 @@ function pfFv(p) {
   for (i = 0; i < 3; i++) kwp *= obj / (anio(kwp, inv) || 1);
   return { kwp: kwp, inv: inv, meses: base.map(function (d) { return d.map(function (x) { return Math.min(x * kwp, inv); }); }) };
 }
+// Periodo de energia del peaje pj a la hora h de un dia del mes m (no: no laborable)
+var PF_TEMPORADA = [1, 1, 2, 4, 4, 3, 1, 3, 3, 4, 2, 1];
+function pfPeriodo(m, no, h, pj) {
+  var valle = no || h < 8;
+  if (pj === '2.0TD') return valle ? 3 : ((h >= 10 && h < 14) || (h >= 18 && h < 22) ? 1 : 2);
+  if (valle) return 6;
+  var x = PF_TEMPORADA[m];
+  return (h >= 9 && h < 14) || (h >= 18 && h < 22) ? x : x + 1;
+}
+var PF_PCOL = ['#3fae49', '#3a9fc0', '#a0784a', '#2aa198', '#c9b400', '#7a1f3d'];
+var PF_P20 = ['punta', 'llano', 'valle'];
+function pfPerDefecto() { var r = [], i; for (i = 0; i < 6; i++) r.push({ fv: true, red: false, red_pct: 25, ver: false, ver_pct: 25 }); return r; }
 // Consumo de cada hora del dia tipo del mes m (no: no laborable)
 function pfConsumoDia(p, m, no) {
   var forma = no ? p.fes : p.lab, kwh = (no ? p.kwh_fes : p.kwh_dia) || 0, f = (p.mes[m] || 0) * 12;
   return forma.map(function (x) { return x * kwh * f; });
 }
-// Bateria hora a hora en un dia tipo (b: kwh, kw, ef 0-1): se carga con lo que sobra de la FV y
-// se descarga cuando falta. Se repite el dia hasta que el estado de carga de la medianoche se
-// repite (como en una racha de dias iguales)
-function pfBateria(g, c, b) {
-  var soc = b.kwh / 2, r = null, v, k;
-  for (v = 0; v < 6; v++) {
-    r = { soc0: soc, carga: [], descarga: [], soc: [] };
-    for (k = 0; k < 24; k++) {
-      var d = Math.min(g[k], c[k]);
-      var ca = Math.max(0, Math.min(g[k] - d, b.kw, (b.kwh - soc) / b.ef));
-      soc += ca * b.ef;
-      var de = Math.max(0, Math.min(c[k] - d, b.kw, soc));
-      soc -= de;
-      r.carga.push(ca); r.descarga.push(de); r.soc.push(soc);
-    }
+// Bateria hora a hora (b: kwh, kw, ef 0-1, per: despacho manual por periodo o null = automatico)
+// desde el estado de carga soc0 (kWh). Automatico: se carga con lo que sobra de la FV y se
+// descarga cuando la FV no llega. Manual: en cada periodo (pers: el de cada hora) carga con la
+// FV, carga de la red y descarga a la red si se ha marcado (al % de su potencia); en los que no
+// carga de la red cubre el consumo
+function pfBateria(g, c, b, soc0, pers) {
+  var soc = Math.min(b.kwh, Math.max(0, soc0)), k;
+  var r = { soc0: soc, carga: [], descarga: [], soc: [], carga_red: [], des_red: [], des_con: [], carga_fv: [] };
+  for (k = 0; k < g.length; k++) {
+    var d = Math.min(g[k], c[k]), cf = b.per && pers ? b.per[pers[k] - 1] || { fv: true } : { fv: true };
+    var ca = cf.fv ? Math.max(0, Math.min(g[k] - d, b.kw, (b.kwh - soc) / b.ef)) : 0;
+    var cr = cf.red ? Math.max(0, Math.min(b.kw * cf.red_pct / 100, b.kw - ca, (b.kwh - soc) / b.ef - ca)) : 0;
+    soc += (ca + cr) * b.ef;
+    var de = cf.red ? 0 : Math.max(0, Math.min(c[k] - d, b.kw, soc));
+    soc -= de;
+    var dr = cf.ver ? Math.max(0, Math.min(b.kw * cf.ver_pct / 100, b.kw - de, soc)) : 0;
+    soc -= dr;
+    r.carga.push(ca + cr); r.descarga.push(de + dr); r.soc.push(soc);
+    r.carga_fv.push(ca); r.carga_red.push(cr); r.des_con.push(de); r.des_red.push(dr);
   }
   return r;
 }
-// Flujos del dia: directa, red (importada) y vertida, con o sin bateria
+// La de una racha de dias iguales (para el año aproximado): el dia se repite hasta que el
+// estado de carga de la medianoche se repite
+function pfBateriaRacha(g, c, b, pers) {
+  var r = pfBateria(g, c, b, b.kwh / 2, pers), v;
+  for (v = 0; v < 5; v++) r = pfBateria(g, c, b, r.soc[r.soc.length - 1], pers);
+  return r;
+}
+// Flujos del dia: directa, de la red (consumo que no cubren la FV ni la bateria, mas la carga de
+// la red) y vertido (lo que sobra de la FV y no carga la bateria, mas la descarga a la red)
 function pfFlujos(g, c, b) {
-  var ca = b ? b.carga : g.map(function () { return 0; }), de = b ? b.descarga : ca;
+  var z = g.map(function () { return 0; });
+  var ca = b ? b.carga : z, de = b ? b.descarga : z;
   var dir = g.map(function (x, k) { return Math.min(x, c[k]); });
   return { ca: ca, de: de, dir: dir,
-           imp: c.map(function (x, k) { return Math.max(0, x - dir[k] - de[k]); }),
-           exp: g.map(function (x, k) { return Math.max(0, x - dir[k] - ca[k]); }) };
+           imp: c.map(function (x, k) { return Math.max(0, x - dir[k] - (b ? b.des_con[k] : 0)) + (b ? b.carga_red[k] : 0); }),
+           exp: g.map(function (x, k) { return Math.max(0, x - dir[k] - (b ? b.carga_fv[k] : 0)) + (b ? b.des_red[k] : 0); }) };
 }
 function pfSum(v) { return v.reduce(function (a, b) { return a + b; }, 0); }
 // Maximo de eje redondeado (1, 2, 2,5 o 5 por potencia de 10)
@@ -16211,23 +16298,25 @@ function pfEscala(v) {
   return 10 * e;
 }
 function pfKwh(v) { return pfNum(v, v < 1 ? 2 : 1) + ' kWh'; }
-// Reparto horario del dia tipo (como el de la simulacion del dia tipo del blog): arriba lo que
-// entra (FV, descarga de la bateria y red) y abajo, en espejo, lo que sale (consumo, carga de la
-// bateria y vertido); con bateria, su estado de carga (% de la capacidad, eje derecho)
-function pfGrafDia(cont, g, c, b, cap) {
-  var W = 640, H = 280, L = 54, R = b ? 40 : 10, T = 10, B = 24, cw = W - L - R, ch = H - T - B, st = cw / 24, k;
+// Reparto horario (como el de la simulacion del dia tipo del blog) de una o varias jornadas
+// seguidas (dias: sus nombres, 24 h cada una): arriba lo que entra (FV, descarga de la bateria y
+// red) y abajo, en espejo, lo que sale (consumo, carga de la bateria y vertido), con la FV y el
+// consumo de cada hora escritos; con bateria, su estado de carga (% de la capacidad, eje derecho)
+function pfGrafDia(cont, g, c, b, cap, dias, pers) {
+  var n = g.length, nd = n / 24, W = nd > 1 ? 960 : 640, H = pers ? 346 : 330, L = 54, R = b ? 42 : 10, T = 22, B = pers ? 40 : 24;
+  var cw = W - L - R, ch = H - T - B, st = cw / n, k;
   var f = pfFlujos(g, c, b);
   var top = g.map(function (x, k) { return x + f.de[k] + f.imp[k]; });
-  var max = pfEscala(Math.max.apply(null, top.concat([0.01])));
+  var max = pfEscala(Math.max.apply(null, top.concat([0.01])) * 1.25);    // (sitio para las cifras)
   var y0 = T + ch / 2, y = function (v) { return y0 - v / max * ch / 2; }, s = '';
   [max, max / 2, 0, -max / 2, -max].forEach(function (v) {
     s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + (v ? '#eee' : '#bbb') + '"/>' +
-      '<text x="' + (L - 5) + '" y="' + (y(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfKwh(Math.abs(v)) + '</text>';
+      '<text x="' + (L - 5) + '" y="' + (y(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfNum(Math.abs(v), 2) + ' kWh' + '</text>';
   });
   var cero = g.map(function () { return 0; }), mas = function (a, b2) { return a.map(function (x, k) { return x + b2[k]; }); };
   function banda(a, d, signo, color) {
     var ar = [], ab = [];
-    for (k = 0; k < 24; k++) {
+    for (k = 0; k < n; k++) {
       var x0 = L + st * k, x1 = x0 + st;
       ar.push([x0, y(signo * (a[k] + d[k]))], [x1, y(signo * (a[k] + d[k]))]);
       ab.push([x0, y(signo * a[k])], [x1, y(signo * a[k])]);
@@ -16236,18 +16325,35 @@ function pfGrafDia(cont, g, c, b, cap) {
   }
   s += banda(cero, g, 1, PF_COL.gen) + banda(g, f.de, 1, PF_COL.des) + banda(mas(g, f.de), f.imp, 1, PF_COL.imp);
   s += banda(cero, c, -1, PF_COL.dem) + banda(c, f.ca, -1, PF_COL.car) + banda(mas(c, f.ca), f.exp, -1, PF_COL.exp);
+  // FV (hacia arriba desde su banda) y consumo (hacia abajo) de cada hora, girados
+  var fs = st < 14 ? 7 : 8.5, cifra = function (v) { return pfNum(v, v < 10 ? 1 : 0); };
+  for (k = 0; k < n; k++) {
+    var lx = (L + st * k + st / 2 + fs / 3).toFixed(1), yg = Math.max(y(g[k]) - 3, T + 2), yc = Math.min(y(-c[k]) + 3, T + ch - 2);
+    if (g[k] >= 0.05) s += '<text x="' + lx + '" y="' + yg.toFixed(1) + '" transform="rotate(-90 ' + lx + ' ' + yg.toFixed(1) + ')" font-size="' + fs + '" fill="#1c2735">' + cifra(g[k]) + '</text>';
+    s += '<text x="' + lx + '" y="' + yc.toFixed(1) + '" transform="rotate(-90 ' + lx + ' ' + yc.toFixed(1) + ')" text-anchor="end" font-size="' + fs + '" fill="#1c2735">' + cifra(c[k]) + '</text>';
+  }
   if (b) {
     var ys = function (v) { return T + ch * (1 - (cap ? v / cap : 0)); }, pts = [L + ',' + ys(b.soc0).toFixed(1)];
-    for (k = 0; k < 24; k++) pts.push((L + st * (k + 1)).toFixed(1) + ',' + ys(b.soc[k]).toFixed(1));
+    for (k = 0; k < n; k++) pts.push((L + st * (k + 1)).toFixed(1) + ',' + ys(b.soc[k]).toFixed(1));
     s += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + PF_COL.soc + '" stroke-width="2" stroke-dasharray="5 3"/>';
-    [0, 50, 100].forEach(function (v) {
+    [0, 25, 50, 75, 100].forEach(function (v) {
       s += '<text x="' + (W - R + 5) + '" y="' + (T + ch * (1 - v / 100) + 3) + '" fill="' + PF_COL.soc + '" font-size="9.5">' + v + ' %</text>';
     });
   }
-  for (k = 0; k < 24; k++) {
-    if (k % 3 === 0) s += '<text x="' + (L + st * k + st / 2) + '" y="' + (H - 7) + '" fill="#999" font-size="9.5" text-anchor="middle">' + k + 'h</text>';
-    s += '<rect x="' + (L + st * k) + '" y="' + T + '" width="' + st + '" height="' + ch + '" fill="transparent"><title>' + k + '–' + (k + 1) + ' h\n' +
-      'FV ' + pfKwh(g[k]) + ' · consumo ' + pfKwh(c[k]) + (b ? '\ncarga ' + pfKwh(f.ca[k]) + ' · descarga ' + pfKwh(f.de[k]) +
+  for (k = 0; k < nd; k++) {     // cada jornada: su nombre y la raya que la separa de la anterior
+    var xd = L + st * 24 * k;
+    if (k) s += '<line x1="' + xd + '" x2="' + xd + '" y1="' + (T - 14) + '" y2="' + (T + ch) + '" stroke="#555" stroke-dasharray="3 3"/>';
+    if (dias) s += '<text x="' + (xd + st * 12) + '" y="' + (T - 9) + '" fill="#555" font-size="11" font-weight="bold" text-anchor="middle">' + esc(dias[k]) + '</text>';
+  }
+  for (k = 0; k < n; k++) {
+    var hh = k % 24;
+    if (hh % (nd > 1 ? 6 : 3) === 0) s += '<text x="' + (L + st * k + st / 2) + '" y="' + (H - 7) + '" fill="#999" font-size="9.5" text-anchor="middle">' + hh + 'h</text>';
+    if (pers) {      // franja del periodo de cada hora (P1, P2...) con su nombre al empezar
+      s += '<rect x="' + (L + st * k).toFixed(1) + '" y="' + (T + ch + 3) + '" width="' + (st + 0.3).toFixed(1) + '" height="11" fill="' + PF_PCOL[pers[k] - 1] + '" fill-opacity=".85"/>';
+      if (!k || pers[k] !== pers[k - 1]) s += '<text x="' + (L + st * k + 2).toFixed(1) + '" y="' + (T + ch + 12) + '" fill="#fff" font-size="8.5" font-weight="bold">P' + pers[k] + '</text>';
+    }
+    s += '<rect x="' + (L + st * k) + '" y="' + T + '" width="' + st + '" height="' + ch + '" fill="transparent"><title>' + (dias ? dias[Math.floor(k / 24)] + ', ' : '') +
+      hh + '–' + (hh + 1) + ' h' + (pers ? ' (P' + pers[k] + ')' : '') + '\nFV ' + pfKwh(g[k]) + ' · consumo ' + pfKwh(c[k]) + (b ? '\ncarga ' + pfKwh(f.ca[k]) + ' · descarga ' + pfKwh(f.de[k]) +
       ' · batería ' + pfPct(cap ? b.soc[k] / cap : 0) : '') + '\nde la red ' + pfKwh(f.imp[k]) + ' · vertido ' + pfKwh(f.exp[k]) + '</title></rect>';
   }
   cont.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Reparto horario del día tipo">' + s + '</svg>';
@@ -16400,22 +16506,25 @@ self.onInit = function () {
   function pfDefecto() {
     var t = pfPlantilla('vivienda');
     return { plantilla: 'vivienda', kwh_dia: t.kwh, kwh_fes: t.kwh_fes, lab: t.lab, fes: t.fes, mes: t.mes,
-             gen_dia: 0, inversor: null, cosphi: 0.93, peaje: 'auto', potencias: null, bat_kwh: 0, bat_kw: null, bat_ef: 90 };
+             fv: true, gen_dia: 8, inversor: null, cosphi: 0.93, peaje: 'auto', potencias: null, bat_kwh: 0, bat_kw: null, bat_ef: 90, bat_soc: 50, bat_modo: 'auto', bat_per: pfPerDefecto() };
   }
   function pfResumen(p) {
     if (!p) return '';
     var r = p.resumen || {}, pl = PF_PLANTILLAS[p.plantilla];
     return '(' + (pl ? pl.n : SIMT[p.plantilla] || 'dibujado') + ', ' + pfNum(p.kwh_dia) + ' / ' + pfNum(p.kwh_fes != null ? p.kwh_fes : p.kwh_dia) + ' kWh/día' +
       (p.fv ? ', FV ' + pfNum(r.kwp != null ? r.kwp : p.gen_dia * 365 / PF_KWH_KWP) + ' kWp' : '') +
-      (p.fv && p.bat_kwh > 0 ? ', batería ' + pfNum(p.bat_kwh) + ' kWh' : '') + ')';
+      (p.bat_kwh > 0 ? ', batería ' + pfNum(p.bat_kwh) + ' kWh' : '') + ')';
   }
   function abrirPerfil(so) {
     var p = so && so.sim_perfil ? JSON.parse(JSON.stringify(so.sim_perfil)) : pfDefecto();
     if (p.tipo === 'generador') { p.kwh_dia = p.aux_dia || 2; p.plantilla = ''; }   // (perfiles de antes de los prosumidores)
     if (!p.fv) p.gen_dia = 0;
     if (p.kwh_fes == null) p.kwh_fes = p.kwh_dia;                                   // (perfiles de antes: el mismo)
-    if (!p.fv || p.bat_kwh == null) { p.bat_kwh = 0; p.bat_kw = null; }             // (perfiles de antes: sin bateria)
+    if (p.bat_kwh == null) { p.bat_kwh = 0; p.bat_kw = null; }             // (perfiles de antes: sin bateria)
     if (p.bat_ef == null) p.bat_ef = 90;
+    if (p.bat_soc == null) p.bat_soc = 50;
+    if (p.bat_modo !== 'manual') p.bat_modo = 'auto';
+    if (!p.bat_per || p.bat_per.length !== 6) p.bat_per = pfPerDefecto();
     p.lab = pfNorm(p.lab); p.fes = pfNorm(p.fes); p.mes = pfNorm(p.mes);
     ['resumen', 'tipo', 'aux_dia', 'modalidad', 'fv', 'var_dia', 'var_q'].forEach(function (k) { delete p[k]; });
     PF = { so: so, p: p, tab: 'con', mes: new Date().getMonth(), dia: 'lab' };
@@ -16441,7 +16550,7 @@ self.onInit = function () {
     var h = '';
     if (!PF.so) h += '<div class="al-campos">' + campo('nombre', '<span class="req">Nombre del socio de prueba</span>', PF.nombre || '',
                      ' placeholder="p. ej. Prueba industrial 6.1TD" maxlength="80"') + '</div>';
-    h += '<div class="al-pf-tabs" role="tablist">' + [['con', 'Consumo'], ['gen', 'Generación'], ['bat', 'Batería'], ['red', 'Reactiva y peaje']].map(function (x) {
+    h += '<div class="al-pf-tabs" role="tablist">' + [['con', 'Consumo'], ['gen', 'Generación'], ['bat', 'Batería']].map(function (x) {
       return '<button type="button" role="tab" class="al-pf-tab' + (PF.tab === x[0] ? ' on' : '') + '" data-tab="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
     var panel = function (k) { return '<div class="al-pf-panel' + (PF.tab === k ? '' : ' off') + '" data-panel="' + k + '">'; };
     var selDia = '<div class="al-pf-sel"><label>Mes del día tipo<select data-sel="mes">' +
@@ -16461,35 +16570,29 @@ self.onInit = function () {
       campo('gen_dia', 'Generación media diaria (kWh/día)', p.gen_dia, ' type="number" min="0" step="0.1"') +
       (p.gen_dia > 0 ? campo('inversor', 'Potencia del inversor (kW)', p.inversor, ' type="number" min="0" step="0.1" placeholder="automática (85 % de la pico)"') : '') +
       '</div><small>0 = sin generación. Lo que no consume en cada cuarto de hora se vierte a la red: para la comunidad cuenta la generación, no la modalidad de autoconsumo.</small>' +
-      (p.gen_dia > 0 ? selDia + '<div class="al-pf-ley"><i style="background:' + PF_COL.gen + '"></i>generación FV <i style="background:' + PF_COL.dem +
+      (true ? selDia + '<div class="al-pf-ley"><i style="background:' + PF_COL.gen + '"></i>generación FV <i style="background:' + PF_COL.dem +
         ';height:2px;vertical-align:3px"></i>consumo del mismo día</div><div class="al-pf-fig" data-fig="gen"></div>' +
         '<small>Generación de un día medio de cada mes (pulsa un mes para ver su día tipo)</small><div class="al-pf-fig" data-fig="meses"></div>' +
         '<small class="al-pf-fvtxt"></small>' : '') + '</div>';
-    h += panel('bat') + (p.gen_dia > 0 ? '<div class="al-campos">' +
+    h += panel('bat') + (true ? '<div class="al-campos">' +
         campo('bat_kwh', 'Capacidad útil (kWh)', p.bat_kwh, ' type="number" min="0" step="0.5"') +
         (p.bat_kwh > 0 ? campo('bat_kw', 'Potencia de carga y descarga (kW)', p.bat_kw, ' type="number" min="0" step="0.1" placeholder="automática: ½ de la capacidad"') +
-          campo('bat_ef', 'Rendimiento (%)', p.bat_ef, ' type="number" min="50" max="100" step="1"') : '') + '</div>' +
-        '<small>0 = sin batería. Se carga con lo que sobra de la FV y se descarga cuando la FV no llega: la red ve solo lo que queda ' +
-        '(menos vertido y menos consumo de la red). Con ella se generan también sus datos.</small>' + selDia +
-        '<div class="al-pf-kpi"></div>' +
+          campo('bat_soc', 'Estado de carga inicial (% de la capacidad)', p.bat_soc, ' type="number" min="0" max="100" step="5"') +
+          campo('bat_ef', 'Rendimiento (%)', p.bat_ef, ' type="number" min="50" max="100" step="1"') +
+          '<label>Despacho<select data-pf="bat_modo">' + opciones([['auto', 'Automático'], ['manual', 'Manual por periodos']], p.bat_modo) + '</select></label>' : '') + '</div>' +
+        '<small>0 = sin batería. <b>Automático</b>: se carga solo con lo que sobra de la FV y se descarga cuando la FV no llega, para ' +
+        'consumir lo menos posible de la red. <b>Manual</b>: eliges en cada periodo del peaje si se carga con la FV, si se carga de la red ' +
+        'y si se descarga a la red (al % de su potencia); en los periodos en que no se carga de la red, cubre el consumo. ' +
+        'Con ella se generan también sus datos.' + (p.gen_dia > 0 ? '' : ' <b>Este socio no tiene FV</b>: en automático la batería no se ' +
+        'carga; con el despacho manual se puede cargar de la red en los periodos baratos y descargar en los caros.') + '</small>' +
+        (p.bat_kwh > 0 && p.bat_modo === 'manual' ? '<div class="al-pf-desp"></div>' : '') +
+        selDia + '<div class="al-pf-kpi"></div>' +
         '<div class="al-pf-ley"><i style="background:' + PF_COL.gen + '"></i>FV <i style="background:' + PF_COL.des + '"></i>descarga de la batería <i style="background:' +
           PF_COL.imp + '"></i>de la red · entran (arriba)<br><i style="background:' + PF_COL.dem + '"></i>consumo <i style="background:' + PF_COL.car +
           '"></i>carga de la batería <i style="background:' + PF_COL.exp + '"></i>vertido · salen (abajo)' +
-          (p.bat_kwh > 0 ? '<br><i class="soc"></i>estado de carga (% de la capacidad, eje derecho)' : '') + '</div>' +
+          (p.bat_kwh > 0 ? '<br><i class="soc"></i>estado de carga (% de la capacidad, eje derecho) · franja: periodo del peaje' : '') + '</div>' +
         '<div class="al-pf-fig" data-fig="bat"></div><small class="al-pf-battxt"></small>'
       : '<p><small>La batería se carga con la generación fotovoltaica: pon antes la generación media diaria en la pestaña <b>Generación</b>.</small></p>') + '</div>';
-    h += panel('red') + '<div class="al-campos">' +
-      campo('cosphi', 'Factor de potencia medio (cos φ)', p.cosphi, ' type="number" min="0.6" max="1" step="0.01"') +
-      '<label>Peaje de acceso<select data-pf="peaje">' + opciones(PF_PEAJES, p.peaje) + '</select></label></div>';
-    if (p.peaje !== 'auto') {
-      var pot = p.potencias && p.potencias.length === PF_POT[p.peaje].length ? p.potencias : PF_POT[p.peaje].slice();
-      p.potencias = pot;
-      h += '<div class="al-pf-pot">' + pot.map(function (x, i) {
-        return '<label>' + (pot.length === 2 ? ['P1 punta y llano', 'P2 valle'][i] : 'P' + (i + 1)) + ' (kW)<input type="number" min="0.1" step="0.1" data-pot="' + i + '" value="' + x + '"></label>';
-      }).join('') + '</div>';
-    } else p.potencias = null;
-    h += '<small>' + (p.peaje === 'auto' ? 'Automático: peaje y potencias contratadas justos para la demanda simulada (máximo de cada periodo más un 5 %). ' : '') +
-      'Curva horaria hasta 50 kW (contadores tipo 4 y 5) y cuartohoraria por encima (tipo 1 a 3); maxímetro cuartohorario; reactiva mensual por periodo (no en 2.0TD).</small></div>';
     q('al-pf').innerHTML = h;
     [].forEach.call(q('al-pf').querySelectorAll('.al-pf-tab'), function (b) {
       b.addEventListener('click', function () {
@@ -16520,7 +16623,7 @@ self.onInit = function () {
         var k = el.dataset.pf;
         if (k === 'plantilla' && el.value) { var t = pfPlantilla(el.value); p.lab = t.lab; p.fes = t.fes; p.mes = t.mes; p.kwh_dia = t.kwh; p.kwh_fes = t.kwh_fes; }
         if (k === 'plantilla' || k === 'peaje' || (k === 'gen_dia' && (p.gen_dia > 0) !== !!q('al-pf').querySelector('[data-pf="inversor"]')) ||
-            (k === 'bat_kwh' && (p.bat_kwh > 0) !== !!q('al-pf').querySelector('[data-pf="bat_kw"]'))) {
+            (k === 'bat_kwh' && (p.bat_kwh > 0) !== !!q('al-pf').querySelector('[data-pf="bat_kw"]')) || k === 'bat_modo') {
           if (k === 'peaje') p.potencias = null;
           pintarPerfil();
         } else resumen();
@@ -16535,7 +16638,7 @@ self.onInit = function () {
     [].forEach.call(q('al-pf').querySelectorAll('[data-pf]'), function (el) {
       var k = el.dataset.pf;
       if (k === 'nombre') PF.nombre = el.value;
-      else if (k === 'plantilla' || k === 'peaje') p[k] = el.value;
+      else if (k === 'plantilla' || k === 'peaje' || k === 'bat_modo') p[k] = el.value;
       else p[k] = n(el.value);
     });
     var pots = q('al-pf').querySelectorAll('[data-pot]');
@@ -16545,7 +16648,7 @@ self.onInit = function () {
     var p = PF.p, t = [];
     if (p.kwh_dia) t.push('Consumo ≈ <b>' + pfNum(p.kwh_dia * (365 - PF_NO_LAB) + (p.kwh_fes || 0) * PF_NO_LAB, 0) + ' kWh al año</b>');
     if (p.gen_dia > 0) t.push('generación ≈ <b>' + pfNum(p.gen_dia * 365, 0) + ' kWh al año</b> (FV de unos ' + pfNum(p.gen_dia * 365 / PF_KWH_KWP) + ' kWp)');
-    if (p.gen_dia > 0 && p.bat_kwh > 0) t.push('batería de ' + pfNum(p.bat_kwh) + ' kWh');
+    if (p.bat_kwh > 0) t.push('batería de ' + pfNum(p.bat_kwh) + ' kWh');
     q('al-pf-res').innerHTML = t.join(' · ') + '. Dos años de datos hasta ayer.';
     graficos();
   }
@@ -16553,7 +16656,7 @@ self.onInit = function () {
   // y, en la de la bateria, lo que cambia en un año hecho con los dias tipo
   function graficos() {
     var p = PF.p, fig = function (k) { return q('al-pf').querySelector('[data-fig="' + k + '"]'); };
-    if (!(p.gen_dia > 0) || !fig('gen')) return;
+    if (!fig('gen')) return;
     var fv = pfFv(p), m = PF.mes, no = PF.dia === 'fes', g = fv.meses[m], cd = pfConsumoDia(p, m, no);
     pfGrafGen(fig('gen'), g, cd);
     pfGrafMeses(fig('meses'), fv, m, function (i) {
@@ -16561,33 +16664,80 @@ self.onInit = function () {
       [].forEach.call(q('al-pf').querySelectorAll('[data-sel="mes"]'), function (x) { x.value = String(i); });
       graficos();
     });
-    q('al-pf-fvtxt').innerHTML = 'Instalación de unos <b>' + pfNum(fv.kwp) + ' kWp</b> con inversor de ' + pfNum(fv.inv) + ' kW (curva de PVGIS en Granada, ' +
+    q('al-pf-fvtxt').innerHTML = !(p.gen_dia > 0) ? 'Sin generación fotovoltaica (0 kWh/día): pon la generación media diaria para ver su curva. ' +
+      PF_MESES_L[m].charAt(0).toUpperCase() + PF_MESES_L[m].slice(1) + ', ' + (no ? 'no laborable' : 'laborable') + ': consume ' + pfKwh(pfSum(cd)) + '.' :
+      'Instalación de unos <b>' + pfNum(fv.kwp) + ' kWp</b> con inversor de ' + pfNum(fv.inv) + ' kW (curva de PVGIS en Granada, ' +
       'día medio del mes, sin nubes de un día concreto). ' + PF_MESES_L[m].charAt(0).toUpperCase() + PF_MESES_L[m].slice(1) + ', ' + (no ? 'no laborable' : 'laborable') +
       ': genera <b>' + pfKwh(pfSum(g)) + '</b> y consume ' + pfKwh(pfSum(cd)) + '.';
-    var hay = p.bat_kwh > 0, b = hay ? { kwh: p.bat_kwh, kw: p.bat_kw > 0 ? p.bat_kw : p.bat_kwh / 2, ef: Math.min(100, Math.max(50, p.bat_ef || 90)) / 100 } : null;
-    var bd = hay ? pfBateria(g, cd, b) : null;
-    pfGrafDia(fig('bat'), g, cd, bd, hay ? b.kwh : 0);
-    // año aproximado: cada mes con sus dias laborables y no laborables tipo
-    var A = { g: 0, c: 0, imp0: 0, exp0: 0, imp: 0, exp: 0, des: 0 };
+    var hay = p.bat_kwh > 0, man = hay && p.bat_modo === 'manual';
+    var b = hay ? { kwh: p.bat_kwh, kw: p.bat_kw > 0 ? p.bat_kw : p.bat_kwh / 2, ef: Math.min(100, Math.max(50, p.bat_ef || 90)) / 100,
+                    per: man ? p.bat_per : null } : null;
+    // peaje para los periodos: el elegido o, en automatico, el que le tocaria sin bateria
+    var pico = 0;
+    for (var mm = 0; mm < 12; mm++) [false, true].forEach(function (nl) {
+      var cc = pfConsumoDia(p, mm, nl); cc.forEach(function (x, h) { pico = Math.max(pico, x - fv.meses[mm][h]); });
+    });
+    var pj = p.peaje === 'auto' ? (pico * 1.05 <= 15 ? '2.0TD' : '3.0TD') : p.peaje.replace('+', '');
+    var nper = pj === '2.0TD' ? 3 : 6, pers = function (mes, nl) { var r = [], h; for (h = 0; h < 24; h++) r.push(pfPeriodo(mes, nl, h, pj)); return r; };
+    if (man) pintarDespacho(pj, nper);
+    var soc0 = hay ? b.kwh * Math.min(100, Math.max(0, p.bat_soc == null ? 50 : p.bat_soc)) / 100 : 0;
+    var pc = function (a, b2) { return b2 > 0 ? pfPct(a / b2) : '–'; };
+    var kpi = '';
+    [no ? ['fes', 'No laborable', true] : ['lab', 'Laborable', false]].forEach(function (x) {     // el dia elegido
+      var gd = fv.meses[m], cd2 = pfConsumoDia(p, m, x[2]), pr = pers(m, x[2]);
+      var bd = hay ? pfBateria(gd, cd2, b, soc0, pr) : null, f0 = pfFlujos(gd, cd2, null), f1 = pfFlujos(gd, cd2, bd);
+      pfGrafDia(fig('bat'), gd, cd2, bd, hay ? b.kwh : 0, [x[1] + ' de ' + PF_MESES_L[m] + ' · ' + pj], pr);
+      var G = pfSum(gd), C = pfSum(cd2);
+      // consumo cubierto con energia propia: la FV directa y la parte de la descarga que viene de la
+      // FV (la que se cargo de la red no cuenta)
+      var propio = function (f, bb) { return pfSum(f.dir) + (bb ? pfSum(bb.des_con) * pfSum(bb.carga_fv) / (pfSum(bb.carga) || 1) : 0); };
+      kpi += '<div>De la red en el día<b>' + pfKwh(pfSum(f1.imp)) + '</b>' + (hay ? 'sin batería ' + pfKwh(pfSum(f0.imp)) : 'consumo ' + pfKwh(C)) + '</div>' +
+        '<div>Autarquía<b>' + pc(propio(f1, bd), C) + '</b>' + (hay ? 'sin batería ' + pc(propio(f0, null), C) : 'de lo que consume') + '</div>' +
+        (hay ? '<div>Batería en el día<b>' + pfKwh(pfSum(bd.descarga)) + '</b>descargada · acaba al ' + pfPct(bd.soc[23] / b.kwh) + '</div>' : '');
+    });
+    // año aproximado: cada mes con sus dias laborables y no laborables tipo (racha de dias iguales)
+    var A = { g: 0, c: 0, imp0: 0, exp0: 0, imp: 0, exp: 0, des: 0, cr: 0 };
     for (var i = 0; i < 12; i++) [false, true].forEach(function (nl) {
       var dias = PF_DIAS_MES[i] * (nl ? PF_NO_LAB : 365 - PF_NO_LAB) / 365, gi = fv.meses[i], ci = pfConsumoDia(p, i, nl);
-      var f0 = pfFlujos(gi, ci, null), bi = hay ? pfBateria(gi, ci, b) : null, f1 = pfFlujos(gi, ci, bi);
+      var f0 = pfFlujos(gi, ci, null), bi = hay ? pfBateriaRacha(gi, ci, b, pers(i, nl)) : null, f1 = pfFlujos(gi, ci, bi);
       A.g += dias * pfSum(gi); A.c += dias * pfSum(ci);
       A.imp0 += dias * pfSum(f0.imp); A.exp0 += dias * pfSum(f0.exp); A.imp += dias * pfSum(f1.imp); A.exp += dias * pfSum(f1.exp);
-      A.des += dias * pfSum(f1.de);
+      if (bi) { A.des += dias * pfSum(bi.descarga); A.cr += dias * pfSum(bi.carga_red); }
     });
-    var pc = function (a, b2) { return b2 > 0 ? pfPct(a / b2) : '–'; };
-    var fd0 = pfFlujos(g, cd, null), fd = pfFlujos(g, cd, bd);
-    q('al-pf-kpi').innerHTML =
-      '<div>Autoconsumo del día<b>' + pc(pfSum(g) - pfSum(fd.exp), pfSum(g)) + '</b>' + (hay ? 'sin batería ' + pc(pfSum(g) - pfSum(fd0.exp), pfSum(g)) : 'de lo que genera') + '</div>' +
-      '<div>Autarquía del día<b>' + pc(pfSum(cd) - pfSum(fd.imp), pfSum(cd)) + '</b>' + (hay ? 'sin batería ' + pc(pfSum(cd) - pfSum(fd0.imp), pfSum(cd)) : 'de lo que consume') + '</div>' +
-      (hay ? '<div>Batería en el día<b>' + pfKwh(pfSum(bd.descarga)) + '</b>descargada (' + pfNum(pfSum(bd.descarga) / b.kwh, 2) + ' ciclos)</div>' : '') +
-      '<div>De la red al año<b>' + pfNum(A.imp, 0) + ' kWh</b>' + (hay ? 'sin batería ' + pfNum(A.imp0, 0) : 'aprox., días tipo') + '</div>' +
+    kpi += '<div>De la red al año<b>' + pfNum(A.imp, 0) + ' kWh</b>' + (hay ? 'sin batería ' + pfNum(A.imp0, 0) : 'aprox., días tipo') + '</div>' +
       '<div>Vertido al año<b>' + pfNum(A.exp, 0) + ' kWh</b>' + (hay ? 'sin batería ' + pfNum(A.exp0, 0) : 'aprox., días tipo') + '</div>';
-    q('al-pf-battxt').innerHTML = (hay ? 'Con la batería, al año (aprox., con los días tipo de cada mes): autoconsumo ' + pc(A.g - A.exp0, A.g) + ' → <b>' +
-      pc(A.g - A.exp, A.g) + '</b>, autarquía ' + pc(A.c - A.imp0, A.c) + ' → <b>' + pc(A.c - A.imp, A.c) + '</b>, unos ' +
-      pfNum(A.des / b.kwh, 0) + ' ciclos completos. ' : '') +
-      'El estado de carga a medianoche es el de una racha de días iguales. Los datos generados usan cada cuarto de hora, con las variaciones de cada día.';
+    q('al-pf-kpi').innerHTML = kpi;
+    q('al-pf-battxt').innerHTML = (hay ? 'Al año (aprox., con los días tipo de cada mes): de la red ' + pfNum(A.imp0, 0) + ' → <b>' + pfNum(A.imp, 0) +
+      ' kWh</b>' + (A.cr > 0.5 ? ' (' + pfNum(A.cr, 0) + ' para cargar la batería)' : '') + ', vertido ' + pfNum(A.exp0, 0) + ' → <b>' + pfNum(A.exp, 0) +
+      ' kWh</b>, unos ' + pfNum(A.des / b.kwh, 0) + ' ciclos completos. ' : '') +
+      'El día tipo empieza con el estado de carga inicial; el año supone rachas de días iguales. Los datos generados usan cada cuarto de hora, ' +
+      'con las variaciones de cada día, y la batería empieza con el estado de carga inicial.' +
+      (p.peaje === 'auto' ? ' Periodos del ' + pj + ', el peaje que le toca por su demanda.' : ' Periodos de su peaje, el ' + pj + '.');
+  }
+  // Despacho manual: en cada periodo del peaje, cargar con la FV, cargar de la red y descargar a
+  // la red (al % de la potencia de la batería)
+  function pintarDespacho(pj, nper) {
+    var cont = q('al-pf-desp'), per = PF.p.bat_per;
+    if (!cont || cont.dataset.pj === pj) return;     // (se pinta al cambiar el peaje; si no, se conserva)
+    cont.dataset.pj = pj;
+    var ck = function (i, k) { return '<input type="checkbox" data-bp="' + i + '.' + k + '"' + (per[i][k] ? ' checked' : '') + '>'; };
+    var pc = function (i, k, on) { return '<input type="number" min="0" max="100" step="5" data-bp="' + i + '.' + k + '_pct" value="' + per[i][k + '_pct'] + '"' + (on ? '' : ' disabled') + '>'; };
+    var h = '<table><tr><th></th><th>Carga con<br>la FV</th><th colspan="2">Carga de la red<small>Permitir · potencia (%)</small></th>' +
+      '<th colspan="2">Descarga a la red<small>Permitir · potencia (%)</small></th></tr>';
+    for (var i = 0; i < nper; i++) h += '<tr><td style="color:' + PF_PCOL[i] + '">P' + (i + 1) + (pj === '2.0TD' ? ' <small>' + PF_P20[i] + '</small>' : '') + '</td><td>' + ck(i, 'fv') +
+      '</td><td>' + ck(i, 'red') + '</td><td>' + pc(i, 'red', per[i].red) + '</td><td>' + ck(i, 'ver') + '</td><td>' + pc(i, 'ver', per[i].ver) + '</td></tr>';
+    cont.innerHTML = h + '</table>';
+    [].forEach.call(cont.querySelectorAll('[data-bp]'), function (el) {
+      el.addEventListener('change', function () {
+        var x = el.dataset.bp.split('.'), i = +x[0], k = x[1];
+        if (el.type === 'checkbox') {
+          per[i][k] = el.checked;
+          var n = cont.querySelector('[data-bp="' + i + '.' + k + '_pct"]');
+          if (n) n.disabled = !el.checked;
+        } else per[i][k] = Math.min(100, Math.max(0, Number(String(el.value).replace(',', '.')) || 0));
+        graficos();
+      });
+    });
   }
   function validarPerfil() {
     leerCampos();
@@ -16596,9 +16746,10 @@ self.onInit = function () {
     else if (!(p.kwh_dia > 0)) e = 'El consumo medio diario laborable debe ser mayor que 0.';
     else if (p.kwh_fes == null || !(p.kwh_fes >= 0)) e = 'Pon el consumo medio diario no laborable (0 si no consume esos días).';
     else if (!(p.gen_dia >= 0)) e = 'La generación media diaria no puede ser negativa.';
-    else if (p.gen_dia > 0 && !(p.bat_kwh >= 0)) e = 'La capacidad de la batería no puede ser negativa.';
-    else if (p.gen_dia > 0 && p.bat_kwh > 0 && p.bat_kw != null && !(p.bat_kw >= 0)) e = 'La potencia de la batería no puede ser negativa.';
-    else if (p.gen_dia > 0 && p.bat_kwh > 0 && !(p.bat_ef >= 50 && p.bat_ef <= 100)) e = 'El rendimiento de la batería debe estar entre 50 y 100 %.';
+    else if (!(p.bat_kwh >= 0)) e = 'La capacidad de la batería no puede ser negativa.';
+    else if (p.bat_kwh > 0 && p.bat_kw != null && !(p.bat_kw >= 0)) e = 'La potencia de la batería no puede ser negativa.';
+    else if (p.bat_kwh > 0 && !(p.bat_ef >= 50 && p.bat_ef <= 100)) e = 'El rendimiento de la batería debe estar entre 50 y 100 %.';
+    else if (p.bat_kwh > 0 && !(p.bat_soc >= 0 && p.bat_soc <= 100)) e = 'El estado de carga inicial debe estar entre 0 y 100 %.';
     else if (!(p.cosphi >= 0.6 && p.cosphi <= 1)) e = 'El factor de potencia debe estar entre 0,6 y 1.';
     else if (p.potencias && p.potencias.some(function (x) { return !(x > 0); })) e = 'Las potencias contratadas deben ser mayores que 0.';
     else if (p.potencias && p.potencias.length === 6 && p.potencias.some(function (x, i) { return i && x < p.potencias[i - 1]; }))
