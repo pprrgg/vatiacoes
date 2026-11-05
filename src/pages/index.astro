@@ -15,7 +15,6 @@ const PORTAL_URL = 'https://VatiaCo.duckdns.org/';
 // «De la lista del IDAE» o en «Comunidad de prueba»
 const ALTA_RUTA = 'login?alta=comunidad';
 const PRUEBA_RUTA = 'login?alta=prueba';
-const DEMO = { usuario: 'demo@vatiaco.es', clave: 'demo' };
 const doc = (url: string) => `/blog/?doc=${encodeURIComponent(url)}`;
 const CE = '/docs/A00_Blog_Interactivo/A02_Comunidades Energéticas/';
 
@@ -119,10 +118,6 @@ const pasos = [
       @media (max-width: 920px) { .ini-hero .wrap { grid-template-columns: 1fr; gap: 2.5rem; } .ini-hero { padding: 3rem 0 3.5rem; } }
       .ini-hero h1 { margin-top: 0.9rem; }
       .ini-hero .lead { font-size: 1.15rem; max-width: 38rem; margin: 0 0 2rem; color: var(--gray-2); }
-      .ini-demo { margin: 1.4rem 0 0; font-size: 0.9rem; color: var(--gray-3); }
-      .ini-demo a { color: var(--accent); font-weight: 600; text-decoration: none; }
-      .ini-demo a:hover { text-decoration: underline; }
-      .ini-demo code { color: var(--gray-1); background: var(--gray-6); border: 1px solid var(--gray-5); border-radius: 0.35rem; padding: 0.05rem 0.4rem; user-select: all; }
 
       /* los dos botones principales: alta (lista del IDAE) y comunidad de prueba */
       .grandes { display: flex; flex-wrap: wrap; gap: 0.75rem; }

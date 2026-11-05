@@ -85,39 +85,9 @@ PG_PASSWORD="$IOT_PASSWORD"
 SUPER_EMAIL="super@vatiaco.es"
 SUPER_PASSWORD="super"
 
-# Comunidades de ejemplo que se crean en cada instalacion, todas del mismo gestor
-# (demo@vatiaco.es / demo, el usuario de la demo de la pagina de alta): la primera es su
-# principal (la crea el superusuario); las demas, otras comunidades suyas (como si las creara
-# el desde su pestaña Suministros autorizados). Sus socios son socios de prueba (pestaña Socios), con los
-# datos de un perfil de prosumidor equivalente a su tipo de socio simulado. CSV separados por ";",
-# decimales con punto; sim_tipo: residencial, residencial_fv, comercial, industrial,
-# cargador_ve, cargador_ve_lento, estacion_ve (2 tomas de 22 kW), estacion_ve_fv o generador_fv; sim_kwh_mes: consumo mensual
-# (en generador_fv, lo generado en un mes medio: FV_KWH_MES_KWP = 140,2 kWh por kWp segun PVGIS; 7010 = 50 kWp;
-# estacion_ve_fv, estacion de recarga que consume el 70 % de lo que generan las generador_fv de su comunidad
-# y 3 kW en las horas sin sol: no usa sim_kwh_mes). Socio sin email:
-# sin usuario. EJEMPLO_COMUNIDADES vacio = sin comunidades de ejemplo.
-EJEMPLO_GESTOR_NOMBRE="Javier Ortega"
-EJEMPLO_GESTOR_EMAIL="demo@vatiaco.es"
-EJEMPLO_GESTOR_TELEFONO="600 333 444"
-EJEMPLO_GESTOR_PASSWORD="demo"
-EJEMPLO_COMUNIDADES="id;nombre;lat;lon
-teatinos;Comunidad Energética Teatinos;36.7155;-4.4730
-albaicin;Comunidad Energética Albaicín;37.1810;-3.5925"
-EJEMPLO_SOCIOS="comunidad;nombre;email;password;telefono;lat;lon;sim_tipo;sim_kwh_mes
-teatinos;Elena Martín;elena.martin@ejemplo.es;elena2026;622 200 001;36.7162;-4.4741;residencial_fv;310
-teatinos;Pablo Sánchez;pablo.sanchez@ejemplo.es;pablo2026;622 200 002;36.7148;-4.4722;residencial_fv;390
-teatinos;Farmacia Teatinos;farmacia@ejemplo.es;farmacia2026;952 200 003;36.7170;-4.4735;comercial;1500
-albaicin;Carmen Ruiz;carmen.ruiz@ejemplo.es;carmen2026;611 100 001;37.1815;-3.5930;residencial;280
-albaicin;Antonio García;antonio.garcia@ejemplo.es;antonio2026;611 100 002;37.1802;-3.5911;residencial;420
-albaicin;Panadería San Nicolás;panaderia@ejemplo.es;panaderia2026;958 100 003;37.1821;-3.5938;comercial;2800
-albaicin;Talleres Darro;;;958 100 004;37.1796;-3.5902;industrial;35000
-albaicin;Parking Plaza Larga;parking@ejemplo.es;parking2026;958 100 005;37.1830;-3.5921;cargador_ve;3500
-albaicin;Estación de recarga Paseo de los Tristes;recarga@ejemplo.es;recarga2026;958 100 006;37.1793;-3.5893;estacion_ve_fv;
-albaicin;FV Cubiertas del Sacromonte;;;958 100 007;37.1838;-3.5852;generador_fv;7010
-albaicin;FV Polideportivo Albaicín;;;958 100 008;37.1852;-3.5940;generador_fv;7010"
-
-# Alta online de comunidades, gratuita: la pagina esta en la web (Astro, <ALTA_URL_WEB>/alta/,
-# menu "Alta comunidad") y llama a la API (https://<TB_DOMAIN>/cec-api/alta/*). La comunidad
+# Alta online de comunidades, gratuita: el modal «Alta de una comunidad energética» del inicio de
+# sesion de la plataforma (la web lo abre con login?alta=comunidad o login?alta=prueba) llama a la
+# API (https://<TB_DOMAIN>/cec-api/alta/*). La comunidad
 # rellena el formulario y la API la crea como el superusuario (plataforma.crear_comunidad:
 # tenant, base de datos, paneles y gestor con la contraseña que eligio). Sin cuotas ni pagos:
 # el uso queda bajo la responsabilidad del gestor (condiciones de uso de la web).
@@ -141,7 +111,7 @@ SERVICIOS_PREMIUM="potencias,reactiva,factura"
 COPIAS_CLAVE="para poder restaurar"
 ALTA_URL_CONDICIONES="https://vatiaco.es/condiciones/"   # condiciones de uso y politica de privacidad
 ALTA_URL_PRIVACIDAD="https://vatiaco.es/privacidad/"
-ALTA_URL_WEB="https://vatiaco.es"     # web con la pagina de alta
+ALTA_URL_WEB="https://vatiaco.es"     # web: publica la lista del IDAE y las condiciones de uso
 # Origenes que pueden llamar a /cec-api/alta (CORS): la web y "astro dev"
 ALTA_ORIGENES="https://vatiaco.es,https://www.vatiaco.es,http://localhost:4321"
 
@@ -1810,7 +1780,7 @@ SIM_TIPOS = {"residencial": ("Residencial", 300, 60, 0.0),
              # instalacion FV de la comunidad: sim_kwh_mes = energia generada en un mes medio
              "generador_fv": ("Instalación fotovoltaica de la comunidad", 3000, 60, 0.0)}
 # Generacion FV de 1 kWp: media de cada hora (UTC) de cada mes, en kWh, de la serie horaria
-# de PVGIS (PVGIS-SARAH3, 2016-2023; JRC, re.jrc.ec.europa.eu/pvg_tools) en el Albaicin
+# de PVGIS (PVGIS-SARAH3, 2016-2023; JRC, re.jrc.ec.europa.eu/pvg_tools) en Granada
 # (37,180, -3,594): silicio cristalino, 35 grados orientado al sur, 14 % de perdidas; 1.683
 # kWh/kWp al año (PVcalc: 1.668). Cada dia se multiplica por un factor de nubosidad de media 1
 # con la variacion de los dias de ese mes en la serie (desviacion tipica y maximo relativos).
@@ -2319,7 +2289,7 @@ def perfil_de_tipo(tipo, kwh_mes, fv_mes=0.0):
     con su consumo mensual kwh_mes (en generador_fv, lo generado): las formas del dia de
     _forma y de las sesiones de recarga, la estacionalidad de simular() y su reactiva.
     estacion_ve_fv: el EV_FV_PARTE de fv_mes (kWh al mes de las FV de su comunidad) en las horas
-    de sol y EV_FV_SIN_SOL_KW el resto. Para las comunidades de ejemplo (socios de prueba)."""
+    de sol y EV_FV_SIN_SOL_KW el resto. Para los socios de prueba."""
     import math
     if tipo not in SIM_TIPOS:
         raise ValueError(f"Tipo de socio simulado no válido: {tipo}")
@@ -8781,8 +8751,8 @@ def baja_socio(sid):
 
 def alta_virtual(nombre, por, d=None):
     """Socio de prueba nuevo (simulaciones), sin datos: se generan con un perfil (o se le cargan
-    CSV de cualquier CUPS). d (opcional): email y password (su usuario, como un socio; los de las
-    comunidades de ejemplo), telefono, lat y lon."""
+    CSV de cualquier CUPS). d (opcional): email y password (su usuario, como un socio),
+    telefono, lat y lon."""
     c = comunidad()
     d = d or {}
     nombre = " ".join(str(nombre or "").split())
@@ -8937,7 +8907,7 @@ class _SMTPSSL(smtplib.SMTP_SSL):
         return self.context.wrap_socket(sock, server_hostname=_tls_nombre(host))
 
 URL = (E.get("ALTA_URL_PUBLICA") or "").rstrip("/")          # la plataforma (ThingsBoard)
-WEB = (E.get("ALTA_URL_WEB") or "").rstrip("/")              # la web con la pagina de alta
+WEB = (E.get("ALTA_URL_WEB") or "").rstrip("/")              # la web (lista del IDAE, condiciones)
 MAX_DIA = int(E.get("ALTA_MAX_DIA") or 20)                   # altas online en 24 h (cada una crea tenant y base)
 APROBACION = (E.get("ALTA_APROBACION") or "si") != "no"      # el superusuario aprueba cada alta
 DOC_MAX_MB = 5                                               # documento acreditativo del gestor
@@ -19946,81 +19916,6 @@ curl -skf -X POST -H "X-Api-Key: $FASTAPI_API_KEY" https://localhost/cec-api/pla
   && echo "    PostgreSQL: superusuario $SUPER_EMAIL registrado" \
   || echo "    AVISO: no se pudo registrar el superusuario en PostgreSQL"
 
-# Comunidades de ejemplo (EJEMPLO_*): la principal del gestor como la crearia el superusuario y
-# las demas como las crearia el gestor; sus socios de prueba (con su perfil) y la publicacion de sus datos.
-# EJEMPLOS_INFO: comunidades|usuario|contraseña de su gestor.
-EJEMPLOS_INFO=""
-if [ -n "$EJEMPLO_COMUNIDADES" ]; then
-  echo "==> Creando las comunidades de ejemplo (unos minutos)..."
-  EJEMPLOS_INFO=$(API_KEY="$FASTAPI_API_KEY" E_GNOMBRE="$EJEMPLO_GESTOR_NOMBRE" E_GEMAIL="$EJEMPLO_GESTOR_EMAIL" \
-    E_GTEL="$EJEMPLO_GESTOR_TELEFONO" E_GPW="$EJEMPLO_GESTOR_PASSWORD" E_COMS="$EJEMPLO_COMUNIDADES" \
-    E_SOCIOS="$EJEMPLO_SOCIOS" python3 - <<'PY'
-import csv, io, json, os, ssl, sys, urllib.error, urllib.request
-
-API, CTX, E = "https://localhost/cec-api", ssl._create_unverified_context(), os.environ
-
-
-def num(v):
-    v = (v or "").strip()
-    return float(v) if v else None
-
-
-def filas(texto):
-    return list(csv.DictReader(io.StringIO(texto), delimiter=";"))
-
-
-def post(ruta, cuerpo, comunidad=None):
-    cab = {"X-Api-Key": E["API_KEY"], "Content-Type": "application/json"}
-    if comunidad:
-        cab["X-Comunidad"] = comunidad
-    pet = urllib.request.Request(API + ruta, json.dumps(cuerpo).encode(), cab, method="POST")
-    try:
-        with urllib.request.urlopen(pet, context=CTX, timeout=1800) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"{e.code} {e.read().decode(errors='replace')[:300]}")
-
-
-principal, creadas = None, []
-for co in filas(E["E_COMS"]):
-    cid, nombre = co["id"], co["nombre"]
-    datos = {"id": cid, "nombre": nombre, "lat": num(co["lat"]), "lon": num(co["lon"])}
-    try:
-        if principal is None:   # su principal: gestor nuevo
-            post("/plataforma/comunidades", dict(datos, gestor_nombre=E["E_GNOMBRE"], gestor_email=E["E_GEMAIL"],
-                                                 gestor_telefono=E["E_GTEL"], gestor_password=E["E_GPW"]))
-            principal = cid
-        else:                   # otra comunidad del mismo gestor
-            post("/gestor/comunidades", datos, principal)
-    except RuntimeError as e:
-        print(f"    AVISO: no se pudo crear {nombre}: {e}", file=sys.stderr)
-        continue
-    # Socios de prueba con su usuario; sus datos, los de un perfil de prosumidor equivalente a su
-    # tipo de socio simulado (la estacion ligada a la FV, con la generacion de las de su comunidad)
-    socios = [so for so in filas(E["E_SOCIOS"]) if so["comunidad"] == cid]
-    fv_mes = sum(num(so["sim_kwh_mes"]) or 0 for so in socios if so["sim_tipo"] == "generador_fv")
-    n = 0
-    for so in socios:
-        try:
-            v = post("/socios/virtual", {"nombre": so["nombre"], "email": so["email"] or None, "password": so["password"] or None,
-                                         "telefono": so["telefono"] or None, "lat": num(so["lat"]), "lon": num(so["lon"])}, cid)
-            post(f"/socios/{v['id']}/perfil", {"perfil": {"sim_tipo": so["sim_tipo"] or "residencial",
-                                                          "sim_kwh_mes": num(so["sim_kwh_mes"]), "fv_mes": fv_mes}}, cid)
-            n += 1
-        except RuntimeError as e:
-            print(f"    AVISO: {nombre}: no se pudo dar de alta a {so['nombre']}: {e}", file=sys.stderr)
-    try:
-        post("/sync", {"origen": "auto", "forzar": True}, cid)
-    except RuntimeError as e:
-        print(f"    AVISO: {nombre}: no se pudo lanzar la publicación de los datos: {e}", file=sys.stderr)
-    print(f"    {nombre}: {n} socios de prueba (sus datos se publican en segundo plano)", file=sys.stderr)
-    creadas.append(nombre)
-if creadas:
-    print(f"{' y '.join(creadas)}|{E['E_GEMAIL']}|{E['E_GPW']}")
-PY
-  ) || true
-fi
-
 # Certificado del 8883: Caddy ya habra obtenido el de Let's Encrypt si hay dominio.
 # Cron semanal para seguir las renovaciones de Caddy (idempotente).
 ./mqtt-cert.sh || echo "    AVISO: no se pudo actualizar el certificado MQTT (./mqtt-cert.sh)"
@@ -20044,7 +19939,6 @@ cero** (sin preguntar); solo se conserva \`backups/postgres\`.
 | Servicio | Acceso | Credenciales |
 |---|---|---|
 | Superusuario (panel *Plataforma*) | https://$IP | $SUPER_EMAIL / $SUPER_PASSWORD |
-$( echo "$EJEMPLOS_INFO" | while IFS='|' read -r E_NOM E_MAIL E_PW; do if [ -n "$E_MAIL" ]; then echo "| Gestor de $E_NOM (ejemplo, socios de prueba) | https://${TB_DOMAIN:-$IP} | $E_MAIL / $E_PW |"; fi; done )
 $( [ -n "$TB_DOMAIN" ] && echo "| ThingsBoard (Internet) | https://$TB_DOMAIN | (las mismas) |" )
 | Sysadmin de ThingsBoard | https://$IP | sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD |
 | Administrador del tenant de cada comunidad (lo usa la API) | https://$IP | api@<id>.$HOSTNAME_LAN.local / $TB_TENANT_PASSWORD |
@@ -20089,7 +19983,8 @@ edita, suspende (no puede entrar; no se borra nada) y borra a sus hijos en una t
 
 ### Alta online de comunidades (gratuita)
 
-La página de alta está en la web (Astro, \`$ALTA_URL_WEB/alta/\`, menú *Alta comunidad*) y llama a
+El alta es el modal *Alta de una comunidad energética* del inicio de sesión de la plataforma (la web
+lo abre con \`login?alta=comunidad\` o \`login?alta=prueba\`) y llama a
 la API (\`https://${TB_DOMAIN:-$SERVE_IP}/cec-api/alta/*\`, CORS para \`$ALTA_ORIGENES\`). La comunidad
 se elige entre las del IDAE, se rellenan los datos de su gestor (con su contraseña) y la API la
 crea como el superusuario (\`plataforma.crear_comunidad\`). Sin cuotas ni pagos: el uso queda bajo
@@ -20175,11 +20070,8 @@ echo "   https://$SERVE_IP  o  https://$IP   (certificado interno: acepta el avi
 [ -n "$TB_DOMAIN" ] && echo "   https://$TB_DOMAIN   (router: 80 y 443 TCP -> $SERVE_IP)"
 echo "   crea comunidades y gestores, asigna sus cuentas de Datadis y hace o restaura copias"
 echo " Sysadmin TB       : sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD"
-echo "$EJEMPLOS_INFO" | while IFS='|' read -r E_NOM E_MAIL E_PW; do
-  if [ -n "$E_MAIL" ]; then echo " Gestor de ejemplo : $E_MAIL / $E_PW  ($E_NOM)"; fi
-done
 if [ "$ALTA_ONLINE" != no ]; then
-  echo " Alta online       : $ALTA_URL_WEB/alta/  (gratuita$( [ "$ALTA_APROBACION" != no ] && echo ", la apruebas en tu panel"))"
+  echo " Alta online       : https://${TB_DOMAIN:-$SERVE_IP}/login?alta=comunidad  (gratuita$( [ "$ALTA_APROBACION" != no ] && echo ", la apruebas en tu panel"))"
   echo " Avisos por correo : $( [ -n "$SMTP_HOST" ] && echo "$AVISOS_EMAIL (altas y restablecer contraseña, por $SMTP_HOST)" || echo "desactivados (pon SMTP_HOST)")"
 else
   echo " Alta online       : desactivada (ALTA_ONLINE=no)"
