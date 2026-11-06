@@ -573,6 +573,9 @@ CREATE TABLE IF NOT EXISTS consumo (
   PRIMARY KEY ("cups", ts)
 );
 CREATE INDEX IF NOT EXISTS consumo_fecha ON consumo ("cups", "fecha");
+-- energia que la bateria entrega al consumo del socio (parte de energiaAutoconsumida_kWh): no la da
+-- Datadis; solo la tienen los socios de prueba con bateria (perfil_ficheros)
+ALTER TABLE consumo ADD COLUMN IF NOT EXISTS "energiaBateria_kWh" double precision;
 
 -- Maximetro: potencia maxima (kW) de cada mes y periodo, con el dia y la hora
 CREATE TABLE IF NOT EXISTS potencias (
@@ -638,7 +641,7 @@ CREATE TABLE IF NOT EXISTS plataforma_registro (
 CREATE OR REPLACE VIEW lectura AS
 SELECT "cups" AS cups, ts, "consumo_kWh" AS consumo_kwh, "energiaVertida_kWh" AS vertida_kwh,
        "energiaGenerada_kWh" AS generada_kwh, "energiaAutoconsumida_kWh" AS autoconsumo_kwh,
-       "metodoObtencion" AS metodo
+       "metodoObtencion" AS metodo, "energiaBateria_kWh" AS bateria_kwh
 FROM consumo;
 
 CREATE OR REPLACE VIEW maximetro AS
@@ -1064,7 +1067,9 @@ LOCK = 727001          # pg_advisory_lock: una sola sincronizacion a la vez
 SERIES = [("consumo_kwh", "consumo_kWh", "consumptionKWh"),
           ("vertida_kwh", "energiaVertida_kWh", "surplusEnergyKWh"),
           ("generada_kwh", "energiaGenerada_kWh", "generationEnergyKWh"),
-          ("autoconsumo_kwh", "energiaAutoconsumida_kWh", "selfConsumptionEnergyKWh")]
+          ("autoconsumo_kwh", "energiaAutoconsumida_kWh", "selfConsumptionEnergyKWh"),
+          # (no es de Datadis: lo que la bateria de un socio de prueba entrega a su consumo)
+          ("bateria_kwh", "energiaBateria_kWh", None)]
 CLAVES = [k for k, _, _ in SERIES]
 COLS_API = {k: a for k, _, a in SERIES}
 COLS_CSV = {k: c for k, c, _ in SERIES}
@@ -1300,8 +1305,9 @@ def _mes_local(d):
 
 # ======================= PostgreSQL (tablas de Datadis) =======================
 COLS_CONSUMO = ["cups", "fecha", "hora", "consumo_kWh", "metodoObtencion", "energiaVertida_kWh",
-                "energiaGenerada_kWh", "energiaAutoconsumida_kWh"]
-VALORES = ["consumo_kWh", "energiaVertida_kWh", "energiaGenerada_kWh", "energiaAutoconsumida_kWh", "metodoObtencion"]
+                "energiaGenerada_kWh", "energiaAutoconsumida_kWh", "energiaBateria_kWh"]
+VALORES = ["consumo_kWh", "energiaVertida_kWh", "energiaGenerada_kWh", "energiaAutoconsumida_kWh", "metodoObtencion",
+           "energiaBateria_kWh"]
 
 
 def guardar_lecturas(cx, cups, filas):
@@ -1312,7 +1318,7 @@ def guardar_lecturas(cx, cups, filas):
         with cur.copy(f"COPY _l ({_q(COLS_CONSUMO)}, ts) FROM STDIN") as cp:
             for ts, paso, v, metodo, fecha, hora in filas:
                 cp.write_row((cups, fecha, hora, v.get("consumo_kwh"), metodo, v.get("vertida_kwh"),
-                              v.get("generada_kwh"), v.get("autoconsumo_kwh"),
+                              v.get("generada_kwh"), v.get("autoconsumo_kwh"), v.get("bateria_kwh"),
                               datetime.fromtimestamp(ts / 1000, timezone.utc)))
         nuevo = lambda c: f'COALESCE(EXCLUDED."{c}", c."{c}")'
         cur.execute(f"""
@@ -2264,11 +2270,11 @@ def perfil_ficheros(p, cups, semilla):
         pj = _peaje([max(0.0, x - g) for x, g in zip(dem, sol)])
         per = [periodo(lt, pj.rstrip("+")) for lt in lts]
     descargada = 0.0
-    red, vert, auto = [], [], []
+    red, vert, auto, bcon = [], [], [], []
     for k, (x, g) in enumerate(zip(dem, sol)):
         a = min(g, x)
         sobra, falta = g - a, x - a
-        de_red = ca_red = 0.0
+        de = de_red = ca_red = 0.0
         if bat:
             cf = p["bat_per"][per[k] - 1] if manual else {"fv": True}
             ca = max(0.0, min(sobra, bkw, (bat - soc) / bef)) if cf["fv"] else 0.0
@@ -2285,6 +2291,7 @@ def perfil_ficheros(p, cups, semilla):
         red.append(falta + ca_red)
         vert.append(sobra + de_red)
         auto.append(x - falta)     # lo que consume de su FV, directa o a traves de la bateria
+        bcon.append(de)            # (lo que le entrega la bateria)
 
     # Potencias: las elegidas o las justas para la demanda (maximo de cada periodo y 5 %)
     if not manual:
@@ -2318,7 +2325,8 @@ def perfil_ficheros(p, cups, semilla):
     def coma(v):
         return f"{v:g}".replace(".", ",")
     ag = paso // 15
-    consumo = ["cups;fecha;hora;consumo_kWh;metodoObtencion;energiaVertida_kWh;energiaGenerada_kWh;energiaAutoconsumida_kWh"]
+    consumo = ["cups;fecha;hora;consumo_kWh;metodoObtencion;energiaVertida_kWh;energiaGenerada_kWh;energiaAutoconsumida_kWh" +
+               (";energiaBateria_kWh" if bat else "")]
     maximos, reac = {}, {}
     i = 0
     for d, t0, nq in dias:
@@ -2333,7 +2341,7 @@ def perfil_ficheros(p, cups, semilla):
         for e in (_etiquetas(nq // ag, 60 // paso) if ag > 1 else e15):
             s = slice(i, i + ag)
             extra = f"{c3(sum(vert[s]))};{c3(sum(sol[s]))};{c3(sum(auto[s]))}" if fv else ";;"
-            consumo.append(f'"{cups}";"{f}";"{e}";{c3(sum(red[s]))};Real;{extra}')
+            consumo.append(f'"{cups}";"{f}";"{e}";{c3(sum(red[s]))};Real;{extra}' + (f";{c3(sum(bcon[s]))}" if bat else ""))
             i += ag
     potencias = ["cups;fechaMaximo;hora;maximoPotenciaDemandadaKW;periodo"] + [
         f'"{cups}";"{f}";"{h}";{c3(kw)};"{pe}"' for (_, _, pe), (kw, f, h) in sorted(maximos.items())]
@@ -4525,7 +4533,7 @@ def _et_l(k):
 
 
 def _vacio_e():
-    return {"p": {}, "red": 0.0, "vert": 0.0, "auto": 0.0, "gen": 0.0}
+    return {"p": {}, "red": 0.0, "vert": 0.0, "auto": 0.0, "gen": 0.0, "bat": 0.0}
 
 
 def _energia_mensual(cx, cups, pj, d0, d1):
@@ -4542,6 +4550,7 @@ def _energia_mensual(cx, cups, pj, d0, d1):
         x["vert"] += v.get("vertida_kwh") or 0.0
         x["auto"] += v.get("autoconsumo_kwh") or 0.0
         x["gen"] += v.get("generada_kwh") or 0.0
+        x["bat"] += v.get("bateria_kwh") or 0.0
     return out
 
 
@@ -4578,10 +4587,13 @@ def _energia_en_comunidad(part, G, D, co):
 def _coste_energia(x, pr):
     """Coste de la energia de un mes (EUR): compra a la red por periodos al precio fijo de cada
     uno, compensacion de excedentes al precio de compensacion y coste de la generacion que
-    corresponde al socio (autoconsumo + excedentes) a su LCOE. -> (compra, compensacion, generacion, neto)"""
+    corresponde al socio (autoconsumo directo de la FV + excedentes) a su LCOE y la que le entrega
+    su bateria (parte del autoconsumo) al LCOE del almacenamiento. -> (compra, compensacion,
+    generacion y almacenamiento, neto)"""
     compra = sum(e * float(pr["p"].get(str(p)) or 0) for p, e in x["p"].items())
     comp = x["vert"] * float(pr["comp"] or 0)
-    gen = (x["auto"] + x["vert"]) * float(pr.get("lcoe") or 0)
+    bat = x.get("bat") or 0.0
+    gen = (x["auto"] - bat + x["vert"]) * float(pr.get("lcoe") or 0) + bat * float(pr.get("lcoe_bat") or 0)
     return compra, comp, gen, compra - comp + gen
 
 
@@ -14106,12 +14118,19 @@ function pj() { return S.peaje && S.peaje !== '2.0TD' ? '6P' : '2.0TD'; }
 
 // Series apiladas: consumo de red por periodos, de abajo (valle) a arriba (punta) como en
 // Datadis, el autoconsumo encima y los excedentes por debajo de cero
+// Con bateria, el autoconsumo se parte: el de la FV directa y lo que entrega la bateria (resta:
+// se descuenta del autoconsumo, que lo incluye)
+function genCats() {
+  if (!S.hayBat) return GEN;
+  return [{ k: 'auto', n: 'Autoconsumo FV', c: GEN[0].c, curva: GEN[0].curva, d: GEN[0].d, signo: 1 },
+          { k: 'bat', n: 'Batería', c: '#8cc63f', curva: 'bateria_kwh', d: 'd_bateria_kwh', signo: 1, resta: 'auto' }, GEN[1]];
+}
 function cats(gen) {   // gen: con autoconsumo y excedentes (por defecto, si los hay o en comunidad)
   var n = pj() === '2.0TD' ? 3 : 6, out = [];
   for (var p = n; p >= 1; p--)
     out.push({ k: 'p' + p, n: n === 3 ? NOM3[p] : 'P' + p, c: (n === 3 ? COL3 : COL6)[p], curva: 'consumo_kwh',
                d: 'd_p' + p + '_kwh', signo: 1, periodo: true });
-  return (gen == null ? S.hayGen || S.enCom : gen) ? out.concat(GEN) : out;
+  return (gen == null ? S.hayGen || S.enCom : gen) ? out.concat(genCats()) : out;
 }
 
 // Unidades de tiempo: inicio, desplazamiento y etiqueta
@@ -14259,6 +14278,7 @@ function ultimo(seguir) {
   S.ctx.http.get(S.base + '/keys/timeseries').subscribe(function (ks) {
     ks = Array.isArray(ks) ? ks : [];
     S.hayGen = ks.indexOf('d_generada_kwh') >= 0;
+    S.hayBat = ks.indexOf('d_bateria_kwh') >= 0;     // socio de prueba con bateria
     S.pers = ks.map(function (k) { var m = /^pmax_p(\d)_kw$/.exec(k); return m ? +m[1] : 0; })
                .filter(Boolean).sort();
     S.reacs = ks.map(function (k) { var m = /^reac_p(\d)_kvarh$/.exec(k); return m ? +m[1] : 0; }).filter(Boolean).sort();
@@ -14422,15 +14442,17 @@ function cargarCostes(n, t0, t1) {
 // Euros de cada casilla: compra a la red por periodo, compensacion de excedentes (negativa), coste
 // de la generacion que corresponde al socio (LCOE x (autoconsumo + excedentes)) y neto
 function lcoe() { var P = precio(); return P.lcoe != null ? +P.lcoe : PRECIOS[tarifa()].lcoe; }
+function lcoeBat() { var P = precio(); return P.lcoe_bat != null ? +P.lcoe_bat : PRECIOS[tarifa()].lcoe_bat; }
 function euros(G) {
-  var P = precio(), np = pj() === '2.0TD' ? 3 : 6, L = lcoe();
+  var P = precio(), np = pj() === '2.0TD' ? 3 : 6, L = lcoe(), Lb = lcoeBat();
   return G.V.map(function (v) {
     var o = { neto: 0 };
     for (var p = 1; p <= np; p++) { o['p' + p] = (v['p' + p] || 0) * P.p[p]; o.neto += o['p' + p]; }
     o.comp = (v.vert || 0) * P.comp;   // v.vert ya es negativo
-    o.lcoe = ((v.auto || 0) - (v.vert || 0)) * L;
+    o.lcoe = ((v.auto || 0) - (v.vert || 0)) * L;   // (con bateria, v.auto es solo el de la FV directa)
+    o.bat = (v.bat || 0) * Lb;                     // lo que entrega la bateria, a su LCOE
     o.factura = o.neto + o.comp;      // lo que cobra la comercializadora (sin la generacion)
-    o.neto += o.comp + o.lcoe;
+    o.neto += o.comp + o.lcoe + o.bat;
     return o;
   });
 }
@@ -14465,8 +14487,10 @@ function pintarCostes() {
   });
   series.push({ type: 'bar', name: 'Compensación de excedentes', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#4caf7d' },
                 data: ver.map(function (o) { return o.comp ? r2(o.comp) : null; }) });
-  series.push({ type: 'bar', name: 'Generación (LCOE)', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#8fc3f0' },
-                data: ver.map(function (o) { return o.lcoe ? r2(o.lcoe) : null; }) });
+  series.push({ type: 'bar', name: S.hayBat ? 'Autoconsumo FV y excedentes (LCOE generación)' : 'Generación (LCOE)', stack: apila ? 'a' : null, barMaxWidth: 48,
+                itemStyle: { color: '#8fc3f0' }, data: ver.map(function (o) { return o.lcoe ? r2(o.lcoe) : null; }) });
+  if (S.hayBat) series.push({ type: 'bar', name: 'Batería (LCOE almacenamiento)', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#8cc63f' },
+                              data: ver.map(function (o) { return o.bat ? r2(o.bat) : null; }) });
   series.push({ type: 'line', name: 'Coste neto' + (com ? ' en comunidad' : ' en solitario'), step: S.modo === 'dia' ? 'middle' : false,
                 symbol: 'circle', symbolSize: 4, lineStyle: { width: 2, color: '#7b2fa8' }, itemStyle: { color: '#7b2fa8' }, z: 5,
                 data: ver.map(function (o) { return r2(o.neto); }) });
@@ -14486,7 +14510,9 @@ function pintarCostes() {
   q('.dd-titulo').innerHTML = 'Coste de la energía ' + { dia: 'horario', semana: 'diario', mes: 'diario', anio: 'mensual' }[S.modo] +
     ' (€)' + (com ? ' — en comunidad' : ' — en solitario') + '<br><small style="color:#777;font-weight:400">Precio fijo por periodos, ' +
     tarifa() + (S.prec && !S.prec.defecto ? ' (precios de la comunidad, sin impuestos): ' : ' (aproximados, sin impuestos; edítalos en la tabla de precios): ') + pr.join(' · ') + ' €/kWh; excedentes compensados a ' + VL.num(P.comp, 2) +
-    ' €/kWh; generación (autoconsumo + excedentes) a su LCOE, ' + VL.num(lcoe(), 3) + ' €/kWh. Coste neto = compra − compensación + generación. ' +
+    ' €/kWh; generación (autoconsumo' + (S.hayBat ? ' directo de la FV' : '') + ' + excedentes) a su LCOE, ' + VL.num(lcoe(), 3) + ' €/kWh' +
+    (S.hayBat ? '; energía que entrega la batería a su LCOE de almacenamiento, ' + VL.num(lcoeBat(), 3) + ' €/kWh' : '') +
+    '. Coste neto = compra − compensación + generación' + (S.hayBat ? ' + almacenamiento' : '') + '. ' +
     'Beneficio = coste en solitario (Datadis) − coste en comunidad.</small>';
   q('.dd-vacio').textContent = 'Sin datos en este periodo';
   q('.dd-vacio').style.display = hay ? 'none' : 'block';
@@ -14510,6 +14536,7 @@ function agrupar(r, C, t0, horaria) {
       if (i < 0 || i >= et.length) return;
       if (dia && c.periodo && 'p' + PERIODO(d, d.getHours(), pj()) !== c.k) return;
       V[i][c.k] = (V[i][c.k] || 0) + c.signo * p.value;
+      if (c.resta) V[i][c.resta] = (V[i][c.resta] || 0) - c.signo * p.value;
       hay[i] = true;
     });
   });
@@ -14595,7 +14622,8 @@ function pintar() {
   var de = { dia: 'del día', semana: 'de la semana', mes: 'del mes', anio: 'del año' }[S.modo];
   q('.dd-k1').textContent = n ? VL.num(total, 2) : '–';
   q('.dd-l1').textContent = 'Consumo total ' + de + ' (kWh)' +
-    ((S.hayGen || S.enCom) && total ? ' · ' + VL.num(100 * tot.auto / total, 0) + ' % con autoconsumo' : '');
+    ((S.hayGen || S.enCom) && total ? ' · ' + VL.num(100 * (tot.auto + (tot.bat || 0)) / total, 0) + ' % con autoconsumo' +
+      (tot.bat ? ' (' + VL.num(100 * tot.bat / total, 0) + ' % de la batería)' : '') : '');
   q('.dd-k2').textContent = n ? VL.num(total / n, 2) : '–';
   q('.dd-l2').textContent = { dia: 'Consumo medio horario', semana: 'Consumo medio diario', mes: 'Consumo medio diario',
                               anio: 'Consumo medio mensual' }[S.modo] + ' (kWh)';
@@ -14634,13 +14662,17 @@ function pintar() {
   var np = pj() === '2.0TD' ? 3 : 6;
   var cons = D.V.map(function (v, i) { if (!D.hay[i]) return null; var t = 0; for (var p = 1; p <= np; p++) t += v['p' + p] || 0; return r3(t); });
   var auto = D.V.map(function (v, i) { return D.hay[i] && v.auto != null ? r3(v.auto) : null; });
+  var bat = S.hayBat ? D.V.map(function (v, i) { return D.hay[i] && v.bat != null ? r3(v.bat) : null; }) : null;   // (descontada del autoconsumo)
   var vert = D.V.map(function (v, i) { return D.hay[i] && v.vert != null ? r3(Math.abs(v.vert)) : null; });   // en positivo
   var gen = D.gen ? D.gen.map(function (v) { return v == null ? null : r3(v); }) : null;
   var suma = function (a) { var t = 0; (a || []).forEach(function (x) { t += x || 0; }); return t; };
-  var TOT = { 'energiaAutoconsumida_kWh': suma(auto), 'consumo_kWh': suma(cons), 'energiaVertida_kWh': suma(vert), 'energiaGenerada_kWh': suma(gen) };
+  var nAuto = bat ? 'energiaAutoconsumida_kWh (FV)' : 'energiaAutoconsumida_kWh', nBat = 'energiaBateria_kWh (batería)';
+  var TOT = { 'consumo_kWh': suma(cons), 'energiaVertida_kWh': suma(vert), 'energiaGenerada_kWh': suma(gen) };
+  TOT[nAuto] = suma(auto); if (bat) TOT[nBat] = suma(bat);
   var hayG = S.hayGen || S.enCom;
   var series = [];
-  if (hayG) series.push({ type: 'bar', name: 'energiaAutoconsumida_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#1fab76' }, data: auto });
+  if (hayG) series.push({ type: 'bar', name: nAuto, stack: 'a', barMaxWidth: 48, itemStyle: { color: '#1fab76' }, data: auto });
+  if (hayG && bat) series.push({ type: 'bar', name: nBat, stack: 'a', barMaxWidth: 48, itemStyle: { color: '#8cc63f' }, data: bat });
   if (hayG) series.push({ type: 'bar', name: 'energiaVertida_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#ee6430' }, data: vert });
   series.push({ type: 'bar', name: 'consumo_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#2b78d8' }, data: cons });
   if (gen) series.push({ type: 'line', name: 'energiaGenerada_kWh', smooth: true, symbol: 'none', z: 5,
@@ -14933,7 +14965,7 @@ function pintarFactura(r, t0, cd) {
   var et = casillas(t0), O = otros(), alq = alquiler(), Pt = calcPot(r, t0), Rc = S.reacs.length ? calcReac(r, t0) : null;
   // Energia de la comercializadora (la compensacion no pasa de lo comprado) y, aparte, el coste de
   // la generacion que corresponde al socio (LCOE, sin impuestos: no es parte de esa factura)
-  var energia = function (G) { return euros(G).map(function (o) { return { e: Math.max(0, o.factura), g: o.lcoe }; }); };
+  var energia = function (G) { return euros(G).map(function (o) { return { e: Math.max(0, o.factura), g: o.lcoe + (o.bat || 0) }; }); };
   var Gs = agrupar(r, cats(S.hayGen), t0), Es = energia(Gs), Ec = cd ? energia(agrupar(curvasCom(cd, t0, mover(new Date(t0), 'anio', 1).getTime()), cats(true), t0, true)) : null;
   var hay = et.map(function (_, m) { return Gs.hay[m] || Pt.hayM[m] || (Rc && Rc.hayM[m]); });
   var com = S.enCom && Ec;
