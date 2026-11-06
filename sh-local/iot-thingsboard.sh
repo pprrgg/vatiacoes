@@ -573,9 +573,6 @@ CREATE TABLE IF NOT EXISTS consumo (
   PRIMARY KEY ("cups", ts)
 );
 CREATE INDEX IF NOT EXISTS consumo_fecha ON consumo ("cups", "fecha");
--- energia que la bateria entrega al consumo del socio (parte de energiaAutoconsumida_kWh): no la da
--- Datadis; solo la tienen los socios de prueba con bateria (perfil_ficheros)
-ALTER TABLE consumo ADD COLUMN IF NOT EXISTS "energiaBateria_kWh" double precision;
 
 -- Maximetro: potencia maxima (kW) de cada mes y periodo, con el dia y la hora
 CREATE TABLE IF NOT EXISTS potencias (
@@ -641,7 +638,7 @@ CREATE TABLE IF NOT EXISTS plataforma_registro (
 CREATE OR REPLACE VIEW lectura AS
 SELECT "cups" AS cups, ts, "consumo_kWh" AS consumo_kwh, "energiaVertida_kWh" AS vertida_kwh,
        "energiaGenerada_kWh" AS generada_kwh, "energiaAutoconsumida_kWh" AS autoconsumo_kwh,
-       "metodoObtencion" AS metodo, "energiaBateria_kWh" AS bateria_kwh
+       "metodoObtencion" AS metodo
 FROM consumo;
 
 CREATE OR REPLACE VIEW maximetro AS
@@ -1067,9 +1064,7 @@ LOCK = 727001          # pg_advisory_lock: una sola sincronizacion a la vez
 SERIES = [("consumo_kwh", "consumo_kWh", "consumptionKWh"),
           ("vertida_kwh", "energiaVertida_kWh", "surplusEnergyKWh"),
           ("generada_kwh", "energiaGenerada_kWh", "generationEnergyKWh"),
-          ("autoconsumo_kwh", "energiaAutoconsumida_kWh", "selfConsumptionEnergyKWh"),
-          # (no es de Datadis: lo que la bateria de un socio de prueba entrega a su consumo)
-          ("bateria_kwh", "energiaBateria_kWh", None)]
+          ("autoconsumo_kwh", "energiaAutoconsumida_kWh", "selfConsumptionEnergyKWh")]
 CLAVES = [k for k, _, _ in SERIES]
 COLS_API = {k: a for k, _, a in SERIES}
 COLS_CSV = {k: c for k, c, _ in SERIES}
@@ -1305,9 +1300,8 @@ def _mes_local(d):
 
 # ======================= PostgreSQL (tablas de Datadis) =======================
 COLS_CONSUMO = ["cups", "fecha", "hora", "consumo_kWh", "metodoObtencion", "energiaVertida_kWh",
-                "energiaGenerada_kWh", "energiaAutoconsumida_kWh", "energiaBateria_kWh"]
-VALORES = ["consumo_kWh", "energiaVertida_kWh", "energiaGenerada_kWh", "energiaAutoconsumida_kWh", "metodoObtencion",
-           "energiaBateria_kWh"]
+                "energiaGenerada_kWh", "energiaAutoconsumida_kWh"]
+VALORES = ["consumo_kWh", "energiaVertida_kWh", "energiaGenerada_kWh", "energiaAutoconsumida_kWh", "metodoObtencion"]
 
 
 def guardar_lecturas(cx, cups, filas):
@@ -1318,7 +1312,7 @@ def guardar_lecturas(cx, cups, filas):
         with cur.copy(f"COPY _l ({_q(COLS_CONSUMO)}, ts) FROM STDIN") as cp:
             for ts, paso, v, metodo, fecha, hora in filas:
                 cp.write_row((cups, fecha, hora, v.get("consumo_kwh"), metodo, v.get("vertida_kwh"),
-                              v.get("generada_kwh"), v.get("autoconsumo_kwh"), v.get("bateria_kwh"),
+                              v.get("generada_kwh"), v.get("autoconsumo_kwh"),
                               datetime.fromtimestamp(ts / 1000, timezone.utc)))
         nuevo = lambda c: f'COALESCE(EXCLUDED."{c}", c."{c}")'
         cur.execute(f"""
@@ -2091,6 +2085,7 @@ def simular(cx, so, forzar, nota):
 # consumo medio, generacion fotovoltaica, reactiva y peaje) y se generan los CSV de los dos ultimos años de
 # su descarga web, que se cargan como los que sube el gestor (ingesta_ficheros)
 PERFIL_VAR_DIA, PERFIL_VAR_Q = 15, 20      # variacion aleatoria (%) entre dias y entre cuartos de hora
+BAT_EF, BAT_HORAS = 0.9, 4                  # bateria de un perfil: rendimiento y horas en que entrega lo guardado
 PERFIL_PEAJES = {"2.0TD": ("BAJA TENSION y POTENCIA <= 15 kW", "Baja tensión", "TARIFA DE TRES PERIODOS"),
                  "3.0TD": ("BAJA TENSION y POTENCIA > 15 kW (3.0TD)", "Baja tensión", "TARIFA DE SEIS PERIODOS"),
                  "3.0TD+": ("BAJA TENSION y POTENCIA > 15 kW (3.0TD)", "Baja tensión", "TARIFA DE SEIS PERIODOS"),
@@ -2124,33 +2119,14 @@ def perfil_valido(p):
             raise ValueError(f"{nombre}: hacen falta {largo} valores entre 0 y 1000, no todos 0")
         return v
     gen_dia = num("gen_dia", 0, 0, 1e7, "Generación media diaria")
-    q = {"plantilla": str(p.get("plantilla") or "")[:40], "fv": gen_dia > 0, "gen_dia": gen_dia,
+    bat = bool(p.get("bateria")) and gen_dia > 0       # (capacidad ilimitada: guarda toda su FV)
+    q = {"plantilla": str(p.get("plantilla") or "")[:40], "fv": gen_dia > 0, "gen_dia": gen_dia, "bateria": bat,
          "kwh_dia": num("kwh_dia", 9, 0.01, 1e6, "Consumo medio diario laborable"),
          "lab": serie("lab", 24, "Día laborable"), "fes": serie("fes", 24, "Fin de semana y festivo"),
          "mes": serie("mes", 12, "Peso de cada mes"),
          "inversor": num("inversor", 0, 0, 1e6, "Potencia del inversor") or None,
          "cosphi": num("cosphi", 0.93, 0.6, 1, "Factor de potencia"),
          "peaje": p.get("peaje") if p.get("peaje") in PERFIL_PEAJES else "auto", "potencias": None}
-    # bateria: se carga con lo que sobra de la FV (y, en el despacho manual, de la red) y se
-    # descarga cuando falta
-    bat = num("bat_kwh", 0, 0, 1e6, "Capacidad de la batería")
-    q["bat_kwh"] = bat or 0.0
-    q["bat_kw"] = (num("bat_kw", 0, 0, 1e6, "Potencia de la batería") or round(bat / 2, 2)) if bat else None
-    q["bat_ef"] = num("bat_ef", 90, 50, 100, "Rendimiento de la batería") if bat else None
-    q["bat_soc"] = num("bat_soc", 50, 0, 100, "Estado de carga inicial de la batería") if bat else None
-    # despacho: automatico (solo carga con la FV y cubre lo que puede del consumo) o manual por
-    # periodos (P1..P6): cargar con la FV, cargar de la red y descargar a la red (% de su potencia)
-    q["bat_modo"] = "manual" if bat and p.get("bat_modo") == "manual" else "auto"
-    q["bat_per"] = None
-    if q["bat_modo"] == "manual":
-        per = p.get("bat_per") if isinstance(p.get("bat_per"), list) else []
-        pct = lambda x: min(100.0, max(0.0, float(x if x not in (None, "") else 25)))
-        try:
-            q["bat_per"] = [{"fv": bool(x.get("fv")), "red": bool(x.get("red")), "red_pct": pct(x.get("red_pct")),
-                             "ver": bool(x.get("ver")), "ver_pct": pct(x.get("ver_pct"))}
-                            for x in (per + [{"fv": True}] * 6)[:6]]
-        except (AttributeError, TypeError, ValueError):
-            raise ValueError("Despacho de la batería por periodos no válido")
     # (perfiles de antes: el mismo consumo los dias no laborables)
     q["kwh_fes"] = num("kwh_fes", q["kwh_dia"], 0, 1e6, "Consumo medio diario no laborable")
     if q["peaje"] != "auto" and p.get("potencias"):
@@ -2174,6 +2150,39 @@ def perfil_valido(p):
     return q
 
 
+def pesos_despacho(cx, socio_id):
+    """Pesos del despacho de la bateria de un generador, {inicio de la hora (s): peso}: el precio de
+    la energia de cada hora (el de la comunidad, por el periodo del peaje de cada socio) por la
+    suma de los consumos de sus socios por su beta (los suyos en vigor; sin ellos, a cada socio
+    en proporcion a su consumo). La bateria entrega mas cuanto mas caro y mas consumen."""
+    from . import gestion
+    d1 = date.today()
+    d0 = d1 - timedelta(days=SIM_DIAS + 2)
+    try:
+        *_, betas = gestion.reparto_vigente(cx)
+        _, part, gens, Gg, D = gestion._red_reparto(cx, d0.isoformat(), d1.isoformat(), exigir_gen=False)
+    except ValueError:
+        return {}
+    b = betas.get(socio_id)
+    if b is None:
+        tot = {i: sum(d.values()) for i, d in D.items()}
+        T = sum(tot.values()) or 1.0
+        b = {i: x / T for i, x in tot.items()}
+    pre = gestion.precios()
+    out = {}
+    for so, s in part:
+        bi = b.get(so["id"], 0.0)
+        if not bi:
+            continue
+        pj = str(s.get("peaje") or "2.0TD")
+        pjn = "2.0TD" if pj == "2.0TD" else "6.1TD" if pj.startswith("6") else "3.0TD"
+        precio = {int(k): float(v) for k, v in pre[pjn]["p"].items()}
+        for h, x in D[so["id"]].items():
+            k = int(h.timestamp())
+            out[k] = out.get(k, 0.0) + bi * x * precio.get(periodo(h.astimezone(TZL), "2.0TD" if pjn == "2.0TD" else "6P"), 0.0)
+    return out
+
+
 def _etiquetas(n, por_hora):
     """Horas de fin de periodo de un dia como las da Datadis (01:00..24:00, o 00:15..24:00):
     el dia que se adelanta la hora falta la 03:00 y el que se retrasa se repite."""
@@ -2186,7 +2195,7 @@ def _etiquetas(n, por_hora):
     return base
 
 
-def perfil_ficheros(p, cups, semilla):
+def perfil_ficheros(p, cups, semilla, pesos=None):
     """CSV de la descarga web de Datadis (Consumo, Potencias, Contrato y Energia) de los dos
     ultimos años, hasta ayer, de un prosumidor con el perfil p (perfil_valido): cada cuarto de
     hora, la forma de su dia (laborable o no: fin de semana y festivo nacional) por el peso del
@@ -2248,57 +2257,50 @@ def perfil_ficheros(p, cups, semilla):
         sol = [min(x * kwp, inv / 4) for x in sol]
     else:
         sol = [0.0] * len(dem)
-    # Peaje: el elegido o el justo para la demanda (sus periodos los usa el despacho manual)
-    pj = p["peaje"]
-
-    def _peaje(red_):
-        pico = max(red_) * 4 * 1.05
-        if pj != "auto":
-            return pj
-        return "2.0TD" if pico <= POT_20TD[-1] else "3.0TD" if pico <= 50 else "3.0TD+" if pico <= 450 else "6.1TD"
-    # Bateria (bat_kwh, bat_kw, bat_ef, bat_soc %): cada cuarto de hora, en automatico, se carga
-    # con lo que sobra de la FV (hasta su potencia y su capacidad, con las perdidas del rendimiento)
-    # y se descarga cuando la FV no llega. En manual, cada periodo del peaje hace lo que diga
-    # bat_per: cargar con la FV, cargar de la red y descargar a la red (al % de su potencia); en
-    # los que no carga de la red cubre el consumo. La red ve solo lo que queda.
-    bat = p.get("bat_kwh") or 0.0
-    soc = bat * (50 if p.get("bat_soc") is None else p["bat_soc"]) / 100
-    bkw, bef = (p.get("bat_kw") or bat / 2) / 4, (p.get("bat_ef") or 90) / 100
-    manual = bool(bat) and p.get("bat_modo") == "manual" and bool(p.get("bat_per"))
-    per = None
-    if manual:      # (el peaje, con la demanda sin bateria)
-        pj = _peaje([max(0.0, x - g) for x, g in zip(dem, sol)])
-        per = [periodo(lt, pj.rstrip("+")) for lt in lts]
-    descargada = 0.0
-    red, vert, auto, bcon = [], [], [], []
-    for k, (x, g) in enumerate(zip(dem, sol)):
+    # Bateria (capacidad ilimitada): cada dia guarda toda su FV y la entrega, por el rendimiento
+    # BAT_EF, desde que termina hasta que vuelve a salir el sol, en proporcion a los pesos (precio de
+    # cada hora x consumo de sus socios por su beta: pesos_despacho); sin ellos, por igual en las
+    # BAT_HORAS siguientes. Toda su generacion pasa a las horas sin sol
+    descarga = None
+    if p.get("bateria") and fv:
+        descarga, k0, sol0 = [0.0] * len(sol), 0, list(sol)
+        tramos = []                    # (cada dia: primer y ultimo cuarto de hora con sol, y sus cuartos)
+        for _, _, nq in dias:
+            idx = range(k0, k0 + nq)
+            pico = max((sol0[k] for k in idx), default=0.0)
+            con = [k for k in idx if sol0[k] > 0.05 * pico]      # (la FV "termina" bajo el 5 % de su pico)
+            tramos.append((con[0], con[-1], k0, k0 + nq) if con else None)
+            k0 += nq
+        for n_, tr in enumerate(tramos):
+            if not tr:
+                continue
+            carga = sum(sol0[tr[2]:tr[3]])
+            for k in range(tr[2], tr[3]):
+                sol[k] -= sol0[k]
+            sig = next((x[0] for x in tramos[n_ + 1:] if x), len(sol))
+            noche = list(range(tr[1] + 1, min(sig, len(sol))))
+            w = [(pesos.get(int(lts[k].timestamp()) // 3600 * 3600) or 0.0) if pesos else 0.0 for k in noche]
+            if not sum(w):             # (sin pesos: por igual en las BAT_HORAS siguientes)
+                noche = noche[:BAT_HORAS * 4]
+                w = [1.0] * len(noche)
+            tw = sum(w) or 1.0
+            for k, x in zip(noche, w):
+                descarga[k] += carga * BAT_EF * x / tw
+                sol[k] += carga * BAT_EF * x / tw
+    red, vert, auto = [], [], []
+    for x, g in zip(dem, sol):
         a = min(g, x)
-        sobra, falta = g - a, x - a
-        de = de_red = ca_red = 0.0
-        if bat:
-            cf = p["bat_per"][per[k] - 1] if manual else {"fv": True}
-            ca = max(0.0, min(sobra, bkw, (bat - soc) / bef)) if cf["fv"] else 0.0
-            if cf.get("red"):
-                ca_red = max(0.0, min(bkw * cf["red_pct"] / 100, bkw - ca, (bat - soc) / bef - ca))
-            soc += (ca + ca_red) * bef
-            de = 0.0 if cf.get("red") else max(0.0, min(falta, bkw, soc))
-            soc -= de
-            if cf.get("ver"):
-                de_red = max(0.0, min(bkw * cf["ver_pct"] / 100, bkw - de, soc))
-                soc -= de_red
-            sobra, falta = sobra - ca, falta - de
-            descargada += de + de_red
-        red.append(falta + ca_red)
-        vert.append(sobra + de_red)
-        auto.append(x - falta)     # lo que consume de su FV, directa o a traves de la bateria
-        bcon.append(de)            # (lo que le entrega la bateria)
+        red.append(x - a)
+        vert.append(g - a)
+        auto.append(a)
 
-    # Potencias: las elegidas o las justas para la demanda (maximo de cada periodo y 5 %)
-    if not manual:
-        pj = _peaje(red)
+    # Peaje y potencias: los elegidos o los justos para la demanda (maximo de cada periodo y 5 %)
+    pj = p["peaje"]
+    pico = max(red) * 4 * 1.05
+    if pj == "auto":
+        pj = "2.0TD" if pico <= POT_20TD[-1] else "3.0TD" if pico <= 50 else "3.0TD+" if pico <= 450 else "6.1TD"
     pjn = pj.rstrip("+")
-    per = per or [periodo(lt, pjn) for lt in lts]
-    pots = p["potencias"]
+    per = [periodo(lt, pjn) for lt in lts]
     pots = p["potencias"]
     if not pots:
         mx = [0.0] * 6
@@ -2325,8 +2327,7 @@ def perfil_ficheros(p, cups, semilla):
     def coma(v):
         return f"{v:g}".replace(".", ",")
     ag = paso // 15
-    consumo = ["cups;fecha;hora;consumo_kWh;metodoObtencion;energiaVertida_kWh;energiaGenerada_kWh;energiaAutoconsumida_kWh" +
-               (";energiaBateria_kWh" if bat else "")]
+    consumo = ["cups;fecha;hora;consumo_kWh;metodoObtencion;energiaVertida_kWh;energiaGenerada_kWh;energiaAutoconsumida_kWh"]
     maximos, reac = {}, {}
     i = 0
     for d, t0, nq in dias:
@@ -2341,7 +2342,7 @@ def perfil_ficheros(p, cups, semilla):
         for e in (_etiquetas(nq // ag, 60 // paso) if ag > 1 else e15):
             s = slice(i, i + ag)
             extra = f"{c3(sum(vert[s]))};{c3(sum(sol[s]))};{c3(sum(auto[s]))}" if fv else ";;"
-            consumo.append(f'"{cups}";"{f}";"{e}";{c3(sum(red[s]))};Real;{extra}' + (f";{c3(sum(bcon[s]))}" if bat else ""))
+            consumo.append(f'"{cups}";"{f}";"{e}";{c3(sum(red[s]))};Real;{extra}')
             i += ag
     potencias = ["cups;fechaMaximo;hora;maximoPotenciaDemandadaKW;periodo"] + [
         f'"{cups}";"{f}";"{h}";{c3(kw)};"{pe}"' for (_, _, pe), (kw, f, h) in sorted(maximos.items())]
@@ -2361,9 +2362,9 @@ def perfil_ficheros(p, cups, semilla):
                 for n, t in (("Consumo", consumo), ("Potencias", potencias), ("Contrato", contrato), ("Energia", energia))]
     resumen = {"peaje": pjn, "potencias": pots, "paso_min": paso, "kwp": round(kwp, 1), "inversor": inv,
                "consumo_kwh_anio": round(sum(dem) * 365 / nd), "red_kwh_anio": round(sum(red) * 365 / nd),
-               "generacion_kwh_anio": round(sum(sol) * 365 / nd), "vertida_kwh_anio": round(sum(vert) * 365 / nd),
-               "bateria_kwh": bat, "descarga_kwh_anio": round(descargada * 365 / nd),
-               "ciclos_anio": round(descargada * 365 / nd / bat) if bat else 0}
+               "generacion_kwh_anio": round(sum(sol) * 365 / nd), "vertida_kwh_anio": round(sum(vert) * 365 / nd)}
+    if descarga is not None:
+        resumen.update(descarga_kwh_anio=round(sum(descarga) * 365 / nd))
     return ficheros, resumen
 
 
@@ -2449,7 +2450,11 @@ def cargar_perfil(socio_id, perfil):
         raise KeyError(socio_id)
     if so.get("origen") != "virtual":
         raise ValueError("Solo los socios de prueba se generan con un perfil")
-    ficheros, res = perfil_ficheros(p, cups_simulado(f"perfil|{comunidad()['id']}|{socio_id}"), socio_id)
+    pesos = None
+    if p.get("bateria"):       # (despacho: precio de cada hora x consumo de sus socios por su beta)
+        with db.conectar() as cx:
+            pesos = pesos_despacho(cx, socio_id)
+    ficheros, res = perfil_ficheros(p, cups_simulado(f"perfil|{comunidad()['id']}|{socio_id}"), socio_id, pesos)
     notas = []
     with db.conectar() as cx, cx.transaction():
         borrar_datos(cx, socio_id)
@@ -2463,7 +2468,9 @@ def cargar_perfil(socio_id, perfil):
                  f"{' / '.join(coma(x) for x in res['potencias'])} kW, curva {'cuartohoraria' if res['paso_min'] == 15 else 'horaria'}): "
                  f"consumo {fmt(res['consumo_kwh_anio'])} kWh al año, {fmt(res['red_kwh_anio'])} de la red" +
                  (f"; FV de {coma(res['kwp'])} kWp: {fmt(res['generacion_kwh_anio'])} kWh al año, {fmt(res['vertida_kwh_anio'])} vertidos"
-                  if p["fv"] else ""))
+                  if p["fv"] else "") +
+                 (f"; con batería: entrega toda su FV ({fmt(res['descarga_kwh_anio'])} kWh al año, con el rendimiento) en las horas sin sol, "
+                  "en proporción al precio de cada hora y al consumo de sus socios por su β" if p.get("bateria") else ""))
     return {**r, "notas": notas, "recargar": True, "resumen": res}
 
 
@@ -3976,7 +3983,8 @@ def _precios():
     from . import gestion
     return {t: ({int(k): v for k, v in x["p"].items()}, x["comp"], x.get("lcoe") or 0.0)
             for t, x in gestion.precios().items() if t not in ("defecto", "otros")}
-NOMBRE_REPARTO = {"solitario": "En solitario (Datadis)", "manual": "Fijos manuales", "optimo": "Fijos óptimos",
+NOMBRE_REPARTO = {"solitario": "En solitario (Datadis)", "generadores": "Por generador (cada instalación con el suyo)",
+                  "manual": "Fijos manuales", "optimo": "Fijos óptimos",
                   "dinamico": "Dinámicos (por horas)"}
 
 
@@ -4061,11 +4069,12 @@ def _figuras_economia(raiz, E):
     }
 
 
-def coeficientes_pdf(anio=None, propio=None):
-    """PDF de justificacion de los coeficientes de reparto de la comunidad en curso: fijos
-    optimos y variables por hora (para el año anio; por defecto, el siguiente). propio (panel
-    de un socio): ese socio y el resto de la comunidad sumado, sin datos de ningun otro.
-    -> (bytes, nombre)."""
+def coeficientes_pdf(anio=None, propio=None, generador=None):
+    """PDF de justificacion de los coeficientes de reparto de un generador de la comunidad en
+    curso (por defecto, el primero): fijos optimos y variables por hora (para el año anio; por
+    defecto, el siguiente), con su generacion y lo que a cada participante le queda por cubrir
+    con los demas generadores. propio (panel de un socio): ese socio y el resto de la comunidad
+    sumado, sin datos de ningun otro. -> (bytes, nombre)."""
     import typst
     from . import gestion
 
@@ -4075,10 +4084,14 @@ def coeficientes_pdf(anio=None, propio=None):
     d0 = d1.replace(year=d1.year - 1) + timedelta(days=1)
     anio = int(anio or hoy.year + 1)
     with db.conectar() as cx:
-        act, part, gen_ids, Gh, Dh = gestion._perfiles(cx, d0.isoformat(), d1.isoformat())
-        fij = gestion.optimizar_coeficientes(cx, d0.isoformat(), d1.isoformat())
-        modo = gestion._ajuste(cx, "reparto_modo") or gestion.MODO_DEFECTO
-        manual = gestion._manual(cx, part)
+        if not generador:
+            gl = gestion._red_reparto(cx, d0.isoformat(), d1.isoformat())[2]
+            generador = gl[0][0]["id"]
+        X = gestion.generador_de(cx, generador, d0.isoformat(), d1.isoformat())
+        act, part, Gh, Dh, gen_ids = X["act"], X["part"], X["G"], X["R"], {generador}
+        modo, manual = X["cfg"]["modo"], X["cfg"]["manual"]
+        en_vigor = X["betas"][generador]
+        fij = gestion.informe_optimo(part, Gh, Dh, X["optimo"], en_vigor)
         # En solitario: las curvas de Datadis de cada socio (compra a la red y vertido)
         # (generacion propia = autoconsumo + vertido, como en el panel; se valora a su LCOE)
         sol = {(r["cups"], r["h"]): (float(r["red"]), float(r["vert"]), float(r["gen"])) for r in cx.execute(
@@ -4091,7 +4104,7 @@ def coeficientes_pdf(anio=None, propio=None):
     peaje = {so["id"]: s.get("peaje") or "2.0TD" for so, s in part}
     nom = {so["id"]: so["nombre"] for so, _ in part}
     cups = {so["id"]: s["cups"] for so, s in part}
-    actual = {so["id"]: so.get("coeficiente") for so, _ in part}
+    actual = {so["id"]: (en_vigor or {}).get(so["id"]) if en_vigor is not None else None for so, _ in part}
     beta = {x["id"]: x["coeficiente"] for x in fij["socios"]}
     consumo = {i: sum(Dh[i].values()) for i in ids}
     tot_cons = sum(consumo.values())
@@ -4226,9 +4239,9 @@ def coeficientes_pdf(anio=None, propio=None):
 
         base = f"{d0:%d/%m/%Y} – {d1:%d/%m/%Y}"
         mejora = AD - AF
-        gen_txt = (f"la de los participantes generadores ({', '.join(generadores)}), que no reciben reparto"
-                   if generadores else "la suma de la generación asignada por la distribuidora a todos los participantes, "
-                                       "que es la producción total de la instalación compartida")
+        gen_txt = (f"la de la instalación de {X['nombre']}, que reparte su energía con sus propios coeficientes (cada "
+                   "instalación de la comunidad tiene los suyos); el consumo de cada participante es el que le queda por cubrir "
+                   "con lo que le dan las demás instalaciones")
         P = lambda x: {"t": "p", "x": x}
         Mk = lambda x: {"t": "m", "x": x}
         H = lambda x: {"t": "h", "x": x}
@@ -4394,7 +4407,7 @@ def coeficientes_pdf(anio=None, propio=None):
         ahora = datetime.now(TZL)
         codigo = f"JUS-COEF-{re.sub(r'[^A-Za-z0-9]+', '-', unicodedata.normalize('NFD', cfg['id']).encode('ascii', 'ignore').decode()).upper()[:20]}-{anio}"
         periodo = f"{base} · coeficientes {anio}"
-        doc = {"titulo": cfg["cec"], "subtitulo": "Justificación de los coeficientes de reparto del autoconsumo colectivo",
+        doc = {"titulo": cfg["cec"], "subtitulo": f"Justificación de los coeficientes de reparto de la instalación de {X['nombre']}",
                "periodo": periodo, "codigo": codigo, "autor": f"Administración de {cfg['cec']}",
                "ficha": [["Código del documento", codigo], ["Versión", "1.0"], ["Fecha de emisión", f"{ahora:%d/%m/%Y}"],
                          ["Periodo base", base], ["Año de aplicación (variables)", str(anio)],
@@ -4533,7 +4546,7 @@ def _et_l(k):
 
 
 def _vacio_e():
-    return {"p": {}, "red": 0.0, "vert": 0.0, "auto": 0.0, "gen": 0.0, "bat": 0.0}
+    return {"p": {}, "red": 0.0, "vert": 0.0, "auto": 0.0, "gen": 0.0}
 
 
 def _energia_mensual(cx, cups, pj, d0, d1):
@@ -4550,34 +4563,25 @@ def _energia_mensual(cx, cups, pj, d0, d1):
         x["vert"] += v.get("vertida_kwh") or 0.0
         x["auto"] += v.get("autoconsumo_kwh") or 0.0
         x["gen"] += v.get("generada_kwh") or 0.0
-        x["bat"] += v.get("bateria_kwh") or 0.0
     return out
 
 
-def _energia_en_comunidad(part, G, D, co):
-    """Energia de cada mes de cada socio con el reparto de la comunidad (como comunidad() del
-    panel): le corresponde beta x generacion; autoconsume lo menor entre eso y su consumo, el
-    resto de su consumo lo compra a la red y lo que no consume son sus excedentes. co: fijos
-    {socio: beta}; None, dinamicos (en proporcion al consumo de cada hora)."""
-    ids = [so["id"] for so, _ in part]
+def _energia_en_comunidad(part, A, D):
+    """Energia de cada mes de cada socio con el reparto de cada generador (como comunidad() del
+    panel): A {socio: {hora: kWh que le corresponden}} (gestion.asignacion); autoconsume lo menor
+    entre eso y su consumo, el resto de su consumo lo compra a la red y lo que no consume son sus
+    excedentes."""
     pj = {so["id"]: _pj6(s.get("peaje")) for so, s in part}
-    tot = {i: sum(D[i].values()) for i in ids}
-    T = sum(tot.values())
-    out = {i: {} for i in ids}
-    for h in sorted(set(G) | {h for d in D.values() for h in d}):
-        g = G.get(h, 0.0)
-        dem = {i: D[i].get(h, 0.0) for i in ids}
-        td = sum(dem.values())
-        lt = h.astimezone(TZL)
-        k = (lt.year, lt.month)
-        for i in ids:
-            b = co.get(i, 0.0) if co else (dem[i] / td if td > 0 else (tot[i] / T if T else 1 / len(ids)))
-            asig = b * g
-            a = min(asig, dem[i])
-            x = out[i].setdefault(k, _vacio_e())
+    out = {so["id"]: {} for so, _ in part}
+    for i in out:
+        for h in set(D[i]) | set(A[i]):
+            dem, asig = D[i].get(h, 0.0), A[i].get(h, 0.0)
+            a = min(asig, dem)
+            lt = h.astimezone(TZL)
+            x = out[i].setdefault((lt.year, lt.month), _vacio_e())
             p = cec.periodo(lt, pj[i])
-            x["p"][p] = x["p"].get(p, 0.0) + dem[i] - a
-            x["red"] += dem[i] - a
+            x["p"][p] = x["p"].get(p, 0.0) + dem - a
+            x["red"] += dem - a
             x["vert"] += asig - a
             x["auto"] += a
             x["gen"] += asig
@@ -4587,13 +4591,10 @@ def _energia_en_comunidad(part, G, D, co):
 def _coste_energia(x, pr):
     """Coste de la energia de un mes (EUR): compra a la red por periodos al precio fijo de cada
     uno, compensacion de excedentes al precio de compensacion y coste de la generacion que
-    corresponde al socio (autoconsumo directo de la FV + excedentes) a su LCOE y la que le entrega
-    su bateria (parte del autoconsumo) al LCOE del almacenamiento. -> (compra, compensacion,
-    generacion y almacenamiento, neto)"""
+    corresponde al socio (autoconsumo + excedentes) a su LCOE. -> (compra, compensacion, generacion, neto)"""
     compra = sum(e * float(pr["p"].get(str(p)) or 0) for p, e in x["p"].items())
     comp = x["vert"] * float(pr["comp"] or 0)
-    bat = x.get("bat") or 0.0
-    gen = (x["auto"] - bat + x["vert"]) * float(pr.get("lcoe") or 0) + bat * float(pr.get("lcoe_bat") or 0)
+    gen = (x["auto"] + x["vert"]) * float(pr.get("lcoe") or 0)
     return compra, comp, gen, compra - comp + gen
 
 
@@ -4709,9 +4710,9 @@ def _datos_resumen(cx, desde, hasta, propio=None):
     d0, d1 = _local(desde), _local(hasta, 1)
     com, modo, gen_ids = {}, None, set()
     try:
-        _, part, gen_ids, Gh, Dh = gestion._perfiles(cx, desde.isoformat(), hasta.isoformat(), exigir_gen=False)
-        modo = gestion._ajuste(cx, "reparto_modo") or gestion.MODO_DEFECTO
-        com = _energia_en_comunidad(part, Gh, Dh, gestion._coeficientes_fijos(cx, part, modo))
+        part, Dh, Ah, gens = gestion.asignacion(cx, desde.isoformat(), hasta.isoformat())
+        gen_ids, modo = {so["id"] for so, _ in gens} - {so["id"] for so, _ in part}, "generadores"
+        com = _energia_en_comunidad(part, Ah, Dh)
     except ValueError:
         pass
     socios = []
@@ -5808,6 +5809,300 @@ def _perfiles(cx, d0, d1, generadores=None, generacion_anual=None, exigir_gen=Tr
     return act, part, gen_ids, G, D
 
 
+# ======================= reparto por generador (RD 244/2019, anexo I; guia del IDAE) =======================
+# Cada instalacion de generacion (socio con generacion: su CUPS) reparte SU energia entre los
+# socios con sus propios coeficientes, que suman 1 (el fichero de coeficientes es de cada
+# instalacion). A cada socio le corresponde la suma, de todas las instalaciones, de lo que le da
+# cada una: beta_g,i x G_g. Cada generador tiene su reparto: fijos manuales, fijos optimos o
+# dinamicos (por horas). Ajuste "reparto_gen": {generador: {"modo", "manual": {socio: beta}}}.
+# Los fijos se reparten primero; los dinamicos, cada hora, en proporcion a lo que a cada socio le
+# queda por cubrir. Los optimos de cada generador maximizan el autoconsumo con lo que le dejan
+# los demas (se recalculan por turnos hasta que se estabilizan).
+PURO = 0.1    # generador puro (no recibe reparto): consume menos de esta fraccion de lo que genera
+
+
+def _red_reparto(cx, d0, d1, exigir_gen=True):
+    """Socios del reparto entre d0 y d1 (fechas ISO locales, d1 incluida): habilitados con datos
+    (act), los que reciben reparto (part: consumen; no los generadores puros), los generadores
+    (gens: con generacion), Gg {generador: {hora: kWh generados}} y D {socio: {hora: kWh
+    consumidos (red + autoconsumo)}}."""
+    act = _cups_activos(cx)
+    sid_de = {s["cups"]: so["id"] for so, s in act}
+    t0 = datetime.fromisoformat(d0).replace(tzinfo=TZL)
+    t1 = datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
+    filas = cx.execute("SELECT cups, date_trunc('hour', ts) AS h, coalesce(sum(consumo_kwh), 0) + coalesce(sum(autoconsumo_kwh), 0) AS d, "
+                       "coalesce(sum(generada_kwh), 0) AS g FROM lectura WHERE cups = ANY(%s) AND ts >= %s AND ts < %s "
+                       "GROUP BY cups, h", (list(sid_de), t0, t1)).fetchall() if sid_de else []
+    Gt, Dt = {}, {}
+    for f in filas:
+        sid = sid_de[f["cups"]]
+        if f["g"]:
+            Gt.setdefault(sid, {})[f["h"]] = Gt.get(sid, {}).get(f["h"], 0.0) + float(f["g"])
+        if f["d"]:
+            Dt.setdefault(sid, {})[f["h"]] = Dt.get(sid, {}).get(f["h"], 0.0) + float(f["d"])
+    tg = {k: sum(v.values()) for k, v in Gt.items()}
+    td = {k: sum(v.values()) for k, v in Dt.items()}
+    gens = [(so, s) for so, s in act if tg.get(so["id"], 0) > 0]
+    part = [(so, s) for so, s in act if td.get(so["id"], 0) > 0 and not
+            (tg.get(so["id"], 0) > 0 and td[so["id"]] < PURO * tg[so["id"]])]
+    if not part:
+        raise ValueError("No hay socios habilitados con datos entre los que repartir")
+    if exigir_gen and not gens:
+        raise ValueError("No hay datos de generación en los últimos 12 meses: ningún socio tiene generación")
+    return act, part, gens, {so["id"]: Gt[so["id"]] for so, _ in gens}, {so["id"]: Dt.get(so["id"], {}) for so, _ in part}
+
+
+def _config_reparto(cx, gens, part):
+    """Reparto de cada generador: {generador: {"modo", "manual": {socio: beta}}}. Sin elegir:
+    el que tenia la comunidad (o los fijos optimos) y los manuales de antes o a partes iguales."""
+    cfg = _ajuste(cx, "reparto_gen") or {}
+    modo0 = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
+    man0 = _ajuste(cx, "reparto_manual") or {}
+    ids = [so["id"] for so, _ in part]
+    out = {}
+    for so, _ in gens:
+        c = cfg.get(so["id"]) or {}
+        m = c.get("manual") or man0
+        m = ({i: float(m.get(i, 0.0)) for i in ids} if abs(sum(float(m.get(i, 0.0)) for i in ids) - 1) < 1e-4
+             else _redondear_6({i: 1.0 for i in ids}))
+        out[so["id"]] = {"modo": c.get("modo") if c.get("modo") in MODOS_REPARTO else modo0, "manual": m}
+    return out
+
+
+def _optimo_beta(G, R):
+    """Coeficientes fijos de UN generador (G {hora: kWh}) que maximizan lo que autoconsumen los
+    socios con lo que les queda por cubrir (R {socio: {hora: kWh}}): el autoconsumo de cada socio
+    es concavo y lineal a trozos en beta_i, con pendiente sum(G_h de las horas con R_ih / G_h >
+    beta_i); se reparte el 1 por tramos de mayor a menor pendiente y lo que sobre, por consumo."""
+    G = {h: g for h, g in G.items() if g > 0}
+    tramos = []
+    for sid, d in R.items():
+        ratios = sorted((d.get(h, 0.0) / g, g) for h, g in G.items())
+        resto, prev = sum(g for _, g in ratios), 0.0
+        for x, g in ratios:
+            if x > prev:
+                tramos.append((resto, x - prev, sid))
+                prev = x
+            resto -= g
+    tramos.sort(key=lambda z: -z[0])
+    beta, libre = {sid: 0.0 for sid in R}, 1.0
+    for _, largo, sid in tramos:
+        if libre <= 0:
+            break
+        x = min(largo, libre)
+        beta[sid] += x
+        libre -= x
+    if libre > 1e-12:
+        cons = {sid: sum(d.values()) for sid, d in R.items()}
+        tot = sum(cons.values())
+        for sid in beta:
+            beta[sid] += libre * (cons[sid] / tot if tot > 0 else 1 / len(beta))
+    return _redondear_6(beta) if beta else {}
+
+
+def _asignar(Gg, D, betas, solo=None):
+    """Energia que corresponde a cada socio hora a hora, {socio: {hora: kWh}}, con los
+    generadores de solo (por defecto, todos): betas[g] fijos ({socio: beta}) o None (dinamico:
+    cada hora, en proporcion a lo que a cada socio le queda por cubrir; si no le queda a nadie,
+    a su consumo total). Primero los fijos y despues los dinamicos."""
+    gs = [g for g in Gg if solo is None or g in solo]
+    A = {i: {} for i in D}
+    tot = {i: sum(d.values()) for i, d in D.items()}
+    T = sum(tot.values())
+    prop = {i: (tot[i] / T if T else 1 / len(D)) for i in D}
+    for g in [g for g in gs if betas.get(g) is not None]:
+        b = betas[g]
+        for h, x in Gg[g].items():
+            for i in D:
+                if b.get(i):
+                    A[i][h] = A[i].get(h, 0.0) + b[i] * x
+    for g in [g for g in gs if betas.get(g) is None]:
+        for h, x in Gg[g].items():
+            if x <= 0:
+                continue
+            falta = {i: max(0.0, D[i].get(h, 0.0) - A[i].get(h, 0.0)) for i in D}
+            tf = sum(falta.values())
+            for i in D:
+                A[i][h] = A[i].get(h, 0.0) + x * (falta[i] / tf if tf > 0 else prop[i])
+    return A
+
+
+def _resolver(Gg, D, cfg):
+    """Coeficientes de cada generador con su reparto: {g: {socio: beta}} (fijos) o {g: None}
+    (dinamico). Los optimos, por turnos, con lo que dejan los demas."""
+    betas = {g: (c["manual"] if c["modo"] == "manual" else None) for g, c in cfg.items()}
+    opt = [g for g, c in cfg.items() if c["modo"] == "optimo"]
+    tot = {i: sum(d.values()) for i, d in D.items()}
+    for g in opt:
+        betas[g] = _redondear_6(tot) if sum(tot.values()) > 0 else _redondear_6({i: 1.0 for i in D})
+    for _ in range(4 if len(Gg) > 1 else 1):
+        for g in opt:
+            otros = _asignar(Gg, D, betas, [k for k in Gg if k != g])
+            R = {i: {h: max(0.0, D[i].get(h, 0.0) - otros[i].get(h, 0.0)) for h in Gg[g]} for i in D}
+            betas[g] = _optimo_beta(Gg[g], R)
+    return betas
+
+
+def _horas(d0, d1):
+    t, fin = datetime.fromisoformat(d0).replace(tzinfo=TZL), datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
+    out = []
+    while t < fin:
+        out.append(t)
+        t = (t.astimezone(timezone.utc) + timedelta(hours=1)).astimezone(TZL)
+    return out
+
+
+def reparto_vigente(cx):
+    """Reparto en vigor de cada generador, calculado con los ultimos 12 meses completos:
+    (act, part, gens, Gg, D, cfg, betas)."""
+    b0, b1 = _base_12()
+    act, part, gens, Gg, D = _red_reparto(cx, b0, b1, exigir_gen=False)
+    cfg = _config_reparto(cx, gens, part)
+    return act, part, gens, Gg, D, cfg, _resolver(Gg, D, cfg)
+
+
+def asignacion(cx, d0, d1):
+    """Energia que corresponde a cada socio hora a hora entre d0 y d1 con el reparto en vigor de
+    cada generador (los fijos, de los ultimos 12 meses; los dinamicos, hora a hora del periodo):
+    (part, D, A, gens)."""
+    *_, betas = reparto_vigente(cx)
+    _, part, gens, Gg, D = _red_reparto(cx, d0, d1, exigir_gen=False)
+    ids = {so["id"] for so, _ in part}
+    bb = {g: ({i: b.get(i, 0.0) for i in ids} if b is not None else None) for g, b in betas.items() if g in Gg}
+    for g in Gg:
+        bb.setdefault(g, None)        # (generador que no lo era en los 12 meses: dinamico)
+    return part, D, _asignar(Gg, D, bb), gens
+
+
+def generador_de(cx, g, d0=None, d1=None):
+    """Lo de un generador para su pestaña Generacion y su informe: su generacion, lo que a cada
+    socio le queda por cubrir con los demas generadores (R), sus manuales, sus optimos y su modo."""
+    b0, b1 = _base_12()
+    d0, d1 = d0 or b0, d1 or b1
+    act, part, gens, Gg, D = _red_reparto(cx, d0, d1)
+    if g not in Gg:
+        raise ValueError("Este socio no tiene generación en los últimos 12 meses: no reparte energía")
+    cfg = _config_reparto(cx, gens, part)
+    betas = _resolver(Gg, D, cfg)
+    otros = _asignar(Gg, D, betas, [k for k in Gg if k != g])
+    R = {i: {h: max(0.0, x - otros[i].get(h, 0.0)) for h, x in d.items()} for i, d in D.items()}
+    return {"act": act, "part": part, "gens": gens, "G": Gg[g], "R": R, "D": D, "cfg": cfg[g], "betas": betas,
+            "optimo": _optimo_beta(Gg[g], R), "nombre": next(so["nombre"] for so, _ in gens if so["id"] == g)}
+
+
+def informe_optimo(part, G, R, beta, actual):
+    """Cifras de los coeficientes de un generador para su informe (como optimizar_coeficientes):
+    G su generacion, R lo que a cada socio le queda por cubrir, beta sus fijos optimos y actual
+    los que tiene en vigor (o None)."""
+    G = {h: g for h, g in G.items() if g > 0}
+    total_g = sum(G.values())
+    consumo = {i: sum(d.values()) for i, d in R.items()}
+
+    def energia(b):
+        por = {i: sum(min(b.get(i, 0.0) * g, R[i].get(h, 0.0)) for h, g in G.items()) for i in R}
+        a = sum(por.values())
+        return por, {"autoconsumo_kwh": round(a, 1), "excedentes_kwh": round(total_g - a, 1),
+                     "autoconsumo_pct": round(100 * a / total_g, 1) if total_g else 0.0,
+                     "cobertura_pct": round(100 * a / sum(consumo.values()), 1) if sum(consumo.values()) else None}
+    por, optimo = energia(beta)
+    act = energia(actual)[1] if actual and abs(sum(actual.values()) - 1) < 1e-4 else None
+    pc = energia(_redondear_6(consumo))[1] if sum(consumo.values()) > 0 else None
+    return {"optimo": optimo, "actual": act, "por_consumo": pc,
+            "socios": [{"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "coeficiente": beta[so["id"]],
+                        "consumo_kwh": round(consumo[so["id"]], 1), "autoconsumo_kwh": round(por[so["id"]], 1)} for so, s in part]}
+
+
+def generadores():
+    """Generadores de la comunidad (socios con generacion en los ultimos 12 meses) y su reparto."""
+    d0, d1 = _base_12()
+    with db.conectar() as cx:
+        act, part, gens, Gg, D = _red_reparto(cx, d0, d1, exigir_gen=False)
+        cfg = _config_reparto(cx, gens, part)
+    return [{"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "kwh": round(sum(Gg[so["id"]].values()), 1),
+             "modo": cfg[so["id"]]["modo"]} for so, s in gens]
+
+
+def horarios_generador(cx, anio, g):
+    """Coeficientes dinamicos de un generador para cada hora del año anio y socio (prevision: la
+    misma fecha y hora de los ultimos 12 meses; el 29 de febrero, la del 28): cada hora, en
+    proporcion a lo que a cada socio le queda por cubrir con los demas generadores (si no le
+    queda a nadie, a su consumo total). Cada hora suma 1 (6 decimales)."""
+    x = generador_de(cx, g)
+    k = lambda h: (lambda l: (l.month, l.day, l.hour))(h.astimezone(TZL))
+    Rk = {i: {} for i in x["R"]}
+    for i, d in x["R"].items():
+        for h, v in d.items():
+            Rk[i][k(h)] = Rk[i].get(k(h), 0.0) + v
+    tot = {i: sum(d.values()) for i, d in x["D"].items()}
+    fijo = _redondear_6(tot) if sum(tot.values()) > 0 else _redondear_6({i: 1.0 for i in tot})
+    horas = _horas(f"{anio}-01-01", f"{anio}-12-31")
+    ids = list(Rk)
+    beta = {i: [] for i in ids}
+    for h in horas:
+        c = k(h)
+        if (c[0], c[1]) == (2, 29):
+            c = (2, 28, c[2])
+        d = {i: Rk[i].get(c, 0.0) for i in ids}
+        b = _redondear_6(d) if sum(d.values()) > 0 else fijo
+        for i in ids:
+            beta[i].append(b[i])
+    cups = {so["id"]: s["cups"] for so, s in x["part"]}
+    return {"anio": anio, "n": len(horas), "generador": x["nombre"],
+            "socios": [{"id": i, "cups": cups[i], "coeficientes": beta[i]} for i in ids]}
+
+
+def _cau(cx, cups):
+    r = cx.execute("SELECT \"cau\" FROM contrato WHERE \"cups\" = %s AND \"cau\" IS NOT NULL "
+                   "ORDER BY \"fechaInicioVigencia\" DESC LIMIT 1", (cups,)).fetchone()
+    return r["cau"] if r else None
+
+
+def ficheros_coeficientes(generador=None, anio=None, horarios=None):
+    """Ficheros para la distribuidora, uno por generador (su instalacion: CAU o, sin el, su CUPS):
+    fijos "CUPS;coeficiente" (anexo I del RD 244/2019) o, si su reparto es el dinamico (o
+    horarios), "CUPS;hora del año;coeficiente" (Orden TED/1247/2021) del año anio (por defecto,
+    el siguiente). 6 decimales, coma decimal; cada fichero (y cada hora) suma 1. Conviene
+    confirmar con la distribuidora el formato exacto que pide. -> [(nombre, texto)]"""
+    anio = int(anio or date.today().year + 1)
+    if not 2000 <= anio <= 2100:
+        raise ValueError("Año no válido")
+    out = []
+    with db.conectar() as cx:
+        act, part, gens, Gg, D, cfg, betas = reparto_vigente(cx)
+        if not gens:
+            raise ValueError("Ningún socio tiene generación: no hay coeficientes que entregar")
+        cups = {so["id"]: s["cups"] for so, s in act}
+        for so, s in gens:
+            g = so["id"]
+            if generador and g != generador:
+                continue
+            base = _cau(cx, s["cups"]) or s["cups"]
+            din = betas[g] is None if horarios is None else horarios
+            if din:
+                hx = horarios_generador(cx, anio, g)
+                lineas = []
+                for i in range(hx["n"]):
+                    lineas += [f"{x['cups']};{i + 1};{x['coeficientes'][i]:.6f}".replace(".", ",") for x in hx["socios"]]
+                out.append((f"{base}_horarios_{anio}.txt", "\r\n".join(lineas) + "\r\n"))
+            else:
+                out.append((f"{base}_{anio}.txt", "".join(f"{cups[i]};{b:.6f}".replace(".", ",") + "\r\n"
+                                                         for i, b in sorted(betas[g].items(), key=lambda z: cups[z[0]]))))
+    if generador and not out:
+        raise ValueError("Ese socio no tiene generación")
+    return out
+
+
+def ficheros_zip(anio=None):
+    """Todos los ficheros de coeficientes (uno por generador) en un .zip. -> (bytes, nombre)"""
+    import io
+    import zipfile
+    b = io.BytesIO()
+    with zipfile.ZipFile(b, "w", zipfile.ZIP_DEFLATED) as z:
+        for nombre, texto in ficheros_coeficientes(anio=anio):
+            z.writestr(nombre, texto)
+    return b.getvalue(), f"coeficientes_{cec.comunidad()['id']}_{int(anio or date.today().year + 1)}.zip"
+
+
 def coeficientes_horarios(cx, d0, d1, anio, generadores=None, generacion_anual=None):
     """Coeficientes de reparto variables, uno por hora del año anio y socio, que maximizan el
     autoconsumo de la comunidad. Previsión: cada hora del año toma la generacion y los consumos
@@ -5901,45 +6196,41 @@ def _manual(cx, part):
 
 
 def reparto_por_defecto():
-    """Si la comunidad aun no ha elegido reparto, pone en vigor el de por defecto (fijos optimos,
-    calculados con los ultimos 12 meses) y lo guarda. Sin datos de generacion, nada."""
-    d0, d1 = _base_12()
-    with db.conectar() as cx:
-        if _ajuste(cx, "reparto_modo"):
-            return False
-        try:
-            opt = optimizar_coeficientes(cx, d0, d1)["socios"]
-        except ValueError:
-            return False
-        _aplicar_coeficientes(cx, {x["id"]: x["coeficiente"] for x in opt})
-        _poner_ajuste(cx, "reparto_modo", MODO_DEFECTO)
-    log.info("reparto por defecto: coeficientes fijos óptimos de %s socios", len(opt))
-    return True
+    """(Antes ponia en vigor los fijos optimos de la comunidad: ahora cada generador tiene su
+    reparto, por defecto los fijos optimos.)"""
+    return False
 
 
-def reparto():
-    """Pestaña Coeficientes de reparto: generacion y consumo de cada socio hora a hora de los
-    ultimos 12 meses completos (los graficos y las cifras de cada reparto se calculan en el
-    navegador), sus coeficientes manuales, los fijos optimos y los que estan en vigor, y el
-    reparto elegido por la comunidad (modo)."""
+def reparto(generador=None):
+    """Pestaña Generacion de un socio generador (o Coeficientes de reparto, con su selector): su
+    generacion y, de cada socio, lo que le queda por cubrir con los demas generadores, hora a hora
+    de los ultimos 12 meses completos (los graficos y las cifras se calculan en el navegador),
+    sus coeficientes manuales, los fijos optimos, los que estan en vigor y su reparto (modo)."""
     d0, d1 = _base_12()
-    reparto_por_defecto()
     with db.conectar() as cx:
-        act, part, gen_ids, G, D = _perfiles(cx, d0, d1)
-        opt = {x["id"]: x["coeficiente"] for x in optimizar_coeficientes(cx, d0, d1)["socios"]}
-        manual = _manual(cx, part)
-        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
-    t, fin = datetime.fromisoformat(d0).replace(tzinfo=TZL), datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
-    horas = []
-    while t < fin:
-        horas.append(t)
-        t = (t.astimezone(timezone.utc) + timedelta(hours=1)).astimezone(TZL)
-    return {"base": {"desde": d0, "hasta": d1}, "inicio": horas[0].isoformat(), "n": len(horas), "modo": modo,
-            "generacion": [round(G.get(h, 0.0), 3) for h in horas],
-            "generadores": [so["nombre"] for so, _ in act if so["id"] in gen_ids],
-            "socios": [{"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "manual": manual[so["id"]],
-                        "optimo": opt[so["id"]], "actual": so.get("coeficiente"),
-                        "consumo": [round(D[so["id"]].get(h, 0.0), 3) for h in horas]} for so, s in part]}
+        act, part, gens, Gg, D = _red_reparto(cx, d0, d1)
+        g = generador or gens[0][0]["id"]
+        x = generador_de(cx, g)
+        cfg = _config_reparto(cx, gens, part)
+        # su propio consumo hora a hora (en una bateria de la comunidad, su carga: la FV que almacena)
+        cg = next(s["cups"] for so, s in gens if so["id"] == g)
+        propio = {f["h"]: float(f["d"]) for f in cx.execute(
+            "SELECT date_trunc('hour', ts) AS h, coalesce(sum(consumo_kwh), 0) + coalesce(sum(autoconsumo_kwh), 0) AS d "
+            "FROM lectura WHERE cups = %s AND ts >= %s AND ts < %s GROUP BY 1",
+            (cg, datetime.fromisoformat(d0).replace(tzinfo=TZL), datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1))).fetchall()}
+    horas = _horas(d0, d1)
+    tot_g = {k: round(sum(v.values()), 1) for k, v in Gg.items()}
+    b = x["betas"][g]
+    return {"base": {"desde": d0, "hasta": d1}, "inicio": horas[0].isoformat(), "n": len(horas), "modo": x["cfg"]["modo"],
+            "generador": {"id": g, "nombre": x["nombre"]},
+            "generadores": [{"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "kwh": tot_g[so["id"]],
+                             "modo": cfg[so["id"]]["modo"]} for so, s in gens],
+            "generacion": [round(x["G"].get(h, 0.0), 3) for h in horas],
+            "consumo_generador": [round(propio.get(h, 0.0), 3) for h in horas],
+            "socios": [{"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "manual": x["cfg"]["manual"][so["id"]],
+                        "optimo": x["optimo"][so["id"]], "actual": b[so["id"]] if b is not None else None,
+                        "consumo": [round(x["R"][so["id"]].get(h, 0.0), 3) for h in horas],
+                        "consumo_total": round(sum(D[so["id"]].values()), 1)} for so, s in part]}
 
 
 def _ventana(desde, hasta):
@@ -5962,21 +6253,28 @@ def _coeficientes_fijos(cx, part, modo):
     return _manual(cx, part) if modo == "manual" else None
 
 
+def _coef_de(cx, socio_id):
+    """Coeficientes en vigor de un socio con cada generador: [{generador, nombre, modo, coeficiente
+    (None: dinamico)}]."""
+    act, part, gens, Gg, D, cfg, betas = reparto_vigente(cx)
+    return [{"generador": so["id"], "nombre": so["nombre"], "modo": cfg[so["id"]]["modo"],
+             "coeficiente": (betas[so["id"]] or {}).get(socio_id) if betas[so["id"]] is not None else None}
+            for so, _ in gens]
+
+
 def reparto_socio(socio_id, desde=None, hasta=None):
     """Un socio en la comunidad (pestaña "En la comunidad" de su panel y curvas "en comunidad"
-    del grafico de consumo): hora a hora del periodo (por defecto, los ultimos 12 meses), su consumo total, la energia que le corresponde con el reparto elegido por
-    la comunidad (beta x generacion) y sus lecturas de Datadis (consumo de red, vertido y
-    autoconsumo, con los coeficientes que tenga comunicados la distribuidora). Sin datos de los
-    demas socios: con el reparto dinamico solo se devuelve su parte."""
+    del grafico de consumo): hora a hora del periodo (por defecto, los ultimos 12 meses), su
+    consumo total, la energia que le corresponde con el reparto de cada generador y sus lecturas
+    de Datadis (consumo de red, vertido y autoconsumo, con los coeficientes que tenga comunicados
+    la distribuidora)."""
     d0, d1 = _ventana(desde, hasta)
     with db.conectar() as cx:
-        act, part, gen_ids, G, D = _perfiles(cx, d0, d1, exigir_gen=False)
+        part, D, A, gens = asignacion(cx, d0, d1)
         ids = [so["id"] for so, _ in part]
         if socio_id not in ids:
             raise ValueError("Este suministro no participa del reparto de la comunidad (sin datos, deshabilitado o generador)")
-        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
-        co = _coeficientes_fijos(cx, part, modo)
-        fijo = co[socio_id] if co else None
+        coefs = _coef_de(cx, socio_id)
         cups = next(s["cups"] for so, s in part if so["id"] == socio_id)
         t0 = datetime.fromisoformat(d0).replace(tzinfo=TZL)
         t1 = datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
@@ -5984,53 +6282,36 @@ def reparto_socio(socio_id, desde=None, hasta=None):
             "SELECT date_trunc('hour', ts) AS h, coalesce(sum(consumo_kwh), 0) AS red, coalesce(sum(vertida_kwh), 0) AS vert, "
             "coalesce(sum(autoconsumo_kwh), 0) AS auto FROM lectura WHERE cups = %s AND ts >= %s AND ts < %s GROUP BY 1",
             (cups, t0, t1)).fetchall()}
-    tot = {i: sum(D[i].values()) for i in ids}
-    T = sum(tot.values())
-    t, horas = t0, []
-    while t < t1:
-        horas.append(t)
-        t = (t.astimezone(timezone.utc) + timedelta(hours=1)).astimezone(TZL)
-    asig = []
-    for h in horas:
-        g = G.get(h, 0.0)
-        if fijo is not None:
-            b = fijo
-        else:
-            dem = sum(D[i].get(h, 0.0) for i in ids)
-            b = D[socio_id].get(h, 0.0) / dem if dem > 0 else (tot[socio_id] / T if T else 1 / len(ids))
-        asig.append(round(b * g, 3))
+    horas = _horas(d0, d1)
     v = lambda h, k: round(float(real[h][k]), 3) if h in real else 0.0
     b0, b1 = _base_12()
-    return {"modo": modo, "coeficiente": fijo, "base": {"desde": b0, "hasta": b1}, "desde": d0, "hasta": d1,
-            "inicio": horas[0].isoformat(),
-            "n": len(horas), "consumo": [round(D[socio_id].get(h, 0.0), 3) for h in horas], "asignada": asig,
+    fijo = coefs[0]["coeficiente"] if len(coefs) == 1 else None
+    return {"modo": coefs[0]["modo"] if len(coefs) == 1 else "generadores", "coeficiente": fijo, "coeficientes": coefs,
+            "base": {"desde": b0, "hasta": b1}, "desde": d0, "hasta": d1, "inicio": horas[0].isoformat(), "n": len(horas),
+            "consumo": [round(D[socio_id].get(h, 0.0), 3) for h in horas],
+            "asignada": [round(A[socio_id].get(h, 0.0), 3) for h in horas],
             "red": [v(h, "red") for h in horas], "vertida": [v(h, "vert") for h in horas],
             "autoconsumo": [v(h, "auto") for h in horas]}
 
 
 def reparto_comunidad(desde=None, hasta=None):
-    """Toda la comunidad con el reparto elegido, hora a hora del periodo (por defecto, los
-    ultimos 12 meses): consumo
-    de los socios que participan del reparto, generacion repartida y autoconsumo (lo que cada
-    socio consume de su parte, sumado). Curvas "en comunidad" del grafico del gestor."""
+    """Toda la comunidad con el reparto de cada generador, hora a hora del periodo (por defecto,
+    los ultimos 12 meses): consumo de los socios que reciben reparto, generacion repartida y
+    autoconsumo (lo que cada socio consume de lo que le corresponde, sumado). Curvas "en
+    comunidad" del grafico del gestor."""
     d0, d1 = _ventana(desde, hasta)
     with db.conectar() as cx:
-        act, part, gen_ids, G, D = _perfiles(cx, d0, d1, exigir_gen=False)
-        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
-        co = _coeficientes_fijos(cx, part, modo)
+        part, D, A, gens = asignacion(cx, d0, d1)
     ids = [so["id"] for so, _ in part]
-    t0, t1 = datetime.fromisoformat(d0).replace(tzinfo=TZL), datetime.fromisoformat(d1).replace(tzinfo=TZL) + timedelta(days=1)
-    t, cons, gen, auto = t0, [], [], []
-    while t < t1:
-        g = G.get(t, 0.0)
-        dem = [D[i].get(t, 0.0) for i in ids]
-        # dinamico: en proporcion al consumo de la hora, todos cubren lo posible: min(G, consumo)
-        a = sum(min(co[i] * g, x) for i, x in zip(ids, dem)) if co else min(g, sum(dem))
-        cons.append(round(sum(dem), 3)); gen.append(round(g, 3)); auto.append(round(a, 3))
-        t = (t.astimezone(timezone.utc) + timedelta(hours=1)).astimezone(TZL)
+    cons, gen, auto = [], [], []
+    for h in _horas(d0, d1):
+        dem = [D[i].get(h, 0.0) for i in ids]
+        asg = [A[i].get(h, 0.0) for i in ids]
+        cons.append(round(sum(dem), 3)); gen.append(round(sum(asg), 3))
+        auto.append(round(sum(min(a, x) for a, x in zip(asg, dem)), 3))
     b0, b1 = _base_12()
-    return {"modo": modo, "coeficiente": None, "base": {"desde": b0, "hasta": b1}, "desde": d0, "hasta": d1,
-            "inicio": t0.isoformat(), "n": len(cons),
+    return {"modo": "generadores", "coeficiente": None, "base": {"desde": b0, "hasta": b1}, "desde": d0, "hasta": d1,
+            "inicio": datetime.fromisoformat(d0).replace(tzinfo=TZL).isoformat(), "n": len(cons),
             "consumo": cons, "asignada": gen, "autoconsumo_com": auto}
 
 
@@ -6065,12 +6346,6 @@ for _t, _alq in (("2.0TD", 0.81), ("3.0TD", 9.0), ("6.1TD", 25.0)):
 # instalacion tipica de cada peaje (residencial, comercial, industrial)
 for _t, _lcoe in (("2.0TD", 0.06), ("3.0TD", 0.05), ("6.1TD", 0.045)):
     PRECIOS_DEFECTO[_t]["lcoe"] = _lcoe
-# LCOE del almacenamiento (coste nivelado de cada kWh que entrega una bateria, EUR/kWh: inversion,
-# sustituciones, operacion y perdidas repartidas entre la energia que descarga en su vida util).
-# Por defecto, valores aproximados en España segun el tamaño de la bateria tipica de cada peaje:
-# domestica de 5-10 kWh, comercial de 20-200 kWh e industrial de mas de 500 kWh
-for _t, _lcoe in (("2.0TD", 0.14), ("3.0TD", 0.11), ("6.1TD", 0.09)):
-    PRECIOS_DEFECTO[_t]["lcoe_bat"] = _lcoe
 OTROS_DEFECTO = {"iee": 5.11269632, "iva": 21.0, "reac1": 0.041554, "reac2": 0.062332}
 
 
@@ -6084,7 +6359,7 @@ def precios():
         if t in out and t != "otros":
             for campo in ("p", "pot", "tep45", "tep123"):
                 out[t][campo].update({k: float(y) for k, y in (x.get(campo) or {}).items() if k in out[t][campo]})
-            for campo in ("comp", "alquiler", "lcoe", "lcoe_bat"):
+            for campo in ("comp", "alquiler", "lcoe"):
                 if x.get(campo) is not None:
                     out[t][campo] = float(x[campo])
     return {**out, "defecto": not v}
@@ -6115,13 +6390,9 @@ def guardar_precios(d):
         lcoe = x.get("lcoe")
         if lcoe is not None and not 0 <= float(lcoe) <= 2:
             raise ValueError("El LCOE de la generación va de 0 a 2 €/kWh")
-        lcoe_bat = x.get("lcoe_bat")
-        if lcoe_bat is not None and not 0 <= float(lcoe_bat) <= 2:
-            raise ValueError("El LCOE del almacenamiento va de 0 a 2 €/kWh")
         limpio[t] = {"p": ps, "pot": pot, "tep45": tep45, "tep123": tep123, **({"comp": float(comp)} if comp is not None else {}),
                      **({"alquiler": float(alq)} if alq is not None else {}),
-                     **({"lcoe": float(lcoe)} if lcoe is not None else {}),
-                     **({"lcoe_bat": float(lcoe_bat)} if lcoe_bat is not None else {})}
+                     **({"lcoe": float(lcoe)} if lcoe is not None else {})}
     with db.conectar() as cx:
         if limpio:
             _poner_ajuste(cx, "precios", limpio)
@@ -6130,37 +6401,42 @@ def guardar_precios(d):
     return precios()
 
 
-def reparto_manual(coeficientes):
-    """Guarda los coeficientes manuales ({socio: coeficiente}, se normalizan para que sumen 1
-    con 6 decimales); si el reparto elegido es el manual, pasan a estar en vigor."""
+def reparto_manual(coeficientes, generador):
+    """Guarda los coeficientes manuales de un generador ({socio: coeficiente}, se normalizan para
+    que sumen 1 con 6 decimales); si su reparto es el manual, pasan a estar en vigor."""
+    d0, d1 = _base_12()
     with db.conectar() as cx:
-        ids = {so["id"] for so, _ in _cups_activos(cx)}
+        act, part, gens, Gg, D = _red_reparto(cx, d0, d1)
+        if generador not in Gg:
+            raise ValueError("Ese socio no tiene generación")
+        ids = {so["id"] for so, _ in part}
         co = {k: float(v) for k, v in (coeficientes or {}).items() if k in ids}
         if not co or any(v < 0 for v in co.values()) or sum(co.values()) <= 0:
             raise ValueError("Coeficientes no válidos")
         co = _redondear_6({i: co.get(i, 0.0) for i in ids})
-        _poner_ajuste(cx, "reparto_manual", co)
-        modo = _ajuste(cx, "reparto_modo") or MODO_DEFECTO
-        if modo == "manual":
-            _aplicar_coeficientes(cx, co)
+        cfg = _ajuste(cx, "reparto_gen") or {}
+        modo = _config_reparto(cx, gens, part)[generador]["modo"]
+        cfg[generador] = {"modo": modo, "manual": co}
+        _poner_ajuste(cx, "reparto_gen", cfg)
     return {"manual": co, "modo": modo}
 
 
-def reparto_modo(modo):
-    """Reparto elegido por la comunidad: manual (pone en vigor los manuales), optimo (calcula y
-    pone en vigor los fijos optimos) o dinamico (coeficientes horarios: su fichero se descarga
-    en la pestaña; los fijos en vigor no cambian)."""
+def reparto_modo(modo, generador):
+    """Reparto de un generador: manual (sus manuales en vigor), optimo (los fijos optimos con lo
+    que le dejan los demas) o dinamico (coeficientes horarios: su fichero se descarga en la
+    pestaña)."""
     if modo not in MODOS_REPARTO:
         raise ValueError("Reparto no válido")
     d0, d1 = _base_12()
     with db.conectar() as cx:
-        if modo == "manual":
-            act = _cups_activos(cx)
-            _aplicar_coeficientes(cx, _manual(cx, [(so, s) for so, s in act]))
-        elif modo == "optimo":
-            _aplicar_coeficientes(cx, {x["id"]: x["coeficiente"] for x in optimizar_coeficientes(cx, d0, d1)["socios"]})
-        _poner_ajuste(cx, "reparto_modo", modo)
-    log.info("reparto de la comunidad: %s", modo)
+        act, part, gens, Gg, D = _red_reparto(cx, d0, d1)
+        if generador not in Gg:
+            raise ValueError("Ese socio no tiene generación")
+        cfg = _ajuste(cx, "reparto_gen") or {}
+        actual = _config_reparto(cx, gens, part)[generador]
+        cfg[generador] = {"modo": modo, "manual": actual["manual"]}
+        _poner_ajuste(cx, "reparto_gen", cfg)
+    log.info("reparto del generador %s: %s", generador, modo)
     return {"modo": modo}
 
 
@@ -8500,29 +8776,18 @@ def proponer_coeficientes(cid, criterio):
 
 
 def fichero_coeficientes(cid):
-    """Fichero de coeficientes fijos para la distribuidora: una linea "CUPS;coeficiente" por
-    suministro (6 decimales, coma decimal), de los socios con coeficiente; deben sumar 1. Nombre:
-    el CAU de la instalacion si esta en los contratos de Datadis (si no, el id de la comunidad).
-    Conviene confirmar con la distribuidora el formato exacto que pide. -> (texto, nombre)."""
-    from datetime import date
+    """Ficheros de coeficientes de una comunidad del gestor para la distribuidora, uno por
+    generador (gestion.ficheros_coeficientes): el fichero si hay uno, o todos en un .zip.
+    -> (bytes, nombre, tipo)"""
     c = _mia(cid)
 
     def f():
-        with db.conectar() as cx:
-            filas = cx.execute("SELECT s.cups, s.coeficiente, (SELECT k.\"cau\" FROM contrato k WHERE k.\"cups\" = s.cups "
-                               "AND k.\"cau\" IS NOT NULL ORDER BY k.\"fechaInicioVigencia\" DESC LIMIT 1) AS cau "
-                               "FROM socio s WHERE s.cups IS NOT NULL AND s.coeficiente IS NOT NULL ORDER BY s.cups").fetchall()
-        return filas
-    filas = con(c, f)
-    if not filas:
-        raise ValueError(f"{c['nombre']}: ningún socio tiene coeficiente (elígelos en la pestaña Coeficientes de reparto)")
-    suma = sum(r["coeficiente"] for r in filas)
-    if abs(suma - 1) > 0.0000005:
-        raise ValueError(f"{c['nombre']}: los coeficientes suman {suma:.6f}".replace(".", ",") + " y deben sumar 1")
-    caus = {r["cau"] for r in filas if r["cau"]}
-    base = caus.pop() if len(caus) == 1 else f"coeficientes_{cid}"
-    txt = "".join(f"{r['cups']};{r['coeficiente']:.6f}".replace(".", ",") + "\r\n" for r in filas)
-    return txt, f"{base}_{date.today().year}.txt"
+        fs = gestion.ficheros_coeficientes()
+        if len(fs) == 1:
+            return fs[0][1].encode("utf-8"), fs[0][0], "text/plain; charset=utf-8"
+        z, nombre = gestion.ficheros_zip()
+        return z, nombre, "application/zip"
+    return con(c, f)
 
 
 # ---------------- comunidades del gestor ----------------
@@ -9535,38 +9800,90 @@ def _fila(aid):
     return a
 
 
-# Socios de prueba con que nace cada comunidad de prueba (nombre, tipo simulado de SIM_TIPOS y
-# kWh al mes): dos consumidores y una instalacion FV que genera en el año lo mismo que consumen
-# los dos (300 + 700 = 1.000 kWh al mes de media; unos 7 kWp con FV_KWH_MES_KWP), para que la
-# comunidad salga lo mas equilibrada posible. Sin email: no tienen usuario.
-PRUEBA_SOCIOS = [("Vivienda", "residencial", 300),
-                 ("Pequeño comercio", "comercial", 700),
-                 ("Instalación fotovoltaica", "generador_fv", 1000)]
+# Socios de prueba con que nace cada comunidad de prueba: la estructura del ejemplo de la Guia
+# Profesional de Tramitacion del Autoconsumo (IDAE): tres instalaciones que reparten cada una su
+# energia con sus propios coeficientes y cinco clientes, mas una instalacion FV con bateria que
+# desplaza su energia a las horas en que falta. Equilibrada: genera en el año lo que consumen
+# (unos 35.000 kWh). Sin email: no tienen usuario.
+#   A: la FV de la vivienda del cliente 1 -> cliente 1 50 %, cliente 2 20 %, cliente 4 30 %
+#   B: la FV de la cubierta del edificio de los clientes 2 y 3 -> 2 40 %, 3 40 %, 4 20 %
+#   C: la FV del polideportivo (cliente 5) -> 5 60 %, 4 10 % y los clientes 1, 2 y 3 un 10 % cada uno
+#   D: FV con bateria: sus coeficientes, los fijos optimos (por defecto)
+def _g(h, c, a):
+    import math
+    return math.exp(-(((h + 0.5) - c) / a) ** 2)
+
+
+_VIV_LAB = [0.25 + 0.7 * _g(h, 8, 1.3) + 0.4 * _g(h, 14.5, 1.5) + 1.3 * _g(h, 21.5, 1.8) for h in range(24)]
+_VIV_FES = [0.28 + 0.5 * _g(h, 10, 2) + 0.6 * _g(h, 14.5, 1.6) + 1.2 * _g(h, 21.5, 2) for h in range(24)]
+_VIV_MES = [1.3, 1.2, 1, 0.85, 0.8, 0.95, 1.15, 1.1, 0.9, 0.85, 1, 1.3]
+
+
+def _perfil(lab, fes, mes, kwh_dia, kwh_fes, gen_dia=0.0):
+    return {"plantilla": "", "lab": lab, "fes": fes, "mes": mes, "kwh_dia": kwh_dia, "kwh_fes": kwh_fes,
+            "gen_dia": gen_dia, "cosphi": 0.95, "peaje": "auto"}
+
+
+# (clave, nombre, perfil); los generadores puros, con el tipo generador_fv (kWh al mes)
+PRUEBA_SOCIOS = [
+    ("c1", "Cliente 1 · Vivienda con FV (instalación A)", _perfil(_VIV_LAB, _VIV_FES, _VIV_MES, 8.5, 10, gen_dia=8.2)),
+    ("c2", "Cliente 2 · Vivienda del edificio", _perfil(_VIV_LAB, _VIV_FES, _VIV_MES, 7.8, 8.5)),
+    ("c3", "Cliente 3 · Vivienda del edificio", _perfil(_VIV_LAB, _VIV_FES, _VIV_MES, 7.8, 8.5)),
+    ("c4", "Cliente 4 · Taller", _perfil([0.1 + (1.0 if 8 <= h < 14 or 16 <= h < 19 else 0.0) for h in range(24)],
+                                         [0.1 + (0.6 if 9 <= h < 13 else 0.0) for h in range(24)],
+                                         [1.05, 1, 0.95, 0.9, 0.95, 1.1, 1.2, 0.7, 1, 1, 1, 1.1], 23, 6)),
+    ("c5", "Cliente 5 · Polideportivo", _perfil([0.15 + (0.4 if 9 <= h < 15 else 0.0) + (1.0 if 17 <= h < 23 else 0.0) for h in range(24)],
+                                                [0.15 + (1.0 if 9 <= h < 21 else 0.0) for h in range(24)],
+                                                [1.1, 1.1, 1.05, 1, 0.95, 0.8, 0.6, 0.55, 1, 1.1, 1.15, 1.1], 48, 62)),
+    ("B", "Instalación B · FV de la cubierta del edificio", {"sim_tipo": "generador_fv", "sim_kwh_mes": 670}),
+    ("C", "Instalación C · FV del polideportivo", {"sim_tipo": "generador_fv", "sim_kwh_mes": 1500}),
+]
+# Coeficientes de cada instalacion (como en la figura de la guia)
+PRUEBA_COEF = {"c1": {"c1": 0.5, "c2": 0.2, "c4": 0.3},
+               "B": {"c2": 0.4, "c3": 0.4, "c4": 0.2},
+               "C": {"c5": 0.6, "c4": 0.1, "c1": 0.1, "c2": 0.1, "c3": 0.1}}
+# Instalacion D: FV con bateria, que entrega toda su energia en las horas sin sol (despues de los demas)
+PRUEBA_BATERIA = ("D", "Instalación D · FV con batería", {"sim_tipo": "generador_fv", "sim_kwh_mes": 500, "bateria": True})
 
 
 def _socios_prueba(c):
     """Comunidad de prueba recien creada: sus PRUEBA_SOCIOS con los datos de su perfil (dos años
-    simulados, como los de Datadis) y sin el socio de prueba vacio con que nace toda comunidad.
-    -> True si hay algo que publicar en ThingsBoard."""
-    from . import cec
+    simulados, como los de Datadis), los coeficientes de cada instalacion (PRUEBA_COEF) y la
+    instalacion con bateria (con la demanda de sus socios, despues de los demas), sin el socio de
+    prueba vacio con que nace toda comunidad. -> True si hay algo que publicar en ThingsBoard."""
+    from . import cec, gestion
+
+    def alta(clave, nombre, perfil, ids):
+        try:
+            so = plataforma.alta_virtual(nombre, "plataforma (comunidad de prueba)")
+            cec.cargar_perfil(so["id"], perfil)
+            ids[clave] = so["id"]
+        except Exception:
+            log.exception("comunidad de prueba %s: socio %s", c["id"], nombre)
 
     def hacer():
-        hechos = 0
-        for nombre, tipo, kwh in PRUEBA_SOCIOS:
+        ids = {}
+        for clave, nombre, perfil in PRUEBA_SOCIOS:
+            alta(clave, nombre, perfil, ids)
+        if not ids:
+            return False
+        try:
+            plataforma.baja_socio(db.VIRTUAL_ID)
+        except KeyError:
+            pass
+        except Exception:
+            log.exception("comunidad de prueba %s: socio de prueba vacío", c["id"])
+        for g, co in PRUEBA_COEF.items():
+            if g not in ids or not all(k in ids for k in co):
+                continue
             try:
-                so = plataforma.alta_virtual(nombre, "plataforma (comunidad de prueba)")
-                cec.cargar_perfil(so["id"], {"sim_tipo": tipo, "sim_kwh_mes": kwh})
-                hechos += 1
+                gestion.reparto_manual({ids[k]: v for k, v in co.items()}, ids[g])
+                gestion.reparto_modo("manual", ids[g])
             except Exception:
-                log.exception("comunidad de prueba %s: socio %s", c["id"], nombre)
-        if hechos:
-            try:
-                plataforma.baja_socio(db.VIRTUAL_ID)
-            except KeyError:
-                pass
-            except Exception:
-                log.exception("comunidad de prueba %s: socio de prueba vacío", c["id"])
-        return hechos > 0
+                log.exception("comunidad de prueba %s: coeficientes de %s", c["id"], g)
+        clave, nombre, x = PRUEBA_BATERIA      # (su perfil de generador, con la bateria)
+        alta(clave, nombre, {**cec.perfil_de_tipo(x["sim_tipo"], x["sim_kwh_mes"]), "bateria": True}, ids)
+        return True
     return plataforma.con(c, hacer)
 
 
@@ -11146,9 +11463,11 @@ async def informe_socio(socio_id: str, desde: date | None = Query(None), hasta: 
 @app.get("/informes/coeficientes",
          summary="Justificación de los coeficientes de reparto (PDF): marco normativo, algoritmos de optimización y "
                  "resultados de los coeficientes fijos y de los variables por hora del año (por defecto, el siguiente)")
-async def informe_coeficientes(anio: int | None = Query(None, ge=2000, le=2100), _: str = Depends(admin)):
+async def informe_coeficientes(anio: int | None = Query(None, ge=2000, le=2100),
+                               generador: str | None = Query(None, description="Id del socio generador (por defecto, el primero)"),
+                               _: str = Depends(admin)):
     try:
-        pdf, nombre = await asyncio.to_thread(informes.coeficientes_pdf, anio)
+        pdf, nombre = await asyncio.to_thread(informes.coeficientes_pdf, anio, None, generador)
     except ValueError as e:
         raise HTTPException(422, str(e))
     return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
@@ -11566,31 +11885,40 @@ async def gestor_optimizar_coeficientes(cid: str, p: PeticionOptimizar, quien: s
 
 
 # ---------------- pestaña Coeficientes de reparto (comunidad en curso) ----------------
-@app.get("/reparto", summary="Coeficientes de reparto: generación y consumo horarios de los últimos 12 meses, coeficientes "
-                             "manuales, fijos óptimos y en vigor, y reparto elegido por la comunidad")
-async def reparto_datos(_: str = Depends(admin)):
-    return await asyncio.to_thread(_gestion, gestion.reparto)
+@app.get("/reparto", summary="Reparto de un generador (pestaña Generación): su generación y lo que a cada socio le queda por "
+                             "cubrir con los demás generadores, hora a hora de los últimos 12 meses, sus coeficientes manuales, "
+                             "fijos óptimos y en vigor, y su reparto")
+async def reparto_datos(generador: str | None = Query(None, description="Id del socio generador (por defecto, el primero)"),
+                        _: str = Depends(admin)):
+    return await asyncio.to_thread(_gestion, gestion.reparto, generador)
+
+
+@app.get("/reparto/generadores", summary="Generadores de la comunidad (socios con generación) y el reparto de cada uno")
+async def reparto_generadores(_: str = Depends(admin)):
+    return await asyncio.to_thread(_gestion, gestion.generadores)
 
 
 class PeticionManual(BaseModel):
+    generador: str = Field(..., description="Id del socio generador")
     coeficientes: dict[str, float] = Field(..., description="Coeficiente de cada socio (se normalizan para que sumen 1)")
 
 
-@app.put("/reparto/manual", summary="Guarda los coeficientes fijos manuales (en vigor si el reparto elegido es el manual)")
+@app.put("/reparto/manual", summary="Guarda los coeficientes fijos manuales de un generador (en vigor si su reparto es el manual)")
 async def reparto_manual(p: PeticionManual, quien: str = Depends(admin)):
-    r = await asyncio.to_thread(_gestion, gestion.reparto_manual, p.coeficientes)
-    log.info("%s guarda los coeficientes manuales", quien)
+    r = await asyncio.to_thread(_gestion, gestion.reparto_manual, p.coeficientes, p.generador)
+    log.info("%s guarda los coeficientes manuales de %s", quien, p.generador)
     return r
 
 
 class PeticionModo(BaseModel):
+    generador: str = Field(..., description="Id del socio generador")
     modo: Literal["manual", "optimo", "dinamico"]
 
 
-@app.put("/reparto/modo", summary="Reparto de la comunidad: fijos manuales, fijos óptimos o dinámicos (por horas)")
+@app.put("/reparto/modo", summary="Reparto de un generador: fijos manuales, fijos óptimos o dinámicos (por horas)")
 async def reparto_modo(p: PeticionModo, quien: str = Depends(admin)):
-    r = await asyncio.to_thread(_gestion, gestion.reparto_modo, p.modo)
-    log.info("%s elige el reparto %s", quien, p.modo)
+    r = await asyncio.to_thread(_gestion, gestion.reparto_modo, p.modo, p.generador)
+    log.info("%s elige el reparto %s para %s", quien, p.modo, p.generador)
     return r
 
 
@@ -11625,18 +11953,27 @@ async def precios_guardar(p: PeticionPrecios, quien: str = Depends(admin)):
     return r
 
 
-@app.get("/reparto/coeficientes.txt", summary="Fichero de los coeficientes fijos en vigor para la distribuidora")
-async def reparto_txt(_: str = Depends(admin)):
-    txt, nombre = await asyncio.to_thread(_plat, plataforma.fichero_coeficientes, comunidad()["id"])
-    return Response(txt.encode("utf-8"), media_type="text/plain; charset=utf-8",
-                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+@app.get("/reparto/coeficientes.txt", summary="Fichero de coeficientes de un generador para la distribuidora: los fijos en "
+                                              "vigor (CUPS;coeficiente) o, si su reparto es el dinámico, los horarios del año")
+async def reparto_txt(generador: str = Query(..., description="Id del socio generador"),
+                      anio: int | None = Query(None, ge=2000, le=2100), _: str = Depends(admin)):
+    fs = await asyncio.to_thread(_gestion, gestion.ficheros_coeficientes, generador, anio)
+    return Response(fs[0][1].encode("utf-8"), media_type="text/plain; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{fs[0][0]}"'})
 
 
-@app.get("/reparto/horarios.txt", summary="Fichero de los coeficientes dinámicos (por horas) del año para la distribuidora")
-async def reparto_horarios_txt(anio: int | None = Query(None, ge=2000, le=2100), _: str = Depends(admin)):
-    txt, nombre = await asyncio.to_thread(_plat, plataforma.fichero_coeficientes_horarios, comunidad()["id"], anio)
-    return Response(txt.encode("utf-8"), media_type="text/plain; charset=utf-8",
-                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+@app.get("/reparto/horarios.txt", summary="Fichero de los coeficientes dinámicos (por horas) de un generador para el año")
+async def reparto_horarios_txt(generador: str = Query(..., description="Id del socio generador"),
+                               anio: int | None = Query(None, ge=2000, le=2100), _: str = Depends(admin)):
+    fs = await asyncio.to_thread(_gestion, gestion.ficheros_coeficientes, generador, anio, True)
+    return Response(fs[0][1].encode("utf-8"), media_type="text/plain; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{fs[0][0]}"'})
+
+
+@app.get("/reparto/ficheros.zip", summary="Los ficheros de coeficientes de todos los generadores (uno por instalación) en un .zip")
+async def reparto_zip(anio: int | None = Query(None, ge=2000, le=2100), _: str = Depends(admin)):
+    z, nombre = await asyncio.to_thread(_gestion, gestion.ficheros_zip, anio)
+    return Response(z, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
 class PeticionHorarios(BaseModel):
@@ -11664,11 +12001,11 @@ async def gestor_fichero_horarios(cid: str, anio: int | None = None, generacion_
 
 
 @app.get("/gestor/comunidades/{cid}/coeficientes.txt",
-         summary="Fichero de coeficientes de reparto de una comunidad para la distribuidora (CUPS;coeficiente)")
+         summary="Ficheros de coeficientes de reparto de una comunidad para la distribuidora, uno por generador "
+                 "(el fichero si hay uno; si hay varios, un .zip)")
 async def gestor_fichero_coeficientes(cid: str, _: str = Depends(admin)):
-    txt, nombre = await asyncio.to_thread(_plat, plataforma.fichero_coeficientes, cid)
-    return Response(txt.encode("utf-8"), media_type="text/plain; charset=utf-8",
-                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+    datos, nombre, tipo = await asyncio.to_thread(_plat, plataforma.fichero_coeficientes, cid)
+    return Response(datos, media_type=tipo, headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
 # ---------------- comunidades del gestor (pestaña Suministros autorizados) ----------------
@@ -12244,8 +12581,9 @@ cat > config/branding/VatiaCo-alta.js <<'EOF'
       '<label data-campo="virtual_lugar"><span class="req">Ubicación</span><input name="virtual_lugar" readonly placeholder="Pulsa en el mapa">' +
       '<span class="err"></span></label>' +
       campo('virtual_municipio', 'Municipio (opcional)', ' maxlength="60" autocomplete="address-level2"') +
-      '</div><small>Para estudios con socios de prueba (perfiles de consumo y generación simulados, sin Datadis). Nace con tres: ' +
-      'una vivienda, un pequeño comercio y una instalación fotovoltaica que genera en el año lo mismo que consumen los dos. Se crea con el nombre ' +
+      '</div><small>Para estudios con socios de prueba (perfiles de consumo y generación simulados, sin Datadis). Nace como el ejemplo de la ' +
+      'guía del IDAE: cinco clientes (tres viviendas, una con sus placas; un taller y un polideportivo) y cuatro instalaciones que ' +
+      'reparten cada una su energía con sus propios coeficientes, una de ellas con batería; en el año generan lo que consumen. Se crea con el nombre ' +
       'que pongas y «(prueba)» al final, en la ubicación del mapa (allí se sitúan la comunidad y sus socios). ' +
       'No pide documento acreditativo: te enviaremos un correo para confirmarla y se crea al momento. ' +
       'Estará disponible <b class="vida">un tiempo limitado</b>; después se borra con todos sus datos.</small></div>' +
@@ -13930,20 +14268,21 @@ CONSUMO_HTML = """<div class="dd">
 CONSUMO_JS = VL_COMUN_JS + PERIODOS_JS + r"""
 var S = { modo: 'dia', metrica: 'consumo', apilado: true, pedido: 0, pers: [], pcon: {}, enCom: false, com: null };
 var API = '/cec-api';
-var REPARTOS = { manual: 'coeficientes fijos', optimo: 'coeficientes fijos óptimos', dinamico: 'coeficientes dinámicos' };
+var REPARTOS = { manual: 'coeficientes fijos', optimo: 'coeficientes fijos óptimos', dinamico: 'coeficientes dinámicos',
+                 generadores: 'cada generador con su reparto' };
 // Pestaña Costes (settings.costes): precio fijo por periodos del mercado libre. Precios aproximados
 // del termino de energia (EUR/kWh, con peajes y cargos, sin impuestos) por periodo del peaje y
 // compensacion de los excedentes; se multiplican por los kWh de cada hora agrupados por periodo
 // Potencia: termino de potencia (EUR/kW y año) por periodo y terminos de exceso de potencia de la
 // Resolucion de peajes de 2026 (anexo II): tep45 (EUR/kW y dia, puntos de medida tipo 4 y 5:
 // potencias <= 50 kW) y tep123 (EUR/kW, tipo 1, 2 y 3: alguna potencia > 50 kW)
-var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, lcoe: 0.06, lcoe_bat: 0.14, pot: { 1: 30.0, 2: 3.0 },
+var PRECIOS = { '2.0TD': { p: { 1: 0.20, 2: 0.14, 3: 0.09 }, comp: 0.06, lcoe: 0.06, pot: { 1: 30.0, 2: 3.0 },
                            tep45: { 1: 0.279426, 2: 0.005316 }, tep123: { 1: 2.968850, 2: 0.056473 } },
-                '3.0TD': { p: { 1: 0.19, 2: 0.16, 3: 0.13, 4: 0.12, 5: 0.10, 6: 0.09 }, comp: 0.06, lcoe: 0.05, lcoe_bat: 0.11,
+                '3.0TD': { p: { 1: 0.19, 2: 0.16, 3: 0.13, 4: 0.12, 5: 0.10, 6: 0.09 }, comp: 0.06, lcoe: 0.05,
                            pot: { 1: 20.0, 2: 11.0, 3: 5.0, 4: 4.3, 5: 2.8, 6: 1.6 },
                            tep45: { 1: 0.171373, 2: 0.090584, 3: 0.028721, 4: 0.021891, 5: 0.006142, 6: 0.006142 },
                            tep123: { 1: 3.325715, 2: 1.757877, 3: 0.557353, 4: 0.424794, 5: 0.119179, 6: 0.119179 } },
-                '6.1TD': { p: { 1: 0.16, 2: 0.14, 3: 0.12, 4: 0.11, 5: 0.09, 6: 0.08 }, comp: 0.05, lcoe: 0.045, lcoe_bat: 0.09,
+                '6.1TD': { p: { 1: 0.16, 2: 0.14, 3: 0.12, 4: 0.11, 5: 0.09, 6: 0.08 }, comp: 0.05, lcoe: 0.045,
                            pot: { 1: 30.0, 2: 15.5, 3: 7.0, 4: 5.5, 5: 1.6, 6: 0.9 },
                            tep45: { 1: 0.275735, 2: 0.146094, 3: 0.054668, 4: 0.038455, 5: 0.000817, 6: 0.000722 },
                            tep123: { 1: 3.431797, 2: 1.818277, 3: 0.680379, 4: 0.478581, 5: 0.010172, 6: 0.008984 } } };
@@ -13969,24 +14308,18 @@ function editorPrecios() {
   var pn = q('.dd-prec1'), gestor = (S.ctx.currentUser || {}).authority === 'TENANT_ADMIN', P = S.prec || PRECIOS;
   var v = function (x) { return x == null ? '' : String(+(+x).toFixed(4)); };
   pn.innerHTML = '<table><tr><th>Peaje</th>' + [1, 2, 3, 4, 5, 6].map(function (p) { return '<th>P' + p + '</th>'; }).join('') +
-    '<th>Excedentes</th><th title="Coste nivelado de la energía generada (inversión, operación y mantenimiento en su vida útil)">LCOE generación</th>' +
-    '<th title="Coste nivelado de cada kWh que entrega la batería (inversión, sustituciones, operación y pérdidas en su vida útil), según el tamaño típico de cada peaje">LCOE almacenamiento</th></tr>' +
+    '<th>Excedentes</th><th title="Coste nivelado de la energía generada (inversión, operación y mantenimiento en su vida útil)">LCOE generación</th></tr>' +
     ['2.0TD', '3.0TD', '6.1TD'].map(function (t) {
       return '<tr><td><b>' + t + '</b></td>' + [1, 2, 3, 4, 5, 6].map(function (p) {
         return '<td>' + (P[t].p[p] == null ? '–' : '<input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="' + p +
           '" value="' + v(P[t].p[p]) + '"' + (gestor ? '' : ' disabled') + '>') + '</td>';
       }).join('') + '<td><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="comp" value="' + v(P[t].comp) + '"' +
         (gestor ? '' : ' disabled') + '></td><td><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="lcoe" value="' +
-        v(P[t].lcoe != null ? P[t].lcoe : PRECIOS[t].lcoe) + '"' + (gestor ? '' : ' disabled') + '></td>' +
-        '<td title="' + { '2.0TD': 'Batería doméstica, 5 a 10 kWh', '3.0TD': 'Batería comercial, 20 a 200 kWh', '6.1TD': 'Batería industrial, más de 500 kWh' }[t] +
-        '"><input type="number" min="0" max="2" step="0.001" data-t="' + t + '" data-p="lcoe_bat" value="' +
-        v(P[t].lcoe_bat != null ? P[t].lcoe_bat : PRECIOS[t].lcoe_bat) + '"' + (gestor ? '' : ' disabled') + '></td></tr>';
+        v(P[t].lcoe != null ? P[t].lcoe : PRECIOS[t].lcoe) + '"' + (gestor ? '' : ' disabled') + '></td></tr>';
     }).join('') + '</table>' +
     '<div class="dd-prec-pie">€/kWh del término de energía (con peajes y cargos, sin impuestos) por periodo, precio de compensación de ' +
     'los excedentes y LCOE de la generación (coste de producir cada kWh fotovoltaico que corresponde al socio: el suyo propio en solitario, ' +
-    'el de su coeficiente en comunidad; por defecto, valores aproximados de autoconsumo FV) y LCOE del almacenamiento (coste de cada kWh que ' +
-    'entrega una batería; por defecto, los típicos según su tamaño: doméstica de 5 a 10 kWh en 2.0TD, comercial de 20 a 200 kWh en 3.0TD e ' +
-    'industrial de más de 500 kWh en 6.1TD). Se usan en esta pestaña, en la factura y en los informes.' +
+    'el de su coeficiente en comunidad; por defecto, valores aproximados de autoconsumo FV). Se usan en esta pestaña, en la factura y en los informes.' +
     (S.prec && S.prec.defecto ? ' Ahora: los aproximados por defecto.' : '') +
     (gestor ? ' <button type="button" class="dd-bprec dd-pg" disabled title="Guarda los precios cambiados y recalcula los costes">Recalcular</button> <button type="button" class="dd-bprec dd-pd">Valores por defecto</button>' : '') +
     ' <span class="dd-pmsg"></span></div>';
@@ -13997,13 +14330,12 @@ function editorPrecios() {
     var out = todosPrecios();
     qa('.dd-prec1 input').forEach(function (i) {
       var x = out[i.dataset.t], val = i.value === '' ? null : +i.value;
-      if (i.dataset.p === 'comp' || i.dataset.p === 'lcoe' || i.dataset.p === 'lcoe_bat') x[i.dataset.p] = val; else x.p[i.dataset.p] = val;
+      if (i.dataset.p === 'comp' || i.dataset.p === 'lcoe') x[i.dataset.p] = val; else x.p[i.dataset.p] = val;
     });
     guardar(out);
   };
   q('.dd-pd').onclick = function () { var out = todosPrecios(); ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
-    out[t].p = JSON.parse(JSON.stringify(PRECIOS[t].p)); out[t].comp = PRECIOS[t].comp; out[t].lcoe = PRECIOS[t].lcoe;
-    out[t].lcoe_bat = PRECIOS[t].lcoe_bat; }); guardar(out); };
+    out[t].p = JSON.parse(JSON.stringify(PRECIOS[t].p)); out[t].comp = PRECIOS[t].comp; out[t].lcoe = PRECIOS[t].lcoe; }); guardar(out); };
 }
 // Guarda los precios (PUT /precios) y vuelve a pintar los costes: mientras, el boton queda
 // deshabilitado y a su lado "Actualizando…" con un indicador que gira; si falla, el error y el
@@ -14035,8 +14367,7 @@ function todosPrecios() {
   ['2.0TD', '3.0TD', '6.1TD'].forEach(function (t) {
     var x = P[t] || PRECIOS[t];
     var c = function (k) { return JSON.parse(JSON.stringify(x[k] || PRECIOS[t][k])); };
-    out[t] = { p: c('p'), comp: x.comp, lcoe: x.lcoe != null ? x.lcoe : PRECIOS[t].lcoe, lcoe_bat: x.lcoe_bat != null ? x.lcoe_bat : PRECIOS[t].lcoe_bat,
-               pot: c('pot'), tep45: c('tep45'), tep123: c('tep123'),
+    out[t] = { p: c('p'), comp: x.comp, lcoe: x.lcoe != null ? x.lcoe : PRECIOS[t].lcoe, pot: c('pot'), tep45: c('tep45'), tep123: c('tep123'),
                alquiler: x.alquiler != null ? x.alquiler : { '2.0TD': 0.81, '3.0TD': 9, '6.1TD': 25 }[t] };
   });
   return out;
@@ -14118,19 +14449,12 @@ function pj() { return S.peaje && S.peaje !== '2.0TD' ? '6P' : '2.0TD'; }
 
 // Series apiladas: consumo de red por periodos, de abajo (valle) a arriba (punta) como en
 // Datadis, el autoconsumo encima y los excedentes por debajo de cero
-// Con bateria, el autoconsumo se parte: el de la FV directa y lo que entrega la bateria (resta:
-// se descuenta del autoconsumo, que lo incluye)
-function genCats() {
-  if (!S.hayBat) return GEN;
-  return [{ k: 'auto', n: 'Autoconsumo FV', c: GEN[0].c, curva: GEN[0].curva, d: GEN[0].d, signo: 1 },
-          { k: 'bat', n: 'Batería', c: '#8cc63f', curva: 'bateria_kwh', d: 'd_bateria_kwh', signo: 1, resta: 'auto' }, GEN[1]];
-}
 function cats(gen) {   // gen: con autoconsumo y excedentes (por defecto, si los hay o en comunidad)
   var n = pj() === '2.0TD' ? 3 : 6, out = [];
   for (var p = n; p >= 1; p--)
     out.push({ k: 'p' + p, n: n === 3 ? NOM3[p] : 'P' + p, c: (n === 3 ? COL3 : COL6)[p], curva: 'consumo_kwh',
                d: 'd_p' + p + '_kwh', signo: 1, periodo: true });
-  return (gen == null ? S.hayGen || S.enCom : gen) ? out.concat(genCats()) : out;
+  return (gen == null ? S.hayGen || S.enCom : gen) ? out.concat(GEN) : out;
 }
 
 // Unidades de tiempo: inicio, desplazamiento y etiqueta
@@ -14278,7 +14602,6 @@ function ultimo(seguir) {
   S.ctx.http.get(S.base + '/keys/timeseries').subscribe(function (ks) {
     ks = Array.isArray(ks) ? ks : [];
     S.hayGen = ks.indexOf('d_generada_kwh') >= 0;
-    S.hayBat = ks.indexOf('d_bateria_kwh') >= 0;     // socio de prueba con bateria
     S.pers = ks.map(function (k) { var m = /^pmax_p(\d)_kw$/.exec(k); return m ? +m[1] : 0; })
                .filter(Boolean).sort();
     S.reacs = ks.map(function (k) { var m = /^reac_p(\d)_kvarh$/.exec(k); return m ? +m[1] : 0; }).filter(Boolean).sort();
@@ -14442,17 +14765,15 @@ function cargarCostes(n, t0, t1) {
 // Euros de cada casilla: compra a la red por periodo, compensacion de excedentes (negativa), coste
 // de la generacion que corresponde al socio (LCOE x (autoconsumo + excedentes)) y neto
 function lcoe() { var P = precio(); return P.lcoe != null ? +P.lcoe : PRECIOS[tarifa()].lcoe; }
-function lcoeBat() { var P = precio(); return P.lcoe_bat != null ? +P.lcoe_bat : PRECIOS[tarifa()].lcoe_bat; }
 function euros(G) {
-  var P = precio(), np = pj() === '2.0TD' ? 3 : 6, L = lcoe(), Lb = lcoeBat();
+  var P = precio(), np = pj() === '2.0TD' ? 3 : 6, L = lcoe();
   return G.V.map(function (v) {
     var o = { neto: 0 };
     for (var p = 1; p <= np; p++) { o['p' + p] = (v['p' + p] || 0) * P.p[p]; o.neto += o['p' + p]; }
     o.comp = (v.vert || 0) * P.comp;   // v.vert ya es negativo
-    o.lcoe = ((v.auto || 0) - (v.vert || 0)) * L;   // (con bateria, v.auto es solo el de la FV directa)
-    o.bat = (v.bat || 0) * Lb;                     // lo que entrega la bateria, a su LCOE
+    o.lcoe = ((v.auto || 0) - (v.vert || 0)) * L;
     o.factura = o.neto + o.comp;      // lo que cobra la comercializadora (sin la generacion)
-    o.neto += o.comp + o.lcoe + o.bat;
+    o.neto += o.comp + o.lcoe;
     return o;
   });
 }
@@ -14487,10 +14808,8 @@ function pintarCostes() {
   });
   series.push({ type: 'bar', name: 'Compensación de excedentes', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#4caf7d' },
                 data: ver.map(function (o) { return o.comp ? r2(o.comp) : null; }) });
-  series.push({ type: 'bar', name: S.hayBat ? 'Autoconsumo FV y excedentes (LCOE generación)' : 'Generación (LCOE)', stack: apila ? 'a' : null, barMaxWidth: 48,
-                itemStyle: { color: '#8fc3f0' }, data: ver.map(function (o) { return o.lcoe ? r2(o.lcoe) : null; }) });
-  if (S.hayBat) series.push({ type: 'bar', name: 'Batería (LCOE almacenamiento)', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#8cc63f' },
-                              data: ver.map(function (o) { return o.bat ? r2(o.bat) : null; }) });
+  series.push({ type: 'bar', name: 'Generación (LCOE)', stack: apila ? 'a' : null, barMaxWidth: 48, itemStyle: { color: '#8fc3f0' },
+                data: ver.map(function (o) { return o.lcoe ? r2(o.lcoe) : null; }) });
   series.push({ type: 'line', name: 'Coste neto' + (com ? ' en comunidad' : ' en solitario'), step: S.modo === 'dia' ? 'middle' : false,
                 symbol: 'circle', symbolSize: 4, lineStyle: { width: 2, color: '#7b2fa8' }, itemStyle: { color: '#7b2fa8' }, z: 5,
                 data: ver.map(function (o) { return r2(o.neto); }) });
@@ -14510,9 +14829,7 @@ function pintarCostes() {
   q('.dd-titulo').innerHTML = 'Coste de la energía ' + { dia: 'horario', semana: 'diario', mes: 'diario', anio: 'mensual' }[S.modo] +
     ' (€)' + (com ? ' — en comunidad' : ' — en solitario') + '<br><small style="color:#777;font-weight:400">Precio fijo por periodos, ' +
     tarifa() + (S.prec && !S.prec.defecto ? ' (precios de la comunidad, sin impuestos): ' : ' (aproximados, sin impuestos; edítalos en la tabla de precios): ') + pr.join(' · ') + ' €/kWh; excedentes compensados a ' + VL.num(P.comp, 2) +
-    ' €/kWh; generación (autoconsumo' + (S.hayBat ? ' directo de la FV' : '') + ' + excedentes) a su LCOE, ' + VL.num(lcoe(), 3) + ' €/kWh' +
-    (S.hayBat ? '; energía que entrega la batería a su LCOE de almacenamiento, ' + VL.num(lcoeBat(), 3) + ' €/kWh' : '') +
-    '. Coste neto = compra − compensación + generación' + (S.hayBat ? ' + almacenamiento' : '') + '. ' +
+    ' €/kWh; generación (autoconsumo + excedentes) a su LCOE, ' + VL.num(lcoe(), 3) + ' €/kWh. Coste neto = compra − compensación + generación. ' +
     'Beneficio = coste en solitario (Datadis) − coste en comunidad.</small>';
   q('.dd-vacio').textContent = 'Sin datos en este periodo';
   q('.dd-vacio').style.display = hay ? 'none' : 'block';
@@ -14536,7 +14853,6 @@ function agrupar(r, C, t0, horaria) {
       if (i < 0 || i >= et.length) return;
       if (dia && c.periodo && 'p' + PERIODO(d, d.getHours(), pj()) !== c.k) return;
       V[i][c.k] = (V[i][c.k] || 0) + c.signo * p.value;
-      if (c.resta) V[i][c.resta] = (V[i][c.resta] || 0) - c.signo * p.value;
       hay[i] = true;
     });
   });
@@ -14622,8 +14938,7 @@ function pintar() {
   var de = { dia: 'del día', semana: 'de la semana', mes: 'del mes', anio: 'del año' }[S.modo];
   q('.dd-k1').textContent = n ? VL.num(total, 2) : '–';
   q('.dd-l1').textContent = 'Consumo total ' + de + ' (kWh)' +
-    ((S.hayGen || S.enCom) && total ? ' · ' + VL.num(100 * (tot.auto + (tot.bat || 0)) / total, 0) + ' % con autoconsumo' +
-      (tot.bat ? ' (' + VL.num(100 * tot.bat / total, 0) + ' % de la batería)' : '') : '');
+    ((S.hayGen || S.enCom) && total ? ' · ' + VL.num(100 * tot.auto / total, 0) + ' % con autoconsumo' : '');
   q('.dd-k2').textContent = n ? VL.num(total / n, 2) : '–';
   q('.dd-l2').textContent = { dia: 'Consumo medio horario', semana: 'Consumo medio diario', mes: 'Consumo medio diario',
                               anio: 'Consumo medio mensual' }[S.modo] + ' (kWh)';
@@ -14662,17 +14977,13 @@ function pintar() {
   var np = pj() === '2.0TD' ? 3 : 6;
   var cons = D.V.map(function (v, i) { if (!D.hay[i]) return null; var t = 0; for (var p = 1; p <= np; p++) t += v['p' + p] || 0; return r3(t); });
   var auto = D.V.map(function (v, i) { return D.hay[i] && v.auto != null ? r3(v.auto) : null; });
-  var bat = S.hayBat ? D.V.map(function (v, i) { return D.hay[i] && v.bat != null ? r3(v.bat) : null; }) : null;   // (descontada del autoconsumo)
   var vert = D.V.map(function (v, i) { return D.hay[i] && v.vert != null ? r3(Math.abs(v.vert)) : null; });   // en positivo
   var gen = D.gen ? D.gen.map(function (v) { return v == null ? null : r3(v); }) : null;
   var suma = function (a) { var t = 0; (a || []).forEach(function (x) { t += x || 0; }); return t; };
-  var nAuto = bat ? 'energiaAutoconsumida_kWh (FV)' : 'energiaAutoconsumida_kWh', nBat = 'energiaBateria_kWh (batería)';
-  var TOT = { 'consumo_kWh': suma(cons), 'energiaVertida_kWh': suma(vert), 'energiaGenerada_kWh': suma(gen) };
-  TOT[nAuto] = suma(auto); if (bat) TOT[nBat] = suma(bat);
+  var TOT = { 'energiaAutoconsumida_kWh': suma(auto), 'consumo_kWh': suma(cons), 'energiaVertida_kWh': suma(vert), 'energiaGenerada_kWh': suma(gen) };
   var hayG = S.hayGen || S.enCom;
   var series = [];
-  if (hayG) series.push({ type: 'bar', name: nAuto, stack: 'a', barMaxWidth: 48, itemStyle: { color: '#1fab76' }, data: auto });
-  if (hayG && bat) series.push({ type: 'bar', name: nBat, stack: 'a', barMaxWidth: 48, itemStyle: { color: '#8cc63f' }, data: bat });
+  if (hayG) series.push({ type: 'bar', name: 'energiaAutoconsumida_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#1fab76' }, data: auto });
   if (hayG) series.push({ type: 'bar', name: 'energiaVertida_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#ee6430' }, data: vert });
   series.push({ type: 'bar', name: 'consumo_kWh', stack: 'a', barMaxWidth: 48, itemStyle: { color: '#2b78d8' }, data: cons });
   if (gen) series.push({ type: 'line', name: 'energiaGenerada_kWh', smooth: true, symbol: 'none', z: 5,
@@ -14965,7 +15276,7 @@ function pintarFactura(r, t0, cd) {
   var et = casillas(t0), O = otros(), alq = alquiler(), Pt = calcPot(r, t0), Rc = S.reacs.length ? calcReac(r, t0) : null;
   // Energia de la comercializadora (la compensacion no pasa de lo comprado) y, aparte, el coste de
   // la generacion que corresponde al socio (LCOE, sin impuestos: no es parte de esa factura)
-  var energia = function (G) { return euros(G).map(function (o) { return { e: Math.max(0, o.factura), g: o.lcoe + (o.bat || 0) }; }); };
+  var energia = function (G) { return euros(G).map(function (o) { return { e: Math.max(0, o.factura), g: o.lcoe }; }); };
   var Gs = agrupar(r, cats(S.hayGen), t0), Es = energia(Gs), Ec = cd ? energia(agrupar(curvasCom(cd, t0, mover(new Date(t0), 'anio', 1).getTime()), cats(true), t0, true)) : null;
   var hay = et.map(function (_, m) { return Gs.hay[m] || Pt.hayM[m] || (Rc && Rc.hayM[m]); });
   var com = S.enCom && Ec;
@@ -15545,7 +15856,9 @@ self.onDestroy = function () { if (self.rail) self.rail.quitar(); };
 SOCIO_NAV_JS = VL_BURGER_JS + VL_RAIL_JS + r"""
 self.onInit = function () {
   var c = self.ctx.$container[0], el = c.querySelector('.vl-tabs'), sc = self.ctx.stateController;
-  var tabs = (self.ctx.settings || {}).tabs || [], socio = (self.ctx.currentUser || {}).authority === 'CUSTOMER_USER';
+  var socio = (self.ctx.currentUser || {}).authority === 'CUSTOMER_USER';
+  // (las pestañas con "-" como nombre para el socio solo las ve el gestor)
+  var tabs = ((self.ctx.settings || {}).tabs || []).filter(function (t) { return !(socio && t[2] === '-'); });
   if ((self.ctx.settings || {}).sub) c.querySelector('.vl-nav-w').className = 'vl-sub-w';
   var activo = sc ? sc.getStateId() : '';
   el.innerHTML = tabs.map(function (t, i) {
@@ -15567,7 +15880,8 @@ self.onDestroy = function () { if (self.rail) self.rail.quitar(); };
 
 # Pestañas de la vista de un socio: estado del panel, nombre (gestor), nombre para el socio e
 # icono (Material Icons, la fuente de ThingsBoard)
-SOCIO_TABS = [["socio", "Consumos", "", "svg:contador"], ["socio_potencias", "Potencias", "", "speed"],
+SOCIO_TABS = [["socio", "Consumos", "", "svg:contador"], ["socio_generacion", "Coeficientes de reparto", "-", "txt:β"],
+              ["socio_potencias", "Potencias", "", "speed"],
               ["socio_reactiva", "Reactiva", "", "waves"], ["socio_factura", "Factura", "", "receipt_long"], ["socio_reparto", "En la comunidad", "", "donut_small"],
               ["socio_mapa", "Ubicación", "", "place"],
               ["socio_informes", "Informes", "", "description"], ["socio_datos", "Datos del socio", "Mis datos", "badge"],
@@ -15918,17 +16232,29 @@ ALTA_CSS = """
 .al-pf-ley { font-size: 11.5px; color: #555; margin: 6px 0 2px; line-height: 1.7; }
 .al-pf-ley i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: -1px; }
 .al-pf-ley i:first-child { margin-left: 0; }
-.al-pf-ley i.soc { height: 0; border-top: 2px dashed #e0479e; border-radius: 0; vertical-align: 3px; }
-.al-pf-desp table { border-collapse: collapse; margin: 10px 0 4px; font-size: 12px; }
-.al-pf-desp th { font-weight: 600; color: #555; padding: 2px 10px; text-align: center; vertical-align: bottom; }
-.al-pf-desp th small { display: block; font-weight: 400; }
-.al-pf-desp td { padding: 3px 10px; text-align: center; }
-.al-pf-desp td:first-child { text-align: left; font-weight: 700; white-space: nowrap; }
-.al-pf-desp input[type=number] { width: 58px; }
-.al-pf-desp input:disabled { opacity: .45; }
-.al-pf-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 8px 0; }
-.al-pf-kpi div { background: #faf6fc; border-radius: 4px; padding: 6px 8px; font-size: 11.5px; color: #555; }
-.al-pf-kpi b { display: block; font-size: 15px; color: #1d2a33; }
+.al-pf-chk { justify-content: flex-end; }
+.al-pf-chk span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; padding: 6px 0; }
+.al-pf-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; }
+.al-pf-kpi { border: 1px solid #eee; border-radius: 6px; padding: 7px 9px; cursor: pointer; }
+.al-pf-kpi.on { border-color: #7b2fa8; box-shadow: 0 0 0 1px #7b2fa8 inset; background: #fcfaff; }
+.al-pf-kpi .t { font-weight: 700; color: #555; font-size: 12px; } .al-pf-kpi .v { font-size: 19px; font-weight: 700; color: #7b2fa8; margin: 2px 0; }
+.al-pf-kpi small { color: #777; font-size: 11px; }
+.al-pf-rcuerpo { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 10px; }
+.al-pf-rcuerpo.sin-lista { grid-template-columns: minmax(0, 1fr); }
+.al-pf-rcaja { border: 1px solid #eee; border-radius: 6px; padding: 8px 10px; min-width: 0; }
+.al-pf-rcaja h5 { margin: 0 0 6px; font-size: 12.5px; color: #7b2fa8; }
+.al-pf-rlista { max-height: 420px; overflow-y: auto; font-size: 12px; }
+.al-pf-rfila { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 2px 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid #f2f2f2; }
+.al-pf-rfila i { width: 10px; height: 10px; border-radius: 50%; }
+.al-pf-rfila .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.al-pf-rfila .p { text-align: right; font-weight: 700; color: #7b2fa8; font-variant-numeric: tabular-nums; }
+.al-pf-rfila input[type=range] { grid-column: 2 / 4; width: 100%; accent-color: #7b2fa8; }
+.al-pf-rfila input[type=range]:disabled { accent-color: #9e9e9e; }
+.al-pf-rsuma { margin: 6px 0; font-weight: 600; } .al-pf-rsuma.ok { color: #2e7d32; } .al-pf-rsuma.no { color: #c62828; }
+@media (max-width: 760px) { .al-pf-rcuerpo { grid-template-columns: minmax(0, 1fr); } .al-pf-kpis { grid-template-columns: 1fr; } }
+.al-pf-modos { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0; }
+.al-pf-modos label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.al-pf-cmsg { min-height: 16px; font-size: 12.5px; margin-top: 4px; } .al-pf-cmsg.ok { color: #2e7d32; } .al-pf-cmsg.err { color: #c62828; }
 .al-pf-res { margin-top: 10px; padding: 6px 8px; background: #faf6fc; border-radius: 4px; font-size: 12px; color: #555; }
 .al-pf-err { color: #c62828; min-height: 16px; margin-top: 6px; font-size: 12.5px; }
 .al-pie { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -16090,7 +16416,8 @@ PART_HTML = """<div class="al">
   <h3>Socios de prueba (simulaciones)</h3>
   <small>Para estudiar qué socios convienen a la comunidad. <b>Añadir socio de prueba</b> abre su <b>perfil</b> de prosumidor: la
    forma de su día laborable y de su fin de semana, el peso de cada mes, su consumo medio, su generación fotovoltaica, su
-   reactiva y su peaje; con él se generan dos años de datos como los de Datadis (curva, maxímetro, reactiva y contrato), sin
+   reactiva y su peaje (o una <b>batería de la comunidad</b>, que se carga y se descarga con la curva de los demás); con él se generan
+   dos años de datos como los de Datadis (curva, maxímetro, reactiva y contrato), sin
    CSV. Cuenta en la comunidad como un socio más (totales, reparto e informes). <b>Perfil</b> vuelve a generar sus datos con
    otro perfil; <b>Quitar</b> lo borra con sus datos.</small>
   <div class="al-virt">Cargando…</div>
@@ -16229,7 +16556,7 @@ function pfBarras(cont, vals, o) {
   svg.addEventListener('pointerup', fin); svg.addEventListener('pointercancel', fin);
 }
 // Generacion de 1 kWp en cada hora UTC de cada mes (kWh): la misma tabla de PVGIS que FV_PERFIL
-// de la API (Granada), para dibujar el dia tipo de la FV y de la bateria
+// de la API (Granada), para dibujar el dia tipo de la FV
 var PF_FV = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0.068, 0.372, 0.522, 0.593, 0.617, 0.597, 0.524, 0.417, 0.246, 0.002, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0.001, 0.194, 0.38, 0.516, 0.599, 0.632, 0.628, 0.556, 0.446, 0.287, 0.095, 0, 0, 0, 0, 0, 0],
@@ -16255,8 +16582,7 @@ function pfFv(p) {
     for (h = 0; h < 24; h++) d.push(PF_FV[m][(h - off + 24) % 24]);
     base.push(d);
   }
-  var cero = base.map(function (d) { return d.map(function () { return 0; }); });
-  if (!(p.gen_dia > 0)) return { kwp: 0, inv: 0, meses: cero };
+  if (!(p.gen_dia > 0)) return { kwp: 0, inv: 0, meses: base.map(function (d) { return d.map(function () { return 0; }); }) };
   var anio = function (kwp, inv) {
     var s = 0;
     base.forEach(function (d, m) { d.forEach(function (x) { s += PF_DIAS_MES[m] * Math.min(x * kwp, inv); }); });
@@ -16266,61 +16592,10 @@ function pfFv(p) {
   for (i = 0; i < 3; i++) kwp *= obj / (anio(kwp, inv) || 1);
   return { kwp: kwp, inv: inv, meses: base.map(function (d) { return d.map(function (x) { return Math.min(x * kwp, inv); }); }) };
 }
-// Periodo de energia del peaje pj a la hora h de un dia del mes m (no: no laborable)
-var PF_TEMPORADA = [1, 1, 2, 4, 4, 3, 1, 3, 3, 4, 2, 1];
-function pfPeriodo(m, no, h, pj) {
-  var valle = no || h < 8;
-  if (pj === '2.0TD') return valle ? 3 : ((h >= 10 && h < 14) || (h >= 18 && h < 22) ? 1 : 2);
-  if (valle) return 6;
-  var x = PF_TEMPORADA[m];
-  return (h >= 9 && h < 14) || (h >= 18 && h < 22) ? x : x + 1;
-}
-var PF_PCOL = ['#3fae49', '#3a9fc0', '#a0784a', '#2aa198', '#c9b400', '#7a1f3d'];
-var PF_P20 = ['punta', 'llano', 'valle'];
-function pfPerDefecto() { var r = [], i; for (i = 0; i < 6; i++) r.push({ fv: true, red: false, red_pct: 25, ver: false, ver_pct: 25 }); return r; }
 // Consumo de cada hora del dia tipo del mes m (no: no laborable)
 function pfConsumoDia(p, m, no) {
   var forma = no ? p.fes : p.lab, kwh = (no ? p.kwh_fes : p.kwh_dia) || 0, f = (p.mes[m] || 0) * 12;
   return forma.map(function (x) { return x * kwh * f; });
-}
-// Bateria hora a hora (b: kwh, kw, ef 0-1, per: despacho manual por periodo o null = automatico)
-// desde el estado de carga soc0 (kWh). Automatico: se carga con lo que sobra de la FV y se
-// descarga cuando la FV no llega. Manual: en cada periodo (pers: el de cada hora) carga con la
-// FV, carga de la red y descarga a la red si se ha marcado (al % de su potencia); en los que no
-// carga de la red cubre el consumo
-function pfBateria(g, c, b, soc0, pers) {
-  var soc = Math.min(b.kwh, Math.max(0, soc0)), k;
-  var r = { soc0: soc, carga: [], descarga: [], soc: [], carga_red: [], des_red: [], des_con: [], carga_fv: [] };
-  for (k = 0; k < g.length; k++) {
-    var d = Math.min(g[k], c[k]), cf = b.per && pers ? b.per[pers[k] - 1] || { fv: true } : { fv: true };
-    var ca = cf.fv ? Math.max(0, Math.min(g[k] - d, b.kw, (b.kwh - soc) / b.ef)) : 0;
-    var cr = cf.red ? Math.max(0, Math.min(b.kw * cf.red_pct / 100, b.kw - ca, (b.kwh - soc) / b.ef - ca)) : 0;
-    soc += (ca + cr) * b.ef;
-    var de = cf.red ? 0 : Math.max(0, Math.min(c[k] - d, b.kw, soc));
-    soc -= de;
-    var dr = cf.ver ? Math.max(0, Math.min(b.kw * cf.ver_pct / 100, b.kw - de, soc)) : 0;
-    soc -= dr;
-    r.carga.push(ca + cr); r.descarga.push(de + dr); r.soc.push(soc);
-    r.carga_fv.push(ca); r.carga_red.push(cr); r.des_con.push(de); r.des_red.push(dr);
-  }
-  return r;
-}
-// La de una racha de dias iguales (para el año aproximado): el dia se repite hasta que el
-// estado de carga de la medianoche se repite
-function pfBateriaRacha(g, c, b, pers) {
-  var r = pfBateria(g, c, b, b.kwh / 2, pers), v;
-  for (v = 0; v < 5; v++) r = pfBateria(g, c, b, r.soc[r.soc.length - 1], pers);
-  return r;
-}
-// Flujos del dia: directa, de la red (consumo que no cubren la FV ni la bateria, mas la carga de
-// la red) y vertido (lo que sobra de la FV y no carga la bateria, mas la descarga a la red)
-function pfFlujos(g, c, b) {
-  var z = g.map(function () { return 0; });
-  var ca = b ? b.carga : z, de = b ? b.descarga : z;
-  var dir = g.map(function (x, k) { return Math.min(x, c[k]); });
-  return { ca: ca, de: de, dir: dir,
-           imp: c.map(function (x, k) { return Math.max(0, x - dir[k] - (b ? b.des_con[k] : 0)) + (b ? b.carga_red[k] : 0); }),
-           exp: g.map(function (x, k) { return Math.max(0, x - dir[k] - (b ? b.carga_fv[k] : 0)) + (b ? b.des_red[k] : 0); }) };
 }
 function pfSum(v) { return v.reduce(function (a, b) { return a + b; }, 0); }
 // Maximo de eje redondeado (1, 2, 2,5 o 5 por potencia de 10)
@@ -16330,73 +16605,37 @@ function pfEscala(v) {
   return 10 * e;
 }
 function pfKwh(v) { return pfNum(v, v < 1 ? 2 : 1) + ' kWh'; }
-// Reparto horario (como el de la simulacion del dia tipo del blog) de una o varias jornadas
-// seguidas (dias: sus nombres, 24 h cada una): arriba lo que entra (FV, descarga de la bateria y
-// red) y abajo, en espejo, lo que sale (consumo, carga de la bateria y vertido), con la FV y el
-// consumo de cada hora escritos; con bateria, su estado de carga (% de la capacidad, eje derecho)
-function pfGrafDia(cont, g, c, b, cap, dias, pers) {
-  var n = g.length, nd = n / 24, W = nd > 1 ? 960 : 640, H = pers ? 346 : 330, L = 54, R = b ? 42 : 10, T = 22, B = pers ? 40 : 24;
-  var cw = W - L - R, ch = H - T - B, st = cw / n, k;
-  var f = pfFlujos(g, c, b);
-  var top = g.map(function (x, k) { return x + f.de[k] + f.imp[k]; });
-  var max = pfEscala(Math.max.apply(null, top.concat([0.01])) * 1.25);    // (sitio para las cifras)
-  var y0 = T + ch / 2, y = function (v) { return y0 - v / max * ch / 2; }, s = '';
-  [max, max / 2, 0, -max / 2, -max].forEach(function (v) {
-    s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + (v ? '#eee' : '#bbb') + '"/>' +
-      '<text x="' + (L - 5) + '" y="' + (y(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfNum(Math.abs(v), 2) + ' kWh' + '</text>';
-  });
-  var cero = g.map(function () { return 0; }), mas = function (a, b2) { return a.map(function (x, k) { return x + b2[k]; }); };
-  function banda(a, d, signo, color) {
-    var ar = [], ab = [];
-    for (k = 0; k < n; k++) {
-      var x0 = L + st * k, x1 = x0 + st;
-      ar.push([x0, y(signo * (a[k] + d[k]))], [x1, y(signo * (a[k] + d[k]))]);
-      ab.push([x0, y(signo * a[k])], [x1, y(signo * a[k])]);
-    }
-    return '<path d="M' + ar.concat(ab.reverse()).map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join('L') + 'Z" fill="' + color + '"/>';
-  }
-  s += banda(cero, g, 1, PF_COL.gen) + banda(g, f.de, 1, PF_COL.des) + banda(mas(g, f.de), f.imp, 1, PF_COL.imp);
-  s += banda(cero, c, -1, PF_COL.dem) + banda(c, f.ca, -1, PF_COL.car) + banda(mas(c, f.ca), f.exp, -1, PF_COL.exp);
-  // FV (hacia arriba desde su banda) y consumo (hacia abajo) de cada hora, girados
-  var fs = st < 14 ? 7 : 8.5, cifra = function (v) { return pfNum(v, v < 10 ? 1 : 0); };
-  for (k = 0; k < n; k++) {
-    var lx = (L + st * k + st / 2 + fs / 3).toFixed(1), yg = Math.max(y(g[k]) - 3, T + 2), yc = Math.min(y(-c[k]) + 3, T + ch - 2);
-    if (g[k] >= 0.05) s += '<text x="' + lx + '" y="' + yg.toFixed(1) + '" transform="rotate(-90 ' + lx + ' ' + yg.toFixed(1) + ')" font-size="' + fs + '" fill="#1c2735">' + cifra(g[k]) + '</text>';
-    s += '<text x="' + lx + '" y="' + yc.toFixed(1) + '" transform="rotate(-90 ' + lx + ' ' + yc.toFixed(1) + ')" text-anchor="end" font-size="' + fs + '" fill="#1c2735">' + cifra(c[k]) + '</text>';
-  }
-  if (b) {
-    var ys = function (v) { return T + ch * (1 - (cap ? v / cap : 0)); }, pts = [L + ',' + ys(b.soc0).toFixed(1)];
-    for (k = 0; k < n; k++) pts.push((L + st * (k + 1)).toFixed(1) + ',' + ys(b.soc[k]).toFixed(1));
-    s += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + PF_COL.soc + '" stroke-width="2" stroke-dasharray="5 3"/>';
-    [0, 25, 50, 75, 100].forEach(function (v) {
-      s += '<text x="' + (W - R + 5) + '" y="' + (T + ch * (1 - v / 100) + 3) + '" fill="' + PF_COL.soc + '" font-size="9.5">' + v + ' %</text>';
-    });
-  }
-  for (k = 0; k < nd; k++) {     // cada jornada: su nombre y la raya que la separa de la anterior
-    var xd = L + st * 24 * k;
-    if (k) s += '<line x1="' + xd + '" x2="' + xd + '" y1="' + (T - 14) + '" y2="' + (T + ch) + '" stroke="#555" stroke-dasharray="3 3"/>';
-    if (dias) s += '<text x="' + (xd + st * 12) + '" y="' + (T - 9) + '" fill="#555" font-size="11" font-weight="bold" text-anchor="middle">' + esc(dias[k]) + '</text>';
-  }
-  for (k = 0; k < n; k++) {
-    var hh = k % 24;
-    if (hh % (nd > 1 ? 6 : 3) === 0) s += '<text x="' + (L + st * k + st / 2) + '" y="' + (H - 7) + '" fill="#999" font-size="9.5" text-anchor="middle">' + hh + 'h</text>';
-    if (pers) {      // franja del periodo de cada hora (P1, P2...) con su nombre al empezar
-      s += '<rect x="' + (L + st * k).toFixed(1) + '" y="' + (T + ch + 3) + '" width="' + (st + 0.3).toFixed(1) + '" height="11" fill="' + PF_PCOL[pers[k] - 1] + '" fill-opacity=".85"/>';
-      if (!k || pers[k] !== pers[k - 1]) s += '<text x="' + (L + st * k + 2).toFixed(1) + '" y="' + (T + ch + 12) + '" fill="#fff" font-size="8.5" font-weight="bold">P' + pers[k] + '</text>';
-    }
-    s += '<rect x="' + (L + st * k) + '" y="' + T + '" width="' + st + '" height="' + ch + '" fill="transparent"><title>' + (dias ? dias[Math.floor(k / 24)] + ', ' : '') +
-      hh + '–' + (hh + 1) + ' h' + (pers ? ' (P' + pers[k] + ')' : '') + '\nFV ' + pfKwh(g[k]) + ' · consumo ' + pfKwh(c[k]) + (b ? '\ncarga ' + pfKwh(f.ca[k]) + ' · descarga ' + pfKwh(f.de[k]) +
-      ' · batería ' + pfPct(cap ? b.soc[k] / cap : 0) : '') + '\nde la red ' + pfKwh(f.imp[k]) + ' · vertido ' + pfKwh(f.exp[k]) + '</title></rect>';
-  }
-  cont.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Reparto horario del día tipo">' + s + '</svg>';
-}
 // Curva de generacion del dia tipo (FV, area) con el consumo del mismo dia (linea)
-function pfGrafGen(cont, g, c) {
+// Bateria de un perfil (como la API, perfil_ficheros): de capacidad ilimitada, guarda toda la FV del
+// dia y la entrega (con un rendimiento del 90 %) desde que termina la FV
+// hasta que vuelve a salir (en el dia tipo, las horas sin sol), en proporcion a w (precio de cada
+// hora x consumo de sus socios por su beta); sin w, por igual en las 4 horas siguientes.
+// -> {g: generacion desplazada, carga, desc, desde: hora}
+var PF_P20_EUR = [0.20, 0.14, 0.09];     // (precios aproximados del 2.0TD por periodo, como los de la comunidad por defecto)
+function pfPrecioHora(h, no) { return PF_P20_EUR[(no || h < 8) ? 2 : ((h >= 10 && h < 14) || (h >= 18 && h < 22) ? 0 : 1)]; }
+function pfDesplaza(g, c, cap, w) {
+  var con = [], k;
+  var pico = Math.max.apply(null, g.concat([0]));
+  for (k = 0; k < 24; k++) if (g[k] > 0.05 * pico) con.push(k);
+  var sob = g.slice(), ts = pfSum(sob), carga = ts;      // (capacidad ilimitada: toda la FV)
+  var out = g.slice(), ult = con.length ? con[con.length - 1] : 23, pri = con.length ? con[0] : 0, noche = [];
+  for (k = ult + 1; k < 24; k++) noche.push(k);
+  for (k = 0; k < pri; k++) noche.push(k);           // (y la madrugada: el dia tipo se repite)
+  var pw = w ? noche.map(function (h) { return w[h] || 0; }) : [];
+  if (!pfSum(pw)) { noche = noche.slice(0, 4); pw = noche.map(function () { return 1; }); }
+  var tw = pfSum(pw);
+  if (carga > 0 && noche.length) {
+    out = g.map(function () { return 0; });
+    noche.forEach(function (h, n) { out[h] += carga * 0.9 * pw[n] / tw; });
+  } else carga = 0;
+  return { g: out, carga: carga, desc: carga * 0.9, desde: (ult + 1) % 24 };
+}
+function pfGrafGen(cont, g, c, g0) {
   var W = 640, H = 200, L = 54, R = 10, T = 10, B = 24, cw = W - L - R, ch = H - T - B, st = cw / 24, k;
-  var max = pfEscala(Math.max.apply(null, g.concat(c, [0.01]))), y = function (v) { return T + ch * (1 - v / max); }, s = '';
+  var max = pfEscala(Math.max.apply(null, g.concat(c, g0 || [], [0.01]))), y = function (v) { return T + ch * (1 - v / max); }, s = '';
   [0, max / 2, max].forEach(function (v) {
     s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#eee"/>' +
-      '<text x="' + (L - 5) + '" y="' + (y(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfKwh(v) + '</text>';
+      '<text x="' + (L - 5) + '" y="' + (y(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfNum(v, 2) + ' kWh</text>';
   });
   var pg = [], pc = [];
   for (k = 0; k < 24; k++) {
@@ -16406,10 +16645,15 @@ function pfGrafGen(cont, g, c) {
   }
   s += '<polygon points="' + L + ',' + y(0) + ' ' + pg.join(' ') + ' ' + (W - R) + ',' + y(0) + '" fill="' + PF_COL.gen + '" fill-opacity=".8"/>';
   s += '<polyline points="' + pc.join(' ') + '" fill="none" stroke="' + PF_COL.dem + '" stroke-width="1.8"/>';
+  if (g0) {       // (con bateria: la FV sin ella)
+    var p0 = [];
+    for (k = 0; k < 24; k++) p0.push((L + st * k).toFixed(1) + ',' + y(g0[k]).toFixed(1), (L + st * (k + 1)).toFixed(1) + ',' + y(g0[k]).toFixed(1));
+    s += '<polyline points="' + p0.join(' ') + '" fill="none" stroke="#7a4b00" stroke-width="1.4" stroke-dasharray="4 3"/>';
+  }
   for (k = 0; k < 24; k++) {
     if (k % 3 === 0) s += '<text x="' + (L + st * k + st / 2) + '" y="' + (H - 7) + '" fill="#999" font-size="9.5" text-anchor="middle">' + k + 'h</text>';
     s += '<rect x="' + (L + st * k) + '" y="' + T + '" width="' + st + '" height="' + ch + '" fill="transparent"><title>' + k + '–' + (k + 1) +
-      ' h\nFV ' + pfKwh(g[k]) + ' · consumo ' + pfKwh(c[k]) + '</title></rect>';
+      ' h\n' + (g0 ? 'generación (con la batería) ' + pfKwh(g[k]) + ' · FV ' + pfKwh(g0[k]) : 'FV ' + pfKwh(g[k])) + ' · consumo ' + pfKwh(c[k]) + '</title></rect>';
   }
   cont.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Curva de generación del día tipo">' + s + '</svg>';
 }
@@ -16420,7 +16664,7 @@ function pfGrafMeses(cont, fv, sel, alElegir) {
   [0, max].forEach(function (x) {
     var yy = T + ch * (1 - x / max);
     s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" stroke="#eee"/>' +
-      '<text x="' + (L - 5) + '" y="' + (yy + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfKwh(x) + '</text>';
+      '<text x="' + (L - 5) + '" y="' + (yy + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfNum(x, 2) + ' kWh</text>';
   });
   v.forEach(function (x, m) {
     var hh = ch * x / max;
@@ -16431,6 +16675,66 @@ function pfGrafMeses(cont, fv, sel, alElegir) {
   });
   cont.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Generación de un día medio de cada mes">' + s + '</svg>';
   [].forEach.call(cont.querySelectorAll('.mes'), function (gr) { gr.addEventListener('click', function () { alElegir(+gr.dataset.m); }); });
+}
+// Reparto de la energia de un generador en el dia tipo (mes m; no: sabado y domingo), con los datos
+// de /reparto?generador=: lo que recibe cada socio (beta x generacion, barras apiladas), el consumo
+// de los socios que no cubren los demas generadores (linea) y, en una bateria, su carga (la FV que
+// almacena; su descarga es la carga por el rendimiento). beta(j, i, tot): coeficiente del socio j
+// en la hora i. -> resumen del dia {g, carga, cons, rec[]}
+var PF_MODOS = [['manual', 'Fijos manuales'], ['optimo', 'Fijos óptimos'], ['dinamico', 'Dinámicos (por horas)']];
+var PF_RCOL = ['#7b2fa8', '#2f7fd8', '#4caf7d', '#f59a6b', '#e0541f', '#26a69a', '#ec407a', '#8d6e63', '#5c6bc0', '#9ccc65', '#ffb300', '#29b6f6'];
+function pfGrafReparto(cont, d, beta, m, no, bateria) {
+  var t0 = Date.parse(d.inicio), ns = d.socios.length, h, i, j;
+  var z = function () { var a = []; for (var k = 0; k < 24; k++) a.push(0); return a; };
+  var G = z(), C = z(), K = z(), n = z(), E = d.socios.map(z);
+  for (i = 0; i < d.n; i++) {
+    var dt = new Date(t0 + i * 3600000), fes = dt.getDay() === 0 || dt.getDay() === 6;
+    if (dt.getMonth() !== m || fes !== no) continue;
+    h = dt.getHours(); n[h]++;
+    var g = d.generacion[i] || 0, tot = 0;
+    for (j = 0; j < ns; j++) tot += d.socios[j].consumo[i] || 0;
+    G[h] += g; C[h] += tot; K[h] += (d.consumo_generador || [])[i] || 0;
+    for (j = 0; j < ns; j++) E[j][h] += beta(j, i, tot) * g;
+  }
+  var med = function (a) { return a.map(function (x, k) { return n[k] ? x / n[k] : 0; }); };
+  G = med(G); C = med(C); K = med(K); E = E.map(med);
+  var W = 640, H = 230, L = 54, R = 10, T = 10, B = 24, cw = W - L - R, ch = H - T - B, st = cw / 24, k, s = '';
+  var max = pfEscala(Math.max.apply(null, G.concat(C, bateria ? K : [], [0.01])));
+  var y = function (v) { return T + ch * (1 - v / max); };
+  [0, max / 2, max].forEach(function (v) {
+    s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#eee"/>' +
+      '<text x="' + (L - 5) + '" y="' + (y(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfNum(v, 2) + ' kWh</text>';
+  });
+  for (k = 0; k < 24; k++) {
+    var acc = 0;
+    for (j = 0; j < ns; j++) {
+      var v = E[j][k];
+      if (v > 0) s += '<rect x="' + (L + st * k + 1).toFixed(1) + '" y="' + y(acc + v).toFixed(1) + '" width="' + (st - 2).toFixed(1) + '" height="' +
+        (y(acc) - y(acc + v)).toFixed(1) + '" fill="' + PF_RCOL[j % PF_RCOL.length] + '"/>';
+      acc += v;
+    }
+  }
+  var linea = function (a, col, dash) {
+    var pts = [];
+    for (k = 0; k < 24; k++) pts.push((L + st * k).toFixed(1) + ',' + y(a[k]).toFixed(1), (L + st * (k + 1)).toFixed(1) + ',' + y(a[k]).toFixed(1));
+    return '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.8"' + (dash ? ' stroke-dasharray="5 3"' : '') + '/>';
+  };
+  s += linea(C, '#333', true);
+  if (bateria) s += linea(K, PF_COL.gen, false);
+  for (k = 0; k < 24; k++) {
+    if (k % 3 === 0) s += '<text x="' + (L + st * k + st / 2) + '" y="' + (H - 7) + '" fill="#999" font-size="9.5" text-anchor="middle">' + k + 'h</text>';
+    var tt = k + '–' + (k + 1) + ' h\n' + (bateria ? 'carga (FV almacenada) ' + pfKwh(K[k]) + ' · descarga ' : 'genera ') + pfKwh(G[k]) +
+      '\nconsumo de los socios ' + pfKwh(C[k]);
+    for (j = 0; j < ns; j++) if (E[j][k] > 0.0005) tt += '\n' + d.socios[j].nombre + ': ' + pfKwh(E[j][k]);
+    s += '<rect x="' + (L + st * k) + '" y="' + T + '" width="' + st + '" height="' + ch + '" fill="transparent"><title>' + esc(tt) + '</title></rect>';
+  }
+  cont.innerHTML = '<div class="al-pf-ley">' + d.socios.map(function (x, j2) {
+      return '<i style="background:' + PF_RCOL[j2 % PF_RCOL.length] + '"></i>' + esc(x.nombre); }).join(' ') +
+    '<br><i style="height:0;border-top:2px dashed #333;border-radius:0;vertical-align:3px"></i>consumo de los socios (lo que no cubren los demás generadores)' +
+    (bateria ? ' <i style="height:2px;background:' + PF_COL.gen + ';vertical-align:3px"></i>carga: FV almacenada' : '') + '</div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Reparto de la energía en el día tipo" style="width:100%;height:auto;display:block">' + s + '</svg>';
+  var sum = function (a) { return a.reduce(function (x, y2) { return x + y2; }, 0); };
+  return { g: sum(G), carga: sum(K), cons: sum(C), rec: E.map(sum) };
 }
 self.onInit = function () {
   var c = self.ctx.$container[0];
@@ -16538,27 +16842,24 @@ self.onInit = function () {
   function pfDefecto() {
     var t = pfPlantilla('vivienda');
     return { plantilla: 'vivienda', kwh_dia: t.kwh, kwh_fes: t.kwh_fes, lab: t.lab, fes: t.fes, mes: t.mes,
-             fv: true, gen_dia: 8, inversor: null, cosphi: 0.93, peaje: 'auto', potencias: null, bat_kwh: 0, bat_kw: null, bat_ef: 90, bat_soc: 50, bat_modo: 'auto', bat_per: pfPerDefecto() };
+             fv: true, gen_dia: 8, inversor: null, cosphi: 0.93, peaje: 'auto', potencias: null };
   }
   function pfResumen(p) {
     if (!p) return '';
     var r = p.resumen || {}, pl = PF_PLANTILLAS[p.plantilla];
     return '(' + (pl ? pl.n : SIMT[p.plantilla] || 'dibujado') + ', ' + pfNum(p.kwh_dia) + ' / ' + pfNum(p.kwh_fes != null ? p.kwh_fes : p.kwh_dia) + ' kWh/día' +
       (p.fv ? ', FV ' + pfNum(r.kwp != null ? r.kwp : p.gen_dia * 365 / PF_KWH_KWP) + ' kWp' : '') +
-      (p.bat_kwh > 0 ? ', batería ' + pfNum(p.bat_kwh) + ' kWh' : '') + ')';
+      (p.fv && p.bateria ? ', con batería' : '') + ')';
   }
   function abrirPerfil(so) {
     var p = so && so.sim_perfil ? JSON.parse(JSON.stringify(so.sim_perfil)) : pfDefecto();
     if (p.tipo === 'generador') { p.kwh_dia = p.aux_dia || 2; p.plantilla = ''; }   // (perfiles de antes de los prosumidores)
-    if (!p.fv) p.gen_dia = 0;
+    if (p.plantilla === 'bateria') { p.plantilla = ''; p.bateria = true; }   // (instalacion FV con bateria de antes)
+    if (!p.fv) { p.gen_dia = 0; p.bateria = false; }
     if (p.kwh_fes == null) p.kwh_fes = p.kwh_dia;                                   // (perfiles de antes: el mismo)
-    if (p.bat_kwh == null) { p.bat_kwh = 0; p.bat_kw = null; }             // (perfiles de antes: sin bateria)
-    if (p.bat_ef == null) p.bat_ef = 90;
-    if (p.bat_soc == null) p.bat_soc = 50;
-    if (p.bat_modo !== 'manual') p.bat_modo = 'auto';
-    if (!p.bat_per || p.bat_per.length !== 6) p.bat_per = pfPerDefecto();
+    if (!p.lab || !p.fes || !p.mes) { var tv = pfPlantilla('vivienda'); p.lab = p.lab || tv.lab; p.fes = p.fes || tv.fes; p.mes = p.mes || tv.mes; }
     p.lab = pfNorm(p.lab); p.fes = pfNorm(p.fes); p.mes = pfNorm(p.mes);
-    ['resumen', 'tipo', 'aux_dia', 'modalidad', 'fv', 'var_dia', 'var_q'].forEach(function (k) { delete p[k]; });
+    ['resumen', 'tipo', 'aux_dia', 'modalidad', 'fv', 'var_dia', 'var_q', 'bat_kwh', 'bat_kw', 'bat_ef', 'bat_soc', 'bat_modo', 'bat_per'].forEach(function (k) { delete p[k]; });
     PF = { so: so, p: p, tab: 'con', mes: new Date().getMonth(), dia: 'lab' };
     q('al-pf-tit').textContent = so ? 'Perfil de ' + so.nombre : 'Nuevo socio de prueba';
     q('al-pf-sub').textContent = 'Con este perfil se generan los dos últimos años de datos, como los que da Datadis: curva de carga, ' +
@@ -16577,20 +16878,304 @@ self.onInit = function () {
   function opciones(lista, v) {
     return lista.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === v ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
   }
+  // Perfil tipo: los de consumo (PF_PLANTILLAS) o dibujado a mano
+  function selTipo(p) {
+    return '<label>Perfil tipo<select data-pf="plantilla"><option value="">Dibujado a mano</option>' +
+      opciones(Object.keys(PF_PLANTILLAS).map(function (k) { return [k, PF_PLANTILLAS[k].n]; }), p.plantilla) + '</select></label>';
+  }
+  function cambiaTipo(v) {
+    var p = PF.p;
+    p.plantilla = v;
+    if (v) { var t = pfPlantilla(v); p.lab = t.lab; p.fes = t.fes; p.mes = t.mes; p.kwh_dia = t.kwh; p.kwh_fes = t.kwh_fes; }
+    pintarPerfil();
+  }
+  // Pestañas del perfil: [[clave, nombre]] -> html; panelPf(k) abre el panel de la pestaña k
+  function tabsPf(lista) {
+    if (!lista.some(function (x) { return x[0] === PF.tab; })) PF.tab = lista[0][0];
+    return '<div class="al-pf-tabs" role="tablist">' + lista.map(function (x) {
+      return '<button type="button" role="tab" class="al-pf-tab' + (PF.tab === x[0] ? ' on' : '') + '" data-tab="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  }
+  function panelPf(k) { return '<div class="al-pf-panel' + (PF.tab === k ? '' : ' off') + '" data-panel="' + k + '">'; }
+  function enganchaTabs() {
+    [].forEach.call(q('al-pf').querySelectorAll('.al-pf-tab'), function (b) {
+      b.addEventListener('click', function () {
+        PF.tab = b.dataset.tab;
+        [].forEach.call(q('al-pf').querySelectorAll('.al-pf-tab'), function (x) { x.classList.toggle('on', x === b); });
+        [].forEach.call(q('al-pf').querySelectorAll('.al-pf-panel'), function (x) { x.classList.toggle('off', x.dataset.panel !== PF.tab); });
+        if (PF.tab === 'coef') pintarCoef();
+      });
+    });
+    if (PF.tab === 'coef') pintarCoef();
+  }
+  // Pestaña Coeficientes de reparto: como generador, el socio reparte su energia entre los socios
+  // con sus propios coeficientes (con los datos que tiene ahora: /reparto?generador=)
+  // Datos del reparto del socio como generador (una vez por perfil abierto)
+  function cargarCoef(ok, mal) {
+    if (PF.coef) { ok(); return; }
+    api('GET', '/reparto?generador=' + encodeURIComponent(PF.so.id)).then(function (d) {
+      if (!PF) return;
+      PF.coef = { d: d, modo: d.modo, man: d.socios.map(function (s) { return s.manual; }) };
+      ok();
+    }).catch(mal);
+  }
+  // Coeficiente del socio j en la hora i con el reparto elegido en la pestaña (o con el reparto m)
+  function betaCoef(j, i, tot) { return betaM(PF.coef.modo, j, i, tot); }
+  function betaM(m, j, i, tot) {
+    var C = PF.coef, s = C.d.socios[j];
+    if (m === 'manual') return C.man[j] || 0;
+    if (m === 'optimo') return s.optimo;
+    if (tot > 0) return (s.consumo[i] || 0) / tot;
+    var T = 0; C.d.socios.forEach(function (x) { T += x.consumo_total || 0; });
+    return T ? (s.consumo_total || 0) / T : 1 / C.d.socios.length;
+  }
+  // Suma de los consumos de sus socios por su beta en cada hora del dia tipo (con el reparto cargado)
+  function pfDemandaBeta(m, no) {
+    var d = PF.coef.d, t0 = Date.parse(d.inicio), s = [], n = [], i, j, h;
+    for (h = 0; h < 24; h++) { s.push(0); n.push(0); }
+    for (i = 0; i < d.n; i++) {
+      var dt = new Date(t0 + i * 3600000), fes = dt.getDay() === 0 || dt.getDay() === 6;
+      if (dt.getMonth() !== m || fes !== no) continue;
+      h = dt.getHours(); n[h]++;
+      var tot = 0; for (j = 0; j < d.socios.length; j++) tot += d.socios[j].consumo[i] || 0;
+      for (j = 0; j < d.socios.length; j++) s[h] += betaCoef(j, i, tot) * (d.socios[j].consumo[i] || 0);
+    }
+    return s.map(function (x, k) { return n[k] ? x / n[k] : 0; });
+  }
+  // Grafico del dia tipo del reparto (mes y dia de los selectores) en cont, con su resumen
+  function graficoReparto(cont) {
+    if (!cont || !PF.coef) return;
+    var no = PF.dia === 'fes';
+    var x = pfGrafReparto(cont.querySelector('.al-pf-rgraf'), PF.coef.d, betaCoef, PF.mes, no, false);
+    var rec = x.rec.reduce(function (a, b) { return a + b; }, 0), aut = 0;
+    var dia = PF_MESES_L[PF.mes] + ', ' + (no ? 'fin de semana' : 'laborable');
+    cont.querySelector('.al-pf-rtxt').innerHTML = 'Día medio de ' + dia + ': ' +
+      'genera <b>' + pfKwh(x.g) + '</b>' +
+      ', que se reparte entre los socios con su β (' + { manual: 'fijos manuales', optimo: 'fijos óptimos', dinamico: 'dinámicos' }[PF.coef.modo] +
+      '); los socios consumen ' + pfKwh(x.cons) + ' que no cubren los demás generadores. Datos de los últimos 12 meses (sus datos de ahora).';
+  }
+  function selRep() {
+    return '<div class="al-pf-sel"><label>Mes del día tipo<select data-rsel="mes">' + opciones(PF_MESES_L.map(function (x, i) { return [String(i), x]; }), String(PF.mes)) +
+      '</select></label><label>Día<select data-rsel="dia">' + opciones([['lab', 'Laborable'], ['fes', 'Fin de semana']], PF.dia) + '</select></label></div>' +
+      '<div class="al-pf-rgraf"></div><small class="al-pf-rtxt"></small>';
+  }
+  function enganchaRep(cont) {
+    [].forEach.call(cont.querySelectorAll('[data-rsel]'), function (el) {
+      el.addEventListener('change', function () {
+        if (el.dataset.rsel === 'mes') PF.mes = +el.value; else PF.dia = el.value;
+        [].forEach.call(q('al-pf').querySelectorAll('[data-rsel="' + el.dataset.rsel + '"]'), function (o) { o.value = el.value; });
+        [].forEach.call(q('al-pf').querySelectorAll('.al-pf-rep'), graficoReparto);
+      });
+    });
+  }
+  function pintarCoef() {
+    var cont = q('al-pf').querySelector('[data-panel="coef"]');
+    if (!cont) return;
+    if (!PF.so) {
+      cont.innerHTML = '<p><small>Crea antes el socio y genera sus datos: después, en esta pestaña, repartes su generación entre los socios.</small></p>';
+      return;
+    }
+    if (PF.coef) { dibujaCoef(cont); return; }
+    cont.innerHTML = '<p><small>Cargando su generación y los consumos de los socios de los últimos 12 meses…</small></p>';
+    cargarCoef(function () { dibujaCoef(cont); }, function (e) {
+      cont.innerHTML = '<p><small>' + (/no tiene generación/.test(e.message)
+        ? 'Este socio no tiene generación en los últimos 12 meses: no reparte energía. Pon su generación (pestaña <b>Generación</b>), ' +
+          'genera sus datos y vuelve aquí.' : 'No se pudo cargar el reparto: ' + esc(e.message)) + '</small></p>';
+    });
+  }
+  // Cifras de un reparto en los 12 meses (como la antigua pestaña Coeficientes de reparto): lo
+  // que autoconsumen los socios de este generador, sus excedentes y la cobertura de lo que les queda
+  function cifrasCoef(m) {
+    var C = PF.coef, d = C.d, a = 0, ns = d.socios.length;
+    if (!C.tot) {     // (consumo de cada hora, total de la generacion y del consumo: una vez)
+      C.tot = []; C.genT = 0; C.consT = 0;
+      for (var i0 = 0; i0 < d.n; i0++) { var x = 0; for (var j0 = 0; j0 < ns; j0++) x += d.socios[j0].consumo[i0] || 0; C.tot.push(x); C.genT += d.generacion[i0] || 0; C.consT += x; }
+    }
+    if (m !== 'manual' && C.fijas && C.fijas[m]) return C.fijas[m];
+    for (var i = 0; i < d.n; i++) {
+      var g = d.generacion[i];
+      if (!g) continue;
+      for (var j = 0; j < ns; j++) a += Math.min(betaM(m, j, i, C.tot[i]) * g, d.socios[j].consumo[i] || 0);
+    }
+    var r = { auto: a, exc: C.genT - a, pct: C.genT ? a / C.genT : 0, cob: C.consT ? a / C.consT : 0 };
+    if (m !== 'manual') (C.fijas = C.fijas || {})[m] = r;
+    return r;
+  }
+  // Coeficiente de cada socio (barras; el otro fijo, una raya) o, con los dinamicos, el reparto
+  // medio de la generacion por hora del dia (barras apiladas)
+  function grafCoef(cont) {
+    var C = PF.coef, d = C.d, ns = d.socios.length, W = 640, H = 220, L = 46, R = 10, T = 10, B = 46, cw = W - L - R, ch = H - T - B, s = '', k, j;
+    var col = function (x) { return PF_RCOL[x % PF_RCOL.length]; };
+    if (C.modo === 'dinamico') {
+      var gh = [], eh = d.socios.map(function () { var a = []; for (var z = 0; z < 24; z++) a.push(0); return a; }), t0 = Date.parse(d.inicio);
+      for (k = 0; k < 24; k++) gh.push(0);
+      for (var i = 0; i < d.n; i++) {
+        var g = d.generacion[i]; if (!g) continue;
+        var h = new Date(t0 + i * 3600000).getHours(); gh[h] += g;
+        for (j = 0; j < ns; j++) eh[j][h] += betaM('dinamico', j, i, C.tot[i]) * g;
+      }
+      var st = cw / 24, y = function (v) { return T + ch * (1 - v / 100); };
+      [0, 50, 100].forEach(function (v) { s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#eee"/><text x="' + (L - 5) +
+        '" y="' + (y(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + v + ' %</text>'; });
+      for (k = 0; k < 24; k++) {
+        var acc = 0;
+        for (j = 0; j < ns; j++) {
+          var v = gh[k] > 0 ? 100 * eh[j][k] / gh[k] : 0;
+          if (v > 0) s += '<rect x="' + (L + st * k + 1).toFixed(1) + '" y="' + y(acc + v).toFixed(1) + '" width="' + (st - 2).toFixed(1) + '" height="' + (y(acc) - y(acc + v)).toFixed(1) +
+            '" fill="' + col(j) + '"><title>' + esc(d.socios[j].nombre) + ', ' + k + ' h: ' + pfNum(v, 1) + ' %</title></rect>';
+          acc += v;
+        }
+        if (k % 3 === 0) s += '<text x="' + (L + st * k + st / 2) + '" y="' + (T + ch + 14) + '" fill="#999" font-size="9.5" text-anchor="middle">' + k + 'h</text>';
+      }
+    } else {
+      var val = function (m, x) { return 100 * (m === 'manual' ? C.man[x] || 0 : d.socios[x].optimo); }, otro = C.modo === 'manual' ? 'optimo' : 'manual';
+      var mx = 0; for (j = 0; j < ns; j++) mx = Math.max(mx, val('manual', j), val('optimo', j));
+      mx = pfEscala(Math.max(mx, 1));
+      var sb = cw / ns, yb = function (v) { return T + ch * (1 - v / mx); };
+      [0, mx / 2, mx].forEach(function (v) { s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yb(v) + '" y2="' + yb(v) + '" stroke="#eee"/><text x="' + (L - 5) +
+        '" y="' + (yb(v) + 3) + '" fill="#999" font-size="9.5" text-anchor="end">' + pfNum(v, 1) + ' %</text>'; });
+      for (j = 0; j < ns; j++) {
+        var x0 = L + sb * j, bw = Math.min(40, sb * 0.6), xc = x0 + sb / 2, v1 = val(C.modo, j), v2 = val(otro, j), nm = d.socios[j].nombre;
+        s += '<rect x="' + (xc - bw / 2).toFixed(1) + '" y="' + yb(v1).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (yb(0) - yb(v1)).toFixed(1) + '" fill="' + col(j) +
+          '"><title>' + esc(nm) + ': ' + pfNum(v1, 4) + ' % (' + (C.modo === 'manual' ? 'manual' : 'óptimo') + ') · ' + pfNum(v2, 4) + ' % (' + (otro === 'manual' ? 'manual' : 'óptimo') + ')</title></rect>' +
+          '<rect x="' + (xc - bw / 2 - 3).toFixed(1) + '" y="' + (yb(v2) - 1.5).toFixed(1) + '" width="' + (bw + 6).toFixed(1) + '" height="3" fill="#333"/>' +
+          '<text x="' + xc.toFixed(1) + '" y="' + (T + ch + 14) + '" fill="#555" font-size="9.5" text-anchor="middle">' + esc(nm.length > 14 ? nm.slice(0, 13) + '…' : nm) + '</text>';
+      }
+    }
+    cont.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" style="width:100%;height:auto;display:block">' + s + '</svg>' +
+      (C.modo === 'dinamico' ? '' : '<small>Barra: ' + (C.modo === 'manual' ? 'manual' : 'óptimo') + '; raya: ' + (C.modo === 'manual' ? 'óptimo' : 'manual') + '.</small>');
+  }
+  function dibujaCoef(cont) {
+    var C = PF.coef, d = C.d, man = C.modo === 'manual', fijo = C.modo !== 'dinamico';
+    cont.innerHTML = '<small>Lo que genera ' + esc(d.generador.nombre) + ' (' + pfNum(d.generacion.reduce(function (a, b) { return a + b; }, 0), 0) +
+        ' kWh en los últimos 12 meses) se reparte entre los socios con sus propios coeficientes, que suman el 100 % (un fichero para la ' +
+        'distribuidora por instalación). Consumo de cada socio: lo que no le cubren los demás generadores.</small>' +
+      '<div class="al-pf-modos">' + PF_MODOS.map(function (m) {
+        return '<label><input type="radio" name="pf-modo" value="' + m[0] + '"' + (C.modo === m[0] ? ' checked' : '') + '> ' + m[1] +
+          (d.modo === m[0] ? ' <span class="al-chip ok">en vigor</span>' : '') + '</label>'; }).join('') + '</div>' +
+      '<div class="al-pf-kpis"></div>' +
+      '<div class="al-pf-rcuerpo' + (fijo ? '' : ' sin-lista') + '">' +
+      (fijo ? '<section class="al-pf-rcaja"><h5 class="al-pf-rtl">' + (man ? 'Coeficientes fijos manuales' : 'Coeficientes fijos óptimos') + '</h5>' +
+        '<div class="al-pf-rlista">' + d.socios.map(function (s, j) {
+          return '<div class="al-pf-rfila"><i style="background:' + PF_RCOL[j % PF_RCOL.length] + '"></i><span class="n" title="' + esc(s.nombre) + '">' + esc(s.nombre) +
+            '</span><span class="p" data-p="' + j + '"></span><input type="range" min="0" max="100" step="0.0001" data-j="' + j + '"></div>';
+        }).join('') + '</div><div class="al-pf-rsuma"></div>' +
+        '<div class="al-ctrl"><button type="button" class="al-b sec peq" data-ca="iguales">A partes iguales</button>' +
+          '<button type="button" class="al-b sec peq" data-ca="consumo">Proporcional al consumo</button>' +
+          '<button type="button" class="al-b sec peq" data-ca="optimo">Copiar los óptimos</button></div>' +
+        '<small>Mueve un socio y los demás se reajustan en proporción para que la suma siga siendo el 100 %' +
+          (man ? '' : ' (pasa a <b>fijos manuales</b>, partiendo de los óptimos)') + '.</small>' +
+        '</section>' : '') +
+      '<section class="al-pf-rcaja"><h5>' + (fijo ? 'Coeficiente de cada socio' : 'Reparto medio de su generación por hora del día') + '</h5><div class="al-pf-g1"></div>' +
+        '<h5 style="margin-top:10px">Energía repartida en el día tipo</h5><div class="al-pf-rep" data-donde="coef">' + selRep() + '</div></section></div>' +
+      '<div class="al-ctrl"><button type="button" class="al-b peq al-pf-cguardar">Guardar su reparto</button>' +
+        '<label style="display:inline-flex;align-items:center;gap:4px;font-size:12px">Año <input type="number" class="al-pf-canio" min="2000" max="2100" ' +
+        'style="width:70px" value="' + (new Date().getFullYear() + 1) + '"></label>' +
+        '<button type="button" class="al-b sec peq al-pf-ctxt" title="Fichero del reparto en vigor de esta instalación: CUPS;coeficiente (fijos, anexo I del ' +
+        'RD 244/2019) o CUPS;hora;coeficiente (dinámicos, Orden TED/1247/2021), 6 decimales con coma; nombre: su CAU y el año">Descargar TXT para la distribuidora</button></div>' +
+      '<div class="al-pf-cmsg"></div>' +
+      '<small>Los coeficientes se calculan con sus datos de ahora: si cambias su perfil, genera antes sus datos. Gráficos por días, ' +
+      'semanas y meses y ficheros, en su pestaña <b>Coeficientes de reparto</b>.</small>';
+    var rep = cont.querySelector('.al-pf-rep');
+    var kpis = function () {
+      cont.querySelector('.al-pf-kpis').innerHTML = PF_MODOS.map(function (m) {
+        var x = cifrasCoef(m[0]);
+        return '<div class="al-pf-kpi' + (m[0] === C.modo ? ' on' : '') + '" data-m="' + m[0] + '"><div class="t">' + m[1] + '</div><div class="v">' + pfPct(x.pct, 1) +
+          '</div><small>de su generación autoconsumida: ' + pfNum(x.auto, 0) + ' kWh · excedentes ' + pfNum(x.exc, 0) + ' kWh · cubre el ' + pfPct(x.cob, 1) + '</small></div>';
+      }).join('');
+      [].forEach.call(cont.querySelectorAll('.al-pf-kpi'), function (k) { k.onclick = function () { if (k.dataset.m !== C.modo) { C.modo = k.dataset.m; dibujaCoef(cont); } }; });
+    };
+    var sincroniza = function (activo) {
+      var s = 0, v = man ? C.man : d.socios.map(function (x) { return x.optimo; });
+      v.forEach(function (x, j) {
+        s += x;
+        var inp = cont.querySelector('.al-pf-rlista input[data-j="' + j + '"]');
+        if (inp && inp !== activo) inp.value = (100 * x).toFixed(4);
+        var et = cont.querySelector('.al-pf-rlista [data-p="' + j + '"]');
+        if (et) { et.textContent = pfNum(100 * x, 4) + ' %'; et.title = 'Coeficiente ' + x.toFixed(6).replace('.', ','); }
+      });
+      var e = cont.querySelector('.al-pf-rsuma');
+      if (e) { e.textContent = 'Suma: ' + pfNum(100 * s, 4) + ' % (' + s.toFixed(6).replace('.', ',') + ')'; e.className = 'al-pf-rsuma ' + (Math.abs(s - 1) < 1e-6 ? 'ok' : 'no'); }
+    };
+    var pend = 0, repinta = function () {     // (una vez por fotograma mientras se arrastra)
+      if (pend) return;
+      pend = requestAnimationFrame(function () { pend = 0; kpis(); grafCoef(cont.querySelector('.al-pf-g1')); graficoReparto(rep); });
+    };
+    kpis(); sincroniza(); grafCoef(cont.querySelector('.al-pf-g1'));
+    enganchaRep(rep); graficoReparto(rep);
+    [].forEach.call(cont.querySelectorAll('[name="pf-modo"]'), function (el) {
+      el.addEventListener('change', function () { C.modo = el.value; dibujaCoef(cont); });
+    });
+    var aManual = function () {
+      if (C.modo === 'manual') return;
+      C.man = d.socios.map(function (x) { return x.optimo; });
+      C.modo = 'manual'; man = true;
+      [].forEach.call(cont.querySelectorAll('[name="pf-modo"]'), function (el) { el.checked = el.value === 'manual'; });
+      cont.querySelector('.al-pf-rtl').textContent = 'Coeficientes fijos manuales';
+    };
+    // al mover un socio, los demas se reajustan en proporcion para que la suma siga siendo 1
+    [].forEach.call(cont.querySelectorAll('.al-pf-rlista input'), function (inp) {
+      inp.addEventListener('input', function () {
+        aManual();
+        var j = +inp.dataset.j, v = Math.max(0, Math.min(1, inp.value / 100)), otros = 0, n = C.man.length;
+        C.man.forEach(function (x, k) { if (k !== j) otros += x; });
+        C.man = C.man.map(function (x, k) { return k === j ? v : (otros > 0 ? x * (1 - v) / otros : (1 - v) / (n - 1)); });
+        sincroniza(inp); repinta();
+      });
+    });
+    [].forEach.call(cont.querySelectorAll('[data-ca]'), function (b) {
+      b.addEventListener('click', function () {
+        var a = b.dataset.ca, n = d.socios.length, tot = 0;
+        aManual();
+        d.socios.forEach(function (s) { tot += s.consumo_total || 0; });
+        C.man = d.socios.map(function (s) { return a === 'iguales' ? 1 / n : a === 'optimo' ? s.optimo : (tot ? (s.consumo_total || 0) / tot : 1 / n); });
+        sincroniza(); repinta();
+      });
+    });
+    // Fichero para la distribuidora: el del reparto en vigor (el guardado) de esta instalacion
+    cont.querySelector('.al-pf-ctxt').onclick = function () {
+      var b = this, m = cont.querySelector('.al-pf-cmsg'), sin = C.modo !== d.modo;
+      b.disabled = true; m.className = 'al-pf-cmsg'; m.textContent = 'Preparando el fichero…';
+      fetch(API + '/reparto/coeficientes.txt?generador=' + encodeURIComponent(d.generador.id) + '&anio=' +
+            encodeURIComponent(cont.querySelector('.al-pf-canio').value), { headers: { 'X-Authorization': 'Bearer ' + (localStorage.getItem('jwt_token') || '') } })
+        .then(function (r) {
+          if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(typeof j.detail === 'string' ? j.detail : 'HTTP ' + r.status); });
+          var n = (r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+          return r.blob().then(function (blob) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = n ? n[1] : 'coeficientes.txt';
+            document.body.appendChild(a); a.click();
+            setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+            m.className = 'al-pf-cmsg ok';
+            m.textContent = 'Descargado ' + a.download + ' (' + PF_MODOS.filter(function (x) { return x[0] === d.modo; })[0][1].toLowerCase() +
+              ', el reparto en vigor): entrégalo a la distribuidora.' + (sin ? ' Ojo: los cambios sin guardar no están en el fichero.' : '');
+          });
+        }).catch(function (e) { m.className = 'al-pf-cmsg err'; m.textContent = 'No se pudo descargar: ' + e.message; })
+        .then(function () { b.disabled = false; });
+    };
+    cont.querySelector('.al-pf-cguardar').onclick = function () {
+      var b = this, m = cont.querySelector('.al-pf-cmsg'), s = 0;
+      C.man.forEach(function (x) { s += x; });
+      if (C.modo === 'manual' && !(s > 0)) { m.className = 'al-pf-cmsg err'; m.textContent = 'Pon algún coeficiente mayor que 0.'; return; }
+      b.disabled = true; m.className = 'al-pf-cmsg'; m.textContent = 'Guardando…';
+      var co = {}; d.socios.forEach(function (x, j) { co[x.id] = C.man[j]; });
+      var paso = C.modo === 'manual' ? api('PUT', '/reparto/manual', { generador: d.generador.id, coeficientes: co }).then(function (r) {
+        C.man = d.socios.map(function (x) { return r.manual[x.id] || 0; }); }) : Promise.resolve();
+      paso.then(function () { return api('PUT', '/reparto/modo', { generador: d.generador.id, modo: C.modo }); }).then(function (r) {
+        d.modo = r.modo;
+        apunta(d.generador.nombre + ': reparto de su generación guardado (' + PF_MODOS.filter(function (x) { return x[0] === r.modo; })[0][1].toLowerCase() + ').', 'ok');
+        dibujaCoef(cont);
+        var m2 = cont.querySelector('.al-pf-cmsg'); m2.className = 'al-pf-cmsg ok'; m2.textContent = 'Reparto guardado y en vigor.';
+      }).catch(function (e) { m.className = 'al-pf-cmsg err'; m.textContent = e.message; b.disabled = false; });
+    };
+  }
   function pintarPerfil() {
     var p = PF.p;
     var h = '';
     if (!PF.so) h += '<div class="al-campos">' + campo('nombre', '<span class="req">Nombre del socio de prueba</span>', PF.nombre || '',
                      ' placeholder="p. ej. Prueba industrial 6.1TD" maxlength="80"') + '</div>';
-    h += '<div class="al-pf-tabs" role="tablist">' + [['con', 'Consumo'], ['gen', 'Generación'], ['bat', 'Batería']].map(function (x) {
-      return '<button type="button" role="tab" class="al-pf-tab' + (PF.tab === x[0] ? ' on' : '') + '" data-tab="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
-    var panel = function (k) { return '<div class="al-pf-panel' + (PF.tab === k ? '' : ' off') + '" data-panel="' + k + '">'; };
-    var selDia = '<div class="al-pf-sel"><label>Mes del día tipo<select data-sel="mes">' +
-        opciones(PF_MESES_L.map(function (x, i) { return [String(i), x]; }), String(PF.mes)) + '</select></label>' +
-      '<label>Día<select data-sel="dia">' + opciones([['lab', 'Laborable'], ['fes', 'No laborable']], PF.dia) + '</select></label></div>';
-    h += panel('con') + '<div class="al-campos">' +
-      '<label>Perfil tipo<select data-pf="plantilla"><option value="">Dibujado a mano</option>' +
-          opciones(Object.keys(PF_PLANTILLAS).map(function (k) { return [k, PF_PLANTILLAS[k].n]; }), p.plantilla) + '</select></label>' +
+    h += tabsPf([['con', 'Consumo'], ['gen', 'Generación'], ['coef', 'Coeficientes de reparto']]);
+    var panel = panelPf;
+    h += panel('con') + '<div class="al-campos">' + selTipo(p) +
         campo('kwh_dia', '<span class="req">Consumo medio diario laborable (kWh/día)</span>', p.kwh_dia, ' type="number" min="0.01" step="0.1"') +
         campo('kwh_fes', '<span class="req">Consumo medio diario no laborable (kWh/día)</span>', p.kwh_fes, ' type="number" min="0" step="0.1"') + '</div>' +
         '<div class="al-pf-graf"><div><small>Día laborable (lunes a viernes) · peso de cada hora (suman 100 %)</small><div class="al-barras" data-ed="lab"></div></div>' +
@@ -16600,45 +17185,21 @@ self.onInit = function () {
       'parte del consumo del día; cada mes, la suya del consumo del año (con 1/12, el 8,3 %, todos los meses consumen igual).</small></div>';
     h += panel('gen') + '<div class="al-campos">' +
       campo('gen_dia', 'Generación media diaria (kWh/día)', p.gen_dia, ' type="number" min="0" step="0.1"') +
-      (p.gen_dia > 0 ? campo('inversor', 'Potencia del inversor (kW)', p.inversor, ' type="number" min="0" step="0.1" placeholder="automática (85 % de la pico)"') : '') +
-      '</div><small>0 = sin generación. Lo que no consume en cada cuarto de hora se vierte a la red: para la comunidad cuenta la generación, no la modalidad de autoconsumo.</small>' +
-      (true ? selDia + '<div class="al-pf-ley"><i style="background:' + PF_COL.gen + '"></i>generación FV <i style="background:' + PF_COL.dem +
-        ';height:2px;vertical-align:3px"></i>consumo del mismo día</div><div class="al-pf-fig" data-fig="gen"></div>' +
-        '<small>Generación de un día medio de cada mes (pulsa un mes para ver su día tipo)</small><div class="al-pf-fig" data-fig="meses"></div>' +
-        '<small class="al-pf-fvtxt"></small>' : '') + '</div>';
-    h += panel('bat') + (true ? '<div class="al-campos">' +
-        campo('bat_kwh', 'Capacidad útil (kWh)', p.bat_kwh, ' type="number" min="0" step="0.5"') +
-        (p.bat_kwh > 0 ? campo('bat_kw', 'Potencia de carga y descarga (kW)', p.bat_kw, ' type="number" min="0" step="0.1" placeholder="automática: ½ de la capacidad"') +
-          campo('bat_soc', 'Estado de carga inicial (% de la capacidad)', p.bat_soc, ' type="number" min="0" max="100" step="5"') +
-          campo('bat_ef', 'Rendimiento (%)', p.bat_ef, ' type="number" min="50" max="100" step="1"') +
-          '<label>Despacho<select data-pf="bat_modo">' + opciones([['auto', 'Automático'], ['manual', 'Manual por periodos']], p.bat_modo) + '</select></label>' : '') + '</div>' +
-        '<small>0 = sin batería. <b>Automático</b>: se carga solo con lo que sobra de la FV y se descarga cuando la FV no llega, para ' +
-        'consumir lo menos posible de la red. <b>Manual</b>: eliges en cada periodo del peaje si se carga con la FV, si se carga de la red ' +
-        'y si se descarga a la red (al % de su potencia); en los periodos en que no se carga de la red, cubre el consumo. ' +
-        'Con ella se generan también sus datos.' + (p.gen_dia > 0 ? '' : ' <b>Este socio no tiene FV</b>: en automático la batería no se ' +
-        'carga; con el despacho manual se puede cargar de la red en los periodos baratos y descargar en los caros.') + '</small>' +
-        (p.bat_kwh > 0 && p.bat_modo === 'manual' ? '<div class="al-pf-desp"></div>' : '') +
-        selDia + '<div class="al-pf-kpi"></div>' +
-        '<div class="al-pf-ley"><i style="background:' + PF_COL.gen + '"></i>FV <i style="background:' + PF_COL.des + '"></i>descarga de la batería <i style="background:' +
-          PF_COL.imp + '"></i>de la red · entran (arriba)<br><i style="background:' + PF_COL.dem + '"></i>consumo <i style="background:' + PF_COL.car +
-          '"></i>carga de la batería <i style="background:' + PF_COL.exp + '"></i>vertido · salen (abajo)' +
-          (p.bat_kwh > 0 ? '<br><i class="soc"></i>estado de carga (% de la capacidad, eje derecho) · franja: periodo del peaje' : '') + '</div>' +
-        '<div class="al-pf-fig" data-fig="bat"></div><small class="al-pf-battxt"></small>'
-      : '<p><small>La batería se carga con la generación fotovoltaica: pon antes la generación media diaria en la pestaña <b>Generación</b>.</small></p>') + '</div>';
+      (p.gen_dia > 0 ? campo('inversor', 'Potencia del inversor (kW)', p.inversor, ' type="number" min="0" step="0.1" placeholder="automática (85 % de la pico)"') +
+        '<label class="al-pf-chk"><span><input type="checkbox" data-pf="bateria"' + (p.bateria ? ' checked' : '') + '> Con batería</span></label>' : '') +
+      '</div><small>' + (p.gen_dia > 0 ? '<b>Con batería</b> (de capacidad ilimitada): cada día guarda toda su FV y la entrega, con un rendimiento del 90 %, ' +
+        'en las horas sin sol, en proporción al precio de cada hora y al consumo de sus socios por su β: toda su generación pasa a la tarde y la noche. ' : '') + '0 = sin generación. Lo que no consume en cada cuarto de hora se vierte a la red: para la comunidad cuenta la generación, no la modalidad de autoconsumo.</small>' +
+      '<div class="al-pf-sel"><label>Mes del día tipo<select data-sel="mes">' + opciones(PF_MESES_L.map(function (x, i) { return [String(i), x]; }), String(PF.mes)) +
+        '</select></label><label>Día<select data-sel="dia">' + opciones([['lab', 'Laborable'], ['fes', 'No laborable']], PF.dia) + '</select></label></div>' +
+      '<div class="al-pf-ley"><i style="background:' + PF_COL.gen + '"></i>generación' + (p.bateria ? ' (con la batería)' : ' FV') +
+        (p.bateria ? ' <i style="height:0;border-top:2px dashed #7a4b00;border-radius:0;vertical-align:3px"></i>FV sin batería' : '') +
+        ' <i style="background:' + PF_COL.dem + ';height:2px;vertical-align:3px"></i>consumo del mismo día</div><div class="al-pf-fig" data-fig="gen"></div>' +
+      '<small>Generación de un día medio de cada mes (pulsa un mes para ver su día tipo)</small><div class="al-pf-fig" data-fig="meses"></div>' +
+      '<small class="al-pf-fvtxt"></small></div>' + panelPf('coef') + '</div>';
     q('al-pf').innerHTML = h;
-    [].forEach.call(q('al-pf').querySelectorAll('.al-pf-tab'), function (b) {
-      b.addEventListener('click', function () {
-        PF.tab = b.dataset.tab;
-        [].forEach.call(q('al-pf').querySelectorAll('.al-pf-tab'), function (x) { x.classList.toggle('on', x === b); });
-        [].forEach.call(q('al-pf').querySelectorAll('.al-pf-panel'), function (x) { x.classList.toggle('off', x.dataset.panel !== PF.tab); });
-      });
-    });
+    enganchaTabs();
     [].forEach.call(q('al-pf').querySelectorAll('[data-sel]'), function (el) {
-      el.addEventListener('change', function () {
-        if (el.dataset.sel === 'mes') PF.mes = +el.value; else PF.dia = el.value;
-        [].forEach.call(q('al-pf').querySelectorAll('[data-sel="' + el.dataset.sel + '"]'), function (x) { x.value = el.value; });
-        graficos();
-      });
+      el.addEventListener('change', function () { if (el.dataset.sel === 'mes') PF.mes = +el.value; else PF.dia = el.value; graficos(); });
     });
     var hora = function (i) { return i + 'h'; }, nomH = function (i) { return i + '–' + (i + 1) + ' h'; };
     // al soltar se vuelven a pintar (los ejes, a la medida de los pesos nuevos)
@@ -16653,15 +17214,11 @@ self.onInit = function () {
       el.addEventListener('change', function () {
         leerCampos();
         var k = el.dataset.pf;
-        if (k === 'plantilla' && el.value) { var t = pfPlantilla(el.value); p.lab = t.lab; p.fes = t.fes; p.mes = t.mes; p.kwh_dia = t.kwh; p.kwh_fes = t.kwh_fes; }
-        if (k === 'plantilla' || k === 'peaje' || (k === 'gen_dia' && (p.gen_dia > 0) !== !!q('al-pf').querySelector('[data-pf="inversor"]')) ||
-            (k === 'bat_kwh' && (p.bat_kwh > 0) !== !!q('al-pf').querySelector('[data-pf="bat_kw"]')) || k === 'bat_modo') {
-          if (k === 'peaje') p.potencias = null;
-          pintarPerfil();
-        } else resumen();
+        if (k === 'plantilla') { cambiaTipo(el.value); return; }
+        if ((k === 'gen_dia' && (p.gen_dia > 0) !== !!q('al-pf').querySelector('[data-pf="inversor"]')) || k === 'bateria') pintarPerfil();
+        else resumen();
       });
     });
-    [].forEach.call(q('al-pf').querySelectorAll('[data-pot]'), function (el) { el.addEventListener('change', function () { leerCampos(); resumen(); }); });
     resumen();
   }
   // Campos del formulario -> PF.p (los numeros con coma o punto)
@@ -16670,106 +17227,42 @@ self.onInit = function () {
     [].forEach.call(q('al-pf').querySelectorAll('[data-pf]'), function (el) {
       var k = el.dataset.pf;
       if (k === 'nombre') PF.nombre = el.value;
-      else if (k === 'plantilla' || k === 'peaje' || k === 'bat_modo') p[k] = el.value;
+      else if (k === 'plantilla' || k === 'peaje') p[k] = el.value;
+      else if (k === 'bateria') p[k] = el.checked;
       else p[k] = n(el.value);
     });
-    var pots = q('al-pf').querySelectorAll('[data-pot]');
-    if (pots.length) p.potencias = [].map.call(pots, function (el) { return n(el.value); });
   }
   function resumen() {
     var p = PF.p, t = [];
     if (p.kwh_dia) t.push('Consumo ≈ <b>' + pfNum(p.kwh_dia * (365 - PF_NO_LAB) + (p.kwh_fes || 0) * PF_NO_LAB, 0) + ' kWh al año</b>');
-    if (p.gen_dia > 0) t.push('generación ≈ <b>' + pfNum(p.gen_dia * 365, 0) + ' kWh al año</b> (FV de unos ' + pfNum(p.gen_dia * 365 / PF_KWH_KWP) + ' kWp)');
-    if (p.bat_kwh > 0) t.push('batería de ' + pfNum(p.bat_kwh) + ' kWh');
+    if (p.gen_dia > 0) t.push('generación ≈ <b>' + pfNum(p.gen_dia * 365, 0) + ' kWh al año</b> (FV de unos ' + pfNum(p.gen_dia * 365 / PF_KWH_KWP) + ' kWp)' +
+      (p.bateria ? ', con batería: ≈ ' + pfNum(p.gen_dia * 365 * 0.9, 0) + ' kWh al año en las horas sin sol' : ''));
     q('al-pf-res').innerHTML = t.join(' · ') + '. Dos años de datos hasta ayer.';
     graficos();
   }
-  // Graficos de las pestañas Generacion y Bateria: el dia tipo del mes y del tipo de dia elegidos
-  // y, en la de la bateria, lo que cambia en un año hecho con los dias tipo
+  // Pestaña Generacion: el dia tipo del mes y del tipo de dia elegidos (sin FV, el consumo del dia)
   function graficos() {
     var p = PF.p, fig = function (k) { return q('al-pf').querySelector('[data-fig="' + k + '"]'); };
     if (!fig('gen')) return;
-    var fv = pfFv(p), m = PF.mes, no = PF.dia === 'fes', g = fv.meses[m], cd = pfConsumoDia(p, m, no);
-    pfGrafGen(fig('gen'), g, cd);
+    var fv = pfFv(p), m = PF.mes, no = PF.dia === 'fes', g0 = fv.meses[m], cd = pfConsumoDia(p, m, no);
+    // despacho: precio de cada hora x consumo de sus socios por su beta (si ya se ha cargado su reparto,
+    // pestaña Coeficientes) o, si no, su propio consumo
+    var dem = PF.coef ? pfDemandaBeta(m, no) : cd;
+    var w = dem.map(function (x, h) { return x * pfPrecioHora(h, no); });
+    var bat = p.bateria && p.gen_dia > 0 ? pfDesplaza(g0, cd, 0, w) : null, g = bat ? bat.g : g0;
+    pfGrafGen(fig('gen'), g, cd, bat ? g0 : null);
     pfGrafMeses(fig('meses'), fv, m, function (i) {
       PF.mes = i;
       [].forEach.call(q('al-pf').querySelectorAll('[data-sel="mes"]'), function (x) { x.value = String(i); });
       graficos();
     });
-    q('al-pf-fvtxt').innerHTML = !(p.gen_dia > 0) ? 'Sin generación fotovoltaica (0 kWh/día): pon la generación media diaria para ver su curva. ' +
-      PF_MESES_L[m].charAt(0).toUpperCase() + PF_MESES_L[m].slice(1) + ', ' + (no ? 'no laborable' : 'laborable') + ': consume ' + pfKwh(pfSum(cd)) + '.' :
-      'Instalación de unos <b>' + pfNum(fv.kwp) + ' kWp</b> con inversor de ' + pfNum(fv.inv) + ' kW (curva de PVGIS en Granada, ' +
-      'día medio del mes, sin nubes de un día concreto). ' + PF_MESES_L[m].charAt(0).toUpperCase() + PF_MESES_L[m].slice(1) + ', ' + (no ? 'no laborable' : 'laborable') +
-      ': genera <b>' + pfKwh(pfSum(g)) + '</b> y consume ' + pfKwh(pfSum(cd)) + '.';
-    var hay = p.bat_kwh > 0, man = hay && p.bat_modo === 'manual';
-    var b = hay ? { kwh: p.bat_kwh, kw: p.bat_kw > 0 ? p.bat_kw : p.bat_kwh / 2, ef: Math.min(100, Math.max(50, p.bat_ef || 90)) / 100,
-                    per: man ? p.bat_per : null } : null;
-    // peaje para los periodos: el elegido o, en automatico, el que le tocaria sin bateria
-    var pico = 0;
-    for (var mm = 0; mm < 12; mm++) [false, true].forEach(function (nl) {
-      var cc = pfConsumoDia(p, mm, nl); cc.forEach(function (x, h) { pico = Math.max(pico, x - fv.meses[mm][h]); });
-    });
-    var pj = p.peaje === 'auto' ? (pico * 1.05 <= 15 ? '2.0TD' : '3.0TD') : p.peaje.replace('+', '');
-    var nper = pj === '2.0TD' ? 3 : 6, pers = function (mes, nl) { var r = [], h; for (h = 0; h < 24; h++) r.push(pfPeriodo(mes, nl, h, pj)); return r; };
-    if (man) pintarDespacho(pj, nper);
-    var soc0 = hay ? b.kwh * Math.min(100, Math.max(0, p.bat_soc == null ? 50 : p.bat_soc)) / 100 : 0;
-    var pc = function (a, b2) { return b2 > 0 ? pfPct(a / b2) : '–'; };
-    var kpi = '';
-    [no ? ['fes', 'No laborable', true] : ['lab', 'Laborable', false]].forEach(function (x) {     // el dia elegido
-      var gd = fv.meses[m], cd2 = pfConsumoDia(p, m, x[2]), pr = pers(m, x[2]);
-      var bd = hay ? pfBateria(gd, cd2, b, soc0, pr) : null, f0 = pfFlujos(gd, cd2, null), f1 = pfFlujos(gd, cd2, bd);
-      pfGrafDia(fig('bat'), gd, cd2, bd, hay ? b.kwh : 0, [x[1] + ' de ' + PF_MESES_L[m] + ' · ' + pj], pr);
-      var G = pfSum(gd), C = pfSum(cd2);
-      // consumo cubierto con energia propia: la FV directa y la parte de la descarga que viene de la
-      // FV (la que se cargo de la red no cuenta)
-      var propio = function (f, bb) { return pfSum(f.dir) + (bb ? pfSum(bb.des_con) * pfSum(bb.carga_fv) / (pfSum(bb.carga) || 1) : 0); };
-      kpi += '<div>De la red en el día<b>' + pfKwh(pfSum(f1.imp)) + '</b>' + (hay ? 'sin batería ' + pfKwh(pfSum(f0.imp)) : 'consumo ' + pfKwh(C)) + '</div>' +
-        '<div>Autarquía<b>' + pc(propio(f1, bd), C) + '</b>' + (hay ? 'sin batería ' + pc(propio(f0, null), C) : 'de lo que consume') + '</div>' +
-        (hay ? '<div>Batería en el día<b>' + pfKwh(pfSum(bd.descarga)) + '</b>descargada · acaba al ' + pfPct(bd.soc[23] / b.kwh) + '</div>' : '');
-    });
-    // año aproximado: cada mes con sus dias laborables y no laborables tipo (racha de dias iguales)
-    var A = { g: 0, c: 0, imp0: 0, exp0: 0, imp: 0, exp: 0, des: 0, cr: 0 };
-    for (var i = 0; i < 12; i++) [false, true].forEach(function (nl) {
-      var dias = PF_DIAS_MES[i] * (nl ? PF_NO_LAB : 365 - PF_NO_LAB) / 365, gi = fv.meses[i], ci = pfConsumoDia(p, i, nl);
-      var f0 = pfFlujos(gi, ci, null), bi = hay ? pfBateriaRacha(gi, ci, b, pers(i, nl)) : null, f1 = pfFlujos(gi, ci, bi);
-      A.g += dias * pfSum(gi); A.c += dias * pfSum(ci);
-      A.imp0 += dias * pfSum(f0.imp); A.exp0 += dias * pfSum(f0.exp); A.imp += dias * pfSum(f1.imp); A.exp += dias * pfSum(f1.exp);
-      if (bi) { A.des += dias * pfSum(bi.descarga); A.cr += dias * pfSum(bi.carga_red); }
-    });
-    kpi += '<div>De la red al año<b>' + pfNum(A.imp, 0) + ' kWh</b>' + (hay ? 'sin batería ' + pfNum(A.imp0, 0) : 'aprox., días tipo') + '</div>' +
-      '<div>Vertido al año<b>' + pfNum(A.exp, 0) + ' kWh</b>' + (hay ? 'sin batería ' + pfNum(A.exp0, 0) : 'aprox., días tipo') + '</div>';
-    q('al-pf-kpi').innerHTML = kpi;
-    q('al-pf-battxt').innerHTML = (hay ? 'Al año (aprox., con los días tipo de cada mes): de la red ' + pfNum(A.imp0, 0) + ' → <b>' + pfNum(A.imp, 0) +
-      ' kWh</b>' + (A.cr > 0.5 ? ' (' + pfNum(A.cr, 0) + ' para cargar la batería)' : '') + ', vertido ' + pfNum(A.exp0, 0) + ' → <b>' + pfNum(A.exp, 0) +
-      ' kWh</b>, unos ' + pfNum(A.des / b.kwh, 0) + ' ciclos completos. ' : '') +
-      'El día tipo empieza con el estado de carga inicial; el año supone rachas de días iguales. Los datos generados usan cada cuarto de hora, ' +
-      'con las variaciones de cada día, y la batería empieza con el estado de carga inicial.' +
-      (p.peaje === 'auto' ? ' Periodos del ' + pj + ', el peaje que le toca por su demanda.' : ' Periodos de su peaje, el ' + pj + '.');
-  }
-  // Despacho manual: en cada periodo del peaje, cargar con la FV, cargar de la red y descargar a
-  // la red (al % de la potencia de la batería)
-  function pintarDespacho(pj, nper) {
-    var cont = q('al-pf-desp'), per = PF.p.bat_per;
-    if (!cont || cont.dataset.pj === pj) return;     // (se pinta al cambiar el peaje; si no, se conserva)
-    cont.dataset.pj = pj;
-    var ck = function (i, k) { return '<input type="checkbox" data-bp="' + i + '.' + k + '"' + (per[i][k] ? ' checked' : '') + '>'; };
-    var pc = function (i, k, on) { return '<input type="number" min="0" max="100" step="5" data-bp="' + i + '.' + k + '_pct" value="' + per[i][k + '_pct'] + '"' + (on ? '' : ' disabled') + '>'; };
-    var h = '<table><tr><th></th><th>Carga con<br>la FV</th><th colspan="2">Carga de la red<small>Permitir · potencia (%)</small></th>' +
-      '<th colspan="2">Descarga a la red<small>Permitir · potencia (%)</small></th></tr>';
-    for (var i = 0; i < nper; i++) h += '<tr><td style="color:' + PF_PCOL[i] + '">P' + (i + 1) + (pj === '2.0TD' ? ' <small>' + PF_P20[i] + '</small>' : '') + '</td><td>' + ck(i, 'fv') +
-      '</td><td>' + ck(i, 'red') + '</td><td>' + pc(i, 'red', per[i].red) + '</td><td>' + ck(i, 'ver') + '</td><td>' + pc(i, 'ver', per[i].ver) + '</td></tr>';
-    cont.innerHTML = h + '</table>';
-    [].forEach.call(cont.querySelectorAll('[data-bp]'), function (el) {
-      el.addEventListener('change', function () {
-        var x = el.dataset.bp.split('.'), i = +x[0], k = x[1];
-        if (el.type === 'checkbox') {
-          per[i][k] = el.checked;
-          var n = cont.querySelector('[data-bp="' + i + '.' + k + '_pct"]');
-          if (n) n.disabled = !el.checked;
-        } else per[i][k] = Math.min(100, Math.max(0, Number(String(el.value).replace(',', '.')) || 0));
-        graficos();
-      });
-    });
+    var dia = PF_MESES_L[m].charAt(0).toUpperCase() + PF_MESES_L[m].slice(1) + ', ' + (no ? 'no laborable' : 'laborable');
+    q('al-pf-fvtxt').innerHTML = !(p.gen_dia > 0) ? 'Sin generación fotovoltaica (0 kWh/día): pon la generación media diaria para ver su curva. ' + dia +
+      ': consume ' + pfKwh(pfSum(cd)) + '.' : 'Instalación de unos <b>' + pfNum(fv.kwp) + ' kWp</b> con inversor de ' + pfNum(fv.inv) +
+      ' kW (curva de PVGIS en Granada, día medio del mes, sin las nubes de un día concreto). ' + dia + ': genera <b>' + pfKwh(pfSum(g)) +
+      '</b> y consume ' + pfKwh(pfSum(cd)) + '.' + (bat ? ' La batería guarda toda su FV (' + pfKwh(bat.carga) + ') y entrega ' +
+      pfKwh(bat.desc) + ' desde las ' + bat.desde + ' h, en proporción al precio de cada hora y al consumo de ' +
+      (PF.coef ? 'sus socios por su β' : 'este socio (al abrir la pestaña Coeficientes de reparto, el de sus socios por su β)') + '.' : '');
   }
   function validarPerfil() {
     leerCampos();
@@ -16778,14 +17271,6 @@ self.onInit = function () {
     else if (!(p.kwh_dia > 0)) e = 'El consumo medio diario laborable debe ser mayor que 0.';
     else if (p.kwh_fes == null || !(p.kwh_fes >= 0)) e = 'Pon el consumo medio diario no laborable (0 si no consume esos días).';
     else if (!(p.gen_dia >= 0)) e = 'La generación media diaria no puede ser negativa.';
-    else if (!(p.bat_kwh >= 0)) e = 'La capacidad de la batería no puede ser negativa.';
-    else if (p.bat_kwh > 0 && p.bat_kw != null && !(p.bat_kw >= 0)) e = 'La potencia de la batería no puede ser negativa.';
-    else if (p.bat_kwh > 0 && !(p.bat_ef >= 50 && p.bat_ef <= 100)) e = 'El rendimiento de la batería debe estar entre 50 y 100 %.';
-    else if (p.bat_kwh > 0 && !(p.bat_soc >= 0 && p.bat_soc <= 100)) e = 'El estado de carga inicial debe estar entre 0 y 100 %.';
-    else if (!(p.cosphi >= 0.6 && p.cosphi <= 1)) e = 'El factor de potencia debe estar entre 0,6 y 1.';
-    else if (p.potencias && p.potencias.some(function (x) { return !(x > 0); })) e = 'Las potencias contratadas deben ser mayores que 0.';
-    else if (p.potencias && p.potencias.length === 6 && p.potencias.some(function (x, i) { return i && x < p.potencias[i - 1]; }))
-      e = 'Con 6 periodos las potencias deben ser crecientes (P1 ≤ P2 ≤ … ≤ P6).';
     q('al-pf-err').textContent = e;
     return !e;
   }
@@ -17186,14 +17671,14 @@ AYUDA = {
     "No se borra nada: al actualizar, el suministro queda <i>sin vigencia</i> (V = No) y deja de descargar datos nuevos. "
     "Los que ya estaban cargados se conservan."],
    ["¿Cómo elijo los coeficientes de reparto?",
-    "En la pestaña <i>Coeficientes de reparto</i>. Mientras no eliges otro, la comunidad usa los <i>Fijos óptimos</i>, que "
-    "se ponen en vigor solos en cuanto hay datos de generación. Los checks de la cabecera eligen el reparto de la comunidad: "
-    "<i>Fijos manuales</i> (los pones con un deslizador por socio; al mover uno, los demás se reajustan para que sumen el "
-    "100 %, y se guardan con <i>Guardar los manuales</i>), <i>Fijos óptimos</i> (los que más energía autoconsumen con los "
-    "consumos y la generación hora a hora de los últimos 12 meses) o <i>Dinámicos</i> (uno por socio y hora del año, en "
-    "proporción a su consumo). Las tres tarjetas comparan el autoconsumo, los excedentes y la cobertura de cada uno; los "
-    "gráficos muestran el coeficiente de cada socio y la energía que recibe por días, semanas, meses o años. Abajo se "
-    "descargan los ficheros TXT para la distribuidora."],
+    "Cada generador (cada socio con generación) reparte su energía con sus propios coeficientes, que suman el 100 %: un "
+    "fichero por instalación para la distribuidora. Abre el generador (pulsa su fila en <i>Socios</i>) y entra en su pestaña "
+    "<i>Coeficientes de reparto</i>, junto a <i>Consumos</i>. Mientras no eliges otro, usa los <i>Fijos óptimos</i>. Los checks "
+    "de la cabecera eligen su reparto: <i>Fijos manuales</i> (un deslizador por socio; al mover uno, los demás se reajustan "
+    "para que sumen el 100 %, y se guardan con <i>Guardar los manuales</i>), <i>Fijos óptimos</i> (los que más energía "
+    "autoconsumen, con lo que a cada socio le queda por cubrir con los demás generadores, hora a hora de los últimos 12 "
+    "meses) o <i>Dinámicos</i> (uno por socio y hora del año). Las tarjetas comparan el autoconsumo, los excedentes y la "
+    "cobertura de cada uno; abajo se descargan sus ficheros TXT, los de todos los generadores (.zip) y su justificación (PDF)."],
    ["¿Cómo abro los datos de un suministro?",
     "Pulsa su fila en <i>Suministros autorizados</i> o en <i>Socios</i>. Si es de otra de tus comunidades, selecciónala "
     "antes en <i>Mis comunidades</i>."]]],
@@ -18304,7 +18789,8 @@ ADMIN_HTML = """<div class="ad">
     método de cálculo (los mismos que las pestañas Consumos, Potencias, Reactiva y Factura) y las referencias bibliográficas (ISO 690).
     Usa los precios de la comunidad. Por defecto, los últimos 12 meses completos.</div>
    <h3 class="ad-h3b">Justificación de los coeficientes de reparto</h3>
-   <div class="ad-ctrl"><label>Año de los coeficientes variables <input type="number" class="ad-janio" min="2000" max="2100"></label>
+   <div class="ad-ctrl"><label>Generador <select class="ad-jgen"></select></label>
+    <label>Año de los coeficientes variables <input type="number" class="ad-janio" min="2000" max="2100"></label>
     <button class="ad-b ad-jdesc">Descargar PDF</button></div>
    <div class="ad-msg ad-jmsg">Informe técnico que justifica los coeficientes de la comunidad: marco normativo (fijos, anexo I del RD 244/2019;
     variables por hora, Orden TED/1247/2021), datos y método, algoritmos de optimización y resultados, con gráficos del reparto
@@ -18698,9 +19184,15 @@ self.onInit = function () {
   q('ad-ihasta').value = VL.iso(fin);
   // Justificacion de los coeficientes de reparto (PDF): fijos optimos y variables del año elegido
   q('ad-janio').value = new Date().getFullYear() + 1;
+  // (cada generador reparte su energia con sus coeficientes: un informe por generador)
+  api('GET', '/reparto/generadores').then(function (gs) {
+    q('ad-jgen').innerHTML = gs.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>'; }).join('') ||
+      '<option value="">(ningún socio tiene generación)</option>';
+  }).catch(function () {});
   q('ad-jdesc').onclick = function () {
     var b = q('ad-jdesc'); b.disabled = true; msg('ad-jmsg', 'Calculando los coeficientes y generando el informe… (puede tardar un minuto)');
-    api('GET', '/informes/coeficientes?anio=' + encodeURIComponent(q('ad-janio').value), null, true).then(function (r) {
+    api('GET', '/informes/coeficientes?anio=' + encodeURIComponent(q('ad-janio').value) + '&generador=' + encodeURIComponent(q('ad-jgen').value),
+        null, true).then(function (r) {
       var n = (r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
       return r.blob().then(function (blob) {
         var a = document.createElement('a');
@@ -19246,8 +19738,11 @@ def w_mapa_com(alias, x, y, w, h):
                 f"Socios — ⚡ verde: aportó a la red el último día · rojo: recibió · círculo: {RADIO_LEY_M // 1000} km", x, y, w, h)
 
 
-# VatiaCo.reparto: coeficientes de reparto de la comunidad (pestaña "Coeficientes de reparto"
-# del gestor). Tres repartos, elegidos con los
+# VatiaCo.reparto: coeficientes de reparto de UN generador (cada instalacion reparte su energia con
+# sus propios coeficientes, RD 244/2019 anexo I): en la pestaña Generacion de la vista del socio
+# generador (VatiaCo.reparto_gen, settings.porSocio) o en la pestaña "Coeficientes de reparto" del
+# gestor, con un selector de generador. El consumo de cada socio es el que le queda por cubrir
+# con los demas generadores (/reparto?generador=). Tres repartos, elegidos con los
 # checks de la cabecera: fijos manuales (deslizadores por socio: al mover uno los demas se
 # reajustan en proporcion para que sumen el 100 %), fijos optimos (gestion.optimizar_coeficientes)
 # y dinamicos por horas (cada hora en proporcion al consumo de cada socio). Con la generacion y
@@ -19261,6 +19756,7 @@ REPARTO_CSS = VP_CSS + """
 .rp h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #7b2fa8; }
 .rp-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 8px 10px; background: #f6f6f8; border-radius: 6px; }
 .rp-cab b { font-size: 15px; }
+.rp-gsel { font: inherit; padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; max-width: 320px; }
 .rp-modos { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .rp-modos label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500; }
 .rp-modos input { width: 16px; height: 16px; accent-color: #7b2fa8; cursor: pointer; }
@@ -19296,7 +19792,8 @@ REPARTO_CSS = VP_CSS + """
 """
 
 REPARTO_HTML = """<div class="rp">
- <div class="rp-cab"><b>Reparto</b><div class="rp-modos"></div><span class="rp-msg">Cargando…</span></div>
+ <div class="rp-cab"><b class="rp-tit">Reparto</b><select class="rp-gsel" hidden></select><div class="rp-modos"></div>
+  <span class="rp-msg">Cargando…</span></div>
  <div class="rp-kpis"></div>
  <div class="rp-cuerpo">
   <section class="rp-caja rp-manual"><h3 class="rp-tl">Coeficientes fijos manuales</h3>
@@ -19305,23 +19802,26 @@ REPARTO_HTML = """<div class="rp">
     <button class="rp-b sec peq" data-a="consumo">Proporcional al consumo</button>
     <button class="rp-b sec peq" data-a="optimo">Copiar los óptimos</button></div>
    <div class="rp-ctrl rp-guardar"><button class="rp-b rp-gm">Guardar los manuales</button></div>
-   <p class="rp-nota rp-nman">Al mover un socio, los demás se reajustan en proporción para que la suma siga siendo el 100 %.</p>
-   <p class="rp-nota rp-nopt">Calculados para que se autoconsuma la mayor parte de la generación; no se editan (cópialos a los
-    manuales para ajustarlos).</p>
+   <p class="rp-nota rp-nman">Al mover un socio, los demás se reajustan en proporción para que la suma siga siendo el 100 %.
+    <i>Guardar los manuales</i> los pone en vigor.</p>
+   <p class="rp-nota rp-nopt">Calculados para que se autoconsuma la mayor parte de la generación. Mueve un socio para ajustarlos:
+    pasas a los fijos manuales, partiendo de estos.</p>
   </section>
   <section class="rp-caja rp-graficos"><h3 class="rp-t1"></h3><div class="rp-g1"></div>
    <h3 class="rp-t2">Energía repartida a cada socio</h3><div class="vp rp-vp"></div><div class="rp-g2"></div>
-   <p class="rp-nota">Color de cada socio: lo que autoconsume; más claro, lo que recibe y no consume (excedente). Línea: consumo
-    de los socios. Datos de los últimos 12 meses completos.</p></section>
+   <p class="rp-nota">Color de cada socio: lo que autoconsume de este generador; más claro, lo que recibe y no consume (excedente).
+    Línea: el consumo de los socios que no cubren los demás generadores. Datos de los últimos 12 meses completos.</p></section>
  </div>
  <div class="rp-caja rp-pie"><h3>Ficheros para la distribuidora</h3>
-  <div class="rp-ctrl"><button class="rp-b sec peq rp-tf">TXT de los fijos en vigor</button>
-   <label>Año <input type="number" class="rp-anio" min="2000" max="2100"></label>
-   <button class="rp-b sec peq rp-th">TXT de los dinámicos (por horas)</button></div>
-  <p>Fijos: la figura original del anexo I del RD 244/2019, un mismo coeficiente para todas las horas del año (una línea
-   <code>CUPS;coeficiente</code>). Dinámicos: coeficientes variables por hora, introducidos por la Orden TED/1247/2021 (una línea
-   <code>CUPS;hora;coeficiente</code> por suministro y hora del año). La justificación completa, con los algoritmos, está en
-   <i>Informes → Justificación de los coeficientes de reparto</i>.</p>
+  <div class="rp-ctrl"><label>Año <input type="number" class="rp-anio" min="2000" max="2100"></label>
+   <button class="rp-b sec peq rp-tf">TXT de este generador (su reparto en vigor)</button>
+   <button class="rp-b sec peq rp-th">TXT de sus dinámicos (por horas)</button>
+   <button class="rp-b sec peq rp-tz">Todos los generadores (.zip)</button>
+   <button class="rp-b sec peq rp-tj">Justificación (PDF)</button></div>
+  <p>Un fichero por instalación de generación (su CAU), con el coeficiente de cada socio, que suman 1. Fijos: la figura original
+   del anexo I del RD 244/2019, un mismo coeficiente para todas las horas del año (una línea <code>CUPS;coeficiente</code>).
+   Dinámicos: coeficientes variables por hora, introducidos por la Orden TED/1247/2021 (una línea <code>CUPS;hora;coeficiente</code>
+   por suministro y hora del año). La justificación, con los algoritmos, en <i>Justificación (PDF)</i>.</p>
  </div>
 </div>"""
 
@@ -19330,7 +19830,7 @@ var API = '/cec-api';
 var COL = ['#7b2fa8', '#2f7fd8', '#4caf7d', '#f59a6b', '#e0541f', '#c07a12', '#26a69a', '#ec407a', '#8d6e63', '#5c6bc0',
            '#9ccc65', '#ffb300', '#29b6f6', '#ab47bc', '#78909c'];
 var MODOS = [['manual', 'Fijos manuales'], ['optimo', 'Fijos óptimos'], ['dinamico', 'Dinámicos (por horas)']];
-var R = { d: null, ver: 'manual', man: [], st: { modo: 'mes', ref: null }, g1: null, g2: null, edita: false, pend: 0 };
+var R = { d: null, ver: 'manual', man: [], st: { modo: 'mes', ref: null }, g1: null, g2: null, edita: false, pend: 0, gen: null };
 
 function api(metodo, ruta, cuerpo, crudo) {
   var h = { 'X-Authorization': 'Bearer ' + (localStorage.getItem('jwt_token') || '') };
@@ -19367,7 +19867,7 @@ function cifras(m) {
     if (!g) continue;
     for (var j = 0; j < d.socios.length; j++) a += Math.min(beta(m, j, i) * g, d.socios[j].consumo[i]);
   }
-  return { auto: a, exc: R.gen - a, pct: R.gen ? 100 * a / R.gen : 0, cob: R.cons ? 100 * a / R.cons : 0 };
+  return { auto: a, exc: R.genT - a, pct: R.genT ? 100 * a / R.genT : 0, cob: R.cons ? 100 * a / R.cons : 0 };
 }
 
 self.onInit = function () {
@@ -19382,30 +19882,58 @@ self.onInit = function () {
   VP.barra(q('.rp-vp'), R.st, grafico2);
   [].forEach.call(R.raiz.querySelectorAll('.rp-acc button'), function (b) { b.onclick = function () { atajo(b.dataset.a); }; });
   q('.rp-gm').onclick = guardarManual;
-  q('.rp-tf').onclick = function () { bajar(q('.rp-tf'), '/reparto/coeficientes.txt', 'coeficientes.txt'); };
-  q('.rp-th').onclick = function () { bajar(q('.rp-th'), '/reparto/horarios.txt?anio=' + encodeURIComponent(q('.rp-anio').value), 'coeficientes_horarios.txt'); };
-  cargar();
+  var anio = function () { return 'anio=' + encodeURIComponent(q('.rp-anio').value); }, gen = function () { return 'generador=' + encodeURIComponent(R.gen); };
+  q('.rp-tf').onclick = function () { bajar(q('.rp-tf'), '/reparto/coeficientes.txt?' + gen() + '&' + anio(), 'coeficientes.txt'); };
+  q('.rp-th').onclick = function () { bajar(q('.rp-th'), '/reparto/horarios.txt?' + gen() + '&' + anio(), 'coeficientes_horarios.txt'); };
+  q('.rp-tz').onclick = function () { bajar(q('.rp-tz'), '/reparto/ficheros.zip?' + anio(), 'coeficientes.zip'); };
+  q('.rp-tj').onclick = function () { msg('Generando el informe… (puede tardar un minuto)');
+    bajar(q('.rp-tj'), '/informes/coeficientes?' + gen() + '&' + anio(), 'justificacion_coeficientes.pdf'); };
+  if ((self.ctx.currentUser || {}).authority !== 'TENANT_ADMIN') {
+    msg('El reparto de la generación lo gestiona el gestor de la comunidad.'); return;
+  }
+  if ((self.ctx.settings || {}).porSocio) {     // pestaña Generacion: el socio del panel
+    var ds = (self.ctx.datasources || [])[0];
+    R.gen = ds && ds.entityName;
+    if (!R.gen) { msg('Elige un socio.'); return; }
+    cargar();
+    return;
+  }
+  // pestaña Coeficientes de reparto: un selector con los generadores de la comunidad
+  api('GET', '/reparto/generadores').then(function (gs) {
+    if (!gs.length) { msg('Ningún socio tiene generación en los últimos 12 meses: no hay nada que repartir.', 'err'); return; }
+    var s = q('.rp-gsel');
+    s.innerHTML = gs.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + ' · ' + kwh(g.kwh) + '</option>'; }).join('');
+    s.hidden = gs.length < 2;
+    s.onchange = function () { R.gen = s.value; cargar(); };
+    R.gen = gs[0].id;
+    cargar();
+  }).catch(function (e) { msg(e.message, 'err'); });
 };
 
 function cargar() {
-  msg('Cargando los consumos de los últimos 12 meses…');
-  api('GET', '/reparto').then(function (d) {
+  msg('Cargando la generación y los consumos de los últimos 12 meses…');
+  api('GET', '/reparto?generador=' + encodeURIComponent(R.gen)).then(function (d) {
     R.d = d; R.t0 = Date.parse(d.inicio); R.ver = d.modo || 'optimo';
     R.man = d.socios.map(function (s) { return s.manual; });
-    R.dem = ceros(d.n); R.gen = 0; R.cons = 0;
+    R.dem = ceros(d.n); R.genT = 0; R.cons = 0;
     var tot = d.socios.map(function (s) { var t = 0; s.consumo.forEach(function (x) { t += x; }); return t; }), T = 0;
     tot.forEach(function (t) { T += t; });
     R.prop = tot.map(function (t) { return T ? t / T : 1 / tot.length; });
-    for (var i = 0; i < d.n; i++) { R.gen += d.generacion[i]; d.socios.forEach(function (s) { R.dem[i] += s.consumo[i]; }); R.cons += R.dem[i]; }
+    for (var i = 0; i < d.n; i++) { R.genT += d.generacion[i]; d.socios.forEach(function (s) { R.dem[i] += s.consumo[i]; }); R.cons += R.dem[i]; }
     R.fijas = { optimo: cifras('optimo'), dinamico: cifras('dinamico') };
     R.perfil = perfilHorario();
     R.st.min = VL.leer(d.base.desde); R.st.max = VL.leer(d.base.hasta);
     R.st.ref = VP.inicio(R.st.max, R.st.modo);
     VP.marcar(q('.rp-vp'), R.st);
-    msg(d.socios.length + ' socios · generación ' + kwh(R.gen) + ' del ' + VL.leer(d.base.desde).toLocaleDateString('es-ES') +
-        ' al ' + VL.leer(d.base.hasta).toLocaleDateString('es-ES') + (d.generadores.length ? ' (' + d.generadores.join(', ') + ')' : ''));
+    q('.rp-tit').textContent = 'Reparto de ' + d.generador.nombre;
+    msg(d.socios.length + ' socios · genera ' + kwh(R.genT) + ' del ' + VL.leer(d.base.desde).toLocaleDateString('es-ES') +
+        ' al ' + VL.leer(d.base.hasta).toLocaleDateString('es-ES') + (d.generadores.length > 1 ? ' · ' + d.generadores.length +
+        ' generadores en la comunidad, cada uno con su reparto' : ''));
     pintar();
-  }).catch(function (e) { msg('No se pudo calcular el reparto: ' + e.message, 'err'); });
+  }).catch(function (e) {
+    msg(/no tiene generación/.test(e.message) ? 'Este socio no tiene generación: no reparte energía (lo que recibe de los generadores ' +
+        'está en la pestaña En la comunidad).' : 'No se pudo calcular el reparto: ' + e.message, /no tiene generación/.test(e.message) ? '' : 'err');
+  });
 }
 
 // Checks de la cabecera: uno siempre marcado. Con edita, el elegido pasa a ser el de la comunidad
@@ -19414,9 +19942,9 @@ function elegir(m, cb) {
   R.ver = m; marcarChecks(); pintar();
   if (!R.edita || !R.d || m === R.d.modo) return;
   var nombre = MODOS.filter(function (x) { return x[0] === m; })[0][1].toLowerCase();
-  msg('Guardando el reparto de la comunidad…');
-  api('PUT', '/reparto/modo', { modo: m }).then(function (r) {
-    R.d.modo = r.modo; marcarChecks(); msg('Reparto de la comunidad: coeficientes ' + nombre + '.', 'ok');
+  msg('Guardando el reparto de ' + R.d.generador.nombre + '…');
+  api('PUT', '/reparto/modo', { modo: m, generador: R.gen }).then(function (r) {
+    R.d.modo = r.modo; marcarChecks(); msg('Reparto de ' + R.d.generador.nombre + ': coeficientes ' + nombre + '.', 'ok');
   }).catch(function (e) { msg(e.message, 'err'); });
 }
 function marcarChecks() {
@@ -19432,7 +19960,7 @@ function pintar() {
   q('.rp-manual').hidden = !fijo;
   q('.rp-cuerpo').classList.toggle('sin-lista', !fijo);
   q('.rp-tl').textContent = man ? 'Coeficientes fijos manuales' : 'Coeficientes fijos óptimos';
-  [].forEach.call(R.raiz.querySelectorAll('.rp-acc, .rp-nman'), function (e) { e.hidden = !man; });
+  [].forEach.call(R.raiz.querySelectorAll('.rp-acc, .rp-nman'), function (e) { e.hidden = !R.edita && !man; });
   q('.rp-guardar').hidden = !man || !R.edita;
   q('.rp-nopt').hidden = man;
   if (fijo) lista();
@@ -19444,8 +19972,8 @@ function kpis() {
   q('.rp-kpis').innerHTML = MODOS.map(function (m) {
     var x = c[m[0]];
     return '<div class="rp-kpi' + (m[0] === R.ver ? ' on' : '') + '" data-m="' + m[0] + '"><div class="t">' + m[1] + '</div>' +
-      '<div class="v">' + pc(x.pct) + '</div><small>de la generación autoconsumida: ' + kwh(x.auto) + ' · excedentes ' +
-      kwh(x.exc) + ' · cubre el ' + pc(x.cob) + ' del consumo</small></div>';
+      '<div class="v">' + pc(x.pct) + '</div><small>de su generación autoconsumida: ' + kwh(x.auto) + ' · excedentes ' +
+      kwh(x.exc) + ' · cubre el ' + pc(x.cob) + ' de lo que no cubren los demás</small></div>';
   }).join('');
   [].forEach.call(R.raiz.querySelectorAll('.rp-kpi'), function (k) {
     k.onclick = function () { var cb = q('.rp-modos input[data-m="' + k.dataset.m + '"]'); if (!cb.checked) { cb.checked = true; elegir(k.dataset.m, cb); } };
@@ -19458,13 +19986,23 @@ function lista() {
   q('.rp-lista').innerHTML = d.socios.map(function (s, j) {
     return '<div class="rp-fila"><i style="background:' + color(j) + '"></i><span class="n" title="' + esc(s.nombre + ' · ' + s.cups) + '">' +
       esc(s.nombre) + '</span><span class="p" data-p="' + j + '"></span><input type="range" min="0" max="100" step="0.0001" data-j="' + j + '"' +
-      (R.edita && R.ver === 'manual' ? '' : ' disabled') + '></div>';
+      (R.edita ? '' : ' disabled') + '></div>';
   }).join('');
   sincronizar();
   [].forEach.call(R.raiz.querySelectorAll('.rp-lista input'), function (inp) {
-    inp.oninput = function () { ajustar(+inp.dataset.j, inp.value / 100); sincronizar(inp); repintar(); };
+    inp.oninput = function () { aManual(); ajustar(+inp.dataset.j, inp.value / 100); sincronizar(inp); repintar(); };
   });
   [].forEach.call(R.raiz.querySelectorAll('.rp-acc button, .rp-gm'), function (b) { b.disabled = !R.edita; });
+}
+// Mover un deslizador (o un atajo) desde los optimos: se pasa a ver los manuales, partiendo de los
+// optimos (se ponen en vigor al guardarlos)
+function aManual() {
+  if (R.ver === 'manual') return;
+  R.man = R.d.socios.map(function (s) { return s.optimo; });
+  R.ver = 'manual'; marcarChecks();
+  q('.rp-tl').textContent = 'Coeficientes fijos manuales';
+  [].forEach.call(R.raiz.querySelectorAll('.rp-acc, .rp-nman'), function (e) { e.hidden = false; });
+  q('.rp-guardar').hidden = !R.edita; q('.rp-nopt').hidden = true;
 }
 function ajustar(j, v) {
   v = Math.max(0, Math.min(1, v));
@@ -19492,6 +20030,7 @@ function repintar() {   // una vez por fotograma mientras se arrastra
 }
 function atajo(a) {
   var d = R.d, n = d.socios.length;
+  aManual();
   R.man = a === 'iguales' ? d.socios.map(function () { return 1 / n; }) : a === 'consumo' ? R.prop.slice() :
     d.socios.map(function (s) { return s.optimo; });
   sincronizar(); repintar();
@@ -19499,10 +20038,12 @@ function atajo(a) {
 function guardarManual() {
   var co = {}; R.d.socios.forEach(function (s, j) { co[s.id] = R.man[j]; });
   var b = q('.rp-gm'); b.disabled = true; msg('Guardando los coeficientes manuales…');
-  api('PUT', '/reparto/manual', { coeficientes: co }).then(function (r) {
+  api('PUT', '/reparto/manual', { coeficientes: co, generador: R.gen }).then(function (r) {
     R.man = R.d.socios.map(function (s) { return r.manual[s.id] || 0; });
-    sincronizar(); repintar();
-    msg('Coeficientes manuales guardados' + (r.modo === 'manual' ? ' y en vigor.' : ' (el reparto en vigor es otro).'), 'ok');
+    return api('PUT', '/reparto/modo', { modo: 'manual', generador: R.gen });
+  }).then(function (r) {
+    R.d.modo = r.modo; marcarChecks(); sincronizar(); repintar();
+    msg('Coeficientes manuales guardados y en vigor.', 'ok');
   }).catch(function (e) { msg(e.message, 'err'); }).then(function () { b.disabled = false; });
 }
 
@@ -19616,6 +20157,16 @@ self.onDestroy = function () { if (R.g1) R.g1.dispose(); if (R.g2) R.g2.dispose(
 """
 
 
+def w_reparto_gen(alias, x, y, w, h):
+    """Pestaña Generacion de la vista de un socio: el reparto de SU generacion (VatiaCo.reparto_gen,
+    el mismo que VatiaCo.reparto con el socio del panel como generador)."""
+    cfg = {"datasources": [{"type": "entity", "entityAliasId": alias, "dataKeys": [_dk("d_generada_kwh", "Generación")]}],
+           "showTitle": False, "title": "Reparto de su generación", "settings": {"edita": True, "porSocio": True},
+           "backgroundColor": "#fff", "color": "rgba(0,0,0,0.87)", "padding": "8px", "dropShadow": True,
+           "enableFullscreen": True, "mobileHeight": 20}
+    return _w("tenant.VatiaCo.reparto_gen", cfg, "latest", x, y, w, h)
+
+
 def w_reparto(edita, x, y, w, h):
     """Coeficientes de reparto (VatiaCo.reparto); edita: el gestor elige el reparto y guarda los manuales."""
     cfg = {"datasources": [], "showTitle": False, "title": "Coeficientes de reparto", "settings": {"edita": edita},
@@ -19661,6 +20212,7 @@ var RS = { d: null, st: { modo: 'mes', ref: null }, g: null };
 function q(s) { return RS.raiz.querySelector(s); }
 function kwh(v) { return Math.round(v).toLocaleString('es-ES') + ' kWh'; }
 function pc(v) { return (+v).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %'; }
+function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function ceros(n) { var a = []; for (var i = 0; i < n; i++) a.push(0); return a; }
 function suma(a, i0, i1) { var t = 0; for (var i = i0 || 0; i < (i1 == null ? a.length : i1); i++) t += a[i]; return t; }
 
@@ -19678,8 +20230,11 @@ self.onInit = function () {
       var c = 0, a = 0, e = 0;
       for (var i = 0; i < d.n; i++) { var x = Math.min(d.asignada[i], d.consumo[i]); a += x; e += d.asignada[i] - x; c += d.consumo[i]; }
       var red = suma(d.red), vert = suma(d.vertida);
-      q('.rs-msg').innerHTML = 'Reparto de la comunidad: <b>' + MODOS[d.modo] + '</b>' +
-        (d.coeficiente != null ? ' · tu coeficiente: <b>' + pc(100 * d.coeficiente) + '</b>' : ' · tu coeficiente cambia cada hora según tu consumo') +
+      // un coeficiente con cada generador (cada instalacion reparte su energia con los suyos)
+      var cs = d.coeficientes || [];
+      q('.rs-msg').innerHTML = (cs.length ? 'Tu coeficiente con cada generador: ' + cs.map(function (x) {
+          return '<b>' + esc(x.nombre) + '</b> ' + (x.coeficiente != null ? pc(100 * x.coeficiente) + ' (' + MODOS[x.modo] + ')' : 'cambia cada hora según tu consumo');
+        }).join(' · ') : 'Ningún socio de la comunidad tiene generación') +
         ' · del ' + VL.leer(d.base.desde).toLocaleDateString('es-ES') + ' al ' + VL.leer(d.base.hasta).toLocaleDateString('es-ES');
       q('.rs-kpis').innerHTML = [
         ['Tu consumo total', kwh(c), 'red + autoconsumo'],
@@ -20161,8 +20716,7 @@ def nav_gestion():
     return [["gestor", "Gestor", "Gestión · Gestor", "", "account_circle"],
             ["suministros", "Suministros autorizados", "Gestión · Suministros autorizados", "", "fact_check"],
             ["-", CEC, "", "", ""]] + \
-           [["participantes", "Socios", "Gestión · Socios", "", "manage_accounts"],
-            ["coeficientes", "Coeficientes de reparto", "Gestión · Coeficientes de reparto", "", "txt:β"]] + \
+           [["participantes", "Socios", "Gestión · Socios", "", "manage_accounts"]] + \
            [["", t[1], CEC, t[0], t[3], t[4]] for t in COM_TABS] + \
            [["informes", "Informes", "Gestión · Informes", "", "description"]] + \
            [[a, n, f"Gestión · {n}", "", "folder"] for a, n in AREAS_GESTION] + \
@@ -20211,9 +20765,6 @@ def gestion_paneles():
                 "Comunidades del gestor y suministros que le han autorizado en Datadis, con la comunidad de cada uno",
                 [w_nav("suministros", 0, 0, 24, 1), w_admin(0, 1, 24, 14, "suministros", "Suministros autorizados en Datadis")],
                 False, "suministros")
-    panel_admin("Gestión · Coeficientes de reparto",
-                "Coeficientes de reparto: fijos manuales, fijos óptimos y dinámicos, con sus gráficos y ficheros",
-                [w_nav("coeficientes", 0, 0, 24, 1), w_reparto(True, 0, 1, 24, 20)], False, "coeficientes")
     panel_admin("Gestión · Informes", "Informes de la comunidad y de cada socio (PDF, Excel y CSV)",
                 [w_nav("informes", 0, 0, 24, 1), w_admin(0, 1, 24, 9, "informes", "Informes")], False, "informes")
     panel_admin("Gestión · Base de datos", "Copias de seguridad de PostgreSQL: hacer, subir, descargar y restaurar",
@@ -20283,6 +20834,7 @@ def cec_config(title):
                    ("socio_reactiva", w_vista(elegido, "reactiva", "Reactiva", 0, 1, 24, 15)),
                    ("socio_factura", w_vista(elegido, "factura", "Factura", 0, 1, 24, 15)),
                    ("socio_reparto", con_imprimir(w_reparto_socio(elegido, 0, 1, 24, 14))),
+                   ("socio_generacion", w_reparto_gen(elegido, 0, 1, 24, 20)),
                    ("socio_mapa", con_imprimir(w_mapa(elegido, 0, 1, 24, 12))),
                    ("socio_informes", w_informes_socio(elegido, 0, 1, 24, 11)), ("socio_datos", w_ficha(elegido, 0, 1, 24, 8)),
                    ("socio_ayuda", w_ayuda("socio", 0, 1, 24, 12))):
@@ -20494,6 +21046,7 @@ cec_widget("VatiaCo.informes_socio", "Informes del socio", con_premium(INFS_HTML
 cec_widget("VatiaCo.socio_nav", "Pestañas del socio", NAV_W_HTML, SOCIO_NAV_JS, 1, NAV_W_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.basedatos", "Copias de la base de datos", BD_HTML, BD_JS, 14, BD_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.reparto", "Coeficientes de reparto", REPARTO_HTML, REPARTO_JS, 20, REPARTO_CSS, tipo="static")
+cec_widget("VatiaCo.reparto_gen", "Reparto de un generador", REPARTO_HTML, REPARTO_JS, 20, REPARTO_CSS)
 cec_widget("VatiaCo.reparto_socio", "Socio en la comunidad", REPSOC_HTML, REPSOC_JS, 14, REPSOC_CSS)
 cec_widget("VatiaCo.ayuda", "Centro de ayuda", AYUDA_HTML, AYUDA_W_JS, 12, AYUDA_W_CSS, tipo="static", recursos=[])
 cec_widget("VatiaCo.admin_datos", "Administración de datos", con_premium(ADMIN_HTML), ADMIN_JS, 11, ADMIN_CSS,
