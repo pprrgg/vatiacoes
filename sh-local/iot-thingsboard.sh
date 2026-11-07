@@ -3949,7 +3949,8 @@ CUERPO_COEF = r"""
 #for c in d.capitulos [
   #heading(level: 1)[#c.titulo]
   #for b in c.bloques {
-    if b.t == "h" { heading(level: 2, b.x) }
+    if b.t == "salto" { pagebreak(weak: true) }   // (cada socio empieza en una pagina nueva)
+    else if b.t == "h" { heading(level: 2, b.x) }
     else if b.t == "p" [#b.x #parbreak()]
     else if b.t == "m" [#eval(b.x, mode: "markup") #parbreak()]
     else if b.t == "l" { list(..b.x.map(i => eval(i, mode: "markup"))) }
@@ -4930,7 +4931,7 @@ def _cap_energia(R, raiz, com):
             "Consumo de red apilado por periodos (valle abajo), autoconsumo encima y excedentes en negativo.")
         pr = x["pr"]
         precios = ", ".join(f"{nomp(p)} {_es(float(pr['p'][str(p)]), 3)}" for p in range(1, np_ + 1) if str(p) in pr["p"])
-        bl += [{"t": "h", "x": x["nombre"]},
+        bl += [{"t": "salto"}, {"t": "h", "x": x["nombre"]},
                {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · precios {precios} €/kWh; compensación de excedentes "
                                f"{_es(float(pr['comp']), 3)} €/kWh; LCOE de la generación {_es(float(pr.get('lcoe') or 0), 3)} €/kWh." +
                                (" Socio generador: no recibe reparto." if x["generador"] else "")},
@@ -5001,7 +5002,7 @@ def _cap_potencia(R, raiz):
             "Barras: término de potencia de cada periodo y excesos; línea: con la potencia ajustada.")
         modo = {"icp": "sin excesos (2.0TD: el limitador corta)", "m": "excesos de medida tipo 4-5 (maxímetro mensual)",
                 "q": "excesos de medida tipo 1-3 (cuartohorarios)"}[P["modo"]]
-        bl += [{"t": "h", "x": x["nombre"]},
+        bl += [{"t": "salto"}, {"t": "h", "x": x["nombre"]},
                {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · potencias contratadas " +
                                (" / ".join(f"{nomg(x, g)} {_es(P['pc'][g], 2)} kW" for g in G_ if g in P["pc"]) or "sin datos") +
                                f" · {modo}. Potencia ajustada a la máxima demandada del periodo: " +
@@ -5067,7 +5068,7 @@ def _cap_reactiva(R, raiz):
             linea={"n": "33 % de la activa de P1 a P5", "c": "#555", "v": [Rm[k]["lim"] for k in ks]}),
             f"Energía reactiva de cada mes — {x['nombre']}",
             "Barras: reactiva por periodos; línea: 33 % de la activa de P1 a P5 (sin recargo por debajo).")
-        bl += [{"t": "h", "x": x["nombre"]},
+        bl += [{"t": "salto"}, {"t": "h", "x": x["nombre"]},
                {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']}" +
                                (" · en 2.0TD no se factura la reactiva." if x["R"]["exenta"] else
                                 f" · precios {_es(R['O']['reac1'], 6)} €/kVArh (cos φ de 0,80 a 0,95) y {_es(R['O']['reac2'], 6)} "
@@ -5137,7 +5138,7 @@ def _cap_factura(R, raiz):
             f"Factura estimada de cada mes por componentes — {x['nombre']}",
             "Barras: componentes de la factura en solitario; línea: total con la energía en comunidad.")
         pr = x["pr"]
-        bl += [{"t": "h", "x": x["nombre"]},
+        bl += [{"t": "salto"}, {"t": "h", "x": x["nombre"]},
                {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · alquiler del contador {_es(float(pr.get('alquiler') or 0), 2)} "
                                f"€/mes · impuesto eléctrico {_es(R['O']['iee'], 8)} % · IVA {_es(R['O']['iva'], 0)} %." +
                                ("" if x["Fc"] is not None else " No participa del reparto: sin columna en comunidad.")},
@@ -5216,7 +5217,7 @@ def _cap_modalidades(R, raiz):
             ets, [{"n": "Pago neto del periodo", "c": "#7b2fa8", "v": [v for v in netos if v is not None]}], unidad="€", ancho=560, alto=220),
             f"Pago neto del periodo en cada modalidad — {x['nombre']}",
             "Pago neto: factura menos, en la venta de excedentes, el ingreso neto de la venta.")
-        bl += [{"t": "h", "x": x["nombre"]},
+        bl += [{"t": "salto"}, {"t": "h", "x": x["nombre"]},
                {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · {len(ks)} meses. " +
                                ("Con instalación propia: genera y vierte excedentes." if propia else
                                 "Sin instalación propia: no hay modalidades individuales; solo sin autoconsumo y en comunidad.") +
