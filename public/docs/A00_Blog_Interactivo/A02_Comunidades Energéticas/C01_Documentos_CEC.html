@@ -74,6 +74,15 @@ table.ed td.n input { width: 72px; font-family: var(--f-mono) }
 .btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 7px; padding: 8px 14px; font: 600 13px var(--f-ui); cursor: pointer }
 .btn.sec2 { background: none; color: var(--accent); border: 1px solid var(--accent) }
 .folio-w { overflow-x: auto }
+/* Modelos oficiales del IDAE (en la lista de documentos y en la mesa) */
+#idae-dl:not([hidden]) { display: contents }
+#idae-dl a.btn { text-decoration: none; display: inline-flex; align-items: center }
+.chip.idae { background: var(--ink); color: #fff; font-size: 10.5px; letter-spacing: .05em; padding: 1px 6px; vertical-align: 1px }
+.fase button.doc[aria-current="true"] .chip.idae { background: #fff; color: var(--accent) }
+.idae-visor { width: 100%; height: min(78vh, 1000px); border: 1px solid var(--line); border-radius: 4px; background: #fff; margin-top: 1em }
+.folio .idae-quien { background: var(--accent-soft); border-radius: 6px; padding: .6em .9em; font: 14px/1.5 var(--f-ui) }
+.nota-idae { margin: 22px auto 0; max-width: 1100px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 12px }
+.nota-idae a { color: var(--accent) }
 .folio { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 1px 2px rgba(11,31,58,0.05), 0 8px 28px rgba(15,40,35,.08);
   max-width: 820px; margin: 0 auto; padding: clamp(22px, 5vw, 64px) clamp(18px, 6vw, 72px); font: 16px/1.62 var(--f-doc); min-width: 0 }
 .folio:focus { outline: 2px dashed var(--line); outline-offset: 4px }
@@ -134,6 +143,7 @@ table.ed td.n input { width: 72px; font-family: var(--f-mono) }
     La normativa citada es la localizada a 4 de noviembre de 2026. El reglamento de las comunidades de energías renovables y el nuevo real decreto de autoconsumo están pendientes, y pueden cambiar plazos y requisitos.
     Los datos de partida son de ejemplo (la comunidad de prueba del Anexo II de los estatutos).</div>
 
+
   <div class="cols">
     <aside class="panel">
       <div class="tabs" role="tablist">
@@ -154,12 +164,20 @@ table.ed td.n input { width: 72px; font-family: var(--f-mono) }
         <button class="btn sec2" id="b-copiar" type="button">Copiar</button>
         <button class="btn sec2" id="b-word" type="button">Descargar Word</button>
         <button class="btn" id="b-pdf" type="button">Descargar PDF</button>
+        <span id="idae-dl" hidden><a class="btn sec2" id="idae-pdf" target="_blank" rel="noopener">Abrir PDF</a>
+          <a class="btn" id="idae-word" download>Descargar Word (editable)</a></span>
       </div>
       <p class="pistas">Los huecos en amarillo son datos que faltan: complétalos en <i>Datos de la comunidad</i>. Para personalizar un documento, escribe directamente en el folio: los cambios se guardan en este navegador (por documento y por socio) y se usan al descargar. Un documento personalizado ya no se actualiza con los datos; <i>Volver a la plantilla</i> lo regenera. En <b>Descargar PDF</b>, elige «Guardar como PDF» como impresora.</p>
       <div class="folio-w"><article class="folio" id="folio" contenteditable="true" spellcheck="true"></article></div>
     </main>
   </div>
 </div>
+<p class="nota-idae" id="nota-idae"><span class="chip idae">IDAE</span> Los documentos marcados así son los <b>modelos oficiales del IDAE</b>
+  (Instituto para la Diversificación y Ahorro de la Energía) para tramitar el autoconsumo colectivo ante la distribuidora y las comercializadoras
+  (Real Decreto 244/2019 y Orden TED/1247/2021), publicados junto a su
+  <a href="https://www.idae.es/sites/default/files/documentos/publicaciones_idae/Guia-Autoconsumo-Colectivo/20240709_Guia_Autoconsumo_Colectivo_v2.1.pdf" target="_blank" rel="noopener">Guía de autoconsumo colectivo</a>.
+  Se reproducen sin cambios, en PDF y en Word (editable); no se generan con los datos de la comunidad. Cada instalación (cada CAU) tiene su
+  acuerdo de reparto y su fichero .txt de coeficientes, que la plataforma descarga en la pestaña <i>Coeficientes de reparto</i> de cada generador.</p>
 <div class="toast" id="toast" hidden></div>
 <div id="impresion" aria-hidden="true"></div>
 
@@ -254,6 +272,40 @@ function tablaSocios(conCuota) {
 }
 function avisoBeta() { const t = sumaBeta(); return Math.abs(t - 1) > 1e-6 ? `<div class="pendiente"><b>La suma de los coeficientes es ${coef(t, 3)}.</b> Tiene que ser exactamente 1 (anexo I del RD 244/2019). Corrígelo en <i>Datos de la comunidad</i> → Socios.</div>` : ""; }
 const P = (k) => V(S.p[k], k);
+
+// ---------------- modelos oficiales del IDAE (ficheros en modelos_idae/, sin cambios) ----------------
+const IDAE_DIR = "modelos_idae/";
+const IDAE = [
+  { n: "0", f: "Modelo_0._Informacion_de_la_instalacion_de_autoconsumo", fase: "Reparto de la energía", t: "Información de la instalación de autoconsumo",
+    d: "La entrega la empresa instaladora: CAU, tipo y modalidad, conexión y CUPS asociados",
+    q: "La rellena la empresa instaladora: titular, CUPS, ubicación, tecnología, potencia instalada (la del inversor), CAU, tipo y modalidad de autoconsumo, tipo de conexión y, en los colectivos, la lista numerada de CUPS asociados. Va con el CIE diligenciado por la comunidad autónoma." },
+  { n: "1", f: "Modelo_1._Contrato_de_compensacion_de_excedentes", fase: "Reparto de la energía", t: "Contrato de compensación de excedentes",
+    d: "Productor y cada consumidor, si hay compensación simplificada",
+    q: "Entre el productor y cada consumidor, en la modalidad CON excedentes acogida a compensación (RD 244/2019, art. 14). Duración mínima de un año, prorrogable. En los colectivos, cada consumidor envía su copia a su comercializadora." },
+  { n: "2", f: "Modelo_2._Acuerdo_de_Reparto_de_energia", fase: "Reparto de la energía", t: "Acuerdo de reparto de energía",
+    d: "Todos los consumidores y el productor, con el .txt de coeficientes β",
+    q: "Lo firman todos los consumidores asociados y el productor: modalidad, si se acogen a la compensación simplificada y los coeficientes β, que van en el fichero .txt adjunto. Con él, cada consumidor pide a la distribuidora el cambio de su contrato ATR." },
+  { n: "3.1", f: "Modelo_3.1_Autorizacion_Gestor_de_Autoconsumo_(firma_conjunta)", fase: "Reparto de la energía", t: "Autorización del gestor de autoconsumo (firma conjunta)",
+    d: "Los consumidores designan al gestor, todos en un documento",
+    q: "Los consumidores asociados designan al gestor de autoconsumo y le dan poder para centralizar los trámites, preparar el .txt, enviar el acuerdo a la distribuidora y a las comercializadoras, y gestionar altas, bajas y cambios. Firman todos en el mismo documento." },
+  { n: "3.2", f: "Modelo_3.2_Autorizacion_Gestor_de_Autoconsumo_(firma_individual)", fase: "Reparto de la energía", t: "Autorización del gestor de autoconsumo (firma individual)",
+    d: "Lo mismo, cada consumidor en su propio documento",
+    q: "Igual que el modelo 3.1, pero cada consumidor firma su propia autorización (con su NIF y su CUPS)." },
+  { n: "4", f: "Modelo_4._Modificacion_de_coeficientes_de_reparto", fase: "Reparto de la energía", t: "Modificación de coeficientes de reparto",
+    d: "Nuevo .txt; firman los que cambian de coeficiente",
+    q: "Sustituye el fichero .txt anterior por uno nuevo. Solo firman los consumidores cuyo coeficiente cambia (con la misma numeración del acuerdo original); el resto del acuerdo sigue igual." },
+  { n: "5", f: "Modelo_5._Alta_de_consumidores_y_Modificacion_de_coeficientes", fase: "Socios", t: "Alta de consumidores en el autoconsumo",
+    d: "Nuevos consumidores y nuevo .txt de coeficientes",
+    q: "Para incorporar consumidores al autoconsumo colectivo (se sigue la numeración del acuerdo original) con el nuevo fichero .txt. Firman los nuevos y los que cambian de coeficiente." },
+  { n: "6", f: "Modelo_6._Baja_de_consumidores_y_Modificacion_de_coeficientes", fase: "Socios", t: "Baja de consumidores del autoconsumo",
+    d: "Bajas y nuevo .txt con su parte repartida",
+    q: "Para dar de baja consumidores del autoconsumo colectivo y repartir su parte con un nuevo fichero .txt. Firman los que cambian de coeficiente." },
+  { n: "6.1", f: "Modelo_6.1._Autorizacion_Gestor_Baja_de_consumidor", fase: "Socios", t: "Autorización al gestor para la baja de un consumidor",
+    d: "El que se va autoriza al gestor a tramitar su baja",
+    q: "El consumidor que causa baja autoriza al gestor de autoconsumo a tramitarla y renuncia a la energía que le correspondía por el acuerdo de reparto." },
+];
+const idaeDe = (id) => IDAE.find((m) => "idae-" + m.n === id);
+const idaeUrl = (m, ext) => IDAE_DIR + encodeURIComponent(m.f + ext);
 
 // ---------------- documentos ----------------
 const DOCS = [
@@ -650,10 +702,26 @@ function pintarDatos() {
 function pintarLista() {
   const fases = [...new Set(DOCS.map((d) => d.fase))];
   $("p-docs").innerHTML = fases.map((f) => `<section class="fase"><h2>${esc(f)}</h2><ul>${DOCS.filter((d) => d.fase === f).map((d) =>
-    `<li><button class="doc" type="button" data-doc="${d.id}"${d.id === ACTUAL ? ' aria-current="true"' : ""}><b>${esc(d.t)}${S.personal[clave(d.id, 0)] || Object.keys(S.personal).some((k) => k.startsWith(d.id + ":")) ? ' <span class="chip">personalizado</span>' : ""}</b><small>${esc(d.d)}${d.socio ? " · uno por socio" : ""}</small></button></li>`).join("")}</ul></section>`).join("") +
+    `<li><button class="doc" type="button" data-doc="${d.id}"${d.id === ACTUAL ? ' aria-current="true"' : ""}><b>${esc(d.t)}${S.personal[clave(d.id, 0)] || Object.keys(S.personal).some((k) => k.startsWith(d.id + ":")) ? ' <span class="chip">personalizado</span>' : ""}</b><small>${esc(d.d)}${d.socio ? " · uno por socio" : ""}</small></button></li>`).join("")}${IDAE.filter((m) => m.fase === f).map((m) =>
+    `<li><button class="doc" type="button" data-doc="idae-${m.n}"${"idae-" + m.n === ACTUAL ? ' aria-current="true"' : ""}><b>${esc(m.t)} <span class="chip idae">IDAE</span></b><small>Modelo ${m.n} · ${esc(m.d)}</small></button></li>`).join("")}</ul></section>`).join("") +
     `<div style="display:grid;gap:6px"><button class="btn" type="button" id="b-pdf-todo">Descargar todos en PDF</button><small class="pistas">Un PDF con los ${DOCS.length} documentos (los de socio, uno por cada socio), cada uno en su página.</small></div>`;
 }
 function pintarDoc() {
+  const m = idaeDe(ACTUAL);
+  ["b-copiar", "b-word", "b-pdf"].forEach((k) => { $(k).hidden = !!m; });
+  $("idae-dl").hidden = !m;
+  if (m) {     // modelo oficial del IDAE: tal cual, sin datos de la comunidad
+    $("doc-tit").textContent = `Modelo ${m.n} del IDAE · ${m.t}`;
+    $("sel-socio-w").hidden = $("doc-pers").hidden = $("b-restaurar").hidden = true;
+    $("doc-huecos").textContent = "Modelo oficial del IDAE"; $("doc-huecos").className = "chip";
+    $("idae-pdf").href = idaeUrl(m, ".pdf"); $("idae-word").href = idaeUrl(m, ".docx");
+    $("folio").setAttribute("contenteditable", "false");
+    $("folio").innerHTML = `<h1>${esc(m.t)}</h1><p class="sub">Modelo ${m.n} · IDAE (ver la <a href="#nota-idae">nota al final</a>)</p>
+      <p class="idae-quien">${esc(m.q)}</p><p>Descárgalo en Word para rellenarlo o ábrelo en PDF para imprimirlo (botones de arriba).</p>
+      <object class="idae-visor" data="${idaeUrl(m, ".pdf")}" type="application/pdf"><p><a href="${idaeUrl(m, ".pdf")}" target="_blank" rel="noopener">Abrir el PDF del modelo ${m.n}</a></p></object>`;
+    return;
+  }
+  $("folio").setAttribute("contenteditable", "true");
   const d = DOCS.find((x) => x.id === ACTUAL) || DOCS[0]; ACTUAL = d.id;
   if (SOCIO >= S.socios.length) SOCIO = 0;
   $("doc-tit").textContent = d.t;

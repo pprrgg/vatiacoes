@@ -2086,6 +2086,13 @@ def simular(cx, so, forzar, nota):
 # su descarga web, que se cargan como los que sube el gestor (ingesta_ficheros)
 PERFIL_VAR_DIA, PERFIL_VAR_Q = 15, 20      # variacion aleatoria (%) entre dias y entre cuartos de hora
 BAT_EF, BAT_HORAS = 0.9, 4                  # bateria de un perfil: rendimiento y horas en que entrega lo guardado
+# Despachos de la bateria de un perfil (cuando entrega, en las horas sin sol, lo que ha guardado):
+#   precio_consumo: en proporcion al precio de cada hora x consumo de sus socios por su beta
+#   consumo: en proporcion al consumo de sus socios por su beta (sigue su demanda)
+#   punta: todo en las horas del periodo mas caro (las demas, nada)
+#   tarde: por igual en las BAT_HORAS siguientes al final de la FV
+#   plano: por igual en todas las horas sin sol
+BAT_DESPACHOS = ("precio_consumo", "consumo", "punta", "tarde", "plano")
 PERFIL_PEAJES = {"2.0TD": ("BAJA TENSION y POTENCIA <= 15 kW", "Baja tensión", "TARIFA DE TRES PERIODOS"),
                  "3.0TD": ("BAJA TENSION y POTENCIA > 15 kW (3.0TD)", "Baja tensión", "TARIFA DE SEIS PERIODOS"),
                  "3.0TD+": ("BAJA TENSION y POTENCIA > 15 kW (3.0TD)", "Baja tensión", "TARIFA DE SEIS PERIODOS"),
@@ -2121,6 +2128,7 @@ def perfil_valido(p):
     gen_dia = num("gen_dia", 0, 0, 1e7, "Generación media diaria")
     bat = bool(p.get("bateria")) and gen_dia > 0       # (capacidad ilimitada: guarda toda su FV)
     q = {"plantilla": str(p.get("plantilla") or "")[:40], "fv": gen_dia > 0, "gen_dia": gen_dia, "bateria": bat,
+         "bat_despacho": (p.get("bat_despacho") if p.get("bat_despacho") in BAT_DESPACHOS else "precio_consumo") if bat else None,
          "kwh_dia": num("kwh_dia", 9, 0.01, 1e6, "Consumo medio diario laborable"),
          "lab": serie("lab", 24, "Día laborable"), "fes": serie("fes", 24, "Fin de semana y festivo"),
          "mes": serie("mes", 12, "Peso de cada mes"),
@@ -2150,7 +2158,7 @@ def perfil_valido(p):
     return q
 
 
-def pesos_despacho(cx, socio_id):
+def pesos_despacho(cx, socio_id, modo="precio_consumo"):
     """Pesos del despacho de la bateria de un generador, {inicio de la hora (s): peso}: el precio de
     la energia de cada hora (el de la comunidad, por el periodo del peaje de cada socio) por la
     suma de los consumos de sus socios por su beta (los suyos en vigor; sin ellos, a cada socio
@@ -2170,6 +2178,10 @@ def pesos_despacho(cx, socio_id):
         b = {i: x / T for i, x in tot.items()}
     pre = gestion.precios()
     out = {}
+    if modo == "punta":         # (solo el precio: el de la tarifa 2.0TD de la comunidad en cada hora)
+        precio = {int(k): float(v) for k, v in pre["2.0TD"]["p"].items()}
+        horas = {h for d in D.values() for h in d}
+        return {int(h.timestamp()): precio.get(periodo(h.astimezone(TZL), "2.0TD"), 0.0) for h in horas}
     for so, s in part:
         bi = b.get(so["id"], 0.0)
         if not bi:
@@ -2179,7 +2191,8 @@ def pesos_despacho(cx, socio_id):
         precio = {int(k): float(v) for k, v in pre[pjn]["p"].items()}
         for h, x in D[so["id"]].items():
             k = int(h.timestamp())
-            out[k] = out.get(k, 0.0) + bi * x * precio.get(periodo(h.astimezone(TZL), "2.0TD" if pjn == "2.0TD" else "6P"), 0.0)
+            pr = 1.0 if modo == "consumo" else precio.get(periodo(h.astimezone(TZL), "2.0TD" if pjn == "2.0TD" else "6P"), 0.0)
+            out[k] = out.get(k, 0.0) + bi * x * pr
     return out
 
 
@@ -2279,8 +2292,17 @@ def perfil_ficheros(p, cups, semilla, pesos=None):
                 sol[k] -= sol0[k]
             sig = next((x[0] for x in tramos[n_ + 1:] if x), len(sol))
             noche = list(range(tr[1] + 1, min(sig, len(sol))))
-            w = [(pesos.get(int(lts[k].timestamp()) // 3600 * 3600) or 0.0) if pesos else 0.0 for k in noche]
-            if not sum(w):             # (sin pesos: por igual en las BAT_HORAS siguientes)
+            modo = p.get("bat_despacho") or "precio_consumo"
+            if modo == "plano":
+                w = [1.0] * len(noche)
+            elif modo == "tarde":
+                w = []
+            else:
+                w = [(pesos.get(int(lts[k].timestamp()) // 3600 * 3600) or 0.0) if pesos else 0.0 for k in noche]
+                if modo == "punta" and w:       # (todo en las horas del periodo mas caro)
+                    mx = max(w)
+                    w = [1.0 if x >= mx - 1e-9 and mx > 0 else 0.0 for x in w]
+            if not sum(w):             # (al ponerse el sol, o sin pesos: por igual en las BAT_HORAS siguientes)
                 noche = noche[:BAT_HORAS * 4]
                 w = [1.0] * len(noche)
             tw = sum(w) or 1.0
@@ -2451,9 +2473,9 @@ def cargar_perfil(socio_id, perfil):
     if so.get("origen") != "virtual":
         raise ValueError("Solo los socios de prueba se generan con un perfil")
     pesos = None
-    if p.get("bateria"):       # (despacho: precio de cada hora x consumo de sus socios por su beta)
+    if p.get("bateria") and p.get("bat_despacho") in ("precio_consumo", "consumo", "punta"):
         with db.conectar() as cx:
-            pesos = pesos_despacho(cx, socio_id)
+            pesos = pesos_despacho(cx, socio_id, p["bat_despacho"])
     ficheros, res = perfil_ficheros(p, cups_simulado(f"perfil|{comunidad()['id']}|{socio_id}"), socio_id, pesos)
     notas = []
     with db.conectar() as cx, cx.transaction():
@@ -2470,7 +2492,10 @@ def cargar_perfil(socio_id, perfil):
                  (f"; FV de {coma(res['kwp'])} kWp: {fmt(res['generacion_kwh_anio'])} kWh al año, {fmt(res['vertida_kwh_anio'])} vertidos"
                   if p["fv"] else "") +
                  (f"; con batería: entrega toda su FV ({fmt(res['descarga_kwh_anio'])} kWh al año, con el rendimiento) en las horas sin sol, "
-                  "en proporción al precio de cada hora y al consumo de sus socios por su β" if p.get("bateria") else ""))
+                  + {"precio_consumo": "en proporción al precio de cada hora y al consumo de sus socios por su β",
+                     "consumo": "siguiendo el consumo de sus socios por su β", "punta": "en las horas del periodo más caro",
+                     "tarde": f"en las {BAT_HORAS} horas siguientes al final de la FV", "plano": "por igual en todas"}[p["bat_despacho"]]
+                  if p.get("bateria") else ""))
     return {**r, "notas": notas, "recargar": True, "resumen": res}
 
 
@@ -4439,6 +4464,11 @@ def coeficientes_pdf(anio=None, propio=None, generador=None):
 # Normativa y documentos en que se basan los calculos de los informes; cada informe numera las
 # que cita en su capitulo "Referencias bibliograficas" ([n] en el texto)
 REFERENCIAS = {
+    "idae_guia": ("INSTITUTO PARA LA DIVERSIFICACIÓN Y AHORRO DE LA ENERGÍA (IDAE). Guía profesional de tramitación del "
+                  "autoconsumo. Versión 6. Madrid: IDAE, julio de 2024. Anexo D, Ejemplos.",
+                  "https://www.idae.es/sites/default/files/documentos/publicaciones_idae/20240709_Guia_Profesional_Tramitacion_autoconsumo_v.6.pdf"),
+    "ley15": ("ESPAÑA. Ley 15/2012, de 27 de diciembre, de medidas fiscales para la sostenibilidad energética. Boletín Oficial del "
+              "Estado, 28 de diciembre de 2012. BOE-A-2012-15649.", "https://www.boe.es/eli/es/l/2012/12/27/15"),
     "ley24": ("ESPAÑA. Ley 24/2013, de 26 de diciembre, del Sector Eléctrico. Boletín Oficial del Estado, 27 de diciembre "
               "de 2013. BOE-A-2013-13645.", "https://www.boe.es/eli/es/l/2013/12/26/24"),
     "rd244": ("ESPAÑA. Real Decreto 244/2019, de 5 de abril, por el que se regulan las condiciones administrativas, técnicas "
@@ -4507,6 +4537,7 @@ TIPOS_RESUMEN = {
     "potencia": ("Potencias contratadas, máximas demandadas y sus costes", "RES-POT"),
     "reactiva": ("Energía reactiva y sus costes", "RES-REA"),
     "factura": ("Factura de electricidad con impuestos y alquiler del contador", "RES-FAC"),
+    "modalidades": ("Comparativa de modalidades de autoconsumo y en comunidad (IDAE, figura D.6)", "RES-MOD"),
 }
 GLOSARIO_RES = GLOSARIO + [
     ("LCOE", "Coste nivelado de la energía (€/kWh): inversión, operación y mantenimiento de la generación repartidos entre la energía que produce en su vida útil."),
@@ -4546,7 +4577,7 @@ def _et_l(k):
 
 
 def _vacio_e():
-    return {"p": {}, "red": 0.0, "vert": 0.0, "auto": 0.0, "gen": 0.0}
+    return {"p": {}, "red": 0.0, "vert": 0.0, "auto": 0.0, "gen": 0.0, "pd": {}}   # pd: toda la demanda (red + autoconsumo) por periodo
 
 
 def _energia_mensual(cx, cups, pj, d0, d1):
@@ -4559,6 +4590,7 @@ def _energia_mensual(cx, cups, pj, d0, d1):
         c = v.get("consumo_kwh") or 0.0
         p = cec.periodo(lt, pj)
         x["p"][p] = x["p"].get(p, 0.0) + c
+        x["pd"][p] = x["pd"].get(p, 0.0) + c + (v.get("autoconsumo_kwh") or 0.0)
         x["red"] += c
         x["vert"] += v.get("vertida_kwh") or 0.0
         x["auto"] += v.get("autoconsumo_kwh") or 0.0
@@ -4581,6 +4613,7 @@ def _energia_en_comunidad(part, A, D):
             x = out[i].setdefault((lt.year, lt.month), _vacio_e())
             p = cec.periodo(lt, pj[i])
             x["p"][p] = x["p"].get(p, 0.0) + dem - a
+            x["pd"][p] = x["pd"].get(p, 0.0) + dem
             x["red"] += dem - a
             x["vert"] += asig - a
             x["auto"] += a
@@ -4698,6 +4731,56 @@ def _factura(c, p, r, alq, O):
             "tot": e + p + r + iee + alq + iva + c[2]}
 
 
+# Venta de excedentes a mercado (autoconsumo CON excedentes NO acogido a compensacion), con las cifras
+# del ejemplo de la Guia profesional de tramitacion del autoconsumo del IDAE (anexo D, figuras D.5 y
+# D.6): IVA de la venta, servicio de representacion en el mercado (EUR/kWh, mas IVA), Impuesto sobre el
+# Valor de la Produccion de Energia Electrica (IVPEE, Ley 15/2012) y retribucion del operador del
+# sistema (EUR/kWh). Precio de venta: el de la compensacion de excedentes de la comunidad.
+VENTA = {"iva": 21.0, "repr": 0.0006, "ivpee": 7.0, "os": 0.00014}
+
+
+def _caso(compra, comp, p, r, alq, O):
+    """Factura de un mes de una modalidad: la compensacion no supera la energia comprada (RD 244/2019,
+    art. 14), impuesto electrico sobre energia, potencia y reactiva e IVA sobre todo."""
+    ca = min(comp, compra)
+    e = compra - ca
+    iee = (e + p + r) * O["iee"] / 100
+    iva = (e + p + r + iee + alq) * O["iva"] / 100
+    return {"compra": compra, "comp": ca, "e": e, "p": p, "r": r, "iee": iee, "alq": alq, "iva": iva,
+            "tot": e + p + r + iee + alq + iva}
+
+
+def _venta(kwh, precio):
+    """Venta de los excedentes a mercado (como la figura D.5 del IDAE): lo que se cobra con IVA, menos la
+    representacion (con IVA), el IVPEE y el operador del sistema. -> {..., "neto": ingreso neto}"""
+    v = kwh * precio
+    x = {"kwh": kwh, "v": v, "iva": v * VENTA["iva"] / 100, "repr": kwh * VENTA["repr"] * (1 + VENTA["iva"] / 100),
+         "ivpee": v * VENTA["ivpee"] / 100, "os": kwh * VENTA["os"]}
+    x["neto"] = x["v"] + x["iva"] - x["repr"] - x["ivpee"] - x["os"]
+    return x
+
+
+def _modalidades(x, k, pr, O):
+    """Las cuatro modalidades de un socio en el mes k: sin autoconsumo (toda su demanda de la red),
+    individual acogida a compensacion (sus lecturas de Datadis), individual con venta de excedentes
+    y en comunidad acogida a compensacion (la energia que le corresponde con el reparto de cada
+    generador). Mismo termino de potencia, reactiva y alquiler en las cuatro."""
+    precio = lambda e: sum(kwh * float(pr["p"].get(str(q)) or 0) for q, kwh in e.items())
+    pc = float(pr.get("comp") or 0)
+    E = x["E"].get(k) or _vacio_e()
+    pot, rea = x["P"]["mes"][k]["total"], (x["R"]["mes"].get(k) or {}).get("total", 0.0)
+    alq = float(pr.get("alquiler") or 0)
+    pd = E["pd"] or E["p"]
+    out = {"sin": _caso(precio(pd), 0.0, pot, rea, alq, O), "kwh_sin": sum(pd.values()), "kwh_red": E["red"], "kwh_exc": E["vert"],
+           "comp": _caso(precio(E["p"]), E["vert"] * pc, pot, rea, alq, O),
+           "venta": _caso(precio(E["p"]), 0.0, pot, rea, alq, O), "v": _venta(E["vert"], pc), "com": None}
+    if x["Ec"] is not None:
+        Ec = x["Ec"].get(k) or _vacio_e()
+        out["com"] = _caso(precio(Ec["p"]), Ec["vert"] * pc, pot, rea, alq, O)
+        out["kwh_red_c"], out["kwh_exc_c"] = Ec["red"], Ec["vert"]
+    return out
+
+
 def _datos_resumen(cx, desde, hasta, propio=None):
     """Calculos de los resumenes mensuales de los socios habilitados con datos (con propio,
     se calcula todo, pero solo se muestran la comunidad y ese socio)."""
@@ -4733,9 +4816,11 @@ def _datos_resumen(cx, desde, hasta, propio=None):
             F[k] = _factura(_coste_energia(E.get(k) or _vacio_e(), pr), pot, rea, float(pr.get("alquiler") or 0), O)
             if Ec is not None:
                 Fc[k] = _factura(_coste_energia(Ec.get(k) or _vacio_e(), pr), pot, rea, float(pr.get("alquiler") or 0), O)
-        socios.append({"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "peaje": pj, "tarifa": t, "pr": pr,
-                       "contrato": c, "E": E, "Ec": Ec, "P": Pt, "R": Rc, "F": F, "Fc": Fc if Ec is not None else None,
-                       "hay": hay, "generador": so["id"] in gen_ids})
+        x = {"id": so["id"], "nombre": so["nombre"], "cups": s["cups"], "peaje": pj, "tarifa": t, "pr": pr,
+             "contrato": c, "E": E, "Ec": Ec, "P": Pt, "R": Rc, "F": F, "Fc": Fc if Ec is not None else None,
+             "hay": hay, "generador": so["id"] in gen_ids}
+        x["M"] = {k: _modalidades(x, k, pr, O) for k in F}
+        socios.append(x)
     if propio and propio not in [x["id"] for x in socios]:
         raise ValueError("Este suministro no tiene datos o no está habilitado en la comunidad")
     return {"cfg": cfg, "PRE": PRE, "O": O, "meses": meses, "modo": modo, "socios": socios, "propio": propio,
@@ -5062,6 +5147,104 @@ def _cap_factura(R, raiz):
     return out, fil
 
 
+def _suma_m(M, ks):
+    """Suma de las modalidades de los meses ks: {caso: {concepto: EUR}}, venta y kWh."""
+    S = {"sin": {}, "comp": {}, "venta": {}, "com": {}, "v": {}}
+    for k in ks:
+        m = M[k]
+        for c in ("sin", "comp", "venta", "com", "v"):
+            if m[c] is None:
+                S[c] = None
+                continue
+            if S[c] is not None:
+                for kk, vv in m[c].items():
+                    S[c][kk] = S[c].get(kk, 0.0) + vv
+        for kk in ("kwh_sin", "kwh_red", "kwh_exc", "kwh_red_c", "kwh_exc_c"):
+            if kk in m:
+                S[kk] = S.get(kk, 0.0) + m[kk]
+    return S
+
+
+def _cap_modalidades(R, raiz):
+    """Comparativa de modalidades de cada socio (como la figura D.6 de la guia del IDAE) con el caso
+    en comunidad: factura desglosada sin autoconsumo, individual acogida a compensacion, individual con
+    venta de excedentes y en comunidad acogida a compensacion; pago neto y ahorro."""
+    meses, soc = R["meses"], [x for x in R["socios"] if not x["generador"]]
+    vis = [x for x in soc if not R["propio"] or x["id"] == R["propio"]]
+    eur = lambda v: _es(v, 2) + " €" if isinstance(v, (int, float)) else v
+    kwh = lambda v: _es(v, 0) + " kWh"
+    pct = lambda a, b: _es(100 * (b - a) / b, 1) + " %" if b else "–"
+    fil, bl, tot = [], [], {"sin": 0.0, "comp": 0.0, "venta": 0.0, "com": 0.0}
+    for i, x in enumerate(vis):
+        ks = [k for k in meses if k in x["M"]]
+        if not ks:
+            continue
+        S = _suma_m(x["M"], ks)
+        propia = S["kwh_exc"] > 0.5 or any((x["E"].get(k) or _vacio_e())["auto"] > 0 for k in ks)
+        neto_v = S["venta"]["tot"] - S["v"]["neto"]
+        com = S["com"]
+        casos = [("Sin autoconsumo", S["sin"], None), ("Individual: compensación", S["comp"] if propia else None, None),
+                 ("Individual: venta de excedentes", S["venta"] if propia else None, S["v"] if propia else None),
+                 ("En comunidad: compensación", com, None)]
+        cab = ["Concepto"] + [c[0] for c in casos]
+        g = lambda f: [f(c, v) if c is not None else "–" for _, c, v in casos]
+        filas = [
+            ["Término fijo: potencia y excesos"] + g(lambda c, v: eur(c["p"])),
+            ["Energía comprada a la red"] + [kwh(S["kwh_sin"]), kwh(S["kwh_red"]) if propia else "–", kwh(S["kwh_red"]) if propia else "–",
+                                             kwh(S.get("kwh_red_c", 0)) if com is not None else "–"],
+            ["Coste de la energía comprada"] + g(lambda c, v: eur(c["compra"])),
+            ["Compensación de excedentes"] + ["–", eur(-S["comp"]["comp"]) if propia else "–", "–", eur(-com["comp"]) if com is not None else "–"],
+            ["Término variable"] + g(lambda c, v: eur(c["e"])),
+            ["Reactiva"] + g(lambda c, v: eur(c["r"])),
+            ["Impuesto eléctrico"] + g(lambda c, v: eur(c["iee"])),
+            ["Alquiler del contador"] + g(lambda c, v: eur(c["alq"])),
+            ["IVA"] + g(lambda c, v: eur(c["iva"])),
+            ["TOTAL FACTURA"] + g(lambda c, v: eur(c["tot"])),
+            ["Excedentes vertidos"] + ["–", kwh(S["kwh_exc"]) if propia else "–", kwh(S["kwh_exc"]) if propia else "–",
+                                       kwh(S.get("kwh_exc_c", 0)) if com is not None else "–"],
+            ["Venta a mercado (con IVA)"] + ["–", "–", eur(S["v"]["v"] + S["v"]["iva"]) if propia else "–", "–"],
+            ["Representación, IVPEE y operador del sistema"] + ["–", "–", eur(-(S["v"]["repr"] + S["v"]["ivpee"] + S["v"]["os"])) if propia else "–", "–"],
+            ["PAGO NETO"] + [eur(S["sin"]["tot"]), eur(S["comp"]["tot"]) if propia else "–", eur(neto_v) if propia else "–",
+                             eur(com["tot"]) if com is not None else "–"],
+            ["AHORRO frente a sin autoconsumo"] + ["–", pct(S["comp"]["tot"], S["sin"]["tot"]) if propia else "–",
+                                                   pct(neto_v, S["sin"]["tot"]) if propia else "–",
+                                                   pct(com["tot"], S["sin"]["tot"]) if com is not None else "–"],
+        ]
+        netos = [S["sin"]["tot"], S["comp"]["tot"] if propia else None, neto_v if propia else None, com["tot"] if com is not None else None]
+        ets = [e for e, v in zip(["Sin autoconsumo", "Ind. compensación", "Ind. venta", "En comunidad"], netos) if v is not None]
+        svg = _fig(raiz, f"res_mod_{i}.svg", ks, lambda: G.barras(
+            ets, [{"n": "Pago neto del periodo", "c": "#7b2fa8", "v": [v for v in netos if v is not None]}], unidad="€", ancho=560, alto=220),
+            f"Pago neto del periodo en cada modalidad — {x['nombre']}",
+            "Pago neto: factura menos, en la venta de excedentes, el ingreso neto de la venta.")
+        bl += [{"t": "h", "x": x["nombre"]},
+               {"t": "p", "x": f"CUPS {x['cups']} · peaje {x['peaje']} · {len(ks)} meses. " +
+                               ("Con instalación propia: genera y vierte excedentes." if propia else
+                                "Sin instalación propia: no hay modalidades individuales; solo sin autoconsumo y en comunidad.") +
+                               ("" if com is not None else " No participa del reparto de la comunidad.")},
+               {"t": "tab", "tabla": _t(cab, filas, total=False), "cap": f"Comparativa de modalidades del periodo — {x['nombre']}",
+                "size": "6.5pt"}] + svg
+        fil.append([{"t": x["nombre"], "sub": x["cups"]}, x["peaje"], S["sin"]["tot"], S["comp"]["tot"] if propia else "–",
+                    neto_v if propia else "–", com["tot"] if com is not None else "–",
+                    (100 * (S["sin"]["tot"] - com["tot"]) / S["sin"]["tot"]) if com is not None and S["sin"]["tot"] else "–"])
+        tot["sin"] += S["sin"]["tot"]
+        tot["comp"] += S["comp"]["tot"] if propia else S["sin"]["tot"]
+        tot["venta"] += neto_v if propia else S["sin"]["tot"]
+        tot["com"] += com["tot"] if com is not None else S["sin"]["tot"]
+    if fil and not R["propio"]:
+        fil.append(["Comunidad", "", tot["sin"], tot["comp"], tot["venta"], tot["com"],
+                    100 * (tot["sin"] - tot["com"]) / tot["sin"] if tot["sin"] else "–"])
+    fil = _fmt(fil, [None, None, 2, 2, 2, 2, 1])
+    cab_r = ["Socio", "Peaje", "Sin autoconsumo (€)", "Individual: compensación (€)", "Individual: venta (€)", "En comunidad (€)",
+             "Ahorro en comunidad (%)"]
+    out = [{"titulo": "Resultados de la comunidad" if not R["propio"] else "Resumen del socio", "bloques": [
+        {"t": "p", "x": "Pago neto del periodo de cada socio en cada modalidad (como la figura D.6 de la guía del IDAE), más el caso en "
+                        "comunidad. En los totales de la comunidad, los socios sin instalación propia cuentan sin autoconsumo en las "
+                        "modalidades individuales. Las instalaciones de generación de la comunidad no se incluyen (no tienen consumo propio)."},
+        {"t": "tab", "tabla": _t(cab_r, fil, texto=2, total=False), "cap": "Pago neto del periodo por modalidad", "size": "6.5pt"}]},
+        {"titulo": "Resultados por socio" if not R["propio"] else "Resultados del socio", "bloques": bl}]
+    return out, fil
+
+
 def _metodo_resumen(tipo, R, n):
     """Capitulo de normativa y metodo de calculo del resumen tipo, con las citas n (solo las de ese tipo)."""
     P_ = lambda x: {"t": "p", "x": x}
@@ -5135,6 +5318,26 @@ def _metodo_resumen(tipo, R, n):
                Fm('F_R = sum_(p=1)^5 max(0, E_(r,p) - 0.33 dot E_(a,p)) dot pi_r (cos phi_p)'),
                P_(f"Con el cos φ redondeado a dos decimales: desde 0,95, sin recargo; de 0,80 a 0,95, {_es(R['O']['reac1'], 6)} "
                   f"€/kVArh; por debajo de 0,80, {_es(R['O']['reac2'], 6)} €/kVArh. La capacitiva del P6 no se factura en 2026.")],
+           "modalidades": lambda: datos + periodos + [
+               H("Modalidades que se comparan"),
+               Mk(f"Como en el anexo D de la Guía profesional de tramitación del autoconsumo del IDAE {n['idae_guia']} (figuras D.4 a "
+                  "D.6), se calcula la factura de cada socio en cada modalidad, con el mismo término de potencia, reactiva y alquiler del "
+                  "contador: (1) sin autoconsumo, toda su demanda (consumo de la red y autoconsumo) comprada a la red; (2) autoconsumo "
+                  f"individual CON excedentes acogido a compensación (Real Decreto 244/2019 {n['rd244']}, art. 14), con sus lecturas de "
+                  "Datadis; (3) autoconsumo individual CON excedentes NO acogido a compensación, en el que los excedentes se venden al "
+                  "mercado; y (4) en comunidad, acogido a compensación, con la energía que le corresponde con los coeficientes de reparto "
+                  "de cada generador de la comunidad."),
+               Fm('C_F = max(0, sum_p E_p dot pi_p - E_"exc" dot pi_c)'),
+               Fm('F = C_F + T_P + F_"EP" + F_R + "IEE" + A_c + "IVA"'),
+               Mk(f"La compensación no puede superar el coste de la energía comprada del mes. En la venta (figura D.5 del IDAE) se "
+                  f"cobra el valor de los excedentes al precio de la compensación con IVA ({_es(VENTA['iva'], 0)} %), y se pagan la "
+                  f"representación en el mercado ({_es(VENTA['repr'], 4)} €/kWh más IVA), el Impuesto sobre el Valor de la Producción de "
+                  f"Energía Eléctrica ({_es(VENTA['ivpee'], 0)} %, Ley 15/2012 {n['ley15']}) y la retribución del operador del sistema "
+                  f"({_es(VENTA['os'], 5)} €/kWh). El pago neto es la factura menos el ingreso neto de la venta y el ahorro, la diferencia "
+                  "con el pago sin autoconsumo en porcentaje de este."),
+               P_(f"Tipos: impuesto eléctrico {_es(R['O']['iee'], 8)} % e IVA {_es(R['O']['iva'], 0)} %. Es una estimación: no incluye el "
+                  "coste de la instalación (LCOE), las cuotas mínimas del impuesto eléctrico, el bono social ni la cuantía por uso de la "
+                  "red en las instalaciones próximas a través de la red (art. 17.5 del Real Decreto 244/2019).")],
            "factura": lambda: datos + [
                H("Componentes de la factura"),
                Mk(f"La factura estimada de cada mes suma el término de energía $C_E$ (la compensación de excedentes no puede "
@@ -5158,7 +5361,8 @@ CLAVES_RES = {"energia": ["datadis", "c3_2020", "peajes2026", "rd148", "rd244", 
               "comunidad": ["datadis", "c3_2020", "rd244", "ted1247", "peajes2026", "rd148", "irena", "ley24"],
               "potencia": ["datadis", "c3_2020", "c1_2025", "peajes2026", "cnmc_crit", "rd1110"],
               "reactiva": ["datadis", "c3_2020", "peajes2026", "cnmc_crit"],
-              "factura": ["datadis", "c3_2020", "c1_2025", "peajes2026", "rd244", "ley38", "itc3860", "ley37", "irena", "cnmc_crit"]}
+              "factura": ["datadis", "c3_2020", "c1_2025", "peajes2026", "rd244", "ley38", "itc3860", "ley37", "irena", "cnmc_crit"],
+              "modalidades": ["datadis", "idae_guia", "rd244", "ted1247", "c3_2020", "peajes2026", "ley15", "ley38", "itc3860", "ley37"]}
 
 
 def resumen_pdf(tipo, desde=None, hasta=None, propio=None):
@@ -5186,7 +5390,7 @@ def resumen_pdf(tipo, desde=None, hasta=None, propio=None):
     with tempfile.TemporaryDirectory() as raiz:
         cap, fil = {"energia": lambda: _cap_energia(R, raiz, False), "comunidad": lambda: _cap_energia(R, raiz, True),
                     "potencia": lambda: _cap_potencia(R, raiz), "reactiva": lambda: _cap_reactiva(R, raiz),
-                    "factura": lambda: _cap_factura(R, raiz)}[tipo]()
+                    "factura": lambda: _cap_factura(R, raiz), "modalidades": lambda: _cap_modalidades(R, raiz)}[tipo]()
         ns = len(R["socios"])
         alcance = (f"Comprende los {ns} socios habilitados con datos de {cfg['cec']}" if not propio else
                    f"Comprende el suministro de {yo['nombre']} (CUPS {yo['cups']}) y, como referencia, los totales del conjunto "
@@ -5213,11 +5417,13 @@ def resumen_pdf(tipo, desde=None, hasta=None, propio=None):
                  "potencia": ["Socio", "Peaje", "Contratada (kW)", "Máxima (kW)", "Ajustada (kW)", "Excesos (€)", "Coste (€)",
                               "Ahorro posible (€)"],
                  "reactiva": ["Socio", "Peaje", "Reactiva (kVArh)", "cos φ medio", "Peor cos φ", "Facturable (kVArh)", "Coste (€)"],
+                 "modalidades": ["Socio", "Peaje", "Sin autoconsumo (€)", "Individual: compensación (€)", "Individual: venta (€)",
+                                 "En comunidad (€)", "Ahorro en comunidad (%)"],
                  "factura": ["Socio", "Peaje", "Energía (€)", "Potencia (€)", "Reactiva (€)", "Imp. eléctrico (€)", "Alquiler (€)",
                              "IVA (€)", "Generación LCOE (€)", "Total (€)", "En comunidad (€)", "Ahorro (€)"]}[tipo]
         # Solo las columnas principales (la tabla del resumen va a 8,5 pt en una pagina)
         idx = {"energia": [0, 1, 2, 3, 4, 5], "comunidad": [0, 1, 3, 4, 5, 7], "potencia": [0, 1, 5, 6, 7],
-               "reactiva": [0, 1, 2, 3, 5, 6], "factura": [0, 1, 2, 3, 9, 10, 11]}[tipo]
+               "reactiva": [0, 1, 2, 3, 5, 6], "factura": [0, 1, 2, 3, 9, 10, 11], "modalidades": [0, 1, 2, 3, 4, 5, 6]}[tipo]
         cifras = {"cabecera": [cab_r[j] for j in idx], "texto": 2, "total": False,
                   "filas": [[f[j] for j in idx] for f in fil if not isinstance(f[0], dict) or propio]}
         resumen = [f"Resumen mensual de {nombre_t[0].lower() + nombre_t[1:]} de "
@@ -11476,7 +11682,7 @@ async def informe_coeficientes(anio: int | None = Query(None, ge=2000, le=2100),
 # Resumenes mensuales (PDF): energia en solitario y en comunidad, potencia, reactiva y factura de
 # cada socio y mes; por defecto, los ultimos 12 meses completos. Del gestor: todos los socios; del
 # panel de un socio: la comunidad (totales) y el propio socio
-TipoResumen = Literal["energia", "comunidad", "potencia", "reactiva", "factura"]
+TipoResumen = Literal["energia", "comunidad", "potencia", "reactiva", "factura", "modalidades"]
 
 
 # Resumenes de las vistas bloqueadas (SERVICIOS_PREMIUM): inactivos
@@ -16613,7 +16819,14 @@ function pfKwh(v) { return pfNum(v, v < 1 ? 2 : 1) + ' kWh'; }
 // -> {g: generacion desplazada, carga, desc, desde: hora}
 var PF_P20_EUR = [0.20, 0.14, 0.09];     // (precios aproximados del 2.0TD por periodo, como los de la comunidad por defecto)
 function pfPrecioHora(h, no) { return PF_P20_EUR[(no || h < 8) ? 2 : ((h >= 10 && h < 14) || (h >= 18 && h < 22) ? 0 : 1)]; }
-function pfDesplaza(g, c, cap, w) {
+// (entre parentesis, su equivalente en SAM, el System Advisor Model del NREL; el "peak shaving" no:
+// el maximetro se mide en el contador de cada socio y la energia repartida por coeficientes no lo baja)
+var PF_DESPACHOS = [['precio_consumo', 'Precio × consumo de sus socios (β) · como «Retail rate»', 'más en las horas caras y de más consumo'],
+                    ['consumo', 'Seguimiento de la demanda · como «Self-consumption»', 'en proporción al consumo de sus socios por su β'],
+                    ['punta', 'Horas más caras (punta) · como «Manual» por periodos', 'todo en las horas del periodo más caro sin sol'],
+                    ['tarde', 'Al ponerse el sol, 4 h · horario fijo', 'por igual en las 4 horas siguientes al final de la FV'],
+                    ['plano', 'Constante toda la noche · horario fijo', 'por igual en todas las horas sin sol']];
+function pfDesplaza(g, c, cap, w, modo) {
   var con = [], k;
   var pico = Math.max.apply(null, g.concat([0]));
   for (k = 0; k < 24; k++) if (g[k] > 0.05 * pico) con.push(k);
@@ -16621,7 +16834,8 @@ function pfDesplaza(g, c, cap, w) {
   var out = g.slice(), ult = con.length ? con[con.length - 1] : 23, pri = con.length ? con[0] : 0, noche = [];
   for (k = ult + 1; k < 24; k++) noche.push(k);
   for (k = 0; k < pri; k++) noche.push(k);           // (y la madrugada: el dia tipo se repite)
-  var pw = w ? noche.map(function (h) { return w[h] || 0; }) : [];
+  var pw = modo === 'plano' ? noche.map(function () { return 1; }) : modo === 'tarde' ? [] : w ? noche.map(function (h) { return w[h] || 0; }) : [];
+  if (modo === 'punta' && pw.length) { var mx = Math.max.apply(null, pw); pw = pw.map(function (x) { return mx > 0 && x >= mx - 1e-9 ? 1 : 0; }); }
   if (!pfSum(pw)) { noche = noche.slice(0, 4); pw = noche.map(function () { return 1; }); }
   var tw = pfSum(pw);
   if (carga > 0 && noche.length) {
@@ -16849,7 +17063,8 @@ self.onInit = function () {
     var r = p.resumen || {}, pl = PF_PLANTILLAS[p.plantilla];
     return '(' + (pl ? pl.n : SIMT[p.plantilla] || 'dibujado') + ', ' + pfNum(p.kwh_dia) + ' / ' + pfNum(p.kwh_fes != null ? p.kwh_fes : p.kwh_dia) + ' kWh/día' +
       (p.fv ? ', FV ' + pfNum(r.kwp != null ? r.kwp : p.gen_dia * 365 / PF_KWH_KWP) + ' kWp' : '') +
-      (p.fv && p.bateria ? ', con batería' : '') + ')';
+      (p.fv && p.bateria ? ', con batería' + (p.bat_despacho && p.bat_despacho !== 'precio_consumo' ? ' (' + (PF_DESPACHOS.filter(function (x) {
+        return x[0] === p.bat_despacho; })[0] || ['', ''])[1].toLowerCase() + ')' : '') : '') + ')';
   }
   function abrirPerfil(so) {
     var p = so && so.sim_perfil ? JSON.parse(JSON.stringify(so.sim_perfil)) : pfDefecto();
@@ -17186,9 +17401,13 @@ self.onInit = function () {
     h += panel('gen') + '<div class="al-campos">' +
       campo('gen_dia', 'Generación media diaria (kWh/día)', p.gen_dia, ' type="number" min="0" step="0.1"') +
       (p.gen_dia > 0 ? campo('inversor', 'Potencia del inversor (kW)', p.inversor, ' type="number" min="0" step="0.1" placeholder="automática (85 % de la pico)"') +
-        '<label class="al-pf-chk"><span><input type="checkbox" data-pf="bateria"' + (p.bateria ? ' checked' : '') + '> Con batería</span></label>' : '') +
+        '<label class="al-pf-chk"><span><input type="checkbox" data-pf="bateria"' + (p.bateria ? ' checked' : '') + '> Con batería</span></label>' +
+        (p.bateria ? '<label>Despacho de la batería<select data-pf="bat_despacho">' + opciones(PF_DESPACHOS.map(function (x) { return [x[0], x[1]]; }),
+          p.bat_despacho || 'precio_consumo') + '</select></label>' : '') : '') +
       '</div><small>' + (p.gen_dia > 0 ? '<b>Con batería</b> (de capacidad ilimitada): cada día guarda toda su FV y la entrega, con un rendimiento del 90 %, ' +
-        'en las horas sin sol, en proporción al precio de cada hora y al consumo de sus socios por su β: toda su generación pasa a la tarde y la noche. ' : '') + '0 = sin generación. Lo que no consume en cada cuarto de hora se vierte a la red: para la comunidad cuenta la generación, no la modalidad de autoconsumo.</small>' +
+        'en las horas sin sol, según el <b>despacho</b>: en proporción al precio y al consumo de sus socios por su β, siguiendo su consumo, en las ' +
+        'horas punta, al ponerse el sol o constante. No se carga de la red (la energía que se reparte en autoconsumo colectivo es la de la instalación) ' +
+        'ni hay «peak shaving» (el maxímetro se mide en el contador de cada socio). ' : '') + '0 = sin generación. Lo que no consume en cada cuarto de hora se vierte a la red: para la comunidad cuenta la generación, no la modalidad de autoconsumo.</small>' +
       '<div class="al-pf-sel"><label>Mes del día tipo<select data-sel="mes">' + opciones(PF_MESES_L.map(function (x, i) { return [String(i), x]; }), String(PF.mes)) +
         '</select></label><label>Día<select data-sel="dia">' + opciones([['lab', 'Laborable'], ['fes', 'No laborable']], PF.dia) + '</select></label></div>' +
       '<div class="al-pf-ley"><i style="background:' + PF_COL.gen + '"></i>generación' + (p.bateria ? ' (con la batería)' : ' FV') +
@@ -17227,7 +17446,7 @@ self.onInit = function () {
     [].forEach.call(q('al-pf').querySelectorAll('[data-pf]'), function (el) {
       var k = el.dataset.pf;
       if (k === 'nombre') PF.nombre = el.value;
-      else if (k === 'plantilla' || k === 'peaje') p[k] = el.value;
+      else if (k === 'plantilla' || k === 'peaje' || k === 'bat_despacho') p[k] = el.value;
       else if (k === 'bateria') p[k] = el.checked;
       else p[k] = n(el.value);
     });
@@ -17247,9 +17466,9 @@ self.onInit = function () {
     var fv = pfFv(p), m = PF.mes, no = PF.dia === 'fes', g0 = fv.meses[m], cd = pfConsumoDia(p, m, no);
     // despacho: precio de cada hora x consumo de sus socios por su beta (si ya se ha cargado su reparto,
     // pestaña Coeficientes) o, si no, su propio consumo
-    var dem = PF.coef ? pfDemandaBeta(m, no) : cd;
-    var w = dem.map(function (x, h) { return x * pfPrecioHora(h, no); });
-    var bat = p.bateria && p.gen_dia > 0 ? pfDesplaza(g0, cd, 0, w) : null, g = bat ? bat.g : g0;
+    var dem = PF.coef ? pfDemandaBeta(m, no) : cd, modo = p.bat_despacho || 'precio_consumo';
+    var w = dem.map(function (x, h) { return modo === 'punta' ? pfPrecioHora(h, no) : modo === 'consumo' ? x : x * pfPrecioHora(h, no); });
+    var bat = p.bateria && p.gen_dia > 0 ? pfDesplaza(g0, cd, 0, w, modo) : null, g = bat ? bat.g : g0;
     pfGrafGen(fig('gen'), g, cd, bat ? g0 : null);
     pfGrafMeses(fig('meses'), fv, m, function (i) {
       PF.mes = i;
@@ -17261,8 +17480,9 @@ self.onInit = function () {
       ': consume ' + pfKwh(pfSum(cd)) + '.' : 'Instalación de unos <b>' + pfNum(fv.kwp) + ' kWp</b> con inversor de ' + pfNum(fv.inv) +
       ' kW (curva de PVGIS en Granada, día medio del mes, sin las nubes de un día concreto). ' + dia + ': genera <b>' + pfKwh(pfSum(g)) +
       '</b> y consume ' + pfKwh(pfSum(cd)) + '.' + (bat ? ' La batería guarda toda su FV (' + pfKwh(bat.carga) + ') y entrega ' +
-      pfKwh(bat.desc) + ' desde las ' + bat.desde + ' h, en proporción al precio de cada hora y al consumo de ' +
-      (PF.coef ? 'sus socios por su β' : 'este socio (al abrir la pestaña Coeficientes de reparto, el de sus socios por su β)') + '.' : '');
+      pfKwh(bat.desc) + ' desde las ' + bat.desde + ' h: ' + PF_DESPACHOS.filter(function (x) { return x[0] === modo; })[0][2] +
+      (modo === 'precio_consumo' || modo === 'consumo' ? (PF.coef ? '' : ' (con el consumo de este socio; al abrir la pestaña Coeficientes de reparto, ' +
+        'el de sus socios por su β)') : '') + (modo === 'precio_consumo' || modo === 'punta' ? '; precios aproximados del 2.0TD' : '') + '.' : '');
   }
   function validarPerfil() {
     leerCampos();
@@ -17520,7 +17740,8 @@ INFS_HTML = """<div class="al"><section class="al-caja">
      <option value="comunidad">Consumos, excedentes y costes en comunidad</option>
      <option value="potencia">Potencias contratadas, máximas demandadas y sus costes</option>
      <option value="reactiva">Energía reactiva y sus costes</option>
-     <option value="factura">Factura de electricidad (con alquiler del contador e impuestos)</option></select></label></div>
+     <option value="factura">Factura de electricidad (con alquiler del contador e impuestos)</option>
+     <option value="modalidades">Comparativa de modalidades: sin autoconsumo, individual y en comunidad (IDAE)</option></select></label></div>
   <div class="al-ctrl"><label>Desde <input type="month" class="i-rdesde"></label><label>Hasta <input type="month" class="i-rhasta"></label>
    <button class="al-b i-rdesc">Descargar PDF</button></div>
   <p class="i-rmsg i-msg">Informe técnico de cada mes con tus datos y, como referencia, los totales de la comunidad (sin los datos de
@@ -18782,7 +19003,8 @@ ADMIN_HTML = """<div class="ad">
      <option value="comunidad">Consumos, excedentes y costes en comunidad</option>
      <option value="potencia">Potencias contratadas, máximas demandadas y sus costes</option>
      <option value="reactiva">Energía reactiva y sus costes</option>
-     <option value="factura">Factura de electricidad (con alquiler del contador e impuestos)</option></select></label>
+     <option value="factura">Factura de electricidad (con alquiler del contador e impuestos)</option>
+     <option value="modalidades">Comparativa de modalidades: sin autoconsumo, individual y en comunidad (IDAE)</option></select></label>
     <label>Desde <input type="month" class="ad-rdesde"></label><label>Hasta <input type="month" class="ad-rhasta"></label>
     <button class="ad-b ad-rdesc">Descargar PDF</button></div>
    <div class="ad-msg ad-rmsg">Informe técnico (ISO 7144) de cada mes: la comunidad y cada socio, con tablas, gráficos, la normativa y el
