@@ -173,6 +173,19 @@
     .calc-row{grid-template-columns:1fr;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -185,13 +198,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
     <nav class="tabbar" id="sidenav">
-      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
-      <a href="#arquitectura" data-sec="arquitectura"><span class="tag">01</span>Arquitectura y componentes</a>
-      <a href="#energia" data-sec="energia"><span class="tag">02</span>Flujo de energía</a>
-      <a href="#senales" data-sec="senales"><span class="tag">03</span>Flujo de señales</a>
-      <a href="#simulador" data-sec="simulador"><span class="tag">04</span>Simulador interactivo</a>
-      <a href="#carga" data-sec="carga"><span class="tag">05</span>Señales de carga</a>
-    </nav>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+  </nav>
     <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
@@ -218,8 +227,94 @@
   <main>
 
     <!-- SECCIÓN 00: RESUMEN -->
-    <section id="resumen">
-      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="simulador" class="tab-bloque">
+      <div class="eyebrow kicker">Simulador interactivo</div>
+      <h2>De la posición del pedal al par, la potencia y la corriente de batería.</h2>
+      <p class="lede">Ajusta la velocidad del vehículo y la intensidad del pedal para ver cómo se traduce esa señal en par (Nm), potencia (kW) y corriente de batería (A), respetando el límite de potencia máxima del motor.</p>
+
+      <div class="calculator">
+        <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+          <button class="btn toggle on" id="btnModoTraccion" onclick="setModo('traccion')">Modo tracción (acelerador)</button>
+          <button class="btn toggle" id="btnModoRegen" onclick="setModo('regen')">Modo frenada regenerativa</button>
+        </div>
+
+        <div class="calc-row">
+          <div class="field">
+            <label>Velocidad del vehículo (km/h)</label>
+            <div class="slider-row">
+              <input type="range" id="sim_velocidad" value="50" min="0" max="180" step="1">
+              <div class="slider-val" id="sim_velocidad_val">50 km/h</div>
+            </div>
+          </div>
+          <div class="field">
+            <label id="sim_intensidad_label">Posición del pedal acelerador (%)</label>
+            <div class="slider-row">
+              <input type="range" id="sim_intensidad" value="40" min="0" max="100" step="1">
+              <div class="slider-val" id="sim_intensidad_val">40%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fieldset-title">Parámetros del vehículo (editables)</div>
+        <div class="calc-row">
+          <div class="field">
+            <label>Potencia máxima motor (kW)</label>
+            <input type="number" id="sim_pmax" value="150" min="20" max="500" step="5">
+          </div>
+          <div class="field">
+            <label>Par máximo motor (Nm)</label>
+            <input type="number" id="sim_tmax" value="310" min="50" max="1000" step="5">
+          </div>
+          <div class="field">
+            <label>Tensión nominal batería (V)</label>
+            <input type="number" id="sim_voltaje" value="400" min="200" max="900" step="10">
+          </div>
+          <div class="field">
+            <label>Relación de reducción</label>
+            <input type="number" id="sim_reduccion" value="9" min="4" max="15" step="0.5">
+          </div>
+          <div class="field">
+            <label>Radio de rueda (m)</label>
+            <input type="number" id="sim_radio" value="0.33" min="0.25" max="0.45" step="0.01">
+          </div>
+        </div>
+
+        <div class="status-line" id="sim_status">Estado: <b>tracción</b> — el inversor entrega potencia de la batería al motor.</div>
+
+        <div class="sim-diagram" id="sim_diagram">
+          <div class="sim-step" id="sd_bateria"><div class="fi">🔋</div><h5>Batería</h5></div>
+          <div class="sim-arrow" id="sa_1">→</div>
+          <div class="sim-step" id="sd_inversor"><div class="fi">🔌</div><h5>Inversor</h5></div>
+          <div class="sim-arrow" id="sa_2">→</div>
+          <div class="sim-step" id="sd_motor"><div class="fi">⚙️</div><h5>Motor</h5></div>
+          <div class="sim-arrow" id="sa_3">→</div>
+          <div class="sim-step" id="sd_reductora"><div class="fi">🔧</div><h5>Reductora</h5></div>
+          <div class="sim-arrow" id="sa_4">→</div>
+          <div class="sim-step" id="sd_ruedas"><div class="fi">🛞</div><h5>Ruedas</h5></div>
+        </div>
+
+        <div id="sim_resultado" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px; margin-top:8px;">
+          <div class="result-chip"><div class="l">Régimen motor</div><div class="v" id="sim_res_rpm">0 rpm</div></div>
+          <div class="result-chip"><div class="l">Par entregado</div><div class="v" id="sim_res_par">0 Nm</div></div>
+          <div class="result-chip"><div class="l">Potencia instantánea</div><div class="v" id="sim_res_pot">0 kW</div></div>
+          <div class="result-chip"><div class="l">Corriente de batería</div><div class="v" id="sim_res_corriente">0 A</div></div>
+          <div class="result-chip"><div class="l">Consumo instantáneo</div><div class="v" id="sim_res_consumo">— kWh/100km</div></div>
+        </div>
+        <p class="tooltip-text" style="margin-top:14px;">Modelo simplificado con fines didácticos: a velocidad cero la potencia calculada tiende a cero aunque el motor pueda entregar par máximo (P = par × velocidad angular); en la realidad, arrancar desde parado también consume corriente por las pérdidas resistivas del motor, aquí no modeladas. Por encima de la potencia máxima del motor, el par se recorta automáticamente (zona de debilitamiento de campo). El "consumo instantáneo" extrapola la potencia de <em>este</em> instante a 100 km recorridos a esa velocidad: con el pedal muy pisado (acelerando fuerte) da valores mucho más altos que el consumo medio real de conducción, que promedia también los tramos sin apenas pedal.</p>
+      </div>
+    
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Resumen ejecutivo</span></summary><div class="acc-cuerpo">
+<div id="resumen">
       <h2>Un coche eléctrico puro (BEV), explicado de la batería a la rueda.</h2>
       <p class="lede">Un vehículo eléctrico de batería (BEV) sustituye el motor de combustión, el depósito y la caja de cambios por cuatro bloques: una batería de tracción, un inversor, un motor eléctrico y una reductora de una sola marcha. Todo el conjunto se coordina mediante señales digitales que viajan por un bus CAN, no por cables mecánicos.</p>
 
@@ -257,11 +352,11 @@
           <p>El diagrama de flujo de señales de control: sensores, VCU, CAN bus, y el bucle de control del inversor a alta frecuencia.</p>
         </div>
       </div>
-    </section>
-
-    <!-- SECCIÓN 01: ARQUITECTURA -->
-    <section id="arquitectura">
-      <div class="eyebrow kicker">01 · Arquitectura y componentes</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Arquitectura y componentes</span></summary><div class="acc-cuerpo">
+<div id="arquitectura">
       <h2>Las piezas que sustituyen al motor térmico.</h2>
       <p class="lede">Un BEV no tiene motor de combustión, escape, embrague ni (normalmente) caja de cambios de varias marchas. En su lugar, cuatro subsistemas de potencia y dos "cerebros" electrónicos gestionan toda la propulsión.</p>
 
@@ -331,14 +426,14 @@
         </div>
         <div class="comp-card">
           <h4>Puerto de carga + PLC/CP</h4>
-          <p>Además del contacto eléctrico, intercambia señales de control con el punto de carga antes de dejar pasar un solo amperio (ver sección 05).</p>
+          <p>Además del contacto eléctrico, intercambia señales de control con el punto de carga antes de dejar pasar un solo amperio (ver la pestaña Ayuda).</p>
         </div>
       </div>
-    </section>
-
-    <!-- SECCIÓN 02: FLUJO DE ENERGÍA -->
-    <section id="energia">
-      <div class="eyebrow kicker">02 · Flujo de energía</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Flujo de energía</span></summary><div class="acc-cuerpo">
+<div id="energia">
       <h2>El camino de la potencia: tracción y frenada regenerativa.</h2>
       <p class="lede">La energía eléctrica solo recorre dos caminos posibles en marcha: hacia las ruedas (tracción) o desde las ruedas hacia la batería (regeneración). El inversor es la pieza que decide, en cada instante, en qué sentido fluye.</p>
 
@@ -380,11 +475,11 @@
           <p>El VCU decide cuánta deceleración puede aportar el motor sin sobrepasar el límite de carga del BMS ni comprometer la estabilidad del vehículo (ESC), y reparte el resto al circuito hidráulico de frenos, de forma transparente para el conductor.</p>
         </div>
       </div>
-    </section>
-
-    <!-- SECCIÓN 03: FLUJO DE SEÑALES -->
-    <section id="senales">
-      <div class="eyebrow kicker">03 · Flujo de señales de control</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Flujo de señales</span></summary><div class="acc-cuerpo">
+<div id="senales">
       <h2>Diagrama de flujo de señales: del pedal al par en el motor.</h2>
       <p class="lede">A diferencia del cable de acelerador mecánico de un coche antiguo, en un BEV el pedal solo genera una señal eléctrica. Todo lo demás —cuánto par dar, si es seguro darlo, y cómo generarlo— lo deciden varias unidades electrónicas comunicándose por un bus CAN.</p>
 
@@ -514,89 +609,11 @@
           <p>El bucle del inversor que ajusta la corriente del motor corre a decenas de kHz (control vectorial). El bus CAN que lleva "par solicitado" o "SOC de la batería" actualiza mensajes a 10–100 Hz. El VCU decide qué pedir; el inversor decide cómo generarlo, mucho más rápido.</p>
         </div>
       </div>
-    </section>
-
-    <!-- SECCIÓN 04: SIMULADOR -->
-    <section id="simulador">
-      <div class="eyebrow kicker">04 · Simulador interactivo</div>
-      <h2>De la posición del pedal al par, la potencia y la corriente de batería.</h2>
-      <p class="lede">Ajusta la velocidad del vehículo y la intensidad del pedal para ver cómo se traduce esa señal en par (Nm), potencia (kW) y corriente de batería (A), respetando el límite de potencia máxima del motor.</p>
-
-      <div class="calculator">
-        <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-          <button class="btn toggle on" id="btnModoTraccion" onclick="setModo('traccion')">Modo tracción (acelerador)</button>
-          <button class="btn toggle" id="btnModoRegen" onclick="setModo('regen')">Modo frenada regenerativa</button>
-        </div>
-
-        <div class="calc-row">
-          <div class="field">
-            <label>Velocidad del vehículo (km/h)</label>
-            <div class="slider-row">
-              <input type="range" id="sim_velocidad" value="50" min="0" max="180" step="1">
-              <div class="slider-val" id="sim_velocidad_val">50 km/h</div>
-            </div>
-          </div>
-          <div class="field">
-            <label id="sim_intensidad_label">Posición del pedal acelerador (%)</label>
-            <div class="slider-row">
-              <input type="range" id="sim_intensidad" value="40" min="0" max="100" step="1">
-              <div class="slider-val" id="sim_intensidad_val">40%</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="fieldset-title">Parámetros del vehículo (editables)</div>
-        <div class="calc-row">
-          <div class="field">
-            <label>Potencia máxima motor (kW)</label>
-            <input type="number" id="sim_pmax" value="150" min="20" max="500" step="5">
-          </div>
-          <div class="field">
-            <label>Par máximo motor (Nm)</label>
-            <input type="number" id="sim_tmax" value="310" min="50" max="1000" step="5">
-          </div>
-          <div class="field">
-            <label>Tensión nominal batería (V)</label>
-            <input type="number" id="sim_voltaje" value="400" min="200" max="900" step="10">
-          </div>
-          <div class="field">
-            <label>Relación de reducción</label>
-            <input type="number" id="sim_reduccion" value="9" min="4" max="15" step="0.5">
-          </div>
-          <div class="field">
-            <label>Radio de rueda (m)</label>
-            <input type="number" id="sim_radio" value="0.33" min="0.25" max="0.45" step="0.01">
-          </div>
-        </div>
-
-        <div class="status-line" id="sim_status">Estado: <b>tracción</b> — el inversor entrega potencia de la batería al motor.</div>
-
-        <div class="sim-diagram" id="sim_diagram">
-          <div class="sim-step" id="sd_bateria"><div class="fi">🔋</div><h5>Batería</h5></div>
-          <div class="sim-arrow" id="sa_1">→</div>
-          <div class="sim-step" id="sd_inversor"><div class="fi">🔌</div><h5>Inversor</h5></div>
-          <div class="sim-arrow" id="sa_2">→</div>
-          <div class="sim-step" id="sd_motor"><div class="fi">⚙️</div><h5>Motor</h5></div>
-          <div class="sim-arrow" id="sa_3">→</div>
-          <div class="sim-step" id="sd_reductora"><div class="fi">🔧</div><h5>Reductora</h5></div>
-          <div class="sim-arrow" id="sa_4">→</div>
-          <div class="sim-step" id="sd_ruedas"><div class="fi">🛞</div><h5>Ruedas</h5></div>
-        </div>
-
-        <div id="sim_resultado" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px; margin-top:8px;">
-          <div class="result-chip"><div class="l">Régimen motor</div><div class="v" id="sim_res_rpm">0 rpm</div></div>
-          <div class="result-chip"><div class="l">Par entregado</div><div class="v" id="sim_res_par">0 Nm</div></div>
-          <div class="result-chip"><div class="l">Potencia instantánea</div><div class="v" id="sim_res_pot">0 kW</div></div>
-          <div class="result-chip"><div class="l">Corriente de batería</div><div class="v" id="sim_res_corriente">0 A</div></div>
-          <div class="result-chip"><div class="l">Consumo instantáneo</div><div class="v" id="sim_res_consumo">— kWh/100km</div></div>
-        </div>
-        <p class="tooltip-text" style="margin-top:14px;">Modelo simplificado con fines didácticos: a velocidad cero la potencia calculada tiende a cero aunque el motor pueda entregar par máximo (P = par × velocidad angular); en la realidad, arrancar desde parado también consume corriente por las pérdidas resistivas del motor, aquí no modeladas. Por encima de la potencia máxima del motor, el par se recorta automáticamente (zona de debilitamiento de campo). El "consumo instantáneo" extrapola la potencia de <em>este</em> instante a 100 km recorridos a esa velocidad: con el pedal muy pisado (acelerando fuerte) da valores mucho más altos que el consumo medio real de conducción, que promedia también los tramos sin apenas pedal.</p>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 05: SEÑALES DE CARGA -->
-    <section id="carga">
-      <div class="eyebrow kicker">05 · Señales de carga</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Señales de carga</span></summary><div class="acc-cuerpo">
+<div id="carga">
       <h2>Cargar también es un intercambio de señales, no solo de electrones.</h2>
       <p class="lede">Antes de que circule un solo amperio hacia la batería, el coche y el punto de carga negocian por señal quién es, cuánta corriente admite el cable y qué límites impone el BMS. Ese protocolo cambia según sea carga lenta en corriente alterna (AC) o carga rápida en corriente continua (DC).</p>
 
@@ -640,6 +657,9 @@
           <p>Cargar celdas de litio a alta corriente cuando ya están casi llenas acelera su degradación. El BMS reduce progresivamente la corriente máxima admitida a partir de aproximadamente el 80% de SOC, lo que explica por qué del 10% al 80% se carga mucho más rápido que del 80% al 100%.</p>
         </div>
       </div>
+    
+</div>
+      </div></details>
     </section>
 
     <footer>
@@ -655,9 +675,18 @@
 // ===================== NAV COMO TABS =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'resumen';
+const SECCION_POR_DEFECTO = 'simulacion';
 
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));

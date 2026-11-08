@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generación Horaria PVGIS y LCOE</title>
+<title>Instalaciones Aisladas FV · Sistemas de Bombeo — PCT-IDAE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -11,37 +11,38 @@
     --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
     --line:#dfe4eb; --line-soft:#eceff4;
     --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
-    --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --amber:#c27c00; --amber-dim:#ecd08f; --cyan:#2457e6; --cyan-dim:#a9bdf3;
+    --green:#16894f; --red:#c62828;
     --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
     --radius:8px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.55; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--cyan); color:#ffffff;}
+  ::selection{background:var(--amber); color:#ffffff;}
   .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(rgba(36,87,230,0.04) 1px, transparent 1px),linear-gradient(90deg, rgba(36,87,230,0.04) 1px, transparent 1px);
+    background-image:linear-gradient(rgba(194,124,0,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(194,124,0,0.035) 1px, transparent 1px);
     background-size:42px 42px; mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 100%);}
   a{color:inherit;}
-  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan);}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber);}
   h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em;}
 
-  .shell{max-width:1440px; margin:0 auto; position:relative; z-index:1;}
+  .shell{max-width:1400px; margin:0 auto; position:relative; z-index:1;}
   /* Barra de pestanas horizontal (sustituye al antiguo sidebar vertical): igual en
      pantallas grandes y pequenas. En pequenas, si las pestanas no caben, la fila hace
      scroll horizontal y aparecen flechas para desplazarla; las flechas se muestran u
      ocultan por JS segun haya o no contenido oculto a cada lado. */
   .tabbar-wrap{position:sticky; top:0; z-index:30; display:flex; align-items:stretch; background:var(--bg2); border-bottom:1px solid var(--line-soft);}
-  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--cyan); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
+  .tabbar-brand{display:flex; align-items:center; padding:0 18px; font-family:var(--font-mono); font-size:12px; color:var(--amber); font-weight:600; white-space:nowrap; flex-shrink:0; border-right:1px solid var(--line-soft);}
   .tabbar{display:flex; overflow-x:auto; flex:1; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none;}
   .tabbar::-webkit-scrollbar{display:none;}
   .tabbar a{display:flex; align-items:center; gap:9px; padding:16px 20px; font-size:13px; color:var(--text-dim); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent; flex-shrink:0; transition:all .15s ease;}
   .tabbar a .tag{font-family:var(--font-mono); font-size:10px; color:var(--text-dimmer);}
   .tabbar a:hover{color:var(--text); background:var(--panel2);}
-  .tabbar a.active{color:var(--cyan); border-bottom-color:var(--cyan);}
-  .tabbar a.active .tag{color:var(--cyan);}
+  .tabbar a.active{color:var(--amber); border-bottom-color:var(--amber);}
+  .tabbar a.active .tag{color:var(--amber);}
   .tabbar-arrow{flex-shrink:0; width:34px; background:var(--bg2); border:none; color:var(--text-dim); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0;}
-  .tabbar-arrow:hover{color:var(--cyan); background:var(--panel2);}
+  .tabbar-arrow:hover{color:var(--amber); background:var(--panel2);}
   .tabbar-arrow svg{width:16px; height:16px;}
   .tabbar-wrap.can-scroll-left .tabbar-arrow-left, .tabbar-wrap.can-scroll-right .tabbar-arrow-right{display:flex;}
 
@@ -51,28 +52,29 @@
   #teoria{padding-top:0;}
   #teoria > .hero{margin:0 -56px 48px;}
   section .kicker{margin-bottom:14px;}
-  section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
+  section h2{font-size:30px; margin-bottom:20px; max-width:760px;}
   section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
 
   .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
   .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
-  .hero h1{font-size:clamp(30px,4vw,48px); line-height:1.05; max-width:780px; margin:14px 0 20px;}
-  .hero h1 em{font-style:normal; color:var(--cyan);}
-  .hero .sub{color:var(--text-dim); max-width:640px; font-size:15.5px;}
+  .hero h1{font-size:clamp(32px,4.2vw,54px); line-height:1.05; max-width:760px; margin:14px 0 20px;}
+  .hero h1 em{font-style:normal; color:var(--amber);}
+  .hero .sub{color:var(--text-dim); max-width:600px; font-size:15.5px;}
   .hero-meta{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer); display:flex; flex-direction:column; gap:6px; text-align:right; padding-top:6px;}
   .hero-meta span{color:var(--text-dim);}
   .stat-row{display:flex; gap:0; border-top:1px solid var(--line-soft); margin-top:40px;}
   .stat{flex:1; padding:16px 16px; border-right:1px solid var(--line-soft);}
   .stat:last-child{border-right:none;}
-  .stat .v{font-family:var(--font-mono); color:var(--cyan); font-size:15px;}
+  .stat .v{font-family:var(--font-mono); color:var(--amber); font-size:19px;}
   .stat .l{font-size:11px; color:var(--text-dimmer); margin-top:3px;}
 
   .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
   .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
   .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
-  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr 1fr;}}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
 
+  /* teoría */
   .theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
   @media(max-width:900px){.theory-grid{grid-template-columns:1fr;}}
   .theory-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px;}
@@ -82,35 +84,60 @@
   .theory-card li{margin-bottom:6px;}
   .theory-card li b{color:var(--text);}
   .formula-box{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px 16px; margin:10px 0; text-align:center;}
-  .formula-box .f{font-family:var(--font-mono); font-size:13px; color:var(--cyan);}
+  .formula-box .f{font-family:var(--font-mono); font-size:14px; color:var(--amber);}
   .formula-box .f small{font-size:10px; color:var(--text-dimmer); display:block; margin-top:4px; font-family:var(--font-mono);}
+  .var-list{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:10px;}
+  .var-list span{font-size:11px; color:var(--text-dimmer); font-family:var(--font-mono);}
+  .var-list span b{color:var(--amber); font-weight:600;}
 
-  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;}
-  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--cyan), var(--amber));}
-  .comp-card h4{font-size:13.5px; margin-bottom:8px;}
-  .comp-card p{font-size:12px; color:var(--text-dim);}
+  /* definiciones */
+  .def-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; border-top:2px solid var(--cyan);}
+  .def-card h4{font-size:14px; margin-bottom:8px; color:var(--text);}
+  .def-card p{font-size:12.5px; color:var(--text-dim);}
 
-  table.data-table{width:100%; border-collapse:collapse; font-size:12px;}
-  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:8px 9px; border-bottom:1px solid var(--line);}
-  table.data-table td{padding:8px 9px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  /* tabla perdidas */
+  table.data-table{width:100%; border-collapse:collapse; font-size:13px;}
+  table.data-table th{text-align:left; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dimmer); padding:10px 12px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:11px 12px; border-bottom:1px solid var(--line-soft);}
   table.data-table tr:hover td{background:var(--panel2);}
-  .table-wrap{overflow-x:auto; margin:10px 0 18px;}
+  .cellnum{font-family:var(--font-mono); color:var(--amber);}
 
+  /* componentes */
+  .comp-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; position:relative; overflow:hidden;}
+  .comp-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--amber), var(--cyan));}
+  .comp-card h4{font-size:14px; margin-bottom:10px;}
+  .comp-card .result-row{padding:8px 0;}
+
+  .result-panel{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px;}
+  .result-row{display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px;}
+  .result-row:last-child{border-bottom:none;}
+  .result-row .lbl{color:var(--text-dim);}
+  .result-row .val{font-family:var(--font-mono); color:var(--text);}
+  .pill{font-family:var(--font-mono); font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600;}
+  .pill.ok{background:rgba(22,137,79,0.12); color:var(--green); border:1px solid rgba(22,137,79,0.35);}
+  .pill.bad{background:rgba(198,40,40,0.12); color:var(--red); border:1px solid rgba(198,40,40,0.35);}
+  .pill.info{background:rgba(36,87,230,0.12); color:var(--cyan); border:1px solid rgba(36,87,230,0.35);}
+
+  /* diagrama de bombeo */
+  .pump-diagram{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:20px;}
+  .pump-diagram svg{display:block; width:100%; height:auto;}
+
+  /* formularios / calculadora */
   .field{margin-bottom:16px;}
   .field label{display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
   .field .hint{font-size:11px; color:var(--text-dimmer); margin-top:5px;}
-  .field input[type=text], .field input[type=number], .field input[type=date], .field input[type=email], .field input[type=tel], .field select{
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select{
     width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
     padding:9px 11px; border-radius:var(--radius); font-family:var(--font-mono); font-size:13.5px;
   }
-  .field input:focus, .field select:focus{outline:none; border-color:var(--cyan);}
-  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .fieldset-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:22px 0 12px; padding-top:16px; border-top:1px solid var(--line-soft);}
   .fieldset-title:first-child{border-top:none; padding-top:0; margin-top:0;}
 
-  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--cyan); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
-  .btn:hover{background:rgba(36,87,230,0.1);}
-  .btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
-  .btn.primary:hover{background:#1b47c4;}
+  .btn{font-family:var(--font-mono); font-size:13px; padding:11px 22px; border-radius:var(--radius); border:1px solid var(--amber); background:transparent; color:var(--amber); cursor:pointer; transition:all .15s ease; font-weight:600; letter-spacing:0.02em;}
+  .btn:hover{background:rgba(194,124,0,0.1);}
+  .btn.primary{background:var(--amber); color:#ffffff; border-color:var(--amber);}
+  .btn.primary:hover{background:#ffc24d;}
   .btn.ghost{border-color:var(--line); color:var(--text-dim);}
   .btn.ghost:hover{border-color:var(--text-dim); color:var(--text);}
   .btn:disabled{opacity:0.4; cursor:not-allowed;}
@@ -125,27 +152,31 @@
   .line-head .lh-right{display:flex; align-items:center; gap:10px; flex-shrink:0;}
   .line-body{padding:0 20px 20px; border-top:1px solid var(--line-soft); display:none;}
   .line-body.open{display:block;}
+  .calc-steps{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:16px 18px; margin:16px 0; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);}
+  .calc-steps .step{padding:6px 0; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; gap:16px;}
+  .calc-steps .step:last-child{border-bottom:none;}
+  .calc-steps .step .k{color:var(--text-dimmer);}
+  .calc-steps .step .v{color:var(--text); text-align:right;}
+  .calc-steps .step.sub .k{padding-left:14px;}
   .remove-btn{font-family:var(--font-mono); font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:4px 8px;}
   .remove-btn:hover{text-decoration:underline;}
   .empty-state{text-align:center; padding:36px 20px; color:var(--text-dimmer); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--radius);}
   .badge{display:inline-block; font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); color:var(--text-dim);}
-  .badge.ok{color:var(--green); border-color:var(--green);}
-  .badge.err{color:var(--red); border-color:var(--red);}
-  .badge.pending{color:var(--amber); border-color:var(--amber);}
+
+  table.summary{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.summary th{text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dimmer); padding:9px 10px; border-bottom:1px solid var(--line);}
+  table.summary td{padding:10px 10px; border-bottom:1px solid var(--line-soft); font-family:var(--font-mono); color:var(--text-dim);}
+  table.summary tr:hover td{background:var(--panel2);}
 
   .stat-chip{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 18px; flex:1; min-width:140px;}
-  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--cyan);}
+  .stat-chip .v{font-family:var(--font-mono); font-size:20px; color:var(--amber);}
   .stat-chip .l{font-size:11px; color:var(--text-dimmer); margin-top:2px;}
 
-  .chart-svg-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:14px 0; overflow-x:auto;}
-  .chart-svg-wrap svg{display:block; margin:0 auto;}
-  .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin:18px 0 6px;}
-
-  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--cyan); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   footer{padding:44px 56px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer);}
-  footer a{color:var(--cyan); text-decoration:none;}
+  footer a{color:var(--amber); text-decoration:none;}
 
   @media(max-width:960px){
     .tabbar-brand{display:none;}
@@ -156,9 +187,20 @@
     .hero-top{flex-direction:column;}
     .hero-meta{text-align:left;}
   }
-  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
-  .spinner{display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--cyan); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:4px;}
-  @keyframes spin{to{transform:rotate(360deg);}}
+  code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -166,16 +208,14 @@
 
 <div class="shell">
   <div class="tabbar-wrap" id="tabbarWrap">
-  <div class="tabbar-brand">PVGIS · HORARIO</div>
+  <div class="tabbar-brand">PCT · BOMBEO FV</div>
   <button class="tabbar-arrow tabbar-arrow-left" id="tabScrollLeft" type="button" aria-label="Desplazar pestañas a la izquierda">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#marco" data-sec="marco"><span class="tag">01</span>PVGIS API</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">02</span>Datos del proyecto</a>
-    <a href="#superficies" data-sec="superficies"><span class="tag">03</span>Superficies y financiación</a>
-    <a href="#informe" data-sec="informe"><span class="tag">04</span>Resultados e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -203,232 +243,393 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Proyecto e informe</div>
+      <h2>Dimensiona tu sistema de bombeo y genera el informe.</h2>
+      <p class="lede">Introduce los datos del pozo, el consumo y la radiación del emplazamiento: la calculadora reproduce paso a paso el método del Anexo I (verificado frente al ejemplo oficial del PCT) y comprueba los límites obligatorios de generador y acumulador.</p>
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir sistema de bombeo</div>
+        <div class="field"><label>Nombre / ubicación del sistema</label><input type="text" id="i_nombre" placeholder="Ej: Pozo finca Los Álamos"></div>
+
+        <div class="fieldset-title">Pozo y bombeo</div>
+        <div class="grid3">
+          <div class="field"><label>Volumen diario requerido Q<sub>d</sub> (m³/día)</label><input type="number" id="i_qd" value="1.5" min="0" step="0.1"></div>
+          <div class="field"><label>Altura del depósito H<sub>D</sub> (m)</label><input type="number" id="i_hd" value="3" min="0" step="0.5"></div>
+          <div class="field"><label>Pérdida por fricción H<sub>f</sub> (m)</label><input type="number" id="i_hf" value="2" min="0" step="0.1"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Nivel estático H<sub>ST</sub> (m)</label><input type="number" id="i_hst" value="15" min="0" step="0.5"></div>
+          <div class="field"><label>Nivel dinámico H<sub>DT</sub> (m)</label><input type="number" id="i_hdt" value="30" min="0" step="0.5"></div>
+          <div class="field"><label>Caudal de prueba Q<sub>T</sub> (m³/h)</label><input type="number" id="i_qt" value="10" min="0.1" step="0.5"></div>
+        </div>
+        <div class="field" style="max-width:260px;"><label>Rendimiento motobomba &eta;<sub>MB</sub></label><input type="number" id="i_etamb" value="0.4" min="0.05" max="1" step="0.01"></div>
+
+        <div class="fieldset-title">Otros consumos diarios</div>
+        <div class="field"><label>Otros consumos (Wh/día) — iluminación, TV, frigorífico, autoconsumo equipos...</label><input type="number" id="i_otros" value="696" min="0" step="1"></div>
+
+        <div class="fieldset-title">Radiación y orientación</div>
+        <div class="grid3">
+          <div class="field"><label>Latitud N (grados)</label><input type="number" id="i_lat" value="41" min="0" max="90" step="0.5"></div>
+          <div class="field">
+            <label>Período de diseño</label>
+            <select id="i_periodo">
+              <option value="dic">Diciembre (K=1,7)</option>
+              <option value="jul">Julio (K=1,0)</option>
+              <option value="anual">Anual (K=1,15)</option>
+            </select>
+          </div>
+          <div class="field"><label>Irradiación horizontal G<sub>dm</sub>(0) (kWh/m²/día)</label><input type="number" id="i_gdm0" value="1.67" min="0" step="0.01"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Inclinación elegida &beta; (grados)</label><input type="number" id="i_beta" value="45" min="0" max="90" step="1"></div>
+          <div class="field"><label>Azimut elegido &alpha; (grados, 0=sur)</label><input type="number" id="i_alpha" value="20" min="-180" max="180" step="1"></div>
+          <div class="field"><label>Factor de sombreado FS (0-1)</label><input type="number" id="i_fs" value="0.92" min="0" max="1" step="0.01"></div>
+        </div>
+        <div class="field" style="max-width:300px;">
+          <label>Rendimiento de la instalación (PR)</label>
+          <select id="i_pr">
+            <option value="0.7">0,7 — con inversor, sin batería</option>
+            <option value="0.6" selected>0,6 — con inversor y batería</option>
+          </select>
+        </div>
+
+        <div class="fieldset-title">Generador elegido</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia pico elegida P<sub>mp</sub> (Wp)</label><input type="number" id="i_pmp" value="660" min="0" step="10"></div>
+          <div class="field"><label>Corriente de cortocircuito generador I<sub>sc</sub> (A)</label><input type="number" id="i_isc" value="20.28" min="0" step="0.01"></div>
+        </div>
+
+        <div class="fieldset-title">Acumulador elegido (litio LiFePO4)</div>
+        <div class="grid3">
+          <div class="field"><label>Capacidad nominal C (Ah)</label><input type="number" id="i_c" value="200" min="0" step="1"></div>
+          <div class="field"><label>Profundidad de descarga máx. (PD<sub>max</sub>)</label><input type="number" id="i_pdmax" value="0.9" min="0.3" max="1" step="0.01"></div>
+          <div class="field"><label>Tensión nominal V<sub>NOM</sub> (V)</label><input type="number" id="i_vnom" value="24" min="1" step="1"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Rendimiento inversor &eta;<sub>inv</sub></label><input type="number" id="i_etainv" value="0.85" min="0.1" max="1" step="0.01"></div>
+          <div class="field"><label>Rendimiento regulador+acumulador &eta;<sub>rb</sub></label><input type="number" id="i_etarb" value="0.95" min="0.1" max="1" step="0.01"></div>
+          <div class="field"><label>C-rate máx. de carga del BMS</label><input type="number" id="i_crate" value="0.5" min="0.05" max="3" step="0.05">
+            <div class="hint">Corriente de carga máx. admitida = C-rate × C (Ah)</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:6px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Añadir sistema al informe</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
-          <div class="eyebrow">Generación fotovoltaica horaria · PVGIS · LCOE</div>
-          <h1>8.760 horas al año,<br>no doce meses <em>promediados</em>.</h1>
-          <p class="sub">Calculadora que llama en tiempo real a la API de PVGIS (Comisión Europea) para obtener la curva de generación fotovoltaica hora a hora de cada superficie de tu sistema, y calcula el LCOE (coste nivelado de la energía) individual y ponderado del conjunto. Carga el diseño guardado por la app de diseño de superficies, o añade cada superficie a mano.</p>
+          <div class="eyebrow">IDAE — Pliego de Condiciones Técnicas de Instalaciones Aisladas de Red</div>
+          <h1>Sacar agua de un pozo<br>a golpe de <em>sol</em>, sin<br>quedarse corto.</h1>
+          <p class="sub">Resumen visual e interactivo del PCT-IDAE para instalaciones fotovoltaicas aisladas: los requisitos de componentes, el esquema del sistema de bombeo (Fig. 3, Anexo I) y una calculadora que replica el ejemplo oficial de dimensionado, para generar tu propio informe de proyecto. <strong style="color:var(--text);">Adaptado a acumuladores de litio (LiFePO4)</strong> — el PCT original solo contempla plomo-ácido; aquí se sustituyen sus criterios por los propios de litio.</p>
         </div>
         <div class="hero-meta">
-          <span>Basado en</span>
-          <span style="color:var(--cyan)">API seriescalc · PVGIS-5</span>
-          <span>Comisión Europea, Joint Research Centre</span>
+          <span>Guía técnica</span>
+          <span style="color:var(--amber)">PCT-IDAE Aisladas</span>
+          <span>Convocatoria FV 2002</span>
         </div>
       </div>
 
       <div class="stat-row">
-        <div class="stat"><div class="v">P(t), t=1..8760</div><div class="l">potencia horaria generada por cada superficie (kW)</div></div>
-        <div class="stat"><div class="v">LCOE = coste / energía</div><div class="l">descontados a lo largo de la vida útil de la instalación</div></div>
-        <div class="stat"><div class="v">Curva lista para cruzar</div><div class="l">con consumo y almacenamiento en una fase posterior</div></div>
+        <div class="stat"><div class="v">3 días</div><div class="l">autonomía mínima del acumulador</div></div>
+        <div class="stat"><div class="v">PD &le; 90-95%</div><div class="l">profundidad de descarga admisible (litio)</div></div>
+        <div class="stat"><div class="v">Pmp &le; 1,2×Pmp,min</div><div class="l">sobredimensionado máx. del generador</div></div>
+        <div class="stat"><div class="v">Hf &lt; 10%</div><div class="l">pérdidas de fricción máx. en tuberías</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
-      <h2>Por qué hace falta la curva horaria, no solo el total anual.</h2>
-      <p class="lede">Saber que un sistema genera 1.700 kWh al año no basta para saber si esa energía coincide con cuándo la consumes, o cuánta batería necesitas. Para eso hace falta la potencia hora a hora.</p>
+      <h2>Las fórmulas del dimensionado, de la carga al generador.</h2>
+      <p class="lede">Resumen de los cálculos del Anexo I del PCT-IDAE, verificados frente al ejemplo oficial del propio documento (vivienda rural + bombeo, San Agustín de Guadalix). Es la base de la calculadora de la pestaña Informe.</p>
 
       <div class="theory-grid">
         <div class="theory-card">
-          <h3>1 · La API seriescalc de PVGIS</h3>
-          <p>A diferencia de la ficha mensual habitual (como la del informe PVGIS que adjuntaste), el endpoint <code class="inline">seriescalc</code> con <code class="inline">pvcalculation=1</code> devuelve la potencia de salida del sistema para cada una de las 8.760 horas de un año, aplicando el mismo modelo fotovoltaico validado de PVGIS (temperatura, ángulo de incidencia, pérdidas espectrales...).</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>2 · Qué necesita PVGIS de cada superficie</h3>
-          <p>Los mismos cinco parámetros que ya recoge la app de diseño de superficies — latitud, longitud, acimut (Sur=0°), inclinación y perfil de horizonte — más la potencia pico instalada y las pérdidas del sistema (cableado, inversor, suciedad...).</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>3 · LCOE — coste nivelado de la energía</h3>
-          <p>El precio al que tendrías que vender cada kWh generado para recuperar exactamente la inversión y los costes de operación, descontados a lo largo de la vida útil:</p>
+          <h3>1 · Altura total equivalente de bombeo</h3>
+          <p>Parámetro ficticio que resume la física del pozo, el depósito y las pérdidas de carga en un único valor de altura:</p>
           <div class="formula-box">
-            <div class="f">LCOE = [CAPEX + Σ OPEX_t/(1+r)^t] / [Σ E_t/(1+r)^t]</div>
-            <small>CAPEX: inversión inicial · OPEX_t: coste de operación del año t · E_t: energía generada el año t (con degradación) · r: tasa de descuento</small>
+            <div class="f">H<sub>TE</sub> = H<sub>D</sub> + H<sub>ST</sub> + [(H<sub>DT</sub>−H<sub>ST</sub>)/Q<sub>T</sub>] &times; Q<sub>AP</sub> + H<sub>f</sub></div>
+            <small>Q_AP = Q_d / 24 (caudal medio, m³/h)</small>
+          </div>
+          <div class="var-list">
+            <span><b>H_D</b> altura depósito (m)</span><span><b>H_ST</b> nivel estático (m)</span>
+            <span><b>H_DT</b> nivel dinámico (m)</span><span><b>Q_T</b> caudal de prueba (m³/h)</span>
+            <span><b>H_f</b> pérdida por fricción (m)</span>
           </div>
         </div>
 
         <div class="theory-card">
-          <h3>4 · Degradación anual</h3>
-          <p>Los paneles pierden una pequeña fracción de su potencia cada año (típicamente 0,3-0,7%/año). La energía de cada año futuro se reduce respecto al primer año antes de descontarla:</p>
+          <h3>2 · Energía eléctrica de la motobomba</h3>
+          <p>La constante 2,725 convierte volumen de agua (m³) y altura (m) directamente en energía hidráulica (Wh):</p>
           <div class="formula-box">
-            <div class="f">E_t = E_1 · (1 − d)^(t−1)</div>
+            <div class="f">E<sub>H</sub> = 2,725 &times; Q<sub>d</sub> &times; H<sub>TE</sub></div>
+            <div class="f" style="margin-top:6px;">E<sub>MB</sub> = E<sub>H</sub> / &eta;<sub>MB</sub></div>
+            <small>Q_d: volumen diario requerido (m³/día) · &eta;_MB: rendimiento motobomba (típico 0,4 para &gt;500W)</small>
           </div>
         </div>
 
         <div class="theory-card">
-          <h3>5 · LCOE ponderado del conjunto</h3>
-          <p>No es la media de los LCOE individuales: se suman todos los costes descontados y toda la energía descontada de todas las superficies, y se divide una vez al final. Así una superficie grande pesa lo que le corresponde, no lo mismo que una pequeña.</p>
+          <h3>3 · Irradiación sobre el generador</h3>
+          <p>La irradiación horizontal se corrige por orientación, inclinación y sombras respecto al óptimo del período de diseño:</p>
+          <div class="formula-box">
+            <div class="f">G<sub>dm</sub>(&alpha;,&beta;) = G<sub>dm</sub>(0) &times; K &times; FI &times; FS</div>
+            <small>K según Tabla III (periodo de diseño) · FI: factor de irradiación · FS: factor de sombreado</small>
+          </div>
+          <div class="formula-box">
+            <div class="f" style="font-size:12.5px;">FI = 1 − [1,2&times;10<sup>−4</sup>(&beta;−&beta;<sub>opt</sub>)² + 3,5&times;10<sup>−5</sup>&alpha;²]　[&beta;&gt;15°]</div>
+            <small>Para &beta; &le; 15° se omite el término del azimut</small>
+          </div>
         </div>
 
         <div class="theory-card">
-          <h3>6 · Qué viene después</h3>
-          <p>Esta curva horaria de generación está pensada para alimentar, en una fase posterior, un cruce con la curva horaria de consumo y el dimensionado de baterías — de ahí que el resultado se pueda exportar en CSV con las 8.760 filas de cada superficie.</p>
+          <h3>4 · Potencia mínima del generador</h3>
+          <p>El generador se dimensiona para cubrir el consumo diario total con el rendimiento energético esperado de la instalación (PR):</p>
+          <div class="formula-box">
+            <div class="f">P<sub>mp,min</sub> = (E<sub>D</sub> &times; G<sub>CEM</sub>) / (G<sub>dm</sub>(&alpha;,&beta;) &times; PR)</div>
+            <small>G_CEM = 1 kW/m² · PR típico: 0,7 con inversor · 0,6 con inversor y batería</small>
+          </div>
+          <p>Límite: la potencia pico elegida no debe superar en más de un 20% este mínimo, salvo justificación expresa.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>5 · Autonomía del acumulador</h3>
+          <p>Días que el sistema puede alimentar el consumo previsto sin ninguna aportación solar, hasta la profundidad de descarga máxima permitida:</p>
+          <div class="formula-box">
+            <div class="f">A = (C &times; PD<sub>max</sub> &times; &eta;<sub>inv</sub> &times; &eta;<sub>rb</sub>) / L<sub>D</sub></div>
+            <small>L_D = E_D / V_NOM (consumo diario en Ah) · C: capacidad nominal del acumulador (Ah) · mínimo exigido: A &ge; 3 días</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>6 · Límites obligatorios de diseño (adaptados a litio)</h3>
+          <ul>
+            <li><b>Generador:</b> P<sub>mp</sub> &le; 1,2 &times; P<sub>mp,min</sub></li>
+            <li><b>Acumulador:</b> I<sub>sc</sub> generador &le; C-rate máx. de carga del BMS &times; C (corriente de carga dentro del límite que admite el BMS)</li>
+            <li><b>Autonomía:</b> mínimo 3 días con el acumulador elegido</li>
+            <li><b>Profundidad de descarga:</b> hasta 90-95% según fabricante (el litio LiFePO4 tolera bien la descarga profunda frecuente, a diferencia del plomo-ácido)</li>
+            <li><b>Fricción hidráulica:</b> H<sub>f</sub> &lt; 10% de H<sub>TE</sub></li>
+          </ul>
         </div>
       </div>
-    </section>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Objeto y definiciones</span></summary><div class="acc-cuerpo">
+<div id="objeto">
+      <h2>Un pliego de mínimos para cualquier instalación aislada.</h2>
+      <p class="lede">Fija las condiciones técnicas mínimas de las instalaciones fotovoltaicas aisladas de red: electrificación de viviendas, alumbrado público, aplicaciones agropecuarias, y bombeo y tratamiento de agua.</p>
 
-    <!-- 01 PVGIS API -->
-    <section id="marco">
-      <div class="eyebrow kicker">01 · PVGIS API</div>
-      <h2>La misma herramienta del PDF de referencia, en su versión horaria.</h2>
-      <p class="lede">PVGIS (Photovoltaic Geographical Information System) es la herramienta gratuita de la Comisión Europea (Joint Research Centre) para estimar la producción de energía solar en cualquier punto de Europa, África y buena parte de Asia y América. Esta calculadora llama a su API directamente desde tu navegador.</p>
+      <div class="grid4" style="margin-bottom:32px;">
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Ámbito</div><p style="font-size:13px; color:var(--text-dim);">Electrificación, alumbrado público, agropecuarias, bombeo, aplicaciones mixtas.</p></div>
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Aislamiento</div><p style="font-size:13px; color:var(--text-dim);">Mínimo clase I; se recomienda clase II sobre 50 V<sub>RMS</sub> o 120 V<sub>CC</sub>.</p></div>
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Grado IP</div><p style="font-size:13px; color:var(--text-dim);">IP65 mínimo a la intemperie, IP20 en interior.</p></div>
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Garantía</div><p style="font-size:13px; color:var(--text-dim);">3 años instalación completa, 8 años los módulos fotovoltaicos.</p></div>
+      </div>
+
+      <div class="grid4">
+        <div class="def-card"><h4>Generador FV</h4><p>Asociación en paralelo de ramas fotovoltaicas, cada una con tensión igual a la nominal del generador.</p></div>
+        <div class="def-card"><h4>Acumulador</h4><p>Baterías de litio LiFePO4 (fosfato de hierro-litio), con BMS (sistema de gestión de batería) integrado obligatorio. Se descarta el plomo-ácido por su menor vida útil y peor tolerancia a la descarga profunda.</p></div>
+        <div class="def-card"><h4>Regulador de carga</h4><p>Protege la batería frente a sobrecargas y sobredescargas, cortando el suministro a las cargas si es necesario.</p></div>
+        <div class="def-card"><h4>Inversor</h4><p>Convierte CC en CA. Preferiblemente de onda senoidal pura; se admite onda no senoidal solo si P&lt;1kVA.</p></div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Orientación e inclinación</span></summary><div class="acc-cuerpo">
+<div id="diseno">
+      <h2>Cuánta radiación pierdes por no apuntar bien al sol.</h2>
+      <p class="lede">Las pérdidas por una orientación e inclinación distintas a las óptimas, y por sombreado, tienen topes máximos reglamentarios en el período de diseño elegido.</p>
+
+      <div class="card" style="padding:0; overflow-x:auto; margin-bottom:28px;">
+        <table class="data-table">
+          <thead><tr><th>Pérdida de radiación del generador</th><th>Valor máximo permitido</th></tr></thead>
+          <tbody>
+            <tr><td>Inclinación y orientación</td><td class="cellnum">20%</td></tr>
+            <tr><td>Sombras</td><td class="cellnum">10%</td></tr>
+            <tr><td>Combinación de ambas</td><td class="cellnum">20%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:14px;">Tabla III · Período de diseño e inclinación óptima</div>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Período de diseño</th><th>&beta;<sub>opt</sub></th><th>K</th><th>Cuándo se usa</th></tr></thead>
+          <tbody>
+            <tr><td>Diciembre</td><td class="cellnum">N + 10°</td><td class="cellnum">1,7</td><td>Consumo constante, mes de menor radiación</td></tr>
+            <tr><td>Julio</td><td class="cellnum">N − 20°</td><td class="cellnum">1,0</td><td>Bombeo con demanda estival, según localidad</td></tr>
+            <tr><td>Anual</td><td class="cellnum">N − 10°</td><td class="cellnum">1,15</td><td>Maximizar la producción anual</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">N = latitud del lugar, en grados. &beta;: inclinación elegida. &alpha;: azimut elegido (0° = sur).</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Componentes</span></summary><div class="acc-cuerpo">
+<div id="componentes">
+      <h2>Los mínimos de calidad, componente a componente.</h2>
+      <p class="lede">Cada elemento del sistema tiene requisitos propios de seguridad, protección y rendimiento.</p>
+
+      <div class="grid2" style="margin-bottom:16px;">
+        <div class="comp-card">
+          <h4>Generador fotovoltaico</h4>
+          <div class="result-row"><span class="lbl">Certificación</span><span class="val">UNE-EN 61215 / 61646</span></div>
+          <div class="result-row"><span class="lbl">Tolerancia potencia/Isc</span><span class="val">±10% s/catálogo</span></div>
+          <div class="result-row"><span class="lbl">Puesta a tierra</span><span class="val">Obligatoria si V&gt;48V</span></div>
+        </div>
+        <div class="comp-card">
+          <h4>Acumulador de litio (LiFePO4)</h4>
+          <div class="result-row"><span class="lbl">Corriente de carga máx.</span><span class="val">según C-rate del BMS (típ. 0,5-1C)</span></div>
+          <div class="result-row"><span class="lbl">Profundidad descarga máx.</span><span class="val">90-95% (según fabricante)</span></div>
+          <div class="result-row"><span class="lbl">Autodescarga a 20°C</span><span class="val">&le; 3%/mes</span></div>
+          <div class="result-row"><span class="lbl">Vida útil</span><span class="val">&gt;3000-6000 ciclos a 80% PD</span></div>
+          <div class="result-row"><span class="lbl">BMS integrado</span><span class="val">Obligatorio</span></div>
+        </div>
+        <div class="comp-card">
+          <h4>Regulador de carga</h4>
+          <div class="result-row"><span class="lbl">Sobrecarga admisible</span><span class="val">+25% Isc generador/consumo</span></div>
+          <div class="result-row"><span class="lbl">Caída de tensión interna</span><span class="val">&le;4% (&lt;1kW) / &le;2% (&gt;1kW)</span></div>
+          <div class="result-row"><span class="lbl">Autoconsumo diario</span><span class="val">&le;3% del consumo diario</span></div>
+        </div>
+        <div class="comp-card">
+          <h4>Inversor</h4>
+          <div class="result-row"><span class="lbl">Tensión / frecuencia salida</span><span class="val">±5% V<sub>NOM</sub> / 50Hz±2%</span></div>
+          <div class="result-row"><span class="lbl">Autoconsumo en vacío</span><span class="val">&le;2% potencia nominal</span></div>
+          <div class="result-row"><span class="lbl">Pérdidas diarias autoconsumo</span><span class="val">&le;5% consumo diario</span></div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:14px;">Tabla II · Rendimiento mínimo del inversor</div>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Tipo de inversor</th><th>Rendimiento al 20% P<sub>nom</sub></th><th>Rendimiento a P<sub>nom</sub></th></tr></thead>
+          <tbody>
+            <tr><td>Onda senoidal, P&le;500 VA</td><td class="cellnum">&gt;80%</td><td class="cellnum">&gt;70%</td></tr>
+            <tr><td>Onda senoidal, P&gt;500 VA</td><td class="cellnum">&gt;85%</td><td class="cellnum">&gt;80%</td></tr>
+            <tr><td>Onda no senoidal (solo si P&lt;1kVA)</td><td class="cellnum">&gt;85%</td><td class="cellnum">&gt;80%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Cableado y protecciones</span></summary><div class="acc-cuerpo">
+<div id="cableado">
+      <h2>Cada tramo tiene su propio límite de caída de tensión.</h2>
+      <p class="lede">La sección de los conductores de la parte de corriente continua se elige para que la caída de tensión no supere estos límites, referidos a la tensión nominal continua del sistema.</p>
+
+      <div class="grid3" style="margin-bottom:16px;">
+        <div class="comp-card"><h4>Generador → regulador/inversor</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">3%</span></div></div>
+        <div class="comp-card"><h4>Regulador → batería</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
+        <div class="comp-card"><h4>Inversor → batería</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
+        <div class="comp-card"><h4>Regulador → inversor</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
+        <div class="comp-card"><h4>Inversor/regulador → cargas</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">3%</span></div></div>
+        <div class="comp-card"><h4>Puesta a tierra</h4><div class="result-row"><span class="lbl">Obligatoria si</span><span class="val" style="font-size:18px; color:var(--amber);">V&gt;48V</span></div></div>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dimmer);">La instalación estará protegida frente a cortocircuitos, sobrecargas y sobretensiones; especial atención a la protección de la batería mediante fusible o disyuntor magnetotérmico.</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Sistema de bombeo</span></summary><div class="acc-cuerpo">
+<div id="bombeo">
+      <h2>El esquema de la Fig. 3: del pozo al depósito.</h2>
+      <p class="lede">La energía necesaria para bombear no depende solo del volumen de agua, sino de una altura equivalente que resume el pozo, el depósito y las pérdidas por fricción.</p>
+
+      <div class="pump-diagram" style="margin-bottom:28px;">
+        <svg viewBox="0 0 640 340" id="pumpSvg"></svg>
+      </div>
 
       <div class="grid3">
-        <div class="comp-card"><h4>Endpoint usado</h4><p><code class="inline">/api/seriescalc</code> con <code class="inline">pvcalculation=1</code>, para obtener la potencia horaria calculada por el modelo fotovoltaico de PVGIS, no solo la irradiación.</p></div>
-        <div class="comp-card"><h4>Base de datos de radiación</h4><p>Por defecto <code class="inline">PVGIS-SARAH3</code> (satélite, Europa/África/Asia). Para el resto del mundo usa <code class="inline">PVGIS-ERA5</code>.</p></div>
-        <div class="comp-card"><h4>Llamada en tiempo real</h4><p>Cada superficie hace su propia llamada a la API al pulsar "Obtener datos PVGIS" — no hay datos precargados ni simulados. Si el navegador bloquea la llamada directa (PVGIS no siempre envía cabeceras CORS, al estar pensada sobre todo para uso desde scripts), se prueban automáticamente varios proxies CORS públicos en cadena; si todos fallan, esa superficie se marca con el detalle exacto de cada intento.</p></div>
+        <div class="def-card"><h4>Nivel estático (H<sub>ST</sub>)</h4><p>Distancia entre el nivel del suelo y el nivel del agua antes de bombear.</p></div>
+        <div class="def-card"><h4>Nivel dinámico (H<sub>DT</sub>)</h4><p>Distancia entre el nivel del suelo y el nivel del agua tras la prueba de bombeo (el pozo baja al extraer agua).</p></div>
+        <div class="def-card"><h4>Caudal de prueba (Q<sub>T</sub>)</h4><p>Caudal extraído durante el ensayo que caracteriza el pozo, usado para estimar el descenso dinámico real.</p></div>
       </div>
-      <p style="font-size:12px; color:var(--text-dimmer); margin-top:20px;">Referencias: <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener" style="color:var(--cyan);">PVGIS — Comisión Europea, Joint Research Centre</a>. <a href="https://joint-research-centre.ec.europa.eu/photovoltaic-geographical-information-system-pvgis/getting-started-pvgis/api-non-interactive-service_en" target="_blank" rel="noopener" style="color:var(--cyan);">Documentación de la API no interactiva de PVGIS</a>.</p>
+      <p style="font-size:12.5px; color:var(--text-dimmer); margin-top:20px; max-width:680px;">Requisito obligatorio: el caudal bombeado no debe exceder el caudal máximo extraíble del pozo cuando el generador trabaja en Condiciones Estándar de Medida (CEM). Es responsabilidad del instalador solicitar al propietario un estudio de caracterización del pozo.</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Mantenimiento y garantías</span></summary><div class="acc-cuerpo">
+<div id="mantenimiento">
+      <h2>Tres años de contrato, revisión anual mínima.</h2>
+      <p class="lede">El contrato de mantenimiento preventivo y correctivo cubre, como mínimo, tres años, con una revisión anual completa.</p>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:12px;">Revisión anual mínima</div>
+          <div class="result-row"><span class="lbl">Cableado y conexiones</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Módulos: limpieza y daños</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Baterías de litio: BMS y balanceo</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Protecciones y tomas de tierra</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Sistemas con monitorización</span><span class="val">Revisión cada 6 meses</span></div>
+        </div>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:12px;">Garantías</div>
+          <div class="result-row"><span class="lbl">Instalación completa</span><span class="val">3 años</span></div>
+          <div class="result-row"><span class="lbl">Módulos fotovoltaicos</span><span class="val">8 años</span></div>
+          <div class="result-row"><span class="lbl">Aviso si no funciona</span><span class="val">Atención &le;48h</span></div>
+          <div class="result-row"><span class="lbl">Aviso si fallo no crítico</span><span class="val">Atención &le;1 semana</span></div>
+          <div class="result-row"><span class="lbl">Recepción provisional</span><span class="val">&ge;240h sin fallos</span></div>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 02 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">02 · Datos del proyecto</div>
-      <h2>¿Para quién es este informe?</h2>
-      <p class="lede">Estos datos aparecerán en la portada del PDF.</p>
-      <div class="card">
-        <div class="fieldset-title">Proyecto</div>
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:14px;">Datos del proyecto</div>
         <div class="grid2">
-          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Generación horaria fotovoltaica y LCOE"></div>
+          <div class="field"><label>Cliente</label><input type="text" id="p_cliente" placeholder="Nombre del cliente"></div>
+          <div class="field"><label>Ubicación de la instalación</label><input type="text" id="p_direccion" placeholder="Finca, término municipal..."></div>
+          <div class="field"><label>Instalador / empresa instaladora</label><input type="text" id="p_instalador" placeholder="Nombre y empresa"></div>
+          <div class="field"><label>Referencia / expediente</label><input type="text" id="p_referencia" placeholder="Ref. interna (opcional)"></div>
           <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
         </div>
-        <div class="fieldset-title">Autor</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
-          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
-        </div>
-        <div class="fieldset-title">Organización</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
-          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
-          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
-        </div>
-        <div class="fieldset-title">Destinatario</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
-        </div>
       </div>
-    </section>
+      </div></details>
+      
 
-    <!-- 03 SUPERFICIES Y FINANCIACION -->
-    <section id="superficies">
-      <div class="eyebrow kicker">03 · Superficies y financiación</div>
-      <h2>Carga el diseño guardado, o añade cada superficie a mano.</h2>
-      <p class="lede">Los parámetros financieros de abajo se aplican a todas las superficies del proyecto. Cada superficie tiene además sus propios parámetros técnicos (los que necesita PVGIS) y su propio coste de inversión y operación.</p>
+      
 
-      <div class="card" style="margin-bottom:24px;">
-        <div class="fieldset-title" style="margin-top:0;">Parámetros financieros del proyecto (para el LCOE)</div>
-        <div class="grid3">
-          <div class="field"><label>Tasa de descuento (%)</label><input type="number" id="fin_tasa" value="4" min="0" max="30" step="0.1"></div>
-          <div class="field"><label>Vida útil (años)</label><input type="number" id="fin_vida" value="25" min="1" max="50" step="1"></div>
-          <div class="field"><label>Degradación anual (%)</label><input type="number" id="fin_degradacion" value="0.5" min="0" max="5" step="0.1"></div>
-        </div>
-      </div>
-
-      <div class="btn-row" style="margin-bottom:20px;">
-        <button class="btn primary" id="btnModoMemoria" type="button">🗄 Cargar diseño guardado</button>
-        <button class="btn ghost" id="btnModoManual" type="button">✏ Añadir manualmente</button>
-      </div>
-
-      <div class="card" id="panelModoMemoria" style="margin-bottom:28px;">
-        <div class="fieldset-title" style="margin-top:0;">Diseño guardado en el navegador</div>
-        <p class="hint" id="estadoVatiacoTexto">Comprobando si hay un diseño guardado…</p>
-        <div class="btn-row">
-          <button class="btn primary" id="btnCargarVatiaco" type="button">⬇Cargar diseño guardado</button>
-        </div>
-      </div>
-
-      <div class="card" id="panelModoManual" style="margin-bottom:28px; display:none;">
-        <div class="eyebrow" style="margin-bottom:6px;">Añadir superficie manualmente</div>
-        <div class="field"><label>Nombre de la superficie</label><input type="text" id="i_nombre" placeholder="Ej: Cubierta nave principal"></div>
-
-        <div class="fieldset-title">Ubicación y sistema</div>
-        <div class="grid3">
-          <div class="field"><label>Latitud</label><input type="number" id="i_lat" value="37.419" step="0.000001"></div>
-          <div class="field"><label>Longitud</label><input type="number" id="i_lng" value="-3.036" step="0.000001"></div>
-          <div class="field"><label>Potencia pico (kWp)</label><input type="number" id="i_peakpower" value="1" min="0.05" step="0.01"></div>
-        </div>
-        <div class="grid3">
-          <div class="field"><label>Orientación / acimut (Sur=0°, Este=−90°, Oeste=+90°)</label><input type="number" id="i_aspect" value="0" min="-180" max="180" step="1"></div>
-          <div class="field"><label>Inclinación (°)</label><input type="number" id="i_angle" value="35" min="0" max="90" step="1"></div>
-          <div class="field"><label>Pérdidas del sistema (%)</label><input type="number" id="i_loss" value="14" min="0" max="50" step="0.5"></div>
-        </div>
-        <div class="grid3">
-          <div class="field"><label>Tecnología del panel</label>
-            <select id="i_pvtech">
-              <option value="crystSi" selected>Silicio cristalino</option>
-              <option value="CIS">CIS</option>
-              <option value="CdTe">CdTe</option>
-              <option value="Unknown">Desconocida / genérica</option>
-            </select>
-          </div>
-          <div class="field"><label>Tipo de montaje</label>
-            <select id="i_mounting">
-              <option value="free" selected>Sobre estructura libre</option>
-              <option value="building">Integrado en edificio</option>
-            </select>
-          </div>
-          <div class="field"><label>Base de datos de radiación</label>
-            <select id="i_raddatabase">
-              <option value="PVGIS-SARAH3" selected>PVGIS-SARAH3 (Europa/África/Asia)</option>
-              <option value="PVGIS-ERA5">PVGIS-ERA5 (global, menor resolución)</option>
-            </select>
-          </div>
-        </div>
-        <div class="field" style="max-width:220px;"><label>Año de la serie horaria</label><input type="number" id="i_year" value="2020" min="2005" max="2023" step="1"></div>
-        <div class="field"><label>Perfil de sombras del horizonte (16 valores, −130° a 130°, separados por comas)</label><input type="text" id="i_userhorizon" value="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"></div>
-        <p class="hint" style="margin-top:-10px;">Al importar desde GeoJSON este campo se rellena automáticamente con el perfil real de esa superficie.</p>
-
-        <div class="fieldset-title">Inversión y operación de esta superficie</div>
-        <div class="grid2">
-          <div class="field"><label>CAPEX — inversión inicial (€)</label><input type="number" id="i_capex" value="1200" min="0" step="10"></div>
-          <div class="field"><label>OPEX — operación y mantenimiento (€/año)</label><input type="number" id="i_opex" value="15" min="0" step="1"></div>
-        </div>
-
-        <div class="fieldset-title">Parámetros para el enlace PVcalc de PVGIS (pvprice)</div>
-        <p class="hint" style="margin-top:-6px; margin-bottom:10px;">PVGIS calcula su propio LCOE ("PV electricity cost") si le pasas el coste del sistema y el interés — independientes de tu CAPEX/tasa de descuento de arriba, por si quieres comparar con supuestos distintos.</p>
-        <div class="grid2">
-          <div class="field"><label>Coste del sistema — systemcost (€)</label><input type="number" id="i_systemcost" value="1200" min="0" step="10"></div>
-          <div class="field"><label>Interés — interest (%)</label><input type="number" id="i_interest" value="4" min="0" max="30" step="0.1"></div>
-        </div>
-
-        <div class="field"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
-        <div class="btn-row">
-          <button class="btn primary" id="btnAddSuperficie">+ Añadir superficie a la lista</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 04 RESULTADOS E INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">04 · Resultados e informe</div>
-      <h2>Cada superficie, con su curva horaria y su LCOE.</h2>
-      <p class="lede">Pulsa "Obtener datos PVGIS" en cada superficie para llamar a la API y calcular su curva horaria y su LCOE. Cuando todas tengan datos, genera el informe o exporta el CSV horario de cada una.</p>
-
+      <div class="eyebrow" style="margin-bottom:10px;">Sistemas del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has añadido ninguna superficie. Usa el conmutador de la sección 03 para cargar el diseño guardado o añadir una superficie a mano.</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún sistema. Rellena el formulario de la pestaña Simulación y pulsa "Añadir sistema al informe".</div></div>
+
+      <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
+        <table class="summary" id="summaryTable"></table>
+      </div>
 
       <div class="btn-row">
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
-        <button class="btn ghost" id="btnObtenerTodas" disabled>⟳ Obtener datos PVGIS de todas</button>
-        <button class="btn ghost" id="btnClearInst">Vaciar todas las superficies</button>
+        <button class="btn ghost" id="btnClearInst">Vaciar todos los sistemas</button>
       </div>
+    
     </section>
 
     <footer>
-      Herramienta no oficial de apoyo al cálculo de generación fotovoltaica horaria y LCOE, basada en llamadas en tiempo real a la <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">API de PVGIS</a> (Comisión Europea, Joint Research Centre). Los resultados dependen de la disponibilidad y precisión de los datos de PVGIS para cada ubicación. El LCOE se calcula con la fórmula estándar de coste nivelado de la energía a partir de los parámetros financieros que introduzcas — no es un asesoramiento financiero.
+      Resumen visual no oficial del Pliego de Condiciones Técnicas de Instalaciones Aisladas de Red, IDAE — convocatoria de energía solar fotovoltaica 2002. Ante cualquier duda de aplicación, consulta siempre el <a href="https://www.idae.es/uploads/documentos/documentos_pliego_condiciones_tecnicas_instalaciones_aisladas_red_843370f2.pdf" target="_blank" rel="noopener">documento oficial</a>.
     </footer>
 
   </main>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
 /** @license
@@ -805,12 +1006,23 @@ function(t){var e=function(){return void 0===this.internal.vFS&&(this.internal.v
 function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,s,o,h,l=e,c=[[0,3,0,1,0,0,0],[0,3,0,1,2,2,0],[0,3,0,17,2,0,1],[0,3,5,5,4,1,0],[0,3,21,21,4,0,1],[0,3,5,5,4,2,0]],u=[[2,0,1,1,0,1,0],[2,0,1,1,0,2,0],[2,0,2,1,3,2,0],[2,0,2,33,3,1,1]],f={L:0,R:1,EN:2,AN:3,N:4,B:5,S:6},d={0:0,5:1,6:2,7:3,32:4,251:5,254:6,255:7},p=["(",")","(","<",">","<","[","]","[","{","}","{","«","»","«","‹","›","‹","⁅","⁆","⁅","⁽","⁾","⁽","₍","₎","₍","≤","≥","≤","〈","〉","〈","﹙","﹚","﹙","﹛","﹜","﹛","﹝","﹞","﹝","﹤","﹥","﹤"],g=new RegExp(/^([1-4|9]|1[0-9]|2[0-9]|3[0168]|4[04589]|5[012]|7[78]|159|16[0-9]|17[0-2]|21[569]|22[03489]|250)$/),m=!1,b=0;this.__bidiEngine__={};var v=function(t){var e=t.charCodeAt(),n=e>>8,r=d[n];return void 0!==r?l[256*r+(255&e)]:252===n||253===n?"AL":g.test(n)?"L":8===n?"R":"N"},w=function(t){for(var e,n=0;n<t.length;n++){if("L"===(e=v(t.charAt(n))))return!1;if("R"===e)return!0}return!1},y=function(t,e,s,o){var h,l,c,u,f=e[o];switch(f){case"L":case"R":case"LRE":case"RLE":case"LRO":case"RLO":case"PDF":m=!1;break;case"N":case"AN":break;case"EN":m&&(f="AN");break;case"AL":m=!0,f="R";break;case"WS":case"BN":f="N";break;case"CS":o<1||o+1>=e.length||"EN"!==(h=s[o-1])&&"AN"!==h||"EN"!==(l=e[o+1])&&"AN"!==l?f="N":m&&(l="AN"),f=l===h?l:"N";break;case"ES":f="EN"===(h=o>0?s[o-1]:"B")&&o+1<e.length&&"EN"===e[o+1]?"EN":"N";break;case"ET":if(o>0&&"EN"===s[o-1]){f="EN";break}if(m){f="N";break}for(c=o+1,u=e.length;c<u&&"ET"===e[c];)c++;f=c<u&&"EN"===e[c]?"EN":"N";break;case"NSM":if(i&&!a){for(u=e.length,c=o+1;c<u&&"NSM"===e[c];)c++;if(c<u){var d=t[o],p=d>=1425&&d<=2303||64286===d;if(h=e[c],p&&("R"===h||"AL"===h)){f="R";break}}}f=o<1||"B"===(h=e[o-1])?"N":s[o-1];break;case"B":m=!1,n=!0,f=b;break;case"S":r=!0,f="N"}return f},_=function(t,e,n){var r=t.split("");return n&&x(r,n,{hiLevel:b}),r.reverse(),e&&e.reverse(),r.join("")},x=function(t,e,i){var a,s,o,h,l,d=-1,p=t.length,g=0,w=[],_=b?u:c,x=[];for(m=!1,n=!1,r=!1,s=0;s<p;s++)x[s]=v(t[s]);for(o=0;o<p;o++){if(l=g,w[o]=y(t,x,w,o),a=240&(g=_[l][f[w[o]]]),g&=15,e[o]=h=_[g][5],a>0)if(16===a){for(s=d;s<o;s++)e[s]=1;d=-1}else d=-1;if(_[g][6])-1===d&&(d=o);else if(d>-1){for(s=d;s<o;s++)e[s]=h;d=-1}"B"===x[o]&&(e[o]=0),i.hiLevel|=h}r&&function(t,e,n){for(var r=0;r<n;r++)if("S"===t[r]){e[r]=b;for(var i=r-1;i>=0&&"WS"===t[i];i--)e[i]=b}}(x,e,p)},A=function(t,e,r,i,a){if(!(a.hiLevel<t)){if(1===t&&1===b&&!n)return e.reverse(),void(r&&r.reverse());for(var s,o,h,l,c=e.length,u=0;u<c;){if(i[u]>=t){for(h=u+1;h<c&&i[h]>=t;)h++;for(l=u,o=h-1;l<o;l++,o--)s=e[l],e[l]=e[o],e[o]=s,r&&(s=r[l],r[l]=r[o],r[o]=s);u=h}u++}}},L=function(t,e,n){var r=t.split(""),i={hiLevel:b};return n||(n=[]),x(r,n,i),function(t,e,n){if(0!==n.hiLevel&&h)for(var r,i=0;i<t.length;i++)1===e[i]&&(r=p.indexOf(t[i]))>=0&&(t[i]=p[r+1])}(r,n,i),A(2,r,e,n,i),A(1,r,e,n,i),r.join("")};return this.__bidiEngine__.doBidiReorder=function(t,e,n){if(function(t,e){if(e)for(var n=0;n<t.length;n++)e[n]=n;void 0===a&&(a=w(t)),void 0===o&&(o=w(t))}(t,e),i||!s||o)if(i&&s&&a^o)b=a?1:0,t=_(t,e,n);else if(!i&&s&&o)b=a?1:0,t=L(t,e,n),t=_(t,e);else if(!i||a||s||o){if(i&&!s&&a^o)t=_(t,e),a?(b=0,t=L(t,e,n)):(b=1,t=L(t,e,n),t=_(t,e));else if(i&&a&&!s&&o)b=1,t=L(t,e,n),t=_(t,e);else if(!i&&!s&&a^o){var r=h;a?(b=1,t=L(t,e,n),b=0,h=!1,t=L(t,e,n),h=r):(b=0,t=L(t,e,n),t=_(t,e),b=1,h=!1,t=L(t,e,n),h=r,t=_(t,e))}}else b=0,t=L(t,e,n);else b=a?1:0,t=L(t,e,n);return t},this.__bidiEngine__.setOptions=function(t){t&&(i=t.isInputVisual,s=t.isOutputVisual,a=t.isInputRtl,o=t.isOutputRtl,h=t.isSymmetricSwapping)},this.__bidiEngine__.setOptions(t),this.__bidiEngine__};var e=["BN","BN","BN","BN","BN","BN","BN","BN","BN","S","B","S","WS","B","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","B","B","B","S","WS","N","N","ET","ET","ET","N","N","N","N","N","ES","CS","ES","CS","CS","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","CS","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","BN","BN","BN","BN","BN","BN","B","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","CS","N","ET","ET","ET","ET","N","N","N","N","L","N","N","BN","N","N","ET","ET","EN","EN","N","L","N","N","N","EN","L","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","N","N","N","N","N","ET","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","R","NSM","R","NSM","NSM","R","NSM","NSM","R","NSM","N","N","N","N","N","N","N","N","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","N","N","N","N","N","R","R","R","R","R","N","N","N","N","N","N","N","N","N","N","N","AN","AN","AN","AN","AN","AN","N","N","AL","ET","ET","AL","CS","AL","N","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AL","AL","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AN","AN","AN","AN","AN","AN","AN","AN","AN","AN","ET","AN","AN","AL","AL","AL","NSM","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AN","N","NSM","NSM","NSM","NSM","NSM","NSM","AL","AL","NSM","NSM","N","NSM","NSM","NSM","NSM","AL","AL","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","N","AL","AL","NSM","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AL","N","N","N","N","N","N","N","N","N","N","N","N","N","N","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","R","R","N","N","N","N","R","N","N","N","N","N","WS","WS","WS","WS","WS","WS","WS","WS","WS","WS","WS","BN","BN","BN","L","R","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","WS","B","LRE","RLE","PDF","LRO","RLO","CS","ET","ET","ET","ET","ET","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","CS","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","WS","BN","BN","BN","BN","BN","N","LRI","RLI","FSI","PDI","BN","BN","BN","BN","BN","BN","EN","L","N","N","EN","EN","EN","EN","EN","EN","ES","ES","N","N","N","L","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","ES","ES","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","L","L","L","L","L","L","L","N","N","N","N","N","N","N","N","N","N","N","N","L","L","L","L","L","N","N","N","N","N","R","NSM","R","R","R","R","R","R","R","R","R","R","ES","R","R","R","R","R","R","R","R","R","R","R","R","R","N","R","R","R","R","R","N","R","N","R","R","N","R","R","N","R","R","R","R","R","R","R","R","R","R","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","CS","N","CS","N","N","CS","N","N","N","N","N","N","N","N","N","ET","N","N","ES","ES","N","N","N","N","N","ET","ET","N","N","N","N","N","AL","AL","AL","AL","AL","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","N","N","BN","N","N","N","ET","ET","ET","N","N","N","N","N","ES","CS","ES","CS","CS","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","CS","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","N","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","L","L","L","L","L","L","N","N","L","L","L","L","L","L","N","N","L","L","L","L","L","L","N","N","L","L","L","N","N","N","ET","ET","N","N","N","ET","ET","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N"],n=new t.__bidiEngine__({isInputVisual:!0});t.API.events.push(["postProcessText",function(t){var e=t.text;t.x,t.y;var r=t.options||{};t.mutex,r.lang;var i=[];if(r.isInputVisual="boolean"!=typeof r.isInputVisual||r.isInputVisual,n.setOptions(r),"[object Array]"===Object.prototype.toString.call(e)){var a=0;for(i=[],a=0;a<e.length;a+=1)"[object Array]"===Object.prototype.toString.call(e[a])?i.push([n.doBidiReorder(e[a][0]),e[a][1],e[a][2]]):i.push([n.doBidiReorder(e[a])]);t.text=i}else t.text=n.doBidiReorder(e);n.setOptions({isInputVisual:!0})}])}(R),R.API.TTFFont=function(){function t(t){var e;if(this.rawData=t,e=this.contents=new Ta(t),this.contents.pos=4,"ttcf"===e.readString(4))throw new Error("TTCF not supported.");e.pos=0,this.parse(),this.subset=new rs(this),this.registerTTF()}return t.open=function(e){return new t(e)},t.prototype.parse=function(){return this.directory=new Da(this.contents),this.head=new Ua(this),this.name=new Ja(this),this.cmap=new Wa(this),this.toUnicode={},this.hhea=new Va(this),this.maxp=new Xa(this),this.hmtx=new Ka(this),this.post=new Ya(this),this.os2=new Ga(this),this.loca=new ns(this),this.glyf=new Qa(this),this.ascender=this.os2.exists&&this.os2.ascender||this.hhea.ascender,this.decender=this.os2.exists&&this.os2.decender||this.hhea.decender,this.lineGap=this.os2.exists&&this.os2.lineGap||this.hhea.lineGap,this.bbox=[this.head.xMin,this.head.yMin,this.head.xMax,this.head.yMax]},t.prototype.registerTTF=function(){var t,e,n,r,i;if(this.scaleFactor=1e3/this.head.unitsPerEm,this.bbox=function(){var e,n,r,i;for(i=[],e=0,n=(r=this.bbox).length;e<n;e++)t=r[e],i.push(Math.round(t*this.scaleFactor));return i}.call(this),this.stemV=0,this.post.exists?(n=255&(r=this.post.italic_angle),32768&(e=r>>16)&&(e=-(1+(65535^e))),this.italicAngle=+(e+"."+n)):this.italicAngle=0,this.ascender=Math.round(this.ascender*this.scaleFactor),this.decender=Math.round(this.decender*this.scaleFactor),this.lineGap=Math.round(this.lineGap*this.scaleFactor),this.capHeight=this.os2.exists&&this.os2.capHeight||this.ascender,this.xHeight=this.os2.exists&&this.os2.xHeight||0,this.familyClass=(this.os2.exists&&this.os2.familyClass||0)>>8,this.isSerif=1===(i=this.familyClass)||2===i||3===i||4===i||5===i||7===i,this.isScript=10===this.familyClass,this.flags=0,this.post.isFixedPitch&&(this.flags|=1),this.isSerif&&(this.flags|=2),this.isScript&&(this.flags|=8),0!==this.italicAngle&&(this.flags|=64),this.flags|=32,!this.cmap.unicode)throw new Error("No unicode cmap for font")},t.prototype.characterToGlyph=function(t){var e;return(null!=(e=this.cmap.unicode)?e.codeMap[t]:void 0)||0},t.prototype.widthOfGlyph=function(t){var e;return e=1e3/this.head.unitsPerEm,this.hmtx.forGlyph(t).advance*e},t.prototype.widthOfString=function(t,e,n){var r,i,a,s;for(a=0,i=0,s=(t=""+t).length;0<=s?i<s:i>s;i=0<=s?++i:--i)r=t.charCodeAt(i),a+=this.widthOfGlyph(this.characterToGlyph(r))+n*(1e3/e)||0;return a*(e/1e3)},t.prototype.lineHeight=function(t,e){var n;return null==e&&(e=!1),n=e?this.lineGap:0,(this.ascender+n-this.decender)/1e3*t},t}();var Ra,Ta=function(){function t(t){this.data=null!=t?t:[],this.pos=0,this.length=this.data.length}return t.prototype.readByte=function(){return this.data[this.pos++]},t.prototype.writeByte=function(t){return this.data[this.pos++]=t},t.prototype.readUInt32=function(){return 16777216*this.readByte()+(this.readByte()<<16)+(this.readByte()<<8)+this.readByte()},t.prototype.writeUInt32=function(t){return this.writeByte(t>>>24&255),this.writeByte(t>>16&255),this.writeByte(t>>8&255),this.writeByte(255&t)},t.prototype.readInt32=function(){var t;return(t=this.readUInt32())>=2147483648?t-4294967296:t},t.prototype.writeInt32=function(t){return t<0&&(t+=4294967296),this.writeUInt32(t)},t.prototype.readUInt16=function(){return this.readByte()<<8|this.readByte()},t.prototype.writeUInt16=function(t){return this.writeByte(t>>8&255),this.writeByte(255&t)},t.prototype.readInt16=function(){var t;return(t=this.readUInt16())>=32768?t-65536:t},t.prototype.writeInt16=function(t){return t<0&&(t+=65536),this.writeUInt16(t)},t.prototype.readString=function(t){var e,n;for(n=[],e=0;0<=t?e<t:e>t;e=0<=t?++e:--e)n[e]=String.fromCharCode(this.readByte());return n.join("")},t.prototype.writeString=function(t){var e,n,r;for(r=[],e=0,n=t.length;0<=n?e<n:e>n;e=0<=n?++e:--e)r.push(this.writeByte(t.charCodeAt(e)));return r},t.prototype.readShort=function(){return this.readInt16()},t.prototype.writeShort=function(t){return this.writeInt16(t)},t.prototype.readLongLong=function(){var t,e,n,r,i,a,s,o;return t=this.readByte(),e=this.readByte(),n=this.readByte(),r=this.readByte(),i=this.readByte(),a=this.readByte(),s=this.readByte(),o=this.readByte(),128&t?-1*(72057594037927940*(255^t)+281474976710656*(255^e)+1099511627776*(255^n)+4294967296*(255^r)+16777216*(255^i)+65536*(255^a)+256*(255^s)+(255^o)+1):72057594037927940*t+281474976710656*e+1099511627776*n+4294967296*r+16777216*i+65536*a+256*s+o},t.prototype.writeLongLong=function(t){var e,n;return e=Math.floor(t/4294967296),n=4294967295&t,this.writeByte(e>>24&255),this.writeByte(e>>16&255),this.writeByte(e>>8&255),this.writeByte(255&e),this.writeByte(n>>24&255),this.writeByte(n>>16&255),this.writeByte(n>>8&255),this.writeByte(255&n)},t.prototype.readInt=function(){return this.readInt32()},t.prototype.writeInt=function(t){return this.writeInt32(t)},t.prototype.read=function(t){var e,n;for(e=[],n=0;0<=t?n<t:n>t;n=0<=t?++n:--n)e.push(this.readByte());return e},t.prototype.write=function(t){var e,n,r,i;for(i=[],n=0,r=t.length;n<r;n++)e=t[n],i.push(this.writeByte(e));return i},t}(),Da=function(){var t;function e(t){var e,n,r;for(this.scalarType=t.readInt(),this.tableCount=t.readShort(),this.searchRange=t.readShort(),this.entrySelector=t.readShort(),this.rangeShift=t.readShort(),this.tables={},n=0,r=this.tableCount;0<=r?n<r:n>r;n=0<=r?++n:--n)e={tag:t.readString(4),checksum:t.readInt(),offset:t.readInt(),length:t.readInt()},this.tables[e.tag]=e}return e.prototype.encode=function(e){var n,r,i,a,s,o,h,l,c,u,f,d,p;for(p in f=Object.keys(e).length,o=Math.log(2),c=16*Math.floor(Math.log(f)/o),a=Math.floor(c/o),l=16*f-c,(r=new Ta).writeInt(this.scalarType),r.writeShort(f),r.writeShort(c),r.writeShort(a),r.writeShort(l),i=16*f,h=r.pos+i,s=null,d=[],e)for(u=e[p],r.writeString(p),r.writeInt(t(u)),r.writeInt(h),r.writeInt(u.length),d=d.concat(u),"head"===p&&(s=h),h+=u.length;h%4;)d.push(0),h++;return r.write(d),n=2981146554-t(r.data),r.pos=s+8,r.writeUInt32(n),r.data},t=function(t){var e,n,r,i;for(t=$a.call(t);t.length%4;)t.push(0);for(r=new Ta(t),n=0,e=0,i=t.length;e<i;e=e+=4)n+=r.readUInt32();return 4294967295&n},e}(),qa={}.hasOwnProperty,za=function(t,e){for(var n in e)qa.call(e,n)&&(t[n]=e[n]);function r(){this.constructor=t}return r.prototype=e.prototype,t.prototype=new r,t.__super__=e.prototype,t},Ua=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="head",e.prototype.parse=function(t){return t.pos=this.offset,this.version=t.readInt(),this.revision=t.readInt(),this.checkSumAdjustment=t.readInt(),this.magicNumber=t.readInt(),this.flags=t.readShort(),this.unitsPerEm=t.readShort(),this.created=t.readLongLong(),this.modified=t.readLongLong(),this.xMin=t.readShort(),this.yMin=t.readShort(),this.xMax=t.readShort(),this.yMax=t.readShort(),this.macStyle=t.readShort(),this.lowestRecPPEM=t.readShort(),this.fontDirectionHint=t.readShort(),this.indexToLocFormat=t.readShort(),this.glyphDataFormat=t.readShort()},e.prototype.encode=function(t){var e;return(e=new Ta).writeInt(this.version),e.writeInt(this.revision),e.writeInt(this.checkSumAdjustment),e.writeInt(this.magicNumber),e.writeShort(this.flags),e.writeShort(this.unitsPerEm),e.writeLongLong(this.created),e.writeLongLong(this.modified),e.writeShort(this.xMin),e.writeShort(this.yMin),e.writeShort(this.xMax),e.writeShort(this.yMax),e.writeShort(this.macStyle),e.writeShort(this.lowestRecPPEM),e.writeShort(this.fontDirectionHint),e.writeShort(t),e.writeShort(this.glyphDataFormat),e.data},e}(Ra=function(){function t(t){var e;this.file=t,e=this.file.directory.tables[this.tag],this.exists=!!e,e&&(this.offset=e.offset,this.length=e.length,this.parse(this.file.contents))}return t.prototype.parse=function(){},t.prototype.encode=function(){},t.prototype.raw=function(){return this.exists?(this.file.contents.pos=this.offset,this.file.contents.read(this.length)):null},t}()),Ha=function(){function t(t,e){var n,r,i,a,s,o,h,l,c,u,f,d,p,g,m,b,v;switch(this.platformID=t.readUInt16(),this.encodingID=t.readShort(),this.offset=e+t.readInt(),c=t.pos,t.pos=this.offset,this.format=t.readUInt16(),this.length=t.readUInt16(),this.language=t.readUInt16(),this.isUnicode=3===this.platformID&&1===this.encodingID&&4===this.format||0===this.platformID&&4===this.format,this.codeMap={},this.format){case 0:for(o=0;o<256;++o)this.codeMap[o]=t.readByte();break;case 4:for(f=t.readUInt16(),u=f/2,t.pos+=6,i=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),t.pos+=2,p=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),h=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),l=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),r=(this.length-t.pos+this.offset)/2,s=function(){var e,n;for(n=[],o=e=0;0<=r?e<r:e>r;o=0<=r?++e:--e)n.push(t.readUInt16());return n}(),o=m=0,v=i.length;m<v;o=++m)for(g=i[o],n=b=d=p[o];d<=g?b<=g:b>=g;n=d<=g?++b:--b)0===l[o]?a=n+h[o]:0!==(a=s[l[o]/2+(n-d)-(u-o)]||0)&&(a+=h[o]),this.codeMap[n]=65535&a}t.pos=c}return t.encode=function(t,e){var n,r,i,a,s,o,h,l,c,u,f,d,p,g,m,b,v,w,y,_,x,A,L,N,S,k,P,F,I,C,j,E,O,B,M,R,T,D,q,z,U,H,W,V,G,Y;switch(F=new Ta,a=Object.keys(t).sort(function(t,e){return t-e}),e){case"macroman":for(p=0,g=function(){var t=[];for(d=0;d<256;++d)t.push(0);return t}(),b={0:0},i={},I=0,O=a.length;I<O;I++)null==b[W=t[r=a[I]]]&&(b[W]=++p),i[r]={old:t[r],new:b[t[r]]},g[r]=b[t[r]];return F.writeUInt16(1),F.writeUInt16(0),F.writeUInt32(12),F.writeUInt16(0),F.writeUInt16(262),F.writeUInt16(0),F.write(g),{charMap:i,subtable:F.data,maxGlyphID:p+1};case"unicode":for(k=[],c=[],v=0,b={},n={},m=h=null,C=0,B=a.length;C<B;C++)null==b[y=t[r=a[C]]]&&(b[y]=++v),n[r]={old:y,new:b[y]},s=b[y]-r,null!=m&&s===h||(m&&c.push(m),k.push(r),h=s),m=r;for(m&&c.push(m),c.push(65535),k.push(65535),N=2*(L=k.length),A=2*Math.pow(Math.log(L)/Math.LN2,2),u=Math.log(A/2)/Math.LN2,x=2*L-A,o=[],_=[],f=[],d=j=0,M=k.length;j<M;d=++j){if(S=k[d],l=c[d],65535===S){o.push(0),_.push(0);break}if(S-(P=n[S].new)>=32768)for(o.push(0),_.push(2*(f.length+L-d)),r=E=S;S<=l?E<=l:E>=l;r=S<=l?++E:--E)f.push(n[r].new);else o.push(P-S),_.push(0)}for(F.writeUInt16(3),F.writeUInt16(1),F.writeUInt32(12),F.writeUInt16(4),F.writeUInt16(16+8*L+2*f.length),F.writeUInt16(0),F.writeUInt16(N),F.writeUInt16(A),F.writeUInt16(u),F.writeUInt16(x),U=0,R=c.length;U<R;U++)r=c[U],F.writeUInt16(r);for(F.writeUInt16(0),H=0,T=k.length;H<T;H++)r=k[H],F.writeUInt16(r);for(V=0,D=o.length;V<D;V++)s=o[V],F.writeUInt16(s);for(G=0,q=_.length;G<q;G++)w=_[G],F.writeUInt16(w);for(Y=0,z=f.length;Y<z;Y++)p=f[Y],F.writeUInt16(p);return{charMap:n,subtable:F.data,maxGlyphID:v+1}}},t}(),Wa=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="cmap",e.prototype.parse=function(t){var e,n,r;for(t.pos=this.offset,this.version=t.readUInt16(),r=t.readUInt16(),this.tables=[],this.unicode=null,n=0;0<=r?n<r:n>r;n=0<=r?++n:--n)e=new Ha(t,this.offset),this.tables.push(e),e.isUnicode&&null==this.unicode&&(this.unicode=e);return!0},e.encode=function(t,e){var n,r;return null==e&&(e="macroman"),n=Ha.encode(t,e),(r=new Ta).writeUInt16(0),r.writeUInt16(1),n.table=r.data.concat(n.subtable),n},e}(Ra),Va=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="hhea",e.prototype.parse=function(t){return t.pos=this.offset,this.version=t.readInt(),this.ascender=t.readShort(),this.decender=t.readShort(),this.lineGap=t.readShort(),this.advanceWidthMax=t.readShort(),this.minLeftSideBearing=t.readShort(),this.minRightSideBearing=t.readShort(),this.xMaxExtent=t.readShort(),this.caretSlopeRise=t.readShort(),this.caretSlopeRun=t.readShort(),this.caretOffset=t.readShort(),t.pos+=8,this.metricDataFormat=t.readShort(),this.numberOfMetrics=t.readUInt16()},e}(Ra),Ga=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="OS/2",e.prototype.parse=function(t){if(t.pos=this.offset,this.version=t.readUInt16(),this.averageCharWidth=t.readShort(),this.weightClass=t.readUInt16(),this.widthClass=t.readUInt16(),this.type=t.readShort(),this.ySubscriptXSize=t.readShort(),this.ySubscriptYSize=t.readShort(),this.ySubscriptXOffset=t.readShort(),this.ySubscriptYOffset=t.readShort(),this.ySuperscriptXSize=t.readShort(),this.ySuperscriptYSize=t.readShort(),this.ySuperscriptXOffset=t.readShort(),this.ySuperscriptYOffset=t.readShort(),this.yStrikeoutSize=t.readShort(),this.yStrikeoutPosition=t.readShort(),this.familyClass=t.readShort(),this.panose=function(){var e,n;for(n=[],e=0;e<10;++e)n.push(t.readByte());return n}(),this.charRange=function(){var e,n;for(n=[],e=0;e<4;++e)n.push(t.readInt());return n}(),this.vendorID=t.readString(4),this.selection=t.readShort(),this.firstCharIndex=t.readShort(),this.lastCharIndex=t.readShort(),this.version>0&&(this.ascent=t.readShort(),this.descent=t.readShort(),this.lineGap=t.readShort(),this.winAscent=t.readShort(),this.winDescent=t.readShort(),this.codePageRange=function(){var e,n;for(n=[],e=0;e<2;e=++e)n.push(t.readInt());return n}(),this.version>1))return this.xHeight=t.readShort(),this.capHeight=t.readShort(),this.defaultChar=t.readShort(),this.breakChar=t.readShort(),this.maxContext=t.readShort()},e}(Ra),Ya=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="post",e.prototype.parse=function(t){var e,n,r;switch(t.pos=this.offset,this.format=t.readInt(),this.italicAngle=t.readInt(),this.underlinePosition=t.readShort(),this.underlineThickness=t.readShort(),this.isFixedPitch=t.readInt(),this.minMemType42=t.readInt(),this.maxMemType42=t.readInt(),this.minMemType1=t.readInt(),this.maxMemType1=t.readInt(),this.format){case 65536:case 196608:break;case 131072:var i;for(n=t.readUInt16(),this.glyphNameIndex=[],i=0;0<=n?i<n:i>n;i=0<=n?++i:--i)this.glyphNameIndex.push(t.readUInt16());for(this.names=[],r=[];t.pos<this.offset+this.length;)e=t.readByte(),r.push(this.names.push(t.readString(e)));return r;case 151552:return n=t.readUInt16(),this.offsets=t.read(n);case 262144:return this.map=function(){var e,n,r;for(r=[],i=e=0,n=this.file.maxp.numGlyphs;0<=n?e<n:e>n;i=0<=n?++e:--e)r.push(t.readUInt32());return r}.call(this)}},e}(Ra),Za=function(t,e){this.raw=t,this.length=t.length,this.platformID=e.platformID,this.encodingID=e.encodingID,this.languageID=e.languageID},Ja=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="name",e.prototype.parse=function(t){var e,n,r,i,a,s,o,h,l,c,u;for(t.pos=this.offset,t.readShort(),e=t.readShort(),s=t.readShort(),n=[],i=0;0<=e?i<e:i>e;i=0<=e?++i:--i)n.push({platformID:t.readShort(),encodingID:t.readShort(),languageID:t.readShort(),nameID:t.readShort(),length:t.readShort(),offset:this.offset+s+t.readShort()});for(o={},i=l=0,c=n.length;l<c;i=++l)r=n[i],t.pos=r.offset,h=t.readString(r.length),a=new Za(h,r),null==o[u=r.nameID]&&(o[u]=[]),o[r.nameID].push(a);this.strings=o,this.copyright=o[0],this.fontFamily=o[1],this.fontSubfamily=o[2],this.uniqueSubfamily=o[3],this.fontName=o[4],this.version=o[5];try{this.postscriptName=o[6][0].raw.replace(/[\x00-\x19\x80-\xff]/g,"")}catch(is){this.postscriptName=o[4][0].raw.replace(/[\x00-\x19\x80-\xff]/g,"")}return this.trademark=o[7],this.manufacturer=o[8],this.designer=o[9],this.description=o[10],this.vendorUrl=o[11],this.designerUrl=o[12],this.license=o[13],this.licenseUrl=o[14],this.preferredFamily=o[15],this.preferredSubfamily=o[17],this.compatibleFull=o[18],this.sampleText=o[19]},e}(Ra),Xa=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="maxp",e.prototype.parse=function(t){return t.pos=this.offset,this.version=t.readInt(),this.numGlyphs=t.readUInt16(),this.maxPoints=t.readUInt16(),this.maxContours=t.readUInt16(),this.maxCompositePoints=t.readUInt16(),this.maxComponentContours=t.readUInt16(),this.maxZones=t.readUInt16(),this.maxTwilightPoints=t.readUInt16(),this.maxStorage=t.readUInt16(),this.maxFunctionDefs=t.readUInt16(),this.maxInstructionDefs=t.readUInt16(),this.maxStackElements=t.readUInt16(),this.maxSizeOfInstructions=t.readUInt16(),this.maxComponentElements=t.readUInt16(),this.maxComponentDepth=t.readUInt16()},e}(Ra),Ka=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="hmtx",e.prototype.parse=function(t){var e,n,r,i,a,s,o;for(t.pos=this.offset,this.metrics=[],e=0,s=this.file.hhea.numberOfMetrics;0<=s?e<s:e>s;e=0<=s?++e:--e)this.metrics.push({advance:t.readUInt16(),lsb:t.readInt16()});for(r=this.file.maxp.numGlyphs-this.file.hhea.numberOfMetrics,this.leftSideBearings=function(){var n,i;for(i=[],e=n=0;0<=r?n<r:n>r;e=0<=r?++n:--n)i.push(t.readInt16());return i}(),this.widths=function(){var t,e,n,r;for(r=[],t=0,e=(n=this.metrics).length;t<e;t++)i=n[t],r.push(i.advance);return r}.call(this),n=this.widths[this.widths.length-1],o=[],e=a=0;0<=r?a<r:a>r;e=0<=r?++a:--a)o.push(this.widths.push(n));return o},e.prototype.forGlyph=function(t){return t in this.metrics?this.metrics[t]:{advance:this.metrics[this.metrics.length-1].advance,lsb:this.leftSideBearings[t-this.metrics.length]}},e}(Ra),$a=[].slice,Qa=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="glyf",e.prototype.parse=function(){return this.cache={}},e.prototype.glyphFor=function(t){var e,n,r,i,a,s,o,h,l,c;return t in this.cache?this.cache[t]:(i=this.file.loca,e=this.file.contents,n=i.indexOf(t),0===(r=i.lengthOf(t))?this.cache[t]=null:(e.pos=this.offset+n,a=(s=new Ta(e.read(r))).readShort(),h=s.readShort(),c=s.readShort(),o=s.readShort(),l=s.readShort(),this.cache[t]=-1===a?new es(s,h,c,o,l):new ts(s,a,h,c,o,l),this.cache[t]))},e.prototype.encode=function(t,e,n){var r,i,a,s,o;for(a=[],i=[],s=0,o=e.length;s<o;s++)r=t[e[s]],i.push(a.length),r&&(a=a.concat(r.encode(n)));return i.push(a.length),{table:a,offsets:i}},e}(Ra),ts=function(){function t(t,e,n,r,i,a){this.raw=t,this.numberOfContours=e,this.xMin=n,this.yMin=r,this.xMax=i,this.yMax=a,this.compound=!1}return t.prototype.encode=function(){return this.raw.data},t}(),es=function(){function t(t,e,n,r,i){var a,s;for(this.raw=t,this.xMin=e,this.yMin=n,this.xMax=r,this.yMax=i,this.compound=!0,this.glyphIDs=[],this.glyphOffsets=[],a=this.raw;s=a.readShort(),this.glyphOffsets.push(a.pos),this.glyphIDs.push(a.readUInt16()),32&s;)a.pos+=1&s?4:2,128&s?a.pos+=8:64&s?a.pos+=4:8&s&&(a.pos+=2)}return t.prototype.encode=function(){var t,e,n;for(e=new Ta($a.call(this.raw.data)),t=0,n=this.glyphIDs.length;t<n;++t)e.pos=this.glyphOffsets[t];return e.data},t}(),ns=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="loca",e.prototype.parse=function(t){var e,n;return t.pos=this.offset,e=this.file.head.indexToLocFormat,this.offsets=0===e?function(){var e,r;for(r=[],n=0,e=this.length;n<e;n+=2)r.push(2*t.readUInt16());return r}.call(this):function(){var e,r;for(r=[],n=0,e=this.length;n<e;n+=4)r.push(t.readUInt32());return r}.call(this)},e.prototype.indexOf=function(t){return this.offsets[t]},e.prototype.lengthOf=function(t){return this.offsets[t+1]-this.offsets[t]},e.prototype.encode=function(t,e){for(var n=new Uint32Array(this.offsets.length),r=0,i=0,a=0;a<n.length;++a)if(n[a]=r,i<e.length&&e[i]==a){++i,n[a]=r;var s=this.offsets[a],o=this.offsets[a+1]-s;o>0&&(r+=o)}for(var h=new Array(4*n.length),l=0;l<n.length;++l)h[4*l+3]=255&n[l],h[4*l+2]=(65280&n[l])>>8,h[4*l+1]=(16711680&n[l])>>16,h[4*l]=(4278190080&n[l])>>24;return h},e}(Ra),rs=function(){function t(t){this.font=t,this.subset={},this.unicodes={},this.next=33}return t.prototype.generateCmap=function(){var t,e,n,r,i;for(e in r=this.font.cmap.tables[0].codeMap,t={},i=this.subset)n=i[e],t[e]=r[n];return t},t.prototype.glyphsFor=function(t){var e,n,r,i,a,s,o;for(r={},a=0,s=t.length;a<s;a++)r[i=t[a]]=this.font.glyf.glyphFor(i);for(i in e=[],r)(null!=(n=r[i])?n.compound:void 0)&&e.push.apply(e,n.glyphIDs);if(e.length>0)for(i in o=this.glyphsFor(e))n=o[i],r[i]=n;return r},t.prototype.encode=function(t,e){var n,r,i,a,s,o,h,l,c,u,f,d,p,g,m;for(r in n=Wa.encode(this.generateCmap(),"unicode"),a=this.glyphsFor(t),f={0:0},m=n.charMap)f[(o=m[r]).old]=o.new;for(d in u=n.maxGlyphID,a)d in f||(f[d]=u++);return l=function(t){var e,n;for(e in n={},t)n[t[e]]=e;return n}(f),c=Object.keys(l).sort(function(t,e){return t-e}),p=function(){var t,e,n;for(n=[],t=0,e=c.length;t<e;t++)s=c[t],n.push(l[s]);return n}(),i=this.font.glyf.encode(a,p,f),h=this.font.loca.encode(i.offsets,p),g={cmap:this.font.cmap.raw(),glyf:i.table,loca:h,hmtx:this.font.hmtx.raw(),hhea:this.font.hhea.raw(),maxp:this.font.maxp.raw(),post:this.font.post.raw(),name:this.font.name.raw(),head:this.font.head.encode(e)},this.font.os2.exists&&(g["OS/2"]=this.font.os2.raw()),this.font.directory.encode(g)},t}();R.API.PDFObject=function(){var t;function e(){}return t=function(t,e){return(Array(e+1).join("0")+t).slice(-e)},e.convert=function(n){var r,i,a,s;if(Array.isArray(n))return"["+function(){var t,i,a;for(a=[],t=0,i=n.length;t<i;t++)r=n[t],a.push(e.convert(r));return a}().join(" ")+"]";if("string"==typeof n)return"/"+n;if(null!=n?n.isString:void 0)return"("+n+")";if(n instanceof Date)return"(D:"+t(n.getUTCFullYear(),4)+t(n.getUTCMonth(),2)+t(n.getUTCDate(),2)+t(n.getUTCHours(),2)+t(n.getUTCMinutes(),2)+t(n.getUTCSeconds(),2)+"Z)";if("[object Object]"==={}.toString.call(n)){for(i in a=["<<"],n)s=n[i],a.push("/"+i+" "+e.convert(s));return a.push(">>"),a.join("\n")}return""+n},e}(),t.AcroForm=St,t.AcroFormAppearance=Lt,t.AcroFormButton=bt,t.AcroFormCheckBox=_t,t.AcroFormChoiceField=dt,t.AcroFormComboBox=gt,t.AcroFormEditBox=mt,t.AcroFormListBox=pt,t.AcroFormPasswordField=At,t.AcroFormPushButton=vt,t.AcroFormRadioButton=wt,t.AcroFormTextField=xt,t.GState=E,t.ShadingPattern=B,t.TilingPattern=M,t.default=R,t.jsPDF=R,Object.defineProperty(t,"__esModule",{value:!0})});
 //# sourceMappingURL=jspdf.umd.min.js.map
 
+</script>
+<script>
 // ===================== NAV ACTIVE STATE =====================
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -834,691 +1046,299 @@ window.addEventListener('popstate', ()=>{
 });
 activarSeccion(location.hash.replace('#','') || SECCION_POR_DEFECTO);
 
+// ===================== ESQUEMA DE BOMBEO (SVG estático ilustrativo) =====================
+(function(){
+  const svg = document.getElementById('pumpSvg');
+  const ns='http://www.w3.org/2000/svg';
+  function el(tag,attrs){const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e;}
+  function txt(x,y,s,opts={}){
+    const t=el('text',Object.assign({x:x,y:y,'text-anchor':opts.anchor||'start','font-family':'IBM Plex Mono','font-size':opts.size||11,fill:opts.color||'#4f5b6d'},{}));
+    t.textContent=s; return t;
+  }
+
+  // ground line
+  svg.appendChild(el('line',{x1:20,y1:150,x2:620,y2:150,stroke:'#dfe4eb','stroke-width':2}));
+  svg.appendChild(txt(24,144,'nivel del suelo',{size:9,color:'#7b8696'}));
+
+  // sun + PV panel top-left
+  svg.appendChild(el('circle',{cx:70,cy:40,r:14,fill:'none',stroke:'#c27c00','stroke-width':1.6}));
+  [0,45,90,135,180,225,270,315].forEach(a=>{
+    const r1=18,r2=24, rad=a*Math.PI/180;
+    svg.appendChild(el('line',{x1:70+Math.cos(rad)*r1,y1:40+Math.sin(rad)*r1,x2:70+Math.cos(rad)*r2,y2:40+Math.sin(rad)*r2,stroke:'#c27c00','stroke-width':1.4}));
+  });
+  svg.appendChild(el('rect',{x:30,y:70,width:90,height:34,rx:2,fill:'#f6f8fb',stroke:'#c27c00','stroke-width':1.4}));
+  svg.appendChild(txt(75,91,'PV',{anchor:'middle',size:12,color:'#c27c00'}));
+
+  // regulador/inversor box
+  svg.appendChild(el('line',{x1:120,y1:87,x2:170,y2:87,stroke:'#dfe4eb','stroke-width':1.4}));
+  svg.appendChild(el('rect',{x:170,y:70,width:96,height:34,rx:2,fill:'#f6f8fb',stroke:'#2457e6','stroke-width':1.4}));
+  svg.appendChild(txt(218,87,'Regulador /',{anchor:'middle',size:9,color:'#2457e6'}));
+  svg.appendChild(txt(218,98,'Inversor',{anchor:'middle',size:9,color:'#2457e6'}));
+
+  // cable down to pump
+  svg.appendChild(el('line',{x1:218,y1:104,x2:218,y2:150,stroke:'#dfe4eb','stroke-width':1.4}));
+  svg.appendChild(el('line',{x1:218,y1:150,x2:218,y2:250,stroke:'#dfe4eb','stroke-width':1.4,'stroke-dasharray':'3,3'}));
+
+  // well shaft
+  svg.appendChild(el('rect',{x:198,y:150,width:40,height:170,fill:'#f6f8fb',stroke:'#dfe4eb','stroke-width':1.4}));
+  // static level line
+  svg.appendChild(el('line',{x1:198,y1:200,x2:280,y2:200,stroke:'#16894f','stroke-width':1.2,'stroke-dasharray':'4,3'}));
+  svg.appendChild(txt(284,203,'H_ST — nivel estático',{size:9,color:'#16894f'}));
+  // dynamic level line
+  svg.appendChild(el('line',{x1:198,y1:245,x2:280,y2:245,stroke:'#c62828','stroke-width':1.2,'stroke-dasharray':'4,3'}));
+  svg.appendChild(txt(284,248,'H_DT — nivel dinámico',{size:9,color:'#c62828'}));
+  // water fill
+  svg.appendChild(el('rect',{x:199,y:245,width:38,height:74,fill:'#2457e6',opacity:'0.15'}));
+
+  // pump (MB) at bottom of well
+  svg.appendChild(el('rect',{x:203,y:290,width:30,height:20,rx:2,fill:'#f6f8fb',stroke:'#c27c00','stroke-width':1.4}));
+  svg.appendChild(txt(218,304,'MB',{anchor:'middle',size:9,color:'#c27c00'}));
+
+  // pipe rising from pump to deposito
+  svg.appendChild(el('line',{x1:233,y1:300,x2:470,y2:300,stroke:'#7b8696','stroke-width':2}));
+  svg.appendChild(el('line',{x1:470,y1:300,x2:470,y2:110,stroke:'#7b8696','stroke-width':2}));
+  svg.appendChild(el('line',{x1:470,y1:110,x2:520,y2:110,stroke:'#7b8696','stroke-width':2}));
+
+  // deposito
+  svg.appendChild(el('rect',{x:520,y:60,width:80,height:60,rx:2,fill:'#f6f8fb',stroke:'#16894f','stroke-width':1.6}));
+  svg.appendChild(txt(560,94,'Depósito',{anchor:'middle',size:10,color:'#16894f'}));
+
+  // H_D bracket
+  svg.appendChild(el('line',{x1:505,y1:150,x2:505,y2:90,stroke:'#7b8696','stroke-width':1,'stroke-dasharray':'2,2'}));
+  svg.appendChild(txt(500,120,'H_D',{anchor:'end',size:9,color:'#7b8696'}));
+
+  // label pozo
+  svg.appendChild(txt(218,335,'pozo (no a escala)',{anchor:'middle',size:9,color:'#7b8696'}));
+
+  // Qd label near deposito
+  svg.appendChild(txt(560,42,'Q_d — volumen diario',{anchor:'middle',size:9,color:'#4f5b6d'}));
+})();
+
+// ===================== PROYECTO E INFORME =====================
 document.getElementById('p_fecha').valueAsDate = new Date();
 
-function fmtNum(n,d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
-function fmtEur(n,d=2){ return isFinite(n) ? n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d})+' €' : '—'; }
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'...' : (s||''); }
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+let installationsPump = [];
+let instPumpNextId = 1;
+
+// Tabla III: periodo de diseño -> {betaOptOffset, K}
+const PERIODOS = {
+  dic: {offset:10, K:1.7, label:'Diciembre'},
+  jul: {offset:-20, K:1.0, label:'Julio'},
+  anual: {offset:-10, K:1.15, label:'Anual'},
+};
+
+function calcPumpSystem(o){
+  // --- 1. Bombeo ---
+  const Qap = o.qd/24;
+  const Hte = o.hd + o.hst + ((o.hdt-o.hst)/o.qt)*Qap + o.hf;
+  const hfOk = o.hf < 0.1*Hte;
+  const Eh = 2.725 * o.qd * Hte; // Wh/dia
+  const Emb = Eh / o.etamb; // Wh/dia
+
+  // --- 2. Consumo total ---
+  const ED_Wh = Emb + o.otros; // Wh/dia
+  const ED_kWh = ED_Wh/1000;
+
+  // --- 3. Irradiacion ---
+  const periodo = PERIODOS[o.periodo];
+  const betaOpt = o.lat + periodo.offset;
+  const K = periodo.K;
+  let FI;
+  if(o.beta <= 15){
+    FI = 1 - (1.2e-4*Math.pow(o.beta-betaOpt,2));
+  } else {
+    FI = 1 - (1.2e-4*Math.pow(o.beta-betaOpt,2) + 3.5e-5*Math.pow(o.alpha,2));
+  }
+  const GdmAB = o.gdm0 * K * FI * o.fs;
+
+  // --- 4. Generador minimo ---
+  const GCEM = 1; // kW/m2
+  const PmpMin_kWp = (ED_kWh*GCEM)/(GdmAB*o.pr);
+  const PmpMin_Wp = PmpMin_kWp*1000;
+  const pmpLimit = PmpMin_Wp*1.2;
+  const pmpOk = o.pmp <= pmpLimit;
+
+  // --- 5. Acumulador (litio LiFePO4) y autonomia ---
+  const LD = ED_Wh/o.vnom; // Ah/dia
+  const A = (o.c*o.pdmax*o.etainv*o.etarb)/LD; // dias
+  const autonomiaOk = A >= 3;
+  const chargeCurrentLimit = o.crate*o.c; // A, maximo que admite el BMS
+  const chargeOk = o.isc <= chargeCurrentLimit;
+
+  const overall = hfOk && pmpOk && autonomiaOk && chargeOk;
+
+  return {Qap, Hte, hfOk, Eh, Emb, ED_Wh, ED_kWh, betaOpt, K, FI, GdmAB, PmpMin_Wp, pmpLimit, pmpOk, LD, A, autonomiaOk, chargeCurrentLimit, chargeOk, overall, periodoLabel:periodo.label};
 }
-const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-// ===================== GESTION DE SUPERFICIES =====================
-let installations = [];
-let instNextId = 1;
-
-function leerFormularioSuperficie(){
-  const userhorizonTexto = document.getElementById('i_userhorizon').value.trim();
-  let userhorizon = userhorizonTexto.split(',').map(v=>parseFloat(v.trim())||0);
-  if(userhorizon.length!==16){ userhorizon = new Array(16).fill(0); }
-  return {
-    nombre: document.getElementById('i_nombre').value.trim() || ('Superficie '+instNextId),
-    lat: parseFloat(document.getElementById('i_lat').value),
-    lng: parseFloat(document.getElementById('i_lng').value),
-    peakpower: parseFloat(document.getElementById('i_peakpower').value)||0,
-    aspect: parseFloat(document.getElementById('i_aspect').value)||0,
-    angle: parseFloat(document.getElementById('i_angle').value)||0,
-    loss: parseFloat(document.getElementById('i_loss').value)||14,
-    pvtech: document.getElementById('i_pvtech').value,
-    mounting: document.getElementById('i_mounting').value,
-    raddatabase: document.getElementById('i_raddatabase').value,
-    year: parseInt(document.getElementById('i_year').value,10)||2020,
-    userhorizon,
-    capex: parseFloat(document.getElementById('i_capex').value)||0,
-    opex: parseFloat(document.getElementById('i_opex').value)||0,
-    systemcost: parseFloat(document.getElementById('i_systemcost').value)||0,
-    interest: parseFloat(document.getElementById('i_interest').value)||0,
+document.getElementById('btnAddInst').addEventListener('click', ()=>{
+  const o = {
+    nombre: document.getElementById('i_nombre').value.trim() || ('Sistema '+instPumpNextId),
+    qd: parseFloat(document.getElementById('i_qd').value)||0,
+    hd: parseFloat(document.getElementById('i_hd').value)||0,
+    hf: parseFloat(document.getElementById('i_hf').value)||0,
+    hst: parseFloat(document.getElementById('i_hst').value)||0,
+    hdt: parseFloat(document.getElementById('i_hdt').value)||0,
+    qt: parseFloat(document.getElementById('i_qt').value)||1,
+    etamb: parseFloat(document.getElementById('i_etamb').value)||0.4,
+    otros: parseFloat(document.getElementById('i_otros').value)||0,
+    lat: parseFloat(document.getElementById('i_lat').value)||0,
+    periodo: document.getElementById('i_periodo').value,
+    gdm0: parseFloat(document.getElementById('i_gdm0').value)||0,
+    beta: parseFloat(document.getElementById('i_beta').value)||0,
+    alpha: parseFloat(document.getElementById('i_alpha').value)||0,
+    fs: parseFloat(document.getElementById('i_fs').value)||1,
+    pr: parseFloat(document.getElementById('i_pr').value)||0.6,
+    pmp: parseFloat(document.getElementById('i_pmp').value)||0,
+    isc: parseFloat(document.getElementById('i_isc').value)||1,
+    c: parseFloat(document.getElementById('i_c').value)||0,
+    pdmax: parseFloat(document.getElementById('i_pdmax').value)||0.9,
+    vnom: parseFloat(document.getElementById('i_vnom').value)||24,
+    etainv: parseFloat(document.getElementById('i_etainv').value)||0.85,
+    etarb: parseFloat(document.getElementById('i_etarb').value)||0.95,
+    crate: parseFloat(document.getElementById('i_crate').value)||0.5,
     notas: document.getElementById('i_notas').value.trim(),
   };
-}
-
-document.getElementById('btnAddSuperficie').addEventListener('click', ()=>{
-  const tech = leerFormularioSuperficie();
-  if(!isFinite(tech.lat) || !isFinite(tech.lng) || tech.lat<-90 || tech.lat>90 || tech.lng<-180 || tech.lng>180){
-    showToast('Revisa la latitud (-90 a 90) y la longitud (-180 a 180).');
-    return;
-  }
-  if(tech.peakpower<=0){ showToast('La potencia pico debe ser mayor que 0.'); return; }
-  const s = { id: instNextId++, tech, estado:'pendiente', resultado:null, error:null };
-  installations.push(s);
-  renderInstallations();
-  showToast('Superficie añadida: '+tech.nombre);
+  o.id = instPumpNextId++;
+  const result = calcPumpSystem(o);
+  installationsPump.push({...o, result});
+  renderInstallationsPump();
+  showToastPump('Sistema añadido: '+o.nombre);
   document.getElementById('i_nombre').value='';
   document.getElementById('i_notas').value='';
 });
 
 document.getElementById('btnClearInst').addEventListener('click', ()=>{
-  if(installations.length===0) return;
-  if(confirm('¿Vaciar todas las superficies del proyecto?')){ installations=[]; renderInstallations(); }
+  if(installationsPump.length===0) return;
+  if(confirm('¿Vaciar todos los sistemas del informe?')){ installationsPump=[]; renderInstallationsPump(); }
 });
 
-// ===================== IMPORTAR GEOJSON (usada por la carga automatica desde 'VatiaCo') =====================
-function importarGeoJSONSuperficies(geojson){
-  if(!geojson || !Array.isArray(geojson.features) || geojson.features.length===0) return 0;
-  const porArea = new Map();
-  geojson.features.forEach(f=>{
-    const p = f.properties||{};
-    const areaKey = p.area || 'Superficie importada';
-    if(!porArea.has(areaKey)) porArea.set(areaKey, {props:p, nPaneles:0});
-    porArea.get(areaKey).nPaneles++;
-  });
-  let n = 0;
-  porArea.forEach((datos, areaKey)=>{
-    const p = datos.props;
-    if(typeof p.lat!=='number' || typeof p.lng!=='number') return;
-    let userhorizon = new Array(16).fill(0);
-    if(typeof p.sombras==='string' && p.sombras.length){
-      const arr = p.sombras.split(',').map(v=>Number(v)||0);
-      if(arr.length===16) userhorizon = arr;
-    }
-    const potenciaW = Number(p.potenciaW)||400;
-    const tech = {
-      nombre: areaKey,
-      lat: p.lat, lng: p.lng,
-      peakpower: Math.round((datos.nPaneles*potenciaW/1000)*100)/100,
-      aspect: Number(p.rotation)||0,
-      angle: Number(p.tilt)||0,
-      loss: 14,
-      pvtech: 'crystSi',
-      mounting: 'free',
-      raddatabase: 'PVGIS-SARAH3',
-      year: 2020,
-      userhorizon,
-      capex: Math.round((datos.nPaneles*potenciaW/1000)*900), // estimacion de partida, 900 EUR/kWp -- editable
-      opex: Math.round((datos.nPaneles*potenciaW/1000)*15),   // estimacion de partida, 15 EUR/kWp/anio -- editable
-      systemcost: Math.round((datos.nPaneles*potenciaW/1000)*900), // mismo valor de partida que el CAPEX -- editable
-      interest: 4, // %, editable
-      notas: p.notas||'',
-    };
-    installations.push({ id: instNextId++, tech, estado:'pendiente', resultado:null, error:null });
-    n++;
-  });
-  renderInstallations();
-  return n;
-}
+function stepPump(k,v,sub){ return '<div class="step'+(sub?' sub':'')+'"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
 
-// ===================== MODO DE CARGA: DISEÑO GUARDADO EN 'VatiaCo' O A MANO =====================
-// La app "Diseño de Sistemas FV" (C01) guarda el GeoJSON de las superficies pintadas en
-// localStorage, bajo VatiaCo.<DOC_KEY_C01>.outputs.diseno. Un conmutador deja elegir entre
-// cargar ese diseño guardado o añadir cada superficie a mano. Este documento guarda su propio
-// estado (superficies + resultados de PVGIS) bajo VatiaCo.<DOC_KEY_C02>.outputs, con el mismo
-// esquema <carpeta>_<documento> + subclaves inputs/outputs que usan todos los documentos.
-const VATIACO_LS_KEY = 'VatiaCo';
-const DOC_KEY_C01 = 'fv_diseno_sistemas_fv';
-const DOC_KEY_C02 = 'fv_generacion_fotovoltaica';
-function vatiacoLeer(){
-  try{ return JSON.parse(localStorage.getItem(VATIACO_LS_KEY)||'{}'); }
-  catch(e){ return {}; }
-}
-function actualizarEstadoVatiaco(){
-  const c01 = vatiacoLeer()[DOC_KEY_C01];
-  const geojson = c01 && c01.outputs && c01.outputs.diseno;
-  const hay = !!(geojson && Array.isArray(geojson.features) && geojson.features.length>0);
-  const nSuperficies = hay ? new Set(geojson.features.map(f=>(f.properties||{}).area||'')).size : 0;
-  const texto = document.getElementById('estadoVatiacoTexto');
-  const boton = document.getElementById('btnCargarVatiaco');
-  if(hay){
-    texto.innerHTML = '✓ Hay un diseño guardado en el navegador con '+nSuperficies+' superficie(s). Pulsa el botón para cargarlo aquí.';
-    boton.disabled = false;
-  } else {
-    texto.innerHTML = '⚠ No se ha encontrado ningún diseño guardado en el navegador (clave <code class="inline">VatiaCo.'+DOC_KEY_C01+'.outputs.diseno</code>). Ve primero a <a href="C01_Diseno_Sistemas_FV.html" style="color:var(--cyan);">Diseño de Sistemas FV</a>, pinta al menos una superficie y vuelve a esta página.';
-    boton.disabled = true;
-  }
-}
-function cargarDisenoDesdeVatiaco(){
-  const c01 = vatiacoLeer()[DOC_KEY_C01];
-  const geojson = c01 && c01.outputs && c01.outputs.diseno;
-  if(!geojson || !Array.isArray(geojson.features) || geojson.features.length===0){
-    showToast('No hay ningún diseño guardado en el navegador todavía.');
-    return;
-  }
-  const n = importarGeoJSONSuperficies(geojson);
-  if(n>0) showToast(n+' superficie(s) cargada(s) desde el diseño guardado en el navegador.');
-  else showToast('El diseño guardado no contiene superficies reconocibles.');
-}
-document.getElementById('btnCargarVatiaco').addEventListener('click', cargarDisenoDesdeVatiaco);
-
-function setModoCarga(modo){
-  const esMemoria = modo==='memoria';
-  document.getElementById('panelModoMemoria').style.display = esMemoria ? '' : 'none';
-  document.getElementById('panelModoManual').style.display = esMemoria ? 'none' : '';
-  document.getElementById('btnModoMemoria').className = 'btn '+(esMemoria?'primary':'ghost');
-  document.getElementById('btnModoManual').className = 'btn '+(esMemoria?'ghost':'primary');
-  if(esMemoria) actualizarEstadoVatiaco();
-}
-document.getElementById('btnModoMemoria').addEventListener('click', ()=>setModoCarga('memoria'));
-document.getElementById('btnModoManual').addEventListener('click', ()=>setModoCarga('manual'));
-actualizarEstadoVatiaco();
-
-// Guarda la respuesta cruda de cada llamada a la API de PVGIS en
-// VatiaCo.<DOC_KEY_C02>.outputs.pvgis, bajo pvgis.<api>.<nombre de la superficie>, para poder
-// reutilizarla sin volver a llamar a la API.
-function guardarJsonApiEnVatiaco(api, nombreSuperficie, json){
-  try{
-    const v = vatiacoLeer();
-    v[DOC_KEY_C02] = v[DOC_KEY_C02] || {};
-    v[DOC_KEY_C02].outputs = v[DOC_KEY_C02].outputs || {};
-    v[DOC_KEY_C02].outputs.pvgis = v[DOC_KEY_C02].outputs.pvgis || {};
-    v[DOC_KEY_C02].outputs.pvgis[api] = v[DOC_KEY_C02].outputs.pvgis[api] || {};
-    v[DOC_KEY_C02].outputs.pvgis[api][nombreSuperficie] = json;
-    localStorage.setItem(VATIACO_LS_KEY, JSON.stringify(v));
-  }catch(e){ /* localStorage no disponible o cuota excedida */ }
-}
-
-// Guarda la lista completa de superficies (parametros tecnicos + resultado de PVGIS ya
-// calculado) en VatiaCo.<DOC_KEY_C02>.outputs.installations, para poder restaurarla sin
-// tener que volver a anadir cada superficie ni volver a llamar a la API.
-function guardarInstallationsEnVatiaco(){
-  try{
-    const v = vatiacoLeer();
-    v[DOC_KEY_C02] = v[DOC_KEY_C02] || {};
-    v[DOC_KEY_C02].outputs = v[DOC_KEY_C02].outputs || {};
-    v[DOC_KEY_C02].outputs.installations = installations;
-    localStorage.setItem(VATIACO_LS_KEY, JSON.stringify(v));
-  }catch(e){ /* localStorage no disponible o cuota excedida */ }
-}
-
-// ===================== LLAMADA A LA API PVGIS (seriescalc, horaria) =====================
-const BASES_DATOS_RADIACION_VALIDAS = new Set(['PVGIS-ERA5', 'PVGIS-SARAH3']);
-
-function normalizarBaseDatosRadiacion(raddatabase){
-  return BASES_DATOS_RADIACION_VALIDAS.has(raddatabase) ? raddatabase : 'PVGIS-SARAH3';
-}
-
-function construirUrlPvgis(tech){
-  const base = 'https://re.jrc.ec.europa.eu/api/seriescalc';
-  const params = new URLSearchParams({
-    lat: tech.lat, lon: tech.lng,
-    outputformat: 'json',
-    startyear: tech.year, endyear: tech.year,
-    pvcalculation: 1,
-    peakpower: tech.peakpower,
-    loss: tech.loss,
-    pvtechchoice: tech.pvtech,
-    mountingplace: tech.mounting,
-    angle: tech.angle,
-    aspect: tech.aspect,
-    usehorizon: 1,
-    userhorizon: tech.userhorizon.join(','),
-    raddatabase: normalizarBaseDatosRadiacion(tech.raddatabase),
-    components: 0,
-  });
-  return base+'?'+params.toString();
-}
-
-// URL del informe mensual/anual de PVGIS (PVcalc), con el calculo de LCOE propio de
-// PVGIS activado (pvprice=1) a partir del coste del sistema y el interes indicados.
-function construirUrlPvcalc(tech){
-  const base = 'https://re.jrc.ec.europa.eu/api/PVcalc';
-  const params = new URLSearchParams({
-    lat: tech.lat, lon: tech.lng,
-    outputformat: 'json',
-    peakpower: tech.peakpower,
-    loss: tech.loss,
-    pvtechchoice: tech.pvtech,
-    mountingplace: tech.mounting,
-    angle: tech.angle,
-    aspect: tech.aspect,
-    usehorizon: 1,
-    userhorizon: tech.userhorizon.join(','),
-    raddatabase: normalizarBaseDatosRadiacion(tech.raddatabase),
-    pvprice: 1,
-    systemcost: tech.systemcost,
-    interest: tech.interest,
-  });
-  return base+'?'+params.toString();
-}
-
-// Parsea la respuesta de seriescalc y agrega: total anual, tabla mensual (E_m, H(i)_m),
-// y una curva diaria (suma de energia por dia) para el grafico.
-// Extrae las 24 horas de un dia concreto (dia 15 del mes indicado, representativo);
-// si por algun hueco en los datos no existe justo ese dia, usa el primero disponible
-// de ese mes.
-function extraerDiaHorario(horas, mes1indexado, diaObjetivo){
-  const fechaObjetivo = String(mes1indexado).padStart(2,'0')+String(diaObjetivo).padStart(2,'0');
-  let filas = horas.filter(h=>h.time.split(':')[0].slice(4,8)===fechaObjetivo);
-  if(filas.length===0){
-    const mesStr = String(mes1indexado).padStart(2,'0');
-    const primeraFilaDelMes = horas.find(h=>h.time.split(':')[0].slice(4,6)===mesStr);
-    if(primeraFilaDelMes){
-      const fechaFallback = primeraFilaDelMes.time.split(':')[0].slice(4,8);
-      filas = horas.filter(h=>h.time.split(':')[0].slice(4,8)===fechaFallback);
-    }
-  }
-  filas = filas.slice().sort((a,b)=>a.time.localeCompare(b.time));
-  return filas.map(h=>({ hora: h.time.split(':')[1].slice(0,2), P: Number(h['P'])||0, Gi: Number(h['G(i)'])||0 }));
-}
-
-function procesarSerieHoraria(json){
-  const horas = (json.outputs && json.outputs.hourly) || [];
-  if(horas.length===0) throw new Error('La respuesta de PVGIS no contiene datos horarios.');
-  const porMes = Array.from({length:12}, ()=>({E:0, H:0, n:0}));
-  const curvaDiaria = {}; // 'YYYYMMDD' -> kWh ese dia
-  let totalE=0, totalH=0;
-  horas.forEach(h=>{
-    // time: "YYYYMMDD:HHMM"
-    const fechaStr = h.time.split(':')[0];
-    const mes = parseInt(fechaStr.slice(4,6),10)-1;
-    const P = Number(h['P'])||0;      // W
-    const Gi = Number(h['G(i)'])||0;  // W/m2
-    const eKwh = P/1000;              // kWh en esa hora (P en W, 1h)
-    const hKwhm2 = Gi/1000;
-    totalE += eKwh; totalH += hKwhm2;
-    if(mes>=0 && mes<12){ porMes[mes].E += eKwh; porMes[mes].H += hKwhm2; porMes[mes].n++; }
-    curvaDiaria[fechaStr] = (curvaDiaria[fechaStr]||0) + eKwh;
-  });
-  const diasOrdenados = Object.keys(curvaDiaria).sort();
-  const serieDiaria = diasOrdenados.map(k=>curvaDiaria[k]);
-  const diaDiciembre = extraerDiaHorario(horas, 12, 15);
-  const diaJunio = extraerDiaHorario(horas, 6, 15);
-  return {
-    totalAnualKwh: totalE,
-    totalIrradiacionKwhm2: totalH,
-    tablaMensual: porMes.map((m,i)=>({mes:MESES[i], E_m:m.E, H_m:m.H})),
-    serieDiaria,
-    diaDiciembre, diaJunio,
-    horasCrudo: horas, // se conserva para exportar CSV horario completo
-    nHoras: horas.length,
-  };
-}
-
-// ===================== LCOE (individual) =====================
-function calcularLCOE(capex, opexAnual, energiaAnualKwh, tasaPct, vidaAnios, degradacionPct){
-  const r = tasaPct/100, d = degradacionPct/100;
-  let numerador = capex, denominador = 0;
-  for(let t=1; t<=vidaAnios; t++){
-    numerador += opexAnual/Math.pow(1+r, t);
-    const eT = energiaAnualKwh*Math.pow(1-d, t-1);
-    denominador += eT/Math.pow(1+r, t);
-  }
-  return { lcoe: denominador>0 ? numerador/denominador : NaN, costeDescontado: numerador, energiaDescontada: denominador };
-}
-
-function getParametrosFinancieros(){
-  return {
-    tasa: parseFloat(document.getElementById('fin_tasa').value)||0,
-    vida: parseInt(document.getElementById('fin_vida').value,10)||25,
-    degradacion: parseFloat(document.getElementById('fin_degradacion').value)||0,
-  };
-}
-
-// ===================== LLAMAR A PVGIS PARA UNA SUPERFICIE =====================
-// Intenta leer la respuesta como JSON; si no lo es (p.ej. una pagina de error HTML),
-// devuelve el texto crudo (recortado) para poder mostrarlo en el diagnostico de error.
-async function leerRespuestaComoJson(resp){
-  const texto = await resp.text();
-  try{ return { json: JSON.parse(texto), textoCrudo: null }; }
-  catch(e){ return { json: null, textoCrudo: texto.slice(0,300) }; }
-}
-
-// La API de PVGIS no siempre envia cabeceras CORS (esta pensada sobre todo para uso
-// desde scripts/servidores), por lo que una llamada directa desde el navegador puede
-// fallar sin mas detalle que "Failed to fetch". Si el intento directo falla, se prueban
-// varios proxies CORS publicos en cadena (uno puede estar caido sin que lo esten los demas).
-const PROXIES_CORS = [
-  { nombre:'allorigins', construirUrl: (u)=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u) },
-  { nombre:'corsproxy.io', construirUrl: (u)=>'https://corsproxy.io/?url='+encodeURIComponent(u) },
-  { nombre:'codetabs', construirUrl: (u)=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u) },
-];
-
-function fetchConTimeout(url, ms){
-  const controlador = new AbortController();
-  const temporizador = setTimeout(()=>controlador.abort(), ms);
-  return fetch(url, {signal: controlador.signal}).finally(()=>clearTimeout(temporizador));
-}
-
-async function intentarUnaLlamada(urlFinal, timeoutMs){
-  const resp = await fetchConTimeout(urlFinal, timeoutMs);
-  const { json, textoCrudo } = await leerRespuestaComoJson(resp);
-  if(json) return { json, httpStatus: resp.status };
-  if(!resp.ok) throw new Error('HTTP '+resp.status+(textoCrudo?': '+textoCrudo:''));
-  throw new Error('Respuesta no valida: '+(textoCrudo||'(vacia)'));
-}
-
-async function llamarPvgisConFallback(url){
-  const erroresPorIntento = [];
-
-  // Intento 1: directo
-  try{
-    const r = await intentarUnaLlamada(url, 15000);
-    return Object.assign(r, { viaProxy:null });
-  }catch(errDirecto){
-    erroresPorIntento.push('directo: '+((errDirecto&&errDirecto.message)||'fallo de red'));
-  }
-
-  // Intentos siguientes: cada proxy CORS publico, uno tras otro
-  for(const proxy of PROXIES_CORS){
-    try{
-      const r = await intentarUnaLlamada(proxy.construirUrl(url), 15000);
-      return Object.assign(r, { viaProxy: proxy.nombre });
-    }catch(errProxy){
-      erroresPorIntento.push(proxy.nombre+': '+((errProxy&&errProxy.message)||'fallo de red'));
-    }
-  }
-
-  throw new Error('Ningún intento tuvo éxito. '+erroresPorIntento.join(' · ')+'. Revisa la conexión a internet, o que la latitud/longitud tenga cobertura en la base de datos de radiación elegida.');
-}
-
-async function obtenerDatosSuperficie(s){
-  s.estado = 'cargando'; s.error = null;
-  renderInstallations();
-  try{
-    const url = construirUrlPvgis(s.tech);
-    const { json, viaProxy } = await llamarPvgisConFallback(url);
-    if(json.status === 'error' || (json.message && !json.outputs)){
-      throw new Error((json.message || 'PVGIS devolvió un error para esta ubicación.'));
-    }
-    if(!json.outputs){
-      throw new Error('La respuesta de PVGIS no tiene el formato esperado (sin campo "outputs"). Respuesta: '+JSON.stringify(json).slice(0,200));
-    }
-    guardarJsonApiEnVatiaco('seriescalc', s.tech.nombre, json);
-    const procesado = procesarSerieHoraria(json);
-    const fin = getParametrosFinancieros();
-    const lcoeRes = calcularLCOE(s.tech.capex, s.tech.opex, procesado.totalAnualKwh, fin.tasa, fin.vida, fin.degradacion);
-    s.resultado = Object.assign({}, procesado, lcoeRes, {finSnapshot: fin, viaProxy});
-    s.estado = 'ok';
-    showToast('Datos de PVGIS obtenidos para: '+s.tech.nombre+(viaProxy?' (vía proxy '+viaProxy+')':''));
-  }catch(err){
-    s.estado = 'error';
-    s.error = (err && err.message) ? err.message : 'Error desconocido al llamar a PVGIS.';
-    showToast('Error al obtener datos de PVGIS para "'+s.tech.nombre+'": '+s.error);
-  }
-  renderInstallations();
-}
-
-document.getElementById('btnObtenerTodas').addEventListener('click', async ()=>{
-  const btn = document.getElementById('btnObtenerTodas');
-  btn.disabled = true;
-  for(const s of installations){
-    if(s.estado!=='ok') await obtenerDatosSuperficie(s);
-  }
-  btn.disabled = false;
-});
-
-// ===================== EXPORTAR CSV HORARIO =====================
-function exportarCsvHorario(s){
-  if(!s.resultado) return;
-  const lineas = ['fecha_hora,P_W,G(i)_Wm2'];
-  s.resultado.horasCrudo.forEach(h=>{
-    lineas.push(h.time+','+(h['P']||0)+','+(h['G(i)']||0));
-  });
-  const blob = new Blob([lineas.join('\n')], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = (s.tech.nombre||'superficie').replace(/[^a-z0-9]+/gi,'_')+'-horario-'+s.tech.year+'.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('CSV horario descargado ('+s.resultado.nHoras+' filas).');
-}
-
-// ===================== GRAFICO SVG: CURVA DIARIA DE ENERGIA =====================
-function buildDayHourlyChartSVG(diaDatos, color, titulo, unidad){
-  unidad = unidad || 'W';
-  const W=640, H=150, padL=52, padR=14, padT=20, padB=22;
-  const values = diaDatos.map(d=>d.P);
-  const maxV = Math.max(...values, 1);
-  const step = (W-padL-padR)/values.length;
-  const barW = step*0.6;
-  const scale = (H-padT-padB)/maxV;
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">'+esc(titulo)+'</text>';
-  for(let g=0; g<=4; g++){
-    const gv = maxV*g/4;
-    const gy = H-padB-gv*scale;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
-    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">'+Math.round(gv)+' '+unidad+'</text>';
-  }
-  values.forEach((v,i)=>{
-    const x = padL+step*i+(step-barW)/2;
-    const y = H-padB-v*scale;
-    s += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+(H-padB-y)+'" fill="'+color+'"/>';
-  });
-  [0,6,12,18,23].forEach(i=>{
-    if(i>=diaDatos.length) return;
-    const x = padL+step*i+step/2;
-    s += '<text x="'+x+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">'+diaDatos[i].hora+'h</text>';
-  });
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
-}
-
-function buildDailyCurveChartSVG(values, color, titulo, unidad){
-  unidad = unidad || 'kWh';
-  const W=640, H=170, padL=52, padR=14, padT=20, padB=22;
-  const maxV = Math.max(...values, 1);
-  const step = (W-padL-padR)/(values.length-1||1);
-  const scale = (H-padT-padB)/maxV;
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">'+esc(titulo)+'</text>';
-  for(let g=0; g<=4; g++){
-    const gv = maxV*g/4;
-    const gy = H-padB-gv*scale;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
-    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">'+Math.round(gv)+' '+unidad+'</text>';
-  }
-  let pts = values.map((v,i)=>[padL+step*i, H-padB-v*scale]);
-  s += '<polyline points="'+pts.map(p=>p.join(',')).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="1"/>';
-  const mesesInicioDia = [0,31,59,90,120,151,181,212,243,273,304,334];
-  mesesInicioDia.forEach((d,i)=>{
-    if(d>=values.length) return;
-    const x = padL+step*d;
-    s += '<text x="'+x+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">'+MESES[i]+'</text>';
-  });
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
-}
-
-// ===================== GRAFICO SVG: CURVA MENSUAL DE ENERGIA (PVcalc) =====================
-function buildMonthlyBarChartSVG(tablaMensual, color, titulo, unidad){
-  unidad = unidad || 'kWh';
-  const W=640, H=170, padL=52, padR=14, padT=20, padB=22;
-  const values = tablaMensual.map(m=>m.E_m);
-  const maxV = Math.max(...values, 1);
-  const step = (W-padL-padR)/values.length;
-  const scale = (H-padT-padB)/maxV;
-  const barW = step*0.6;
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="10" fill="#4f5b6d">'+esc(titulo)+'</text>';
-  for(let g=0; g<=4; g++){
-    const gv = maxV*g/4;
-    const gy = H-padB-gv*scale;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
-    s += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">'+Math.round(gv)+' '+unidad+'</text>';
-  }
-  values.forEach((v,i)=>{
-    const x = padL+step*i+(step-barW)/2;
-    const y = H-padB-v*scale;
-    s += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+(H-padB-y)+'" fill="'+color+'"/>';
-    s += '<text x="'+(x+barW/2)+'" y="'+(y-4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7" fill="#4f5b6d">'+Math.round(v)+'</text>';
-    s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+13)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="7.5" fill="#7b8696">'+tablaMensual[i].mes+'</text>';
-  });
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
-}
-
-// ===================== RENDERIZADO DE TARJETAS =====================
-function renderInstallations(){
+function renderInstallationsPump(){
   const container = document.getElementById('instContainer');
   const statsRow = document.getElementById('statsRow');
   const btnPdf = document.getElementById('btnPdf');
-  const btnObtenerTodas = document.getElementById('btnObtenerTodas');
+  const summaryWrap = document.getElementById('summaryTableWrap');
 
-  guardarInstallationsEnVatiaco();
-
-  if(installations.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has añadido ninguna superficie. Usa el conmutador de la sección 03 para cargar el diseño guardado o añadir una superficie a mano.</div>';
+  if(installationsPump.length===0){
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún sistema. Rellena el formulario de la pestaña Simulación y pulsa "Añadir sistema al informe".</div>';
     statsRow.style.display='none';
-    btnPdf.disabled = true; btnObtenerTodas.disabled = true;
+    btnPdf.disabled = true;
+    summaryWrap.style.display='none';
+    document.getElementById('summaryTable').innerHTML='';
     return;
   }
-  btnObtenerTodas.disabled = false;
+  btnPdf.disabled = false;
+  summaryWrap.style.display='block';
 
-  const conDatos = installations.filter(s=>s.estado==='ok');
-  btnPdf.disabled = conDatos.length===0;
+  const okCount = installationsPump.filter(i=>i.result.overall).length;
+  const warnCount = installationsPump.length-okCount;
+  statsRow.style.display='flex';
+  statsRow.innerHTML =
+    '<div class="stat-chip"><div class="v">'+installationsPump.length+'</div><div class="l">sistemas</div></div>'+
+    '<div class="stat-chip"><div class="v" style="color:var(--green)">'+okCount+'</div><div class="l">cumplen todos los límites</div></div>'+
+    '<div class="stat-chip"><div class="v" style="color:'+(warnCount>0?'var(--red)':'var(--text-dimmer)')+'">'+warnCount+'</div><div class="l">requieren revisión</div></div>';
 
-  if(conDatos.length>0){
-    const totalEnergia = conDatos.reduce((a,s)=>a+s.resultado.totalAnualKwh,0);
-    const totalCoste = conDatos.reduce((a,s)=>a+s.resultado.costeDescontado,0);
-    const totalEnergiaDesc = conDatos.reduce((a,s)=>a+s.resultado.energiaDescontada,0);
-    const lcoePonderado = totalEnergiaDesc>0 ? totalCoste/totalEnergiaDesc : NaN;
-    statsRow.style.display='flex';
-    statsRow.innerHTML =
-      '<div class="stat-chip"><div class="v">'+conDatos.length+' / '+installations.length+'</div><div class="l">superficies con datos PVGIS</div></div>'+
-      '<div class="stat-chip"><div class="v">'+fmtNum(totalEnergia,0)+' kWh</div><div class="l">generación anual conjunta (año 1)</div></div>'+
-      '<div class="stat-chip"><div class="v">'+fmtNum(lcoePonderado,4)+' €/kWh</div><div class="l">LCOE ponderado del conjunto</div></div>';
-  } else {
-    statsRow.style.display='none';
-  }
-
-  container.innerHTML = installations.map((s,idx)=>{
-    const t = s.tech;
-    let badgeHtml = '';
-    if(s.estado==='pendiente') badgeHtml = '<span class="badge pending">sin datos PVGIS</span>';
-    else if(s.estado==='cargando') badgeHtml = '<span class="badge pending"><span class="spinner"></span>consultando PVGIS…</span>';
-    else if(s.estado==='error') badgeHtml = '<span class="badge err">error PVGIS</span>';
-    else if(s.estado==='ok') badgeHtml = '<span class="badge ok">'+fmtNum(s.resultado.lcoe,4)+' €/kWh</span>';
-
-    let cuerpoResultado = '';
-    if(s.estado==='error'){
-      cuerpoResultado = '<div class="subsection-title">Error</div><p style="font-size:12.5px; color:var(--red);">'+esc(s.error)+'</p>';
-    }
-    if(s.estado==='error' || s.estado==='pendiente'){
-      const urlPvgis = construirUrlPvgis(t);
-      const urlEscapadaJs = urlPvgis.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      cuerpoResultado += '<div class="subsection-title">Vía manual (siempre funciona, sin proxy)</div>'+
-        '<p style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">1. Abre la URL de PVGIS en una pestaña nueva (es una navegación normal, sin problema de CORS). 2. Copia todo el texto JSON que aparece (Ctrl+A, Ctrl+C). 3. Pégalo aquí abajo y pulsa "Usar este JSON".</p>'+
-        '<div class="btn-row" style="margin-bottom:8px;"><button class="btn ghost" type="button" onclick="window.open(\''+urlEscapadaJs+'\',\'_blank\')">↗ Abrir URL de PVGIS en pestaña nueva</button></div>'+
-        '<textarea id="pegado-'+s.id+'" placeholder="Pega aquí la respuesta JSON de PVGIS…" style="width:100%; min-height:90px; background:var(--panel2); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:11.5px; padding:8px; border-radius:2px; resize:vertical; box-sizing:border-box;"></textarea>'+
-        '<div class="btn-row" style="margin-top:8px;"><button class="btn primary" type="button" onclick="usarJsonPegadoPorId('+s.id+')">Usar este JSON</button></div>';
-    }
-    if(s.estado==='ok'){      const r = s.resultado;
-      const chart = buildDailyCurveChartSVG(r.serieDiaria, '#2457e6', 'Curva de carga anual — energía diaria generada (kWh/día)', 'kWh');
-      const chartDic = buildDayHourlyChartSVG(r.diaDiciembre, '#2563EB', 'Día representativo de diciembre — potencia horaria (W)', 'W');
-      const chartJun = buildDayHourlyChartSVG(r.diaJunio, '#F59E0B', 'Día representativo de junio — potencia horaria (W)', 'W');
-      const chartMensual = buildMonthlyBarChartSVG(r.tablaMensual, '#22C55E', 'Curva mensual de energía generada — PVcalc (kWh/mes)', 'kWh');
-      let tablaMensualHtml = '<table class="data-table"><thead><tr><th>Mes</th><th>E_m (kWh)</th><th>H(i)_m (kWh/m²)</th></tr></thead><tbody>';
-      r.tablaMensual.forEach(m=>{ tablaMensualHtml += '<tr><td>'+m.mes+'</td><td>'+fmtNum(m.E_m,1)+'</td><td>'+fmtNum(m.H_m,1)+'</td></tr>'; });
-      tablaMensualHtml += '</tbody></table>';
-      cuerpoResultado =
-        '<div class="subsection-title">Generación anual (año '+t.year+')'+(r.viaProxy?' <span class="badge" style="margin-left:6px;">obtenido vía proxy '+esc(r.viaProxy)+'</span>':(r.viaPegado?' <span class="badge" style="margin-left:6px;">pegado manualmente</span>':''))+'</div>'+
-        '<table class="data-table"><tbody>'+
-          '<tr><td>Energía anual generada (E, año 1)</td><td>'+fmtNum(r.totalAnualKwh,1)+' kWh</td></tr>'+
-          '<tr><td>Irradiación anual en el plano</td><td>'+fmtNum(r.totalIrradiacionKwhm2,1)+' kWh/m²</td></tr>'+
-          '<tr><td>LCOE de esta superficie</td><td><b>'+fmtNum(r.lcoe,4)+' €/kWh</b></td></tr>'+
-        '</tbody></table>'+
-        '<div class="subsection-title">Curva diaria de generación</div>'+
-        '<div class="chart-svg-wrap">'+chart+'</div>'+
-        '<div class="subsection-title">Día representativo de invierno y verano (seriescalc)</div>'+
-        '<div class="chart-svg-wrap">'+chartDic+'</div>'+
-        '<div class="chart-svg-wrap">'+chartJun+'</div>'+
-        '<div class="subsection-title">Curva mensual de energía (PVcalc)</div>'+
-        '<div class="chart-svg-wrap">'+chartMensual+'</div>'+
-        '<div class="subsection-title">Generación y radiación mensual</div>'+
-        '<div class="table-wrap">'+tablaMensualHtml+'</div>'+
-        '<div class="btn-row"><button class="btn ghost" onclick="exportarCsvHorarioPorId('+s.id+')" type="button">⬇Exportar CSV horario (8.760 filas)</button></div>';
-    }
+  container.innerHTML = installationsPump.map((inst,idx)=>{
+    const r = inst.result;
+    const pillClass = r.overall ? 'ok' : 'bad';
+    const pillText = r.overall ? 'CUMPLE' : 'REVISAR';
+    let stepsHtml = '';
+    stepsHtml += stepPump('Caudal medio Q_AP', r.Qap.toFixed(3)+' m³/h');
+    stepsHtml += stepPump('Altura total equivalente H_TE', r.Hte.toFixed(2)+' m');
+    stepsHtml += stepPump('Fricción H_f &lt; 10% H_TE', (inst.hf.toFixed(2))+' m — '+(r.hfOk?'cumple':'SUPERA'), true);
+    stepsHtml += stepPump('Energía hidráulica E_H', r.Eh.toFixed(1)+' Wh/día', true);
+    stepsHtml += stepPump('Energía motobomba E_MB', r.Emb.toFixed(1)+' Wh/día', true);
+    stepsHtml += stepPump('Consumo total E_D', r.ED_Wh.toFixed(1)+' Wh/día ('+r.ED_kWh.toFixed(3)+' kWh/día)');
+    stepsHtml += stepPump('Período de diseño', r.periodoLabel+' — &beta;_opt='+r.betaOpt.toFixed(1)+'°, K='+r.K, true);
+    stepsHtml += stepPump('Factor de irradiación FI', r.FI.toFixed(3), true);
+    stepsHtml += stepPump('Irradiación sobre generador G_dm(&alpha;,&beta;)', r.GdmAB.toFixed(3)+' kWh/m²/día', true);
+    stepsHtml += stepPump('Potencia mínima generador P_mp,min', r.PmpMin_Wp.toFixed(1)+' Wp');
+    stepsHtml += stepPump('Límite 1,2×P_mp,min', r.pmpLimit.toFixed(1)+' Wp — P_mp='+inst.pmp+'Wp: '+(r.pmpOk?'cumple':'SUPERA'), true);
+    stepsHtml += stepPump('Consumo diario L_D', r.LD.toFixed(2)+' Ah/día');
+    stepsHtml += stepPump('Autonomía A (&ge;3 días)', r.A.toFixed(2)+' días — '+(r.autonomiaOk?'cumple':'INSUFICIENTE'), true);
+    stepsHtml += stepPump('Corriente de carga (BMS &le;'+inst.crate+'C)', 'límite '+r.chargeCurrentLimit.toFixed(2)+'A — Isc generador '+inst.isc+'A: '+(r.chargeOk?'cumple':'SUPERA'), true);
+    if(inst.notas) stepsHtml += stepPump('Notas', inst.notas);
 
     return '<div class="line-card">'+
-      '<div class="line-head" onclick="toggleInst('+s.id+')">'+
-        '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title">'+esc(t.nombre)+'</span></div>'+
-        '<div class="lh-right">'+badgeHtml+
-          (s.estado!=='ok' && s.estado!=='cargando' ? '<button class="btn ghost" style="padding:6px 12px; font-size:11px;" onclick="event.stopPropagation(); obtenerDatosSuperficiePorId('+s.id+')" type="button">Obtener datos PVGIS</button>' : '')+
-          '<button class="remove-btn" onclick="event.stopPropagation(); removeInst('+s.id+')">eliminar</button>'+
-        '</div>'+
+      '<div class="line-head" onclick="toggleInstPump('+inst.id+')">'+
+        '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title">'+inst.nombre+'</span></div>'+
+        '<div class="lh-right"><span class="badge">'+r.PmpMin_Wp.toFixed(0)+' Wp mín.</span>'+
+        '<span class="badge">A='+r.A.toFixed(1)+'d</span>'+
+        '<span class="pill '+pillClass+'">'+pillText+'</span>'+
+        '<button class="remove-btn" onclick="event.stopPropagation(); removeInstPump('+inst.id+')">eliminar</button></div>'+
       '</div>'+
-      '<div class="line-body" id="ib-'+s.id+'">'+
-        '<div class="subsection-title">Parámetros técnicos (PVGIS)</div>'+
-        '<table class="data-table"><tbody>'+
-          '<tr><td>Latitud / Longitud</td><td>'+fmtNum(t.lat,6)+', '+fmtNum(t.lng,6)+'</td></tr>'+
-          '<tr><td>Potencia pico</td><td>'+fmtNum(t.peakpower,2)+' kWp</td></tr>'+
-          '<tr><td>Orientación (acimut) / Inclinación</td><td>'+t.aspect+'° / '+t.angle+'°</td></tr>'+
-          '<tr><td>Pérdidas del sistema</td><td>'+t.loss+'%</td></tr>'+
-          '<tr><td>Tecnología / Montaje</td><td>'+t.pvtech+' / '+t.mounting+'</td></tr>'+
-          '<tr><td>Base de datos / Año</td><td>'+t.raddatabase+' / '+t.year+'</td></tr>'+
-          '<tr><td>CAPEX / OPEX anual</td><td>'+fmtEur(t.capex,0)+' / '+fmtEur(t.opex,0)+'/año</td></tr>'+
-        '</tbody></table>'+
-        '<div class="subsection-title">Enlaces a la API de PVGIS (descargar JSON)</div>'+
-        '<table class="data-table"><tbody>'+
-          '<tr><td>Informe con LCOE de PVGIS (PVcalc + pvprice)</td><td><a href="'+esc(construirUrlPvcalc(t))+'" target="_blank" rel="noopener" style="color:var(--cyan);">Abrir / descargar JSON ↗</a></td></tr>'+
-          '<tr><td>Serie horaria completa — incluye el día de diciembre y de junio (seriescalc)</td><td><a href="'+esc(construirUrlPvgis(t))+'" target="_blank" rel="noopener" style="color:var(--cyan);">Abrir / descargar JSON ↗</a></td></tr>'+
-        '</tbody></table>'+
-        cuerpoResultado+
-        (t.notas?('<div class="subsection-title">Notas</div><p style="font-size:12.5px;color:var(--text-dim);">'+esc(t.notas)+'</p>'):'')+
-      '</div>'+
+      '<div class="line-body" id="ibp-'+inst.id+'"><div class="calc-steps">'+stepsHtml+'</div></div>'+
     '</div>';
   }).join('');
+
+  const summaryTable = document.getElementById('summaryTable');
+  summaryTable.innerHTML =
+    '<thead><tr><th>Sistema</th><th>E_D (kWh/día)</th><th>P_mp,min (Wp)</th><th>Autonomía (d)</th><th>Veredicto</th></tr></thead><tbody>'+
+    installationsPump.map(inst=>{
+      const r=inst.result;
+      return '<tr><td>'+inst.nombre+'</td><td>'+r.ED_kWh.toFixed(2)+'</td><td>'+r.PmpMin_Wp.toFixed(0)+'</td><td>'+r.A.toFixed(2)+'</td><td style="color:'+(r.overall?'var(--green)':'var(--red)')+'">'+(r.overall?'Cumple':'Revisar')+'</td></tr>';
+    }).join('')+'</tbody>';
 }
 
-window.toggleInst = function(id){ document.getElementById('ib-'+id).classList.toggle('open'); };
-window.removeInst = function(id){ installations = installations.filter(i=>i.id!==id); renderInstallations(); };
-window.obtenerDatosSuperficiePorId = function(id){ const s = installations.find(i=>i.id===id); if(s) obtenerDatosSuperficie(s); };
-window.usarJsonPegadoPorId = function(id){
-  const s = installations.find(i=>i.id===id);
-  if(!s) return;
-  const textarea = document.getElementById('pegado-'+id);
-  const texto = textarea ? textarea.value.trim() : '';
-  if(!texto){ showToast('Pega primero el JSON de PVGIS en el cuadro de texto.'); return; }
-  let json;
-  try{ json = JSON.parse(texto); }
-  catch(e){ showToast('El texto pegado no es JSON válido. Copia la respuesta completa de la pestaña de PVGIS.'); return; }
-  try{
-    if(!json.outputs){ throw new Error('El JSON pegado no tiene el formato esperado de PVGIS (sin campo "outputs").'); }
-    const procesado = procesarSerieHoraria(json);
-    const fin = getParametrosFinancieros();
-    const lcoeRes = calcularLCOE(s.tech.capex, s.tech.opex, procesado.totalAnualKwh, fin.tasa, fin.vida, fin.degradacion);
-    s.resultado = Object.assign({}, procesado, lcoeRes, {finSnapshot: fin, viaProxy:null, viaPegado:true});
-    s.estado = 'ok'; s.error = null;
-    showToast('Datos de PVGIS cargados manualmente para: '+s.tech.nombre);
-  }catch(err){
-    s.estado = 'error';
-    s.error = (err && err.message) ? err.message : 'Error al procesar el JSON pegado.';
-    showToast('Error: '+s.error);
-  }
-  renderInstallations();
-};
-window.exportarCsvHorarioPorId = function(id){ const s = installations.find(i=>i.id===id); if(s) exportarCsvHorario(s); };
+window.toggleInstPump = function(id){ document.getElementById('ibp-'+id).classList.toggle('open'); };
+window.removeInstPump = function(id){ installationsPump = installationsPump.filter(i=>i.id!==id); renderInstallationsPump(); };
+
+function showToastPump(msg){
+  let t = document.getElementById('toastPump');
+  if(!t){ t=document.createElement('div'); t.id='toastPump'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastPumpTimer);
+  window._toastPumpTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
 
 // ===================== GENERAR PDF =====================
 document.getElementById('btnPdf').addEventListener('click', ()=>{
-  const conDatos = installations.filter(s=>s.estado==='ok');
-  if(conDatos.length===0) return;
+  if(installationsPump.length===0) return;
   const { jsPDF } = window.jspdf;
-  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
+  const pageW = 210, marginX = 22, topY = 30, bottomY = 275;
 
-  const proyecto = document.getElementById('p_proyecto').value || 'Generacion horaria fotovoltaica y LCOE';
-  const autor = document.getElementById('p_autor').value || '-';
-  const registro = document.getElementById('p_registro').value || '-';
-  const orgNombre = document.getElementById('p_org_nombre').value || '-';
-  const orgCif = document.getElementById('p_org_cif').value || '-';
-  const orgDir = document.getElementById('p_org_dir').value || '-';
-  const orgTel = document.getElementById('p_org_tel').value || '-';
-  const orgCorreo = document.getElementById('p_org_correo').value || '-';
-  const destNombre = document.getElementById('p_dest_nombre').value || '-';
-  const destCif = document.getElementById('p_dest_cif').value || '-';
-  const destDir = document.getElementById('p_dest_dir').value || '-';
+  const cliente = document.getElementById('p_cliente').value || '-';
+  const direccion = document.getElementById('p_direccion').value || '-';
+  const instalador = document.getElementById('p_instalador').value || '-';
+  const referencia = document.getElementById('p_referencia').value || '-';
   const fechaVal = document.getElementById('p_fecha').value;
   const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
-  const docTitleShort = proyecto;
-  const authorShort = autor;
-  const fin = getParametrosFinancieros();
+  const docTitleShort = (referencia!=='-'?referencia:(cliente!=='-'?cliente:'Informe de bombeo FV'));
+  const authorShort = instalador!=='-'?instalador:'PCT-IDAE';
 
   const GLOSARIO = [
-    ['PVGIS','Photovoltaic Geographical Information System (Comision Europea)','-'],
-    ['seriescalc','Endpoint de la API de PVGIS que devuelve series horarias','-'],
-    ['PVcalc','Endpoint de la API de PVGIS que devuelve el informe mensual/anual','-'],
-    ['pvprice','Parametro de PVcalc que activa el calculo de LCOE propio de PVGIS','-'],
-    ['systemcost','Coste total del sistema, usado por PVGIS para su LCOE','EUR'],
-    ['interest','Tasa de interes, usada por PVGIS para su LCOE','%'],
-    ['P(t)','Potencia de salida del sistema en la hora t','W'],
-    ['G(i)','Irradiancia en el plano del generador en la hora t','W/m2'],
-    ['E_m','Energia media mensual generada','kWh'],
-    ['H(i)_m','Suma media mensual de irradiacion en el plano','kWh/m2'],
-    ['LCOE','Coste nivelado de la energia (Levelized Cost of Energy)','EUR/kWh'],
-    ['CAPEX','Inversion inicial de la superficie','EUR'],
-    ['OPEX','Coste anual de operacion y mantenimiento','EUR/anio'],
-    ['kWp','Potencia pico instalada','kW'],
+    ['Q_d','Volumen diario de agua requerido','m3/dia'],
+    ['H_D','Altura del deposito respecto al suelo','m'],
+    ['H_ST','Nivel estatico del agua en el pozo','m'],
+    ['H_DT','Nivel dinamico del agua en el pozo','m'],
+    ['Q_T','Caudal de la prueba de bombeo','m3/h'],
+    ['H_f','Perdida de altura equivalente por friccion','m'],
+    ['H_TE','Altura total equivalente de bombeo','m'],
+    ['Q_AP','Caudal medio o aparente (Q_d/24)','m3/h'],
+    ['eta_MB','Rendimiento de la motobomba','-'],
+    ['E_H','Energia hidraulica necesaria','Wh/dia'],
+    ['E_MB','Energia electrica de la motobomba','Wh/dia'],
+    ['E_D','Consumo electrico diario total','Wh/dia'],
+    ['G_dm(0)','Irradiacion diaria sobre horizontal','kWh/m2/dia'],
+    ['G_dm(a,b)','Irradiacion diaria sobre el generador','kWh/m2/dia'],
+    ['FI','Factor de irradiacion','-'],
+    ['FS','Factor de sombreado','-'],
+    ['K','Factor segun periodo de diseño','-'],
+    ['PR','Rendimiento de la instalacion (performance ratio)','-'],
+    ['P_mp','Potencia pico del generador elegido','Wp'],
+    ['P_mp,min','Potencia pico minima requerida','Wp'],
+    ['C','Capacidad nominal del acumulador de litio','Ah'],
+    ['PD_max','Profundidad de descarga maxima','%'],
+    ['eta_inv','Rendimiento del inversor','-'],
+    ['eta_rb','Rendimiento regulador + acumulador','-'],
+    ['L_D','Consumo diario de la carga','Ah/dia'],
+    ['A','Autonomia sin aportacion solar','dias'],
+    ['I_sc','Corriente de cortocircuito del generador','A'],
   ];
 
+  // ===================== HELPERS DE MAQUETACION (blancos, estilo informe) =====================
   function makeHelpers(doc){
     function checkPage(yy, needed=12){
       if(yy > bottomY-needed){ doc.addPage(); return topY; }
@@ -1528,7 +1348,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       yy = checkPage(yy, 18);
       doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
       doc.text(numText+'  '+text, marginX, yy);
-      doc.setDrawColor(37,180,220); doc.setLineWidth(0.6);
+      doc.setDrawColor(255,176,32); doc.setLineWidth(0.6);
       doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
       doc.setLineWidth(0.2);
       if(collect) collect.toc.push({num:numText, text, page: doc.internal.getNumberOfPages()});
@@ -1545,11 +1365,8 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
       doc.text(k, marginX+indent, yy);
       doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
-      const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+72));
-      doc.text(vLines[0], marginX+indent+72, yy);
-      let extra = 0;
-      for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+72, yy+extra); }
-      return yy+5.6+extra;
+      doc.text(String(v), marginX+indent+74, yy);
+      return yy+5.6;
     }
     function paragraph(yy, text, opts={}){
       const size = opts.size || 9;
@@ -1566,7 +1383,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       doc.roundedRect(marginX, yy-5, pageW-2*marginX, boxH, 1, 1, 'FD');
       let ly = yy+2;
       formulaLines.forEach(f=>{
-        doc.setFont('courier','bold'); doc.setFontSize(9.5); doc.setTextColor(15,140,170);
+        doc.setFont('courier','bold'); doc.setFontSize(10); doc.setTextColor(180,120,10);
         doc.text(f, pageW/2, ly, {align:'center'});
         ly += 7;
       });
@@ -1587,286 +1404,192 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     function figureCaption(yy, numText, text, collect){
       yy = checkPage(yy,8);
       doc.setFont('times','bolditalic'); doc.setFontSize(8.5); doc.setTextColor(65,72,84);
-      const lines = doc.splitTextToSize(numText+': '+text, pageW-2*marginX);
-      lines.forEach((l,i)=>{ doc.text(l, marginX, yy+i*4.5); });
+      doc.text(numText+': '+text, marginX, yy);
       if(collect) collect.figures.push({num:numText, text, page: doc.internal.getNumberOfPages()});
-      return yy+lines.length*4.5+3;
+      return yy+6;
     }
     function simpleTable(yy, headers, rows, colX){
       yy = checkPage(yy, 10+rows.length*6.5);
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.6); doc.setTextColor(100,108,120);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(100,108,120);
       headers.forEach((h,i)=>doc.text(h, colX[i], yy));
       yy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5.5;
       doc.setFont('helvetica','normal');
       rows.forEach(row=>{
         yy = checkPage(yy,7);
-        doc.setFontSize(7.4); doc.setTextColor(30,35,45);
+        doc.setFontSize(8); doc.setTextColor(30,35,45);
         row.forEach((cell,i)=>doc.text(String(cell), colX[i], yy));
-        yy+=6;
+        yy+=6.2;
       });
       return yy+3;
     }
-    function drawDailyCurveChart(yy, values, colorRgb, titulo, unidad){
-      unidad = unidad || 'kWh';
-      const chartH = 50, chartW = pageW-2*marginX;
-      yy = checkPage(yy, chartH+14);
-      const x0 = marginX, y0 = yy;
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(80,86,96);
-      doc.text(titulo, x0, y0-2);
-      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,chartW,chartH);
-      const padL=16, padR=4, padT=4, padB=8;
-      const maxV = Math.max(...values, 1);
-      const step = (chartW-padL-padR)/(values.length-1||1);
-      const scale = (chartH-padT-padB)/maxV;
-      doc.setDrawColor(225,225,230); doc.setLineWidth(0.12);
-      doc.setFont('helvetica','normal'); doc.setFontSize(4.5); doc.setTextColor(150,155,163);
-      for(let g=0; g<=3; g++){
-        const gv = maxV*g/3;
-        const gy = y0+chartH-padB-gv*scale;
-        doc.line(x0+padL, gy, x0+chartW-padR, gy);
-        doc.text(fmtNum(gv,0)+' '+unidad, x0+padL-2, gy, {align:'right'});
-      }
-      let pts = values.map((v,i)=>[x0+padL+step*i, y0+chartH-padB-v*scale]);
-      doc.setDrawColor(...colorRgb); doc.setLineWidth(0.3);
-      for(let i=0;i<pts.length-1;i++){ doc.line(pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]); }
-      doc.setFont('helvetica','normal'); doc.setFontSize(5); doc.setTextColor(150,155,163);
-      const mesesInicioDia = [0,31,59,90,120,151,181,212,243,273,304,334];
-      mesesInicioDia.forEach((d,i)=>{
-        if(d>=values.length) return;
-        doc.text(MESES[i], x0+padL+step*d, y0+chartH-1, {align:'center'});
-      });
-      return y0+chartH+6;
+    function drawPumpFigure(yy){
+      yy = checkPage(yy, 74);
+      const x0=marginX, w=pageW-2*marginX, h=62, y0=yy;
+      doc.setDrawColor(215,215,220); doc.setLineWidth(0.25); doc.rect(x0,y0,w,h);
+      const gY = y0+20;
+      doc.setDrawColor(130,130,138); doc.line(x0+8, gY, x0+w-8, gY);
+      doc.setDrawColor(200,140,20);
+      doc.rect(x0+12, y0+7, 22,11);
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(200,140,20);
+      doc.text('PV', x0+23, y0+13.5, {align:'center'});
+      doc.setDrawColor(130,130,138);
+      doc.rect(x0+55, gY, 16, 34);
+      doc.setDrawColor(90,150,130); doc.line(x0+55, gY+12, x0+76, gY+12);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(90,150,130); doc.text('H_ST', x0+78, gY+13);
+      doc.setDrawColor(190,90,90); doc.line(x0+55, gY+24, x0+76, gY+24);
+      doc.setTextColor(190,90,90); doc.text('H_DT', x0+78, gY+25);
+      doc.setDrawColor(200,140,20); doc.rect(x0+58,gY+28,10,6);
+      doc.setFontSize(6); doc.setTextColor(200,140,20); doc.text('MB', x0+63, gY+32, {align:'center'});
+      doc.setDrawColor(130,130,138);
+      doc.line(x0+68, gY+28, x0+w-24, gY+28);
+      doc.line(x0+w-24, gY+28, x0+w-24, y0+13);
+      doc.rect(x0+w-38, y0+6, 24,13);
+      doc.setFontSize(6.5); doc.setTextColor(90,150,130); doc.text('Deposito', x0+w-26, y0+13.5,{align:'center'});
+      doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(150,155,163);
+      doc.text('(esquema, no a escala)', x0+w/2, y0+h-4, {align:'center'});
+      return y0+h+7;
     }
-    function drawHourlyDayChart(yy, diaDatos, colorRgb, titulo, unidad){
-      unidad = unidad || 'W';
-      const chartH = 42, chartW = pageW-2*marginX;
-      yy = checkPage(yy, chartH+14);
-      const x0 = marginX, y0 = yy;
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(80,86,96);
-      doc.text(titulo, x0, y0-2);
-      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,chartW,chartH);
-      const padL=16, padR=4, padT=4, padB=8;
-      const values = diaDatos.map(d=>d.P);
-      const maxV = Math.max(...values, 1);
-      const step = (chartW-padL-padR)/values.length;
-      const barW = step*0.6;
-      const scale = (chartH-padT-padB)/maxV;
-      doc.setDrawColor(225,225,230); doc.setLineWidth(0.12);
-      doc.setFont('helvetica','normal'); doc.setFontSize(4.5); doc.setTextColor(150,155,163);
-      for(let g=0; g<=3; g++){
-        const gv = maxV*g/3;
-        const gy = y0+chartH-padB-gv*scale;
-        doc.line(x0+padL, gy, x0+chartW-padR, gy);
-        doc.text(fmtNum(gv,0)+' '+unidad, x0+padL-2, gy, {align:'right'});
-      }
-      doc.setFillColor(...colorRgb);
-      values.forEach((v,i)=>{
-        const bx = x0+padL+step*i+(step-barW)/2;
-        const by = y0+chartH-padB-v*scale;
-        doc.rect(bx, by, barW, (y0+chartH-padB)-by, 'F');
-      });
-      doc.setFont('helvetica','normal'); doc.setFontSize(5); doc.setTextColor(150,155,163);
-      [0,6,12,18,23].forEach(i=>{
-        if(i>=diaDatos.length) return;
-        const x = x0+padL+step*i+step/2;
-        doc.text(diaDatos[i].hora+'h', x, y0+chartH-1, {align:'center'});
-      });
-      return y0+chartH+6;
-    }
-    function drawMonthlyBarChart(yy, tablaMensual, colorRgb, titulo, unidad){
-      unidad = unidad || 'kWh';
-      const chartH = 50, chartW = pageW-2*marginX;
-      yy = checkPage(yy, chartH+14);
-      const x0 = marginX, y0 = yy;
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(80,86,96);
-      doc.text(titulo, x0, y0-2);
-      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,chartW,chartH);
-      const padL=16, padR=4, padT=4, padB=8;
-      const values = tablaMensual.map(m=>m.E_m);
-      const maxV = Math.max(...values, 1);
-      const step = (chartW-padL-padR)/values.length;
-      const barW = step*0.6;
-      const scale = (chartH-padT-padB)/maxV;
-      doc.setDrawColor(225,225,230); doc.setLineWidth(0.12);
-      doc.setFont('helvetica','normal'); doc.setFontSize(4.5); doc.setTextColor(150,155,163);
-      for(let g=0; g<=3; g++){
-        const gv = maxV*g/3;
-        const gy = y0+chartH-padB-gv*scale;
-        doc.line(x0+padL, gy, x0+chartW-padR, gy);
-        doc.text(fmtNum(gv,0)+' '+unidad, x0+padL-2, gy, {align:'right'});
-      }
-      doc.setFillColor(...colorRgb);
-      values.forEach((v,i)=>{
-        const bx = x0+padL+step*i+(step-barW)/2;
-        const by = y0+chartH-padB-v*scale;
-        doc.rect(bx, by, barW, (y0+chartH-padB)-by, 'F');
-        doc.setFontSize(4.2); doc.setTextColor(90,96,106);
-        doc.text(fmtNum(v,0), bx+barW/2, by-1, {align:'center'});
-      });
-      doc.setFont('helvetica','normal'); doc.setFontSize(5); doc.setTextColor(150,155,163);
-      tablaMensual.forEach((m,i)=>{
-        const x = x0+padL+step*i+step/2;
-        doc.text(m.mes, x, y0+chartH-1, {align:'center'});
-      });
-      return y0+chartH+6;
-    }
-    function linkLine(yy, etiqueta, url){
-      yy = checkPage(yy, 8);
-      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,108,120);
-      doc.text(etiqueta, marginX, yy);
-      doc.setTextColor(20,110,190); doc.setFont('helvetica','bold');
-      doc.textWithLink('Abrir / descargar JSON', marginX+72, yy, {url});
-      return yy+5.6;
-    }
-    return {checkPage, sectionTitle, subTitle, kv, paragraph, formulaBlock, tableCaption, figureCaption, simpleTable, drawDailyCurveChart, drawHourlyDayChart, drawMonthlyBarChart, linkLine};
+    return {checkPage, sectionTitle, subTitle, kv, paragraph, formulaBlock, tableCaption, figureCaption, simpleTable, drawPumpFigure};
   }
 
+  // ===================== CUERPO DEL INFORME (identico en ambos pases) =====================
   function renderBody(doc, collect){
     const H = makeHelpers(doc);
     let y = topY;
-    let figN = 0, tabN = 1;
-    const FIG = ()=>{ figN++; return 'Figura '+figN; };
-    const TAB = ()=>{ tabN++; return 'Tabla '+tabN; };
 
-    const totalEnergia = conDatos.reduce((a,s)=>a+s.resultado.totalAnualKwh,0);
-    const totalKwp = conDatos.reduce((a,s)=>a+s.tech.peakpower,0);
-    const totalCoste = conDatos.reduce((a,s)=>a+s.resultado.costeDescontado,0);
-    const totalEnergiaDesc = conDatos.reduce((a,s)=>a+s.resultado.energiaDescontada,0);
-    const lcoePonderado = totalEnergiaDesc>0 ? totalCoste/totalEnergiaDesc : NaN;
+    y = H.sectionTitle(y, '1.', 'Objeto y alcance', collect);
+    y = H.paragraph(y, 'Este informe recoge la memoria de calculo de dimensionado de '+(installationsPump.length>1?'los sistemas':'el sistema')+' de bombeo de agua alimentados por energia solar fotovoltaica descritos en este proyecto, conforme al metodo de calculo del Anexo I del Pliego de Condiciones Tecnicas de Instalaciones Aisladas de Red del IDAE (PCT-IDAE).');
+    y = H.paragraph(y, 'El acumulador considerado es de litio LiFePO4 con BMS integrado, sustituyendo los criterios de plomo-acido del pliego original por los propios de esta tecnologia. El alcance incluye la estimacion de la energia necesaria para el bombeo, el dimensionado minimo del generador fotovoltaico, y la verificacion de la autonomia y la corriente de carga admisible del acumulador.');
 
-    y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
-    y = H.paragraph(y, 'Este informe recoge la generacion fotovoltaica horaria y el LCOE de '+(conDatos.length>1?conDatos.length+' superficies':'una superficie')+' del proyecto "'+proyecto+'", calculados llamando a la API seriescalc de PVGIS (Comision Europea) para obtener la potencia generada en cada una de las 8.760 horas del anio de referencia.');
-    y = H.paragraph(y, 'El conjunto suma '+fmtNum(totalKwp,2)+' kWp de potencia pico y '+fmtNum(totalEnergia,0)+' kWh de energia anual generada (anio 1). El LCOE ponderado del conjunto es de '+fmtNum(lcoePonderado,4)+' EUR/kWh.');
-    y = H.paragraph(y, 'Este documento no incluye el cruce con el consumo ni el dimensionado de almacenamiento: la curva horaria de cada superficie queda preparada para ese analisis en una fase posterior.');
+    y = H.sectionTitle(y, '2.', 'Documentos de referencia', collect);
+    y = H.paragraph(y, 'Pliego de Condiciones Tecnicas de Instalaciones Aisladas de Red (IDAE), Anexo I: Dimensionado del sistema fotovoltaico. Reglamento Electrotecnico de Baja Tension (Decreto 2413/1973 y desarrollos posteriores). Especificaciones tecnicas del fabricante del acumulador de litio y del sistema BMS empleado.');
 
-    y = H.sectionTitle(y, '2.', 'Introduccion', collect);
-    y = H.paragraph(y, 'PVGIS (Photovoltaic Geographical Information System) es la herramienta gratuita de la Comision Europea (Joint Research Centre) para estimar la produccion de energia solar en cualquier punto de Europa, Africa y buena parte de Asia y America. Su endpoint seriescalc, con el parametro pvcalculation activado, devuelve la potencia de salida del sistema fotovoltaico para cada hora de un anio, aplicando el mismo modelo de perdidas (temperatura, angulo de incidencia, efectos espectrales) que usa la ficha mensual habitual de PVGIS.');
+    y = H.sectionTitle(y, '3.', 'Fundamento teorico y formulas aplicadas', collect);
+    y = H.subTitle(y, '3.1', 'Altura total equivalente de bombeo');
+    y = H.paragraph(y, 'Parametro ficticio que resume la altura desde la salida de la bomba en el deposito hasta el nivel estatico del agua, mas una correccion por el descenso dinamico durante el bombeo y las perdidas por friccion en la tuberia.');
+    y = H.formulaBlock(y, ['H_TE = H_D + H_ST + [(H_DT - H_ST)/Q_T] x Q_AP + H_f'], 'Q_AP = Q_d / 24 (caudal medio, m3/h). Requisito: H_f < 10% de H_TE');
 
-    y = H.sectionTitle(y, '3.', 'Metodo de calculo', collect);
-    y = H.subTitle(y, '3.1', 'Potencia horaria');
-    y = H.paragraph(y, 'Para cada una de las 8.760 horas del anio se obtiene la potencia de salida P(t) en vatios; la energia de esa hora, en kWh, coincide numericamente con P(t)/1000 al tratarse de un paso horario.');
-    y = H.subTitle(y, '3.2', 'Coste nivelado de la energia (LCOE)');
-    y = H.formulaBlock(y, ['LCOE = [CAPEX + suma OPEX_t/(1+r)^t] / [suma E_t/(1+r)^t]'], 'CAPEX: inversion inicial. OPEX_t: coste de operacion del anio t. E_t: energia generada el anio t. r: tasa de descuento.');
-    y = H.subTitle(y, '3.3', 'Degradacion anual');
-    y = H.formulaBlock(y, ['E_t = E_1 x (1 - d)^(t-1)'], 'E_1: energia generada el primer anio (obtenida de PVGIS). d: tasa de degradacion anual.');
-    y = H.subTitle(y, '3.4', 'LCOE ponderado del conjunto');
-    y = H.paragraph(y, 'No es la media de los LCOE individuales: se suman los costes descontados y la energia descontada de todas las superficies, y se divide una unica vez.');
-    y = H.formulaBlock(y, ['LCOE_conjunto = suma(costes descontados) / suma(energia descontada)']);
+    y = H.subTitle(y, '3.2', 'Energia electrica de la motobomba');
+    y = H.paragraph(y, 'La constante 2,725 convierte volumen de agua (m3) y altura (m) directamente en energia hidraulica (Wh). La energia electrica necesaria depende del rendimiento de la motobomba (tipicamente 0,4 para bombas de mas de 500W).');
+    y = H.formulaBlock(y, ['E_H = 2,725 x Q_d x H_TE','E_MB = E_H / eta_MB'], 'Q_d: volumen diario requerido (m3/dia)');
+
+    y = H.subTitle(y, '3.3', 'Irradiacion sobre el generador');
+    y = H.paragraph(y, 'La irradiacion horizontal del emplazamiento se corrige por el factor K del periodo de diseño elegido, por el factor de irradiacion FI (perdidas por orientacion e inclinacion no optimas) y por el factor de sombreado FS.');
+    y = H.formulaBlock(y, ['G_dm(a,b) = G_dm(0) x K x FI x FS'], null);
+    y = H.formulaBlock(y, ['FI = 1 - [1,2x10^-4 (b-b_opt)^2 + 3,5x10^-5 a^2]'], 'para inclinacion b > 15 grados; para b <= 15 grados se omite el termino del azimut');
+    y = H.tableCaption(y, 'Tabla 2', 'Periodo de diseño e inclinacion optima', collect);
+    y = H.simpleTable(y, ['Periodo','beta_opt','K'], [['Diciembre','N + 10','1,7'],['Julio','N - 20','1,0'],['Anual','N - 10','1,15']], [marginX, marginX+70, marginX+110]);
+
+    y = H.subTitle(y, '3.4', 'Potencia minima del generador');
+    y = H.paragraph(y, 'El generador se dimensiona para cubrir el consumo diario total (bombeo mas otras cargas) con el rendimiento energetico esperado de la instalacion (PR). Valores tipicos: PR=0,7 con inversor, PR=0,6 con inversor y bateria.');
+    y = H.formulaBlock(y, ['P_mp,min = (E_D x G_CEM) / (G_dm(a,b) x PR)'], 'G_CEM = 1 kW/m2. Limite: P_mp <= 1,2 x P_mp,min');
+
+    y = H.subTitle(y, '3.5', 'Autonomia del acumulador de litio');
+    y = H.paragraph(y, 'Dias que el sistema puede alimentar el consumo previsto sin ninguna aportacion solar, hasta la profundidad de descarga maxima permitida. El litio LiFePO4 tolera bien la descarga profunda frecuente, a diferencia del plomo-acido.');
+    y = H.formulaBlock(y, ['A = (C x PDmax x eta_inv x eta_rb) / L_D'], 'L_D = E_D / V_NOM (consumo diario en Ah). C: capacidad nominal (Ah). Minimo exigido: A >= 3 dias');
+    y = H.paragraph(y, 'Limite de carga del BMS: la corriente de carga procedente del generador (Isc) no debe superar el C-rate maximo admitido por el BMS multiplicado por la capacidad nominal C.');
+
+    y = H.subTitle(y, '3.6', 'Esquema del sistema de bombeo');
+    y = H.paragraph(y, 'La figura 1 ilustra los elementos y alturas caracteristicas del sistema: generador fotovoltaico, motobomba, pozo con sus niveles estatico y dinamico, y deposito de acumulacion de agua.');
+    y = H.drawPumpFigure(y);
+    y = H.figureCaption(y, 'Figura 1', 'Esquema del sistema de bombeo fotovoltaico (Fig. 3, Anexo I PCT-IDAE)', collect);
 
     y = H.sectionTitle(y, '4.', 'Datos de partida del proyecto', collect);
-    y = H.kv(y, 'Proyecto', proyecto);
-    y = H.kv(y, 'Autor', autor+' ('+registro+')');
-    y = H.kv(y, 'Organizacion', orgNombre+' - '+orgCif);
-    y = H.kv(y, 'Direccion organizacion', orgDir);
-    y = H.kv(y, 'Contacto', orgTel+' / '+orgCorreo);
-    y = H.kv(y, 'Destinatario', destNombre+' - '+destCif);
-    y = H.kv(y, 'Direccion destinatario', destDir);
+    y = H.kv(y, 'Cliente', cliente);
+    y = H.kv(y, 'Ubicacion de la instalacion', direccion);
+    y = H.kv(y, 'Instalador / empresa', instalador);
+    y = H.kv(y, 'Referencia', referencia);
     y = H.kv(y, 'Fecha del informe', fecha);
-    y = H.kv(y, 'Tasa de descuento / Vida util / Degradacion', fin.tasa+'% / '+fin.vida+' anios / '+fin.degradacion+'%/anio');
-    y = H.kv(y, 'Numero de superficies con datos PVGIS', String(conDatos.length));
+    y = H.kv(y, 'Numero de sistemas de bombeo', String(installationsPump.length));
 
-    y = H.sectionTitle(y, '5.', 'Resultados - resumen de superficies', collect);
-    y = H.tableCaption(y, TAB(), 'Resumen de superficies', collect);
-    const colX = [marginX, marginX+62, marginX+92, marginX+128, marginX+160];
-    y = H.checkPage(y,10);
-    doc.setFont('helvetica','bold'); doc.setFontSize(7.4); doc.setTextColor(100,108,120);
-    ['Superficie','kWp','E anual (kWh)','LCOE (EUR/kWh)','Año'].forEach((hh,i)=>doc.text(hh,colX[i],y));
+    y = H.sectionTitle(y, '5.', 'Resultados - resumen de sistemas', collect);
+    y = H.tableCaption(y, 'Tabla 3', 'Resumen de sistemas calculados', collect);
+    const colX = [marginX, marginX+62, marginX+102, marginX+138, marginX+164];
+    y = checkPageLocal(H,y,10);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(100,108,120);
+    ['Sistema','E_D (kWh/dia)','P_mp,min (Wp)','Autonomia (d)','Veredicto'].forEach((h,i)=>doc.text(h,colX[i],y));
     y+=2.5; doc.setDrawColor(205,205,212); doc.line(marginX,y,pageW-marginX,y); y+=5.5;
     doc.setFont('helvetica','normal');
-    conDatos.forEach(s=>{
+    installationsPump.forEach(inst=>{
       y = H.checkPage(y,7);
-      doc.setFontSize(7.2); doc.setTextColor(30,35,45);
-      doc.text(trunc(s.tech.nombre,30),colX[0],y);
-      doc.text(fmtNum(s.tech.peakpower,2),colX[1],y);
-      doc.text(fmtNum(s.resultado.totalAnualKwh,0),colX[2],y);
-      doc.setFont('helvetica','bold');
-      doc.text(fmtNum(s.resultado.lcoe,4),colX[3],y);
-      doc.setFont('helvetica','normal');
-      doc.text(String(s.tech.year),colX[4],y);
-      y+=6;
+      const r=inst.result;
+      doc.setFontSize(8); doc.setTextColor(30,35,45);
+      doc.text(trunc(inst.nombre,28),colX[0],y);
+      doc.text(r.ED_kWh.toFixed(2),colX[1],y);
+      doc.text(r.PmpMin_Wp.toFixed(0),colX[2],y);
+      doc.text(r.A.toFixed(2),colX[3],y);
+      doc.setTextColor(...(r.overall?[50,140,100]:[190,60,60]));
+      doc.text(r.overall?'CUMPLE':'REVISAR',colX[4],y);
+      y+=6.2;
     });
-    y+=3;
-    y = H.paragraph(y, 'LCOE ponderado del conjunto: '+fmtNum(lcoePonderado,4)+' EUR/kWh.', {bold:true});
+    y += 4;
 
-    y = H.sectionTitle(y, '6.', 'Memoria por superficie', collect);
-    conDatos.forEach((s,i)=>{
-      const t = s.tech, r = s.resultado;
-      y = H.checkPage(y, 70);
-      y = H.subTitle(y, '6.'+(i+1), t.nombre);
-      y = H.kv(y,'Latitud / Longitud', fmtNum(t.lat,6)+', '+fmtNum(t.lng,6));
-      y = H.kv(y,'Potencia pico', fmtNum(t.peakpower,2)+' kWp');
-      y = H.kv(y,'Orientacion (acimut, Sur=0) / Inclinacion', t.aspect+' / '+t.angle+' grados');
-      y = H.kv(y,'Perdidas del sistema', t.loss+'%');
-      y = H.kv(y,'Tecnologia / Montaje', t.pvtech+' / '+t.mounting);
-      y = H.kv(y,'Base de datos / Anio de la serie', t.raddatabase+' / '+t.year);
-      y = H.kv(y,'CAPEX / OPEX anual', fmtEur(t.capex,0)+' / '+fmtEur(t.opex,0)+'/anio');
-      y = H.kv(y,'PVGIS pvprice: systemcost / interest', fmtEur(t.systemcost,0)+' / '+t.interest+'%');
-      y = H.kv(y,'Energia anual generada (anio 1)', fmtNum(r.totalAnualKwh,1)+' kWh');
-      y = H.kv(y,'LCOE de esta superficie', fmtNum(r.lcoe,4)+' EUR/kWh');
-      if(t.notas) y = H.kv(y,'Notas', t.notas);
-
-      y = H.paragraph(y, 'Enlaces a la API de PVGIS (JSON):', {bold:true});
-      y = H.linkLine(y, 'Informe con LCOE (PVcalc + pvprice)', construirUrlPvcalc(t));
-      y = H.linkLine(y, 'Serie horaria completa (seriescalc)', construirUrlPvgis(t));
-      y += 3;
-
-      y = H.paragraph(y, 'Curva diaria de generacion (suma de energia horaria por dia, kWh/dia):');
-      y = H.drawDailyCurveChart(y, r.serieDiaria, [55,207,255], 'Curva de generacion diaria (kWh/dia)', 'kWh');
-      y = H.figureCaption(y, FIG(), 'Curva diaria de generacion - '+t.nombre, collect);
-
-      y = H.paragraph(y, 'Dia representativo de invierno y de verano, extraidos de la serie horaria (seriescalc):');
-      y = H.drawHourlyDayChart(y, r.diaDiciembre, [37,99,235], 'Dia representativo de diciembre - potencia horaria (W)', 'W');
-      y = H.figureCaption(y, FIG(), 'Dia representativo de diciembre - '+t.nombre, collect);
-      y = H.drawHourlyDayChart(y, r.diaJunio, [245,158,11], 'Dia representativo de junio - potencia horaria (W)', 'W');
-      y = H.figureCaption(y, FIG(), 'Dia representativo de junio - '+t.nombre, collect);
-
-      y = H.paragraph(y, 'Curva mensual de energia generada, obtenida de PVcalc (E_m):');
-      y = H.drawMonthlyBarChart(y, r.tablaMensual, [34,197,94], 'Curva mensual de energia - PVcalc (kWh/mes)', 'kWh');
-      y = H.figureCaption(y, FIG(), 'Curva mensual de energia (PVcalc) - '+t.nombre, collect);
-
-      y = H.tableCaption(y, TAB(), 'Generacion y radiacion mensual (E_m, H(i)_m) - '+t.nombre, collect);
-      const colXm = [marginX, marginX+60, marginX+110];
+    y = H.sectionTitle(y, '6.', 'Memoria de calculo por sistema', collect);
+    installationsPump.forEach((inst,i)=>{
+      const r = inst.result;
+      y = H.checkPage(y, 78);
+      y = H.subTitle(y, '6.'+(i+1), inst.nombre);
+      y = H.kv(y,'Volumen diario requerido Q_d', inst.qd.toFixed(2)+' m3/dia');
+      y = H.kv(y,'Caudal medio Q_AP', r.Qap.toFixed(3)+' m3/h');
+      y = H.kv(y,'Altura total equivalente H_TE', r.Hte.toFixed(2)+' m');
+      y = H.kv(y,'Friccion H_f (< 10% H_TE)', inst.hf.toFixed(2)+' m - '+(r.hfOk?'cumple':'SUPERA'));
+      y = H.kv(y,'Energia hidraulica E_H', r.Eh.toFixed(1)+' Wh/dia');
+      y = H.kv(y,'Rendimiento motobomba', inst.etamb.toFixed(2));
+      y = H.kv(y,'Energia motobomba E_MB', r.Emb.toFixed(1)+' Wh/dia');
+      y = H.kv(y,'Otros consumos diarios', inst.otros.toFixed(0)+' Wh/dia');
+      y = H.kv(y,'Consumo total E_D', r.ED_Wh.toFixed(1)+' Wh/dia ('+r.ED_kWh.toFixed(3)+' kWh/dia)');
+      y = H.kv(y,'Periodo de diseño', r.periodoLabel+' (K='+r.K+', beta_opt='+r.betaOpt.toFixed(1)+' grados)');
+      y = H.kv(y,'Irradiacion horizontal G_dm(0)', inst.gdm0.toFixed(2)+' kWh/m2/dia');
+      y = H.kv(y,'Inclinacion / azimut elegidos', inst.beta+' grados / '+inst.alpha+' grados');
+      y = H.kv(y,'Factor de irradiacion FI', r.FI.toFixed(3));
+      y = H.kv(y,'Factor de sombreado FS', inst.fs.toFixed(2));
+      y = H.kv(y,'Irradiacion sobre generador', r.GdmAB.toFixed(3)+' kWh/m2/dia');
+      y = H.kv(y,'Rendimiento instalacion PR', inst.pr.toFixed(2));
+      y = H.kv(y,'Potencia minima generador P_mp,min', r.PmpMin_Wp.toFixed(1)+' Wp');
+      y = H.kv(y,'Potencia elegida P_mp (limite 1,2x)', inst.pmp+' Wp / '+r.pmpLimit.toFixed(1)+' Wp - '+(r.pmpOk?'cumple':'SUPERA'));
+      y = H.kv(y,'Capacidad acumulador (litio LiFePO4) C', inst.c+' Ah');
+      y = H.kv(y,'Profundidad de descarga PDmax', (inst.pdmax*100).toFixed(0)+'%');
+      y = H.kv(y,'Corriente cortocircuito generador Isc', inst.isc+' A');
+      y = H.kv(y,'C-rate max. de carga del BMS', inst.crate+'C (limite '+r.chargeCurrentLimit.toFixed(2)+' A) - '+(r.chargeOk?'cumple':'SUPERA'));
+      y = H.kv(y,'Consumo diario L_D', r.LD.toFixed(2)+' Ah/dia');
+      y = H.kv(y,'Autonomia A (minimo 3 dias)', r.A.toFixed(2)+' dias - '+(r.autonomiaOk?'cumple':'INSUFICIENTE'));
+      if(inst.notas) y = H.kv(y,'Notas', inst.notas);
       y = H.checkPage(y,10);
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.4); doc.setTextColor(100,108,120);
-      ['Mes','E_m (kWh)','H(i)_m (kWh/m2)'].forEach((hh,ii)=>doc.text(hh,colXm[ii],y));
-      y+=2.5; doc.setDrawColor(205,205,212); doc.line(marginX,y,pageW-marginX,y); y+=5.5;
-      doc.setFont('helvetica','normal');
-      r.tablaMensual.forEach(m=>{
-        y = H.checkPage(y,6.5);
-        doc.setFontSize(7.2); doc.setTextColor(30,35,45);
-        doc.text(m.mes,colXm[0],y);
-        doc.text(fmtNum(m.E_m,1),colXm[1],y);
-        doc.text(fmtNum(m.H_m,1),colXm[2],y);
-        y+=6;
-      });
-      y+=4;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.setTextColor(...(r.overall?[50,140,100]:[190,60,60]));
+      doc.text('Veredicto: '+(r.overall?'CUMPLE todos los limites obligatorios verificados.':'REQUIERE REVISION - no se cumple algun limite obligatorio.'), marginX, y);
+      y+=12;
     });
 
-    y = H.sectionTitle(y, '7.', 'Conclusiones y proximos pasos', collect);
-    y = H.paragraph(y, 'Se ha obtenido la curva horaria de generacion (8.760 valores/anio) y el LCOE de '+conDatos.length+' superficie(s), con un LCOE ponderado del conjunto de '+fmtNum(lcoePonderado,4)+' EUR/kWh, a partir de los parametros tecnicos de cada superficie y los parametros financieros (tasa de descuento, vida util y degradacion) introducidos.');
-    y = H.paragraph(y, 'El siguiente paso, fuera del alcance de este documento, es cruzar la curva horaria de generacion de cada superficie con la curva horaria de consumo del proyecto y con el dimensionado de un sistema de almacenamiento, para obtener los indicadores de rentabilidad de la inversion (autoconsumo, ahorro, payback, VAN, TIR) del sistema completo.');
+    y = H.sectionTitle(y, '7.', 'Conclusiones', collect);
+    const okCount = installationsPump.filter(i=>i.result.overall).length;
+    y = H.paragraph(y, 'De los '+installationsPump.length+' sistema(s) de bombeo evaluados, '+okCount+' cumplen la totalidad de los limites obligatorios de dimensionado (generador, autonomia del acumulador y corriente de carga admisible por el BMS), y '+(installationsPump.length-okCount)+' requieren revision antes de su ejecucion.');
+    y = H.paragraph(y, 'Este informe se ha generado con una herramienta de calculo no oficial, basada en el Anexo I del PCT-IDAE con adaptacion a acumuladores de litio. El instalador es responsable de verificar los resultados antes de la ejecucion de la instalacion.');
 
     y = H.sectionTitle(y, '8.', 'Referencias', collect);
     const refs = [
-      'PVGIS (Photovoltaic Geographical Information System). Comision Europea, Joint Research Centre.',
-      'API no interactiva de PVGIS - documentacion del endpoint seriescalc.',
+      'Pliego de Condiciones Tecnicas de Instalaciones Aisladas de Red. IDAE, Departamento de Energia Solar.',
+      'Reglamento Electrotecnico para Baja Tension. Decreto 2413/1973 y desarrollos posteriores (ITC-BT).',
+      'UNE-EN 61215 / UNE-EN 61646. Modulos fotovoltaicos de silicio cristalino y de capa delgada.',
+      'Especificaciones tecnicas del fabricante del acumulador de litio LiFePO4 y del sistema BMS empleado.',
     ];
-    refs.forEach((r2,i)=>{ y = H.paragraph(y, (i+1)+'. '+r2); });
+    refs.forEach((r,i)=>{ y = H.paragraph(y, (i+1)+'. '+r); });
   }
+  function checkPageLocal(H,y,needed){ return H.checkPage(y,needed); }
 
-  // ===================== PASE 1: MEDICION =====================
+  // ===================== PASE 1: MEDICION (paginas relativas del cuerpo) =====================
   const measureDoc = new jsPDF({unit:'mm', format:'a4'});
   const collectMeasure = {toc:[], tables:[], figures:[]};
   renderBody(measureDoc, collectMeasure);
 
-  // ===================== PORTADA Y PRELIMINARES (fijas: 5 paginas) =====================
+  // ===================== PORTADA Y PAGINAS PRELIMINARES (fijas: 5 paginas) =====================
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  const FRONT_PAGES = 5;
+  const FRONT_PAGES = 5; // 1 portada + 1 indice + 1 indice figuras + 1 indice tablas + 1 glosario
 
   function drawIndexPage(title, entries){
     doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
     doc.text(title, marginX, 32);
-    doc.setDrawColor(37,180,220); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+    doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
     let y=50;
     doc.setFontSize(10);
     entries.forEach(e=>{
@@ -1887,7 +1610,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
         doc.text('.'.repeat(n), dotsStartX, y);
       }
-      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
+      y+=8;
     });
     if(entries.length===0){
       doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
@@ -1895,59 +1618,65 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     }
   }
 
-  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
-  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
+  // -- Portada --
+  doc.setFont('times','bold'); doc.setFontSize(24); doc.setTextColor(20,24,32);
+  const titleLines = doc.splitTextToSize('INFORME DE DIMENSIONADO DE SISTEMA DE BOMBEO FOTOVOLTAICO', 155);
   let cy = 92;
   titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
-  doc.setDrawColor(37,180,220); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
+  doc.setDrawColor(255,176,32); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
   cy+=16;
   doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
-  doc.text('Generacion fotovoltaica horaria y LCOE - datos de la API de PVGIS', marginX, cy); cy+=16;
+  doc.text(docTitleShort, marginX, cy); cy+=16;
   doc.setFontSize(10.5);
-  [['Organizacion', orgNombre],['CIF', orgCif],['Destinatario', destNombre],['Autor', autor],['Fecha', fecha]].forEach(([k,v])=>{
+  [['Cliente', cliente],['Ubicacion', direccion],['Instalador / empresa', instalador],['Referencia', referencia],['Fecha', fecha]].forEach(([k,v])=>{
     doc.setFont('times','italic'); doc.setTextColor(130,136,146); doc.text(k+':', marginX, cy);
     doc.setFont('times','normal'); doc.setTextColor(40,46,56); doc.text(String(v), marginX+40, cy);
     cy+=7.5;
   });
   doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(150,155,163);
-  doc.text('Fuente: API seriescalc de PVGIS (Comision Europea, Joint Research Centre)', marginX, 274);
+  doc.text('PCT-IDAE - Instalaciones fotovoltaicas aisladas de red (adaptado a acumulador de litio)', marginX, 274);
 
+  // -- Indice --
   doc.addPage();
   drawIndexPage('Indice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
 
+  // -- Indice de figuras --
   doc.addPage();
   drawIndexPage('Indice de figuras', collectMeasure.figures.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
 
+  // -- Indice de tablas (incluye la Tabla 1 = glosario, en la pagina fija 5) --
   doc.addPage();
-  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y terminos', page:5}]
+  const tablesForList = [{num:'Tabla 1', text:'Glosario de simbolos / nomenclatura', page:5}]
     .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
   drawIndexPage('Indice de tablas', tablesForList);
 
+  // -- Glosario de simbolos --
   doc.addPage();
   doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
-  doc.text('Glosario de siglas y terminos', marginX, 32);
-  doc.setDrawColor(37,180,220); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
+  doc.text('Glosario de simbolos / nomenclatura', marginX, 32);
+  doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
   let gy=48;
   doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
-  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+28, gy); doc.text('Unidad', marginX+150, gy);
+  doc.text('Variable', marginX, gy); doc.text('Descripcion', marginX+32, gy); doc.text('Unidad', marginX+152, gy);
   gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
   GLOSARIO.forEach(row=>{
-    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(15,140,170);
+    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(180,120,10);
     doc.text(row[0], marginX, gy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
-    const dLines = doc.splitTextToSize(row[1], 118);
-    doc.text(dLines[0], marginX+28, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.3); doc.setTextColor(50,56,66);
+    doc.text(row[1], marginX+32, gy);
     doc.setTextColor(100,108,120);
-    doc.text(row[2], marginX+150, gy);
-    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
+    doc.text(row[2], marginX+152, gy);
+    gy+=6.2;
   });
   doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
-  doc.text('Tabla 1: Glosario de siglas y terminos', marginX, gy+6);
+  doc.text('Tabla 1: Glosario de simbolos / nomenclatura', marginX, gy+6);
 
+  // ===================== PASE 2: CUERPO REAL =====================
   doc.addPage();
   const collectReal = {toc:[], tables:[], figures:[]};
   renderBody(doc, collectReal);
 
+  // ===================== CABECERA / PIE EN TODAS LAS PAGINAS (excepto portada) =====================
   const totalPages = doc.internal.getNumberOfPages();
   for(let p=2;p<=totalPages;p++){
     doc.setPage(p);
@@ -1961,25 +1690,12 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     doc.text('Página '+p, pageW/2, 287, {align:'center'});
   }
 
-  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-  doc.save('informe-pvgis-horario-lcoe-'+safeName+'.pdf');
-  showToast('PDF generado y descargado.');
+  const safeName = (referencia!=='-'?referencia:cliente!=='-'?cliente:'instalacion').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  doc.save('informe-bombeo-fv-'+safeName+'.pdf');
+  showToastPump('PDF generado y descargado.');
 });
 
-// Comunicacion bidireccional con VatiaCo.<DOC_KEY_C02>.outputs.installations: restaura la
-// lista de superficies (parametros tecnicos + resultado de PVGIS ya calculado, si lo hay) si
-// se habia guardado en una visita anterior o justo despues de importar un VatiaCo.json -
-// evita tener que volver a anadir cada superficie o volver a llamar a la API tras recargar.
-(function restaurarInstallationsGuardadas(){
-  const guardado = vatiacoLeer()[DOC_KEY_C02];
-  const previas = guardado && guardado.outputs && guardado.outputs.installations;
-  if(Array.isArray(previas) && previas.length>0){
-    installations = previas;
-    instNextId = installations.reduce((m,s)=>Math.max(m,(s.id||0)+1), 1);
-    renderInstallations();
-    showToast(installations.length+' superficie(s) restauradas desde la memoria del navegador.');
-  }
-})();
+function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'…' : (s||''); }
 </script>
 
 <!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
@@ -1987,13 +1703,13 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
      bidireccional con VatiaCo.proyecto, compartido entre todos los documentos: se rellena
      por defecto desde ahi al cargar la pagina, y cualquier cambio en el formulario se guarda
      de vuelta. El resto de campos propios de este documento se acumulan en
-     VatiaCo.fv_generacion_fotovoltaica.inputs. Si VatiaCo.fv_generacion_fotovoltaica no existe todavia, se crea al vuelo con
+     VatiaCo.idae_bombeo_fv.inputs. Si VatiaCo.idae_bombeo_fv no existe todavia, se crea al vuelo con
      los valores que los campos tienen por defecto (o vacios, si el campo esta vacio). Cada vez
-     que se genera el informe PDF se anota en VatiaCo.fv_generacion_fotovoltaica.outputs. Ademas se anaden
+     que se genera el informe PDF se anota en VatiaCo.idae_bombeo_fv.outputs. Ademas se anaden
      botones flotantes para exportar/importar el objeto VatiaCo completo como un .json. -->
 <script>
 (function(){
-  var DOC_KEY = 'fv_generacion_fotovoltaica';
+  var DOC_KEY = 'idae_bombeo_fv';
   var LS_KEY = 'VatiaCo';
 
   function leerVatiaco(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ return {}; } }
@@ -2030,7 +1746,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     });
   }
 
-  // Registra en VatiaCo.fv_generacion_fotovoltaica.outputs cada vez que se genera el informe (salida del
+  // Registra en VatiaCo.idae_bombeo_fv.outputs cada vez que se genera el informe (salida del
   // documento). No duplica la logica de calculo de cada documento (distinta en cada uno):
   // deja constancia de cuando se genero la ultima salida, junto con los inputs vigentes en
   // ese momento, para poder distinguir una salida ya desactualizada de una reciente.
@@ -2103,7 +1819,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       function(vv){ return vv.proyecto; },
       function(vv){ vv.proyecto = vv.proyecto || {}; return vv.proyecto; }
     );
-    // Resto de campos de este documento: propios, acumulados en VatiaCo.fv_generacion_fotovoltaica.inputs.
+    // Resto de campos de este documento: propios, acumulados en VatiaCo.idae_bombeo_fv.inputs.
     sincronizarCampos(
       Array.prototype.slice.call(document.querySelectorAll('input:not([id^="p_"]), select:not([id^="p_"]), textarea:not([id^="p_"])')),
       function(vv){ return vv[DOC_KEY] && vv[DOC_KEY].inputs; },

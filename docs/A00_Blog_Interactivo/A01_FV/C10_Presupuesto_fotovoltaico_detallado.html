@@ -174,6 +174,19 @@
     .summary-box{max-width:100%;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -186,13 +199,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
-    <a href="#config" data-sec="config"><span class="tag">02</span>Configuración</a>
-    <a href="#catalogo" data-sec="catalogo"><span class="tag">03</span>Catálogo de precios</a>
-    <a href="#comercial" data-sec="comercial"><span class="tag">04</span>Parámetros comerciales</a>
-    <a href="#partidas" data-sec="partidas"><span class="tag">05</span>Partidas del presupuesto</a>
-    <a href="#informe" data-sec="informe"><span class="tag">06</span>Resumen y oferta</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -220,7 +229,145 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="config" class="tab-bloque">
+      <div class="eyebrow kicker">Configuración de la instalación</div>
+      <h2>El tamaño del sistema, en cifras.</h2>
+      <p class="lede">Estos valores son la "cantidad" de la que dependen la mayoría de partidas del presupuesto: potencia pico, potencia del inversor y, si aplica, capacidad de batería.</p>
+      <div class="card">
+        <div class="fieldset-title">Generador fotovoltaico</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia pico, kWp</label><input type="number" id="c_kwp" value="5.5" min="0" step="0.1"></div>
+          <div class="field"><label>Potencia por panel, Wp</label><input type="number" id="c_wp_panel" value="450" min="0" step="5"></div>
+          <div class="field"><label>Nº de paneles (calculado)</label><input type="text" id="c_num_paneles" value="" readonly style="opacity:.75;"></div>
+        </div>
+        <div class="fieldset-title">Inversor</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia del inversor, kW</label><input type="number" id="c_kw_inversor" value="5" min="0" step="0.1"><div class="hint">Se estima al cambiar la potencia pico (ratio DC/AC ≈ 1,1); edítalo si tu inversor es distinto.</div></div>
+          <div class="field">
+            <label>Tipo de instalación</label>
+            <select id="c_tipo">
+              <option value="sin_excedentes">Autoconsumo sin excedentes</option>
+              <option value="con_excedentes" selected>Autoconsumo con excedentes (compensación)</option>
+              <option value="con_excedentes_sin_comp">Autoconsumo con excedentes (sin compensación)</option>
+              <option value="colectivo">Autoconsumo colectivo</option>
+            </select>
+          </div>
+          <div class="field"><label>Ubicación (municipio / provincia)</label><input type="text" id="c_ubicacion" placeholder="Ej: Torremolinos, Málaga"></div>
+        </div>
+        <div class="fieldset-title">Emplazamiento y conexión</div>
+        <div class="grid3">
+          <div class="field"><label>Superficie disponible, m² (opcional)</label><input type="number" id="c_superficie" min="0" step="1"></div>
+          <div class="checkline" style="margin-top:26px;"><input type="checkbox" id="c_suelo"> <label for="c_suelo" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Instalación en suelo (no en cubierta)</label></div>
+          <div class="checkline" style="margin-top:26px;"><input type="checkbox" id="c_at"> <label for="c_at" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Conexión en Alta Tensión (AT)</label></div>
+        </div>
+        <p style="font-size:11px; color:var(--text-dimmer); margin:-4px 0 14px;">Determinan qué trámites se marcan como aplicables por defecto en el catálogo (03): licencia urbanística vs. declaración responsable, EICI vs. autorización de explotación.</p>
+        <div class="fieldset-title">Almacenamiento (opcional)</div>
+        <div class="checkline"><input type="checkbox" id="c_bateria"> <label for="c_bateria" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Incluir batería de almacenamiento en el presupuesto</label></div>
+        <div class="grid3">
+          <div class="field"><label>Capacidad de la batería, kWh</label><input type="number" id="c_kwh_bateria" value="5" min="0" step="0.5" disabled></div>
+        </div>
+      </div>
+
+      <div class="subsection-title" style="margin-top:28px;">Diagrama de la instalación</div>
+      <p class="lede" style="margin-bottom:14px;">Se redibuja al momento con cada cambio de arriba — los tramos atenuados no aplican a esta configuración, y son justo los que marcan qué partidas del catálogo (03) quedan activas por defecto.</p>
+      <div class="chart-svg-wrap" id="instalacionFlowWrap"></div>
+    
+      </div>
+      <div id="catalogo" class="tab-bloque">
+      <div class="eyebrow kicker">Catálogo de precios unitarios</div>
+      <h2>El catálogo completo, con la selección de trámites según tu instalación.</h2>
+      <p class="lede">Incluye todas las partidas posibles — proyecto, materiales, mano de obra y los distintos trámites según potencia, modalidad y emplazamiento (ver <a href="../A04_Instalaciones/B01_IDAE/C01_Autoconsumo_Tramitacion.html" style="color:var(--amber);">Autoconsumo: tramitación</a>). La columna "Activa" se marca sola según la configuración (02), y puedes cambiarla a mano si tu caso es distinto. Solo las partidas activas se cargan al presupuesto (05).</p>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table" id="tablaCatalogo"></table>
+      </div>
+      <p style="font-size:11.5px; color:var(--text-dimmer); margin-top:12px;">Precios orientativos de mercado (España, 2024-2025). Ajústalos a tus costes reales de aprovisionamiento y mano de obra antes de generar ofertas.</p>
+    
+      </div>
+      <div id="comercial" class="tab-bloque">
+      <div class="eyebrow kicker">Parámetros comerciales</div>
+      <h2>IVA, descuento y condiciones de la oferta.</h2>
+      <p class="lede">Se aplican al conjunto del presupuesto y se incluyen en las condiciones de la oferta en PDF.</p>
+      <div class="card">
+        <div class="fieldset-title">Impuestos y descuento</div>
+        <div class="grid3">
+          <div class="field"><label>IVA (%)</label><input type="number" id="e_iva" value="21" min="0" step="0.5"></div>
+          <div class="field"><label>Descuento comercial (%)</label><input type="number" id="e_descuento" value="0" min="0" max="100" step="0.5"></div>
+          <div class="field"><label>Validez de la oferta (días)</label><input type="number" id="e_validez" value="30" min="1" step="1"></div>
+        </div>
+        <div class="fieldset-title">Condiciones</div>
+        <div class="grid2">
+          <div class="field" style="grid-column:1/-1;"><label>Forma de pago</label><input type="text" id="e_forma_pago" value="30% a la firma, 40% al inicio de la instalación, 30% a la puesta en marcha"></div>
+          <div class="field"><label>Plazo de ejecución estimado</label><input type="text" id="e_plazo" value="4-6 semanas desde la firma del contrato"></div>
+          <div class="field"><label>Garantía de los paneles (años)</label><input type="number" id="e_garantia_paneles" value="25" min="0" step="1"></div>
+          <div class="field"><label>Garantía del inversor (años)</label><input type="number" id="e_garantia_inversor" value="10" min="0" step="1"></div>
+          <div class="field"><label>Garantía de la instalación (años)</label><input type="number" id="e_garantia_instalacion" value="5" min="0" step="1"></div>
+        </div>
+      </div>
+    
+      </div>
+      <div id="partidas" class="tab-bloque">
+      <div class="eyebrow kicker">Partidas del presupuesto</div>
+      <h2>El desglose real, capítulo a capítulo.</h2>
+      <p class="lede">Carga el catálogo con un clic para partir de un presupuesto completo, y luego edita cantidades y precios o añade partidas propias.</p>
+
+      <div class="btn-row" style="margin-bottom:24px;">
+        <button class="btn primary" id="btnCargarCatalogo">↺ Cargar partidas del catálogo</button>
+        <button class="btn ghost" id="btnVaciarPartidas">Vaciar todas las partidas</button>
+      </div>
+
+      <div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir partida manual</div>
+        <div class="grid4">
+          <div class="field">
+            <label>Capítulo</label>
+            <select id="i_capitulo">
+              <option value="PROYECTO">Proyecto</option>
+              <option value="MAT" selected>Materiales</option>
+              <option value="MO">Mano de obra</option>
+              <option value="TRAMITACION">Tramitación</option>
+              <option value="OTROS">Otros</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:span 2;"><label>Descripción</label><input type="text" id="i_descripcion" placeholder="Ej: Refuerzo de estructura de cubierta"></div>
+          <div class="field">
+            <label>Base de precio</label>
+            <select id="i_base">
+              <option value="kWp">€ / kWp</option>
+              <option value="kWinv">€ / kW inversor</option>
+              <option value="kWhBat">€ / kWh batería</option>
+              <option value="ud" selected>€ / unidad</option>
+              <option value="h">€ / hora</option>
+              <option value="m">€ / metro</option>
+              <option value="m2">€ / m²</option>
+              <option value="fijo">Importe fijo</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Precio unitario (€)</label><input type="number" id="i_precio" value="0" min="0" step="0.01"></div>
+          <div class="field"><label>Cantidad (si no es kWp/kW/kWh/fijo)</label><input type="number" id="i_cantidad" value="1" min="0" step="0.01"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btnAddPartida">+ Añadir partida</button>
+        </div>
+      </div>
+
+      <div id="partidasWrap">
+        <div class="empty-state">Todavía no hay partidas en el presupuesto. Carga el catálogo o añade una partida manual.</div>
+      </div>
+    
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
@@ -241,8 +388,6 @@
         <div class="stat"><div class="v">4 capítulos</div><div class="l">proyecto · materiales · mano de obra · tramitación</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento</div>
       <h2>Un presupuesto serio se construye por partidas.</h2>
       <p class="lede">Cotizar "a bulto" por precio total instalado es la forma más fácil de perder dinero o de que el cliente no confíe en la oferta. Cada partida debe tener una cantidad y un precio unitario trazables — y en fotovoltaica, casi todos escalan con la potencia o la energía del sistema, no son importes fijos.</p>
 
@@ -295,13 +440,16 @@
           <p>Configura la instalación (02), revisa o ajusta el catálogo de precios unitarios (03), carga esas partidas al presupuesto con un clic (05) y edítalas o añade partidas propias. Fija los parámetros comerciales (04) y genera la oferta en PDF (06).</p>
         </div>
       </div>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 01 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">01 · Datos del proyecto</div>
-      <h2>¿Para quién es esta oferta?</h2>
-      <p class="lede">Estos datos aparecen en la portada y en los encabezados de la oferta en PDF.</p>
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
       <div class="card">
         <div class="fieldset-title">Proyecto</div>
         <div class="grid2">
@@ -328,143 +476,10 @@
           <div class="field" style="grid-column:1/-1;"><label>Dirección de la instalación</label><input type="text" id="p_dest_dir" placeholder="Dirección donde se instala el sistema"></div>
         </div>
       </div>
-    </section>
+    
+</div>
+      </div></details>
 
-    <!-- 02 CONFIGURACION -->
-    <section id="config">
-      <div class="eyebrow kicker">02 · Configuración de la instalación</div>
-      <h2>El tamaño del sistema, en cifras.</h2>
-      <p class="lede">Estos valores son la "cantidad" de la que dependen la mayoría de partidas del presupuesto: potencia pico, potencia del inversor y, si aplica, capacidad de batería.</p>
-      <div class="card">
-        <div class="fieldset-title">Generador fotovoltaico</div>
-        <div class="grid3">
-          <div class="field"><label>Potencia pico, kWp</label><input type="number" id="c_kwp" value="5.5" min="0" step="0.1"></div>
-          <div class="field"><label>Potencia por panel, Wp</label><input type="number" id="c_wp_panel" value="450" min="0" step="5"></div>
-          <div class="field"><label>Nº de paneles (calculado)</label><input type="text" id="c_num_paneles" value="" readonly style="opacity:.75;"></div>
-        </div>
-        <div class="fieldset-title">Inversor</div>
-        <div class="grid3">
-          <div class="field"><label>Potencia del inversor, kW</label><input type="number" id="c_kw_inversor" value="5" min="0" step="0.1"><div class="hint">Se estima al cambiar la potencia pico (ratio DC/AC ≈ 1,1); edítalo si tu inversor es distinto.</div></div>
-          <div class="field">
-            <label>Tipo de instalación</label>
-            <select id="c_tipo">
-              <option value="sin_excedentes">Autoconsumo sin excedentes</option>
-              <option value="con_excedentes" selected>Autoconsumo con excedentes (compensación)</option>
-              <option value="con_excedentes_sin_comp">Autoconsumo con excedentes (sin compensación)</option>
-              <option value="colectivo">Autoconsumo colectivo</option>
-            </select>
-          </div>
-          <div class="field"><label>Ubicación (municipio / provincia)</label><input type="text" id="c_ubicacion" placeholder="Ej: Torremolinos, Málaga"></div>
-        </div>
-        <div class="fieldset-title">Emplazamiento y conexión</div>
-        <div class="grid3">
-          <div class="field"><label>Superficie disponible, m² (opcional)</label><input type="number" id="c_superficie" min="0" step="1"></div>
-          <div class="checkline" style="margin-top:26px;"><input type="checkbox" id="c_suelo"> <label for="c_suelo" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Instalación en suelo (no en cubierta)</label></div>
-          <div class="checkline" style="margin-top:26px;"><input type="checkbox" id="c_at"> <label for="c_at" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Conexión en Alta Tensión (AT)</label></div>
-        </div>
-        <p style="font-size:11px; color:var(--text-dimmer); margin:-4px 0 14px;">Determinan qué trámites se marcan como aplicables por defecto en el catálogo (03): licencia urbanística vs. declaración responsable, EICI vs. autorización de explotación.</p>
-        <div class="fieldset-title">Almacenamiento (opcional)</div>
-        <div class="checkline"><input type="checkbox" id="c_bateria"> <label for="c_bateria" style="margin:0; text-transform:none; font-family:var(--font-body); font-size:13px; color:var(--text-dim);">Incluir batería de almacenamiento en el presupuesto</label></div>
-        <div class="grid3">
-          <div class="field"><label>Capacidad de la batería, kWh</label><input type="number" id="c_kwh_bateria" value="5" min="0" step="0.5" disabled></div>
-        </div>
-      </div>
-
-      <div class="subsection-title" style="margin-top:28px;">Diagrama de la instalación</div>
-      <p class="lede" style="margin-bottom:14px;">Se redibuja al momento con cada cambio de arriba — los tramos atenuados no aplican a esta configuración, y son justo los que marcan qué partidas del catálogo (03) quedan activas por defecto.</p>
-      <div class="chart-svg-wrap" id="instalacionFlowWrap"></div>
-    </section>
-
-    <!-- 03 CATALOGO -->
-    <section id="catalogo">
-      <div class="eyebrow kicker">03 · Catálogo de precios unitarios</div>
-      <h2>El catálogo completo, con la selección de trámites según tu instalación.</h2>
-      <p class="lede">Incluye todas las partidas posibles — proyecto, materiales, mano de obra y los distintos trámites según potencia, modalidad y emplazamiento (ver <a href="../A04_Instalaciones/B01_IDAE/C01_Autoconsumo_Tramitacion.html" style="color:var(--amber);">Autoconsumo: tramitación</a>). La columna "Activa" se marca sola según la configuración (02), y puedes cambiarla a mano si tu caso es distinto. Solo las partidas activas se cargan al presupuesto (05).</p>
-      <div class="card" style="padding:0; overflow-x:auto;">
-        <table class="data-table" id="tablaCatalogo"></table>
-      </div>
-      <p style="font-size:11.5px; color:var(--text-dimmer); margin-top:12px;">Precios orientativos de mercado (España, 2024-2025). Ajústalos a tus costes reales de aprovisionamiento y mano de obra antes de generar ofertas.</p>
-    </section>
-
-    <!-- 04 PARAMETROS COMERCIALES -->
-    <section id="comercial">
-      <div class="eyebrow kicker">04 · Parámetros comerciales</div>
-      <h2>IVA, descuento y condiciones de la oferta.</h2>
-      <p class="lede">Se aplican al conjunto del presupuesto y se incluyen en las condiciones de la oferta en PDF.</p>
-      <div class="card">
-        <div class="fieldset-title">Impuestos y descuento</div>
-        <div class="grid3">
-          <div class="field"><label>IVA (%)</label><input type="number" id="e_iva" value="21" min="0" step="0.5"></div>
-          <div class="field"><label>Descuento comercial (%)</label><input type="number" id="e_descuento" value="0" min="0" max="100" step="0.5"></div>
-          <div class="field"><label>Validez de la oferta (días)</label><input type="number" id="e_validez" value="30" min="1" step="1"></div>
-        </div>
-        <div class="fieldset-title">Condiciones</div>
-        <div class="grid2">
-          <div class="field" style="grid-column:1/-1;"><label>Forma de pago</label><input type="text" id="e_forma_pago" value="30% a la firma, 40% al inicio de la instalación, 30% a la puesta en marcha"></div>
-          <div class="field"><label>Plazo de ejecución estimado</label><input type="text" id="e_plazo" value="4-6 semanas desde la firma del contrato"></div>
-          <div class="field"><label>Garantía de los paneles (años)</label><input type="number" id="e_garantia_paneles" value="25" min="0" step="1"></div>
-          <div class="field"><label>Garantía del inversor (años)</label><input type="number" id="e_garantia_inversor" value="10" min="0" step="1"></div>
-          <div class="field"><label>Garantía de la instalación (años)</label><input type="number" id="e_garantia_instalacion" value="5" min="0" step="1"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 05 PARTIDAS -->
-    <section id="partidas">
-      <div class="eyebrow kicker">05 · Partidas del presupuesto</div>
-      <h2>El desglose real, capítulo a capítulo.</h2>
-      <p class="lede">Carga el catálogo con un clic para partir de un presupuesto completo, y luego edita cantidades y precios o añade partidas propias.</p>
-
-      <div class="btn-row" style="margin-bottom:24px;">
-        <button class="btn primary" id="btnCargarCatalogo">↺ Cargar partidas del catálogo</button>
-        <button class="btn ghost" id="btnVaciarPartidas">Vaciar todas las partidas</button>
-      </div>
-
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:6px;">Añadir partida manual</div>
-        <div class="grid4">
-          <div class="field">
-            <label>Capítulo</label>
-            <select id="i_capitulo">
-              <option value="PROYECTO">Proyecto</option>
-              <option value="MAT" selected>Materiales</option>
-              <option value="MO">Mano de obra</option>
-              <option value="TRAMITACION">Tramitación</option>
-              <option value="OTROS">Otros</option>
-            </select>
-          </div>
-          <div class="field" style="grid-column:span 2;"><label>Descripción</label><input type="text" id="i_descripcion" placeholder="Ej: Refuerzo de estructura de cubierta"></div>
-          <div class="field">
-            <label>Base de precio</label>
-            <select id="i_base">
-              <option value="kWp">€ / kWp</option>
-              <option value="kWinv">€ / kW inversor</option>
-              <option value="kWhBat">€ / kWh batería</option>
-              <option value="ud" selected>€ / unidad</option>
-              <option value="h">€ / hora</option>
-              <option value="m">€ / metro</option>
-              <option value="m2">€ / m²</option>
-              <option value="fijo">Importe fijo</option>
-            </select>
-          </div>
-        </div>
-        <div class="grid3">
-          <div class="field"><label>Precio unitario (€)</label><input type="number" id="i_precio" value="0" min="0" step="0.01"></div>
-          <div class="field"><label>Cantidad (si no es kWp/kW/kWh/fijo)</label><input type="number" id="i_cantidad" value="1" min="0" step="0.01"></div>
-        </div>
-        <div class="btn-row">
-          <button class="btn" id="btnAddPartida">+ Añadir partida</button>
-        </div>
-      </div>
-
-      <div id="partidasWrap">
-        <div class="empty-state">Todavía no hay partidas en el presupuesto. Carga el catálogo o añade una partida manual.</div>
-      </div>
-    </section>
-
-    <!-- 06 RESUMEN E INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">06 · Resumen y oferta</div>
       <h2>El total, y la oferta lista para enviar.</h2>
       <p class="lede">Revisa el resumen económico y la distribución por capítulos antes de generar el PDF.</p>
 
@@ -479,6 +494,7 @@
       <div class="btn-row" style="margin-top:32px;">
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar oferta en PDF</button>
       </div>
+    
     </section>
 
     <footer>
@@ -495,8 +511,17 @@
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));

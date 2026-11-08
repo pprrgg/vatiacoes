@@ -156,6 +156,19 @@
     section{padding:44px 16px;}
     .card{padding:16px;}
   }
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -165,20 +178,20 @@
   <div class="tabbar-wrap">
     <div class="tabbar-brand">COEFICIENTES DE REPARTO</div>
     <nav class="tabbar" id="sidenav">
-      <a href="#fijos" data-sec="fijos"><span class="tag">01</span>Coeficientes fijos</a>
-      <a href="#dinamicos" data-sec="dinamicos"><span class="tag">02</span>Coeficientes dinámicos</a>
-      <a href="#comparar" data-sec="comparar"><span class="tag">03</span>Fijos frente a dinámicos</a>
-      <a href="#fichero" data-sec="fichero"><span class="tag">04</span>Fichero para la distribuidora</a>
-      <a href="#faq" data-sec="faq"><span class="tag">05</span>Preguntas frecuentes</a>
-      <a href="#concepto" data-sec="concepto"><span class="tag">?</span>Ayuda: concepto</a>
-    </nav>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#fichero" data-sec="fichero"><span class="tag">02</span>Informe</a>
+  </nav>
   </div>
 
   <main>
 
     <!-- 01 · FIJOS -->
-    <section id="fijos">
-      <div class="eyebrow kicker">01 · Coeficientes fijos</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="fijos" class="tab-bloque">
+      <div class="eyebrow kicker">Coeficientes fijos</div>
       <h2>El mismo porcentaje para cada socio, todas las horas del año.</h2>
       <p class="lede">Mueve los porcentajes: los demás se ajustan para que la suma sea siempre el 100 %. Con una producción de <b>10 kWh</b> y un reparto 50 / 20 / 20 / 10 %, la vivienda A recibe 5 kWh, B y C 2 kWh y D 1 kWh, consuman o no en esa hora.</p>
       <div class="reparto">
@@ -195,14 +208,13 @@
           </div>
         </div>
       </div>
-      <div class="callout"><b>¿Cómo se eligen?</b> Lo habitual es repartir según lo que aporta cada socio a la inversión, su consumo anual o su potencia contratada. En la sección 03 puedes dibujar el perfil horario de cada socio y de la instalación FV y calcular los fijos que más energía aprovechan.</div>
-    </section>
-
-    <!-- 02 · DINAMICOS -->
-    <section id="dinamicos">
-      <div class="eyebrow kicker">02 · Coeficientes dinámicos</div>
+      <div class="callout"><b>¿Cómo se eligen?</b> Lo habitual es repartir según lo que aporta cada socio a la inversión, su consumo anual o su potencia contratada. En la pestaña Simulación puedes dibujar el perfil horario de cada socio y de la instalación FV y calcular los fijos que más energía aprovechan.</div>
+    
+      </div>
+      <div id="dinamicos" class="tab-bloque">
+      <div class="eyebrow kicker">Coeficientes dinámicos</div>
       <h2>Un reparto distinto para cada una de las 8760 horas del año.</h2>
-      <p class="lede">Con coeficientes dinámicos cada hora tiene su propio reparto. En la <b>hora nº 2338</b> la vivienda A puede recibir el 60 % porque está consumiendo, y siete horas después, en la <b>nº 2345</b>, solo el 40 %. Abajo, el reparto que da más autoconsumo en cada hora del día simulado en la sección 03: la energía se reparte en proporción a lo que consume cada vivienda.</p>
+      <p class="lede">Con coeficientes dinámicos cada hora tiene su propio reparto. En la <b>hora nº 2338</b> la vivienda A puede recibir el 60 % porque está consumiendo, y siete horas después, en la <b>nº 2345</b>, solo el 40 %. Abajo, el reparto que da más autoconsumo en cada hora del día simulado en la pestaña Simulación: la energía se reparte en proporción a lo que consume cada vivienda.</p>
       <div class="reparto">
         <div class="card diagrama"><div id="diagDin"></div></div>
         <div class="card">
@@ -210,7 +222,7 @@
             <input type="range" id="horaDin" min="0" max="23" step="1" value="12"></div>
           <div id="filasDin"></div>
           <div class="btn-row" style="margin-top:12px;"><button class="btn ghost" type="button" data-mas-socio>+ Socio</button></div>
-          <p class="note">Producción y consumos de esa hora según el día simulado (sección 03). Edita allí las barras de la instalación FV y del consumo de cada socio.</p>
+          <p class="note">Producción y consumos de esa hora según el día simulado (pestaña Simulación). Edita allí las barras de la instalación FV y del consumo de cada socio.</p>
         </div>
       </div>
 
@@ -232,19 +244,18 @@
           <div class="kpi"><div class="v" id="hnRes" style="font-size:16px;">–</div><div class="l">fecha y franja horaria</div></div>
         </div>
       </div>
-    </section>
-
-    <!-- 03 · COMPARAR -->
-    <section id="comparar">
-      <div class="eyebrow kicker">03 · Fijos frente a dinámicos</div>
+    
+      </div>
+      <div id="comparar" class="tab-bloque">
+      <div class="eyebrow kicker">Fijos frente a dinámicos</div>
       <h2>Lo que no consume un socio en su hora se vierte a la red: el reparto importa.</h2>
-      <p class="lede">Simula un día: <b>dibuja</b> la curva de la instalación FV y el perfil horario de consumo de cada socio arrastrando sus barras, y añade o quita socios. Los gráficos de abajo muestran la energía que recibe cada socio cada hora; la parte <b>clara</b> es lo que no consume (excedente) y la línea, el consumo total. Compara los coeficientes fijos de la sección 01 con los dinámicos.</p>
+      <p class="lede">Simula un día: <b>dibuja</b> la curva de la instalación FV y el perfil horario de consumo de cada socio arrastrando sus barras, y añade o quita socios. Los gráficos de abajo muestran la energía que recibe cada socio cada hora; la parte <b>clara</b> es lo que no consume (excedente) y la línea, el consumo total. Compara los coeficientes fijos de la pestaña Simulación con los dinámicos.</p>
       <div class="card">
         <div class="grid4">
           <div class="field"><label>Potencia pico de la instalación (kWp)</label><input type="number" id="kwp" value="10" min="0.5" step="0.5"></div>
           <div class="field"><label>Curva FV</label><select id="epoca"><option value="verano">Día de verano</option><option value="primavera" selected>Día de primavera / otoño</option><option value="invierno">Día de invierno</option><option value="personal">Dibujada a mano</option></select></div>
-          <div class="field"><label>Coeficientes fijos</label><select id="fijosOrigen"><option value="manual">Los de la sección 01</option><option value="consumo">Proporcionales al consumo</option><option value="optimo">Los fijos óptimos</option></select></div>
-          <div class="field" style="display:flex; align-items:flex-end;"><button class="btn" type="button" id="btnAplicarOptimo" style="width:100%;">Llevar los óptimos a la sección 01</button></div>
+          <div class="field"><label>Coeficientes fijos</label><select id="fijosOrigen"><option value="manual">Los de la pestaña Simulación</option><option value="consumo">Proporcionales al consumo</option><option value="optimo">Los fijos óptimos</option></select></div>
+          <div class="field" style="display:flex; align-items:flex-end;"><button class="btn" type="button" id="btnAplicarOptimo" style="width:100%;">Llevar los óptimos a la pestaña Simulación</button></div>
         </div>
         <div class="chart-tit" style="margin-top:4px;">Generación FV de la instalación (kWh cada hora): <b id="fvTotal" class="mono" style="color:var(--amber)"></b></div>
         <p class="ayuda-barras">Arrastra sobre las barras para cambiar la curva; la potencia pico la escala (el máximo del eje es 1 kWh por kWp).</p>
@@ -263,11 +274,59 @@
       </div>
       <div class="chart-leg" id="leyenda"></div>
       <p class="note">Simplificación de un día tipo con los perfiles que dibujes. Los fijos óptimos son los que más energía autoconsumen ese día; los dinámicos reparten cada hora en proporción al consumo, que es el máximo posible. En la plataforma VatiaCo el cálculo se hace con los datos reales de Datadis de los últimos 12 meses (pestaña Socios: <i>Proponer → Optimizado</i> y <i>Optimizar reparto horario</i>).</p>
+    
+      </div>
     </section>
 
-    <!-- 04 · FICHERO -->
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Preguntas frecuentes</span></summary><div class="acc-cuerpo">
+<div id="faq">
+      <h2>Lo que suele preguntarse.</h2>
+      <details class="detalle"><summary>¿Qué pasa con la energía que un socio recibe y no consume?</summary><div class="d-body">Se vierte a la red como excedente de ese socio. Según la modalidad, se compensa en su factura o se vende, pero vale menos que la energía autoconsumida, que evita comprarla a la comercializadora. Por eso conviene repartir según cuándo consume cada uno.</div></details>
+      <details class="detalle"><summary>¿Cuánto tienen que sumar los coeficientes?</summary><div class="d-body">Exactamente 1 (el 100 %): en el reparto fijo, la suma de todos; en el dinámico, la de cada hora. Si un socio no recibe nada en una hora, su coeficiente es 0.</div></details>
+      <details class="detalle"><summary>¿Cada cuánto se pueden cambiar?</summary><div class="d-body">El acuerdo se presenta a la distribuidora con antelación y suele renovarse una vez al año. Con coeficientes dinámicos el fichero ya trae un reparto distinto para cada hora del año, así que no hace falta cambiarlo durante el año.</div></details>
+      <details class="detalle"><summary>¿Los dinámicos siempre son mejores?</summary><div class="d-body">Aprovechan más la energía porque la dan a quien la consume en cada hora, pero son una previsión hecha con consumos pasados y requieren que todos los socios y la distribuidora trabajen con ficheros horarios. Con socios de perfiles muy parecidos, la diferencia con unos buenos fijos es pequeña.</div></details>
+      <details class="detalle"><summary>¿Quién debe firmar el acuerdo de reparto?</summary><div class="d-body">Todos los consumidores asociados a la instalación. Se entrega a la distribuidora, directamente o a través de la comercializadora de cada socio.</div></details>
+      <details class="detalle"><summary>¿Cómo lo calcula la plataforma VatiaCo?</summary><div class="d-body">En la pestaña <i>Socios</i>: <i>Proponer → Optimizado</i> busca los fijos que más autoconsumo dan con los consumos y la generación hora a hora de los últimos 12 meses, y <i>Optimizar reparto horario</i> calcula los dinámicos para el año siguiente, con su gráfico y el fichero .txt para la distribuidora.</div></details>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Ayuda: concepto</span></summary><div class="acc-cuerpo">
+<div id="concepto">
+      <h2>Cada socio recibe una parte de la energía que se genera: su coeficiente de reparto.</h2>
+      <p class="lede">Un consumidor participa en un <b>autoconsumo colectivo</b> cuando pertenece a un grupo de varios consumidores que se alimentan, de forma acordada, de la energía de instalaciones de producción <b>próximas</b> a las de consumo y asociadas a ellas. Cómo se reparte esa energía entre los socios lo fijan los <b>coeficientes de reparto</b>.</p>
+
+      <div class="formula">ENG<sub>h,i</sub> = <span class="b">β<sub>h,i</sub></span> · <span class="g">ENG<sub>h</sub></span></div>
+      <div class="leyenda">
+        <div><b>ENG<sub>h,i</sub></b><br>Energía que le corresponde al consumidor <i>i</i> en la hora <i>h</i>.</div>
+        <div><b style="color:var(--amber)">β<sub>h,i</sub></b><br>Coeficiente de reparto del consumidor <i>i</i> en la hora <i>h</i>. Los de todos los consumidores suman <b>1</b> (100 %) cada hora.</div>
+        <div><b style="color:var(--cyan)">ENG<sub>h</sub></b><br>Energía neta horaria total producida por el generador o los generadores.</div>
+      </div>
+
+      <div class="fieldset-title">Requisitos</div>
+      <div class="grid2">
+        <div class="comp-card"><h4>Misma modalidad</h4><p>Todos los consumidores deben pertenecer a la misma modalidad de autoconsumo (por ejemplo, con excedentes acogidos a compensación).</p></div>
+        <div class="comp-card"><h4>Acuerdo de reparto</h4><p>Se presenta a la distribuidora (normalmente a través de la comercializadora) un acuerdo firmado con los coeficientes, fijos o variables, cada año o antes de que empiecen a aplicarse.</p></div>
+      </div>
+
+      <div class="fieldset-title">Dos formas de repartir</div>
+      <div class="grid2">
+        <div class="comp-card"><h4>01 · Coeficientes fijos</h4><p>Un mismo porcentaje para cada socio en todas las horas del año. Sencillo de acordar, pero en las horas en que un socio no consume, su parte se vierte a la red como excedente.</p></div>
+        <div class="comp-card"><h4>02 · Coeficientes dinámicos (horarios)</h4><p>Un porcentaje distinto para cada socio en cada una de las 8760 horas del año. Permite dar la energía a quien la consume en cada momento y aprovecharla mejor.</p></div>
+      </div>
+      <p class="note">Marco normativo: Real Decreto 244/2019 (autoconsumo), cuyo anexo I recoge el reparto entre consumidores asociados; la Orden TED/1247/2021 permitió los coeficientes variables por hora. Esta guía es divulgativa: confirma los detalles con tu distribuidora.</p>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
     <section id="fichero">
-      <div class="eyebrow kicker">04 · Fichero para la distribuidora</div>
+      <div class="eyebrow kicker">02 · Informe</div>
+
       <h2>Un fichero de texto: una línea por suministro (y por hora, si es dinámico).</h2>
       <p class="lede">El acuerdo de reparto se acompaña de un fichero <b>.txt</b>. Con coeficientes fijos, cada línea es <code class="inline">CUPS;coeficiente</code>. Con coeficientes dinámicos, <code class="inline">CUPS;hora;coeficiente</code> para cada suministro y cada hora del año. El separador es el punto y coma y el decimal, la coma.</p>
       <div class="grid2">
@@ -335,48 +394,10 @@ ES0031405000000003EF1F;8760;0,400000</pre>
           <span id="estadoFich"></span>
         </div>
         <pre class="fichero" id="vistaFich" style="margin-top:14px;">Pulsa "Generar fichero".</pre>
-        <p class="note">Fijo: los coeficientes de la sección 01 con 6 decimales; se redondean para que sumen exactamente 1. Dinámico: los de la sección 03 para todas las horas del año, repitiendo el día simulado (en la realidad cada hora es distinta: la plataforma VatiaCo lo genera con los consumos reales). Cada hora suma 1.</p>
+        <p class="note">Fijo: los coeficientes de la pestaña Simulación con 6 decimales; se redondean para que sumen exactamente 1. Dinámico: los de la pestaña Simulación para todas las horas del año, repitiendo el día simulado (en la realidad cada hora es distinta: la plataforma VatiaCo lo genera con los consumos reales). Cada hora suma 1.</p>
       </div>
       <div class="callout"><b>Comprueba el formato</b> antes de presentarlo: algunas distribuidoras tienen un validador en línea, como el de UFD (Naturgy): <a href="https://sctd.gasnaturalfenosa.com/sctd/elco/herramientas/validaFicheroCoefRepartos.do" target="_blank" rel="noopener">validaFicheroCoefRepartos</a>.</div>
-    </section>
-
-    <!-- 05 · FAQ -->
-    <section id="faq">
-      <div class="eyebrow kicker">05 · Preguntas frecuentes</div>
-      <h2>Lo que suele preguntarse.</h2>
-      <details class="detalle"><summary>¿Qué pasa con la energía que un socio recibe y no consume?</summary><div class="d-body">Se vierte a la red como excedente de ese socio. Según la modalidad, se compensa en su factura o se vende, pero vale menos que la energía autoconsumida, que evita comprarla a la comercializadora. Por eso conviene repartir según cuándo consume cada uno.</div></details>
-      <details class="detalle"><summary>¿Cuánto tienen que sumar los coeficientes?</summary><div class="d-body">Exactamente 1 (el 100 %): en el reparto fijo, la suma de todos; en el dinámico, la de cada hora. Si un socio no recibe nada en una hora, su coeficiente es 0.</div></details>
-      <details class="detalle"><summary>¿Cada cuánto se pueden cambiar?</summary><div class="d-body">El acuerdo se presenta a la distribuidora con antelación y suele renovarse una vez al año. Con coeficientes dinámicos el fichero ya trae un reparto distinto para cada hora del año, así que no hace falta cambiarlo durante el año.</div></details>
-      <details class="detalle"><summary>¿Los dinámicos siempre son mejores?</summary><div class="d-body">Aprovechan más la energía porque la dan a quien la consume en cada hora, pero son una previsión hecha con consumos pasados y requieren que todos los socios y la distribuidora trabajen con ficheros horarios. Con socios de perfiles muy parecidos, la diferencia con unos buenos fijos es pequeña.</div></details>
-      <details class="detalle"><summary>¿Quién debe firmar el acuerdo de reparto?</summary><div class="d-body">Todos los consumidores asociados a la instalación. Se entrega a la distribuidora, directamente o a través de la comercializadora de cada socio.</div></details>
-      <details class="detalle"><summary>¿Cómo lo calcula la plataforma VatiaCo?</summary><div class="d-body">En la pestaña <i>Socios</i>: <i>Proponer → Optimizado</i> busca los fijos que más autoconsumo dan con los consumos y la generación hora a hora de los últimos 12 meses, y <i>Optimizar reparto horario</i> calcula los dinámicos para el año siguiente, con su gráfico y el fichero .txt para la distribuidora.</div></details>
-    </section>
-
-    <!-- AYUDA · CONCEPTO -->
-    <section id="concepto">
-      <div class="eyebrow kicker">Ayuda · Concepto</div>
-      <h2>Cada socio recibe una parte de la energía que se genera: su coeficiente de reparto.</h2>
-      <p class="lede">Un consumidor participa en un <b>autoconsumo colectivo</b> cuando pertenece a un grupo de varios consumidores que se alimentan, de forma acordada, de la energía de instalaciones de producción <b>próximas</b> a las de consumo y asociadas a ellas. Cómo se reparte esa energía entre los socios lo fijan los <b>coeficientes de reparto</b>.</p>
-
-      <div class="formula">ENG<sub>h,i</sub> = <span class="b">β<sub>h,i</sub></span> · <span class="g">ENG<sub>h</sub></span></div>
-      <div class="leyenda">
-        <div><b>ENG<sub>h,i</sub></b><br>Energía que le corresponde al consumidor <i>i</i> en la hora <i>h</i>.</div>
-        <div><b style="color:var(--amber)">β<sub>h,i</sub></b><br>Coeficiente de reparto del consumidor <i>i</i> en la hora <i>h</i>. Los de todos los consumidores suman <b>1</b> (100 %) cada hora.</div>
-        <div><b style="color:var(--cyan)">ENG<sub>h</sub></b><br>Energía neta horaria total producida por el generador o los generadores.</div>
-      </div>
-
-      <div class="fieldset-title">Requisitos</div>
-      <div class="grid2">
-        <div class="comp-card"><h4>Misma modalidad</h4><p>Todos los consumidores deben pertenecer a la misma modalidad de autoconsumo (por ejemplo, con excedentes acogidos a compensación).</p></div>
-        <div class="comp-card"><h4>Acuerdo de reparto</h4><p>Se presenta a la distribuidora (normalmente a través de la comercializadora) un acuerdo firmado con los coeficientes, fijos o variables, cada año o antes de que empiecen a aplicarse.</p></div>
-      </div>
-
-      <div class="fieldset-title">Dos formas de repartir</div>
-      <div class="grid2">
-        <div class="comp-card"><h4>01 · Coeficientes fijos</h4><p>Un mismo porcentaje para cada socio en todas las horas del año. Sencillo de acordar, pero en las horas en que un socio no consume, su parte se vierte a la red como excedente.</p></div>
-        <div class="comp-card"><h4>02 · Coeficientes dinámicos (horarios)</h4><p>Un porcentaje distinto para cada socio en cada una de las 8760 horas del año. Permite dar la energía a quien la consume en cada momento y aprovecharla mejor.</p></div>
-      </div>
-      <p class="note">Marco normativo: Real Decreto 244/2019 (autoconsumo), cuyo anexo I recoge el reparto entre consumidores asociados; la Orden TED/1247/2021 permitió los coeficientes variables por hora. Esta guía es divulgativa: confirma los detalles con tu distribuidora.</p>
+    
     </section>
 
     <footer>
@@ -391,7 +412,16 @@ ES0031405000000003EF1F;8760;0,400000</pre>
 // ===================== NAVEGACION =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = 'fijos';
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -492,7 +522,7 @@ function agregarSocio(){
   const i = ST.pc.length;
   if(i >= MAX_SOCIOS){ toast(`Como máximo ${MAX_SOCIOS} socios`); return; }
   ST.pc.push(100/(i+1)); ST.dem.push(plantilla(PERF_DEF[i], KWH_DEF[i]));
-  normalizarPc(); pintarTodo(); toast(`Socio ${letra(i)} añadido: dibuja su consumo en la sección 03`);
+  normalizarPc(); pintarTodo(); toast(`Socio ${letra(i)} añadido: dibuja su consumo en la pestaña Simulación`);
 }
 function quitarSocio(i){
   if(ST.pc.length <= 2){ toast('Hacen falta al menos 2 socios'); return; }
@@ -653,7 +683,7 @@ function pintarPerfiles(C){
 $('kwp').addEventListener('change', pintarTodo);
 $('fijosOrigen').addEventListener('change', pintarTodo);
 $('epoca').addEventListener('change', ()=>{ if($('epoca').value!=='personal') ST.fv = formaFv($('epoca').value); pintarTodo(); });
-$('btnAplicarOptimo').onclick = ()=>{ const C=calcular(); ST.pc = fijosOptimos(C.G,C.D).map(b=>b*100); $('fijosOrigen').value='manual'; pintarTodo(); toast('Coeficientes óptimos llevados a la sección 01'); };
+$('btnAplicarOptimo').onclick = ()=>{ const C=calcular(); ST.pc = fijosOptimos(C.G,C.D).map(b=>b*100); $('fijosOrigen').value='manual'; pintarTodo(); toast('Coeficientes óptimos llevados a la pestaña Simulación'); };
 
 // ===================== 02 · DINAMICOS =====================
 function pintarDinamicos(C){
@@ -694,7 +724,7 @@ function redondear6(pesos){
 const coma6 = m => (m/1e6).toFixed(6).replace('.',',');
 function pintarCups(){
   while(ST.cups.length < ST.pc.length) ST.cups.push('');
-  $('tablaCups').innerHTML = `<tr><th>Socio</th><th>CUPS</th><th>Coef. fijo (sección 01)</th></tr>` + ST.pc.map((p,i)=>
+  $('tablaCups').innerHTML = `<tr><th>Socio</th><th>CUPS</th><th>Coef. fijo (pestaña Simulación)</th></tr>` + ST.pc.map((p,i)=>
     `<tr><td><span class="dot" style="background:${COLORES[i]}; display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center; justify-content:center; color:#ffffff; font-family:var(--font-mono); font-size:11px; font-weight:600;">${letra(i)}</span></td>
      <td><input type="text" data-cups="${i}" value="${esc(ST.cups[i])}" placeholder="ES0021000000000001AA" maxlength="22"></td>
      <td class="n">${coma6(redondear6(ST.pc)[i])}</td></tr>`).join('');

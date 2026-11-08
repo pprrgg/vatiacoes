@@ -169,6 +169,19 @@
     .report-sheet{padding:24px 20px;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -181,15 +194,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
     <nav class="tabbar" id="sidenav">
-      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
-      <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
-      <a href="#marco" data-sec="marco"><span class="tag">02</span>Marco y metodología</a>
-      <a href="#zonas" data-sec="zonas"><span class="tag">03</span>Zonas climáticas de España</a>
-      <a href="#edificio" data-sec="edificio"><span class="tag">04</span>Datos del edificio</a>
-      <a href="#rehabilitacion" data-sec="rehabilitacion"><span class="tag">05</span>Escenario de rehabilitación</a>
-      <a href="#resultados" data-sec="resultados"><span class="tag">06</span>Resultados de la simulación</a>
-      <a href="#informe" data-sec="informe"><span class="tag">07</span>Informe final</a>
-    </nav>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
+  </nav>
     <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
@@ -216,165 +224,13 @@
   <main>
 
     <!-- SECCIÓN 00: RESUMEN -->
-    <section id="resumen">
-      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
-      <h2>Simulador de rehabilitación energética de edificios, para cualquier punto de España.</h2>
-      <p class="lede">Herramienta interactiva  de rehabilitación de edificios construida sobre el sistema de <b>zonas climáticas del CTE DB-HE</b>, válido para las 12 zonas climáticas peninsulares y de referencia para todo el territorio nacional. Introduce las características de tu edificio, elige las medidas de rehabilitación que te interesan y compara al instante la demanda, el consumo, el coste y las emisiones antes y después, con un informe final descargable.</p>
-
-      <div class="hero">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
-          <div>
-            <h1>Del edificio <em>actual</em> al edificio <em>rehabilitado</em>.</h1>
-            <p class="sub">Un único flujo de datos: el tipo de edificio, la zona climática, el año de construcción y los sistemas instalados alimentan automáticamente la comparativa de escenarios, el análisis económico de las medidas y el informe final descargable en PDF.</p>
-          </div>
-        </div>
-        <div class="stat-row">
-          <div class="stat"><div class="v">12 zonas climáticas</div><div class="l">sistema CTE DB-HE, válido en toda España</div></div>
-          <div class="stat"><div class="v">3 tipologías</div><div class="l">unifamiliar, bloque de viviendas, oficina</div></div>
-          <div class="stat"><div class="v">Envolvente + sistemas + FV</div><div class="l">fachada, cubierta, ventanas, calefacción, ACS, fotovoltaica</div></div>
-          <div class="stat"><div class="v">Calificación A–G</div><div class="l">estimación simplificada, no oficial</div></div>
-        </div>
-      </div>
-
-      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
-      <h2 style="font-size:18px;">Un flujo de trabajo, seis pasos.</h2>
-      <div class="grid4">
-        <div class="comp-card"><h4>01 · Marco y zonas</h4><p>Repasa el método de cálculo simplificado y localiza tu zona climática CTE entre las 12 de España.</p></div>
-        <div class="comp-card"><h4>02 · Datos del edificio</h4><p>Tipo de edificio, superficie, año de construcción y sistemas de calefacción, refrigeración y ACS actuales.</p></div>
-        <div class="comp-card"><h4>03 · Escenario de rehabilitación</h4><p>Marca las medidas de envolvente y sistemas que quieres simular: aislamiento, ventanas, bomba de calor, solar térmica, fotovoltaica.</p></div>
-        <div class="comp-card"><h4>04 · Resultados</h4><p>Compara demanda, consumo, coste, emisiones y calificación estimada entre el estado actual y el rehabilitado.</p></div>
-      </div>
-      <div class="grid2" style="margin-top:16px;">
-        <div class="comp-card"><h4>05 · Análisis económico</h4><p>Inversión total de las medidas seleccionadas, ahorro anual y periodo de retorno simple.</p></div>
-        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera automáticamente el informe con los datos, la comparativa y las medidas evaluadas, listo para imprimir en PDF.</p></div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 01: DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">01 · Datos del proyecto</div>
-      <h2>¿Para quién y por quién se realiza esta simulación?</h2>
-      <p class="lede">Estos datos aparecen en la portada y en los encabezados del informe en PDF (sección 07).</p>
-
-      <div class="card">
-        <div class="fieldset-title" style="margin-top:0;">Proyecto / edificio simulado</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del proyecto / edificio</label><input type="text" id="p_proyecto" value="Simulación de rehabilitación energética"></div>
-          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
-        </div>
-
-        <div class="fieldset-title">Técnico / autor de la simulación</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
-          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
-        </div>
-
-        <div class="fieldset-title">Organización</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
-          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
-          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
-        </div>
-
-        <div class="fieldset-title">Titular / cliente del edificio simulado</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
-          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección del edificio</label><input type="text" id="p_dest_dir" placeholder="Dirección del edificio simulado"></div>
-        </div>
-      </div>
-      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
-    </section>
-
-    <!-- SECCIÓN 02: MARCO Y METODOLOGÍA -->
-    <section id="marco">
-      <div class="eyebrow kicker">02 · Marco y metodología</div>
-      <h2>Cómo se estima el ahorro de una rehabilitación energética.</h2>
-      <p class="lede">Esta herramienta usa un modelo <b>simplificado de sensibilización</b>, similar en espíritu a los simuladores de rehabilitación de edificios que publican algunas comunidades autónomas (como el simulador del ICAEN en Cataluña), pero referenciado al sistema de <b>zonas climáticas del Código Técnico de la Edificación (CTE DB-HE)</b>, que cubre toda España. No sustituye a un certificado de eficiencia energética oficial (procedimientos CE3, CE3X o CERMA/HULC) ni a un proyecto de rehabilitación firmado por un técnico competente.</p>
-
-      <div class="fieldset-title" style="margin-top:0;">Lógica del cálculo</div>
-      <div class="grid2">
-        <div class="theory-card">
-          <h3>1 · Demanda de referencia</h3>
-          <p>Cada tipología de edificio tiene una demanda energética específica de referencia (kWh/m²·año), repartida entre calefacción, refrigeración, ACS y otros usos (iluminación, equipos).</p>
-        </div>
-        <div class="theory-card">
-          <h3>2 · Ajuste por antigüedad y clima</h3>
-          <p>Esa demanda se ajusta con un factor según el periodo constructivo (a peor envolvente térmica, mayor factor) y con un factor de severidad climática según la zona CTE del edificio (invierno y verano).</p>
-        </div>
-        <div class="theory-card">
-          <h3>3 · De demanda a consumo</h3>
-          <p>La demanda de cada uso se transforma en consumo de energía final dividiendo por el rendimiento (o COP/EER) del sistema que la cubre: calefacción, refrigeración y ACS.</p>
-        </div>
-        <div class="theory-card">
-          <h3>4 · Medidas de rehabilitación</h3>
-          <p>Cada medida (aislamiento, ventanas, cambio de sistema, solar térmica, fotovoltaica) reduce la demanda o mejora el rendimiento, generando el "escenario reformado" que se compara con el estado actual.</p>
-        </div>
-      </div>
-
-      <div class="fieldset-title">Factores de severidad climática (simplificados, no oficiales)</div>
-      <p class="lede" style="margin-bottom:16px;">El CTE DB-HE define 12 zonas climáticas peninsulares combinando una letra (severidad de invierno, de A a E) y un número (severidad de verano, de 1 a 4). Esta herramienta usa un índice relativo simplificado —no los coeficientes oficiales del CTE— para escalar la demanda de calefacción y refrigeración según la zona.</p>
-      <div class="grid2">
-        <div class="theory-card">
-          <h3>Severidad de invierno (letra)</h3>
-          <p>A: invierno muy suave · B: suave · C: moderado · D: frío · E: muy frío. A mayor letra, más peso relativo de la calefacción en la demanda total.</p>
-        </div>
-        <div class="theory-card">
-          <h3>Severidad de verano (número)</h3>
-          <p>1: verano suave · 2: moderado · 3: caluroso · 4: muy caluroso. A mayor número, más peso relativo de la refrigeración en la demanda total.</p>
-        </div>
-      </div>
-
-      <div class="fieldset-title">Escala de calificación energética simplificada (A–G)</div>
-      <div class="formula-box">
-        <div class="f">Calificación ≈ f(emisiones de CO₂ totales / superficie útil), por tipo de edificio</div>
-      </div>
-      <p class="tooltip-text">Escala orientativa de sensibilización con la misma forma que la escala oficial de certificación energética (A a G), pero con umbrales aproximados propios de esta herramienta. Para un certificado válido a efectos legales (compraventa, alquiler, ayudas), es necesario un procedimiento reconocido (CE3, CE3X, CERMA, HULC) realizado por un técnico competente.</p>
-
-      <div class="fieldset-title">Guías técnicas IDAE de referencia (rehabilitación de la envolvente)</div>
-      <p class="lede" style="margin-bottom:16px;">Las soluciones de aislamiento y acristalamiento que se pueden elegir en la sección 05 "Escenario de rehabilitación" están inspiradas en la colección de <b>Guías Técnicas para la Rehabilitación de la Envolvente Térmica de los Edificios</b> del IDAE (Instituto para la Diversificación y Ahorro de la Energía). Los porcentajes de ahorro y los costes de esta herramienta son estimaciones propias orientativas; las guías originales no fijan un porcentaje de ahorro único, sino criterios de diseño, ejecución y detalles constructivos.</p>
-      <div class="grid3">
-        <div class="comp-card"><h4>SATE — aislamiento térmico exterior</h4><p>Guías IDAE 002: "Sistemas de Aislamiento Térmico Exterior (SATE) para la Rehabilitación de la Envolvente Térmica de los Edificios" (2012). Aislamiento continuo por el exterior, elimina puentes térmicos.</p></div>
-        <div class="comp-card"><h4>Acristalamiento y cerramientos</h4><p>"Soluciones de acristalamiento y cerramiento acristalado" (2019). Tipos de vidrio (doble, bajo emisivo, triple), carpinterías y rotura de puente térmico.</p></div>
-        <div class="comp-card"><h4>Aislamiento con lana mineral</h4><p>"Soluciones de aislamiento con lana mineral" (2008). Paneles y rollos de lana de vidrio o roca para fachada, cubierta y cámaras.</p></div>
-        <div class="comp-card"><h4>Poliestireno expandido (EPS)</h4><p>"Soluciones de aislamiento con poliestireno expandido (EPS)" (2008). Paneles rígidos para trasdosados, cubiertas y SATE.</p></div>
-        <div class="comp-card"><h4>Poliestireno extruido (XPS)</h4><p>"Soluciones de aislamiento con poliestireno extruido (XPS)" (2008). Mayor resistencia a la humedad; cubiertas invertidas y soleras.</p></div>
-        <div class="comp-card"><h4>Poliuretano proyectado</h4><p>"Soluciones de aislamiento con poliuretano" (2008). Espuma rígida proyectada in situ, menor conductividad térmica del grupo.</p></div>
-        <div class="comp-card"><h4>Espumas flexibles</h4><p>"Soluciones de aislamiento con espumas flexibles" (2008). Aislamiento de tuberías y conductos de ACS y climatización, reduce pérdidas de distribución.</p></div>
-      </div>
-
-      <div class="fieldset-title">Limitaciones del modelo</div>
-      <div class="grid3">
-        <div class="comp-card"><h4>No es un cálculo horario</h4><p>No simula hora a hora ni usa un archivo climático real; usa factores anuales agregados por zona y periodo constructivo.</p></div>
-        <div class="comp-card"><h4>Geometría simplificada</h4><p>No calcula superficies de fachada, cubierta y huecos a partir de planos; se introducen como estimaciones directas.</p></div>
-        <div class="comp-card"><h4>Para decidir, no para certificar</h4><p>Sirve para comparar órdenes de magnitud entre medidas y priorizar inversiones, no como justificación técnica ni administrativa.</p></div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 03: ZONAS CLIMÁTICAS -->
-    <section id="zonas">
-      <div class="eyebrow kicker">03 · Zonas climáticas de España</div>
-      <h2>Las 12 zonas climáticas del CTE DB-HE, con ejemplos orientativos de localización.</h2>
-      <p class="lede">El Apéndice B del CTE DB-HE asigna una zona climática a cada municipio en función de la provincia y la altitud sobre el nivel del mar. Los ejemplos de esta tabla son aproximados (referidos a la capital de provincia habitual); un municipio de la misma provincia a mayor altitud puede pertenecer a una zona más fría. En Canarias se usan además zonas "α", de invierno extremadamente suave: si tu municipio está allí, aproxímalo con la zona A3 o A4 que más se parezca, o consulta el Apéndice B para tu término municipal exacto.</p>
-
-      <div style="overflow-x:auto;">
-        <table class="data-table" id="tablaZonas">
-          <thead>
-            <tr><th>Zona</th><th>Invierno</th><th>Verano</th><th>Ejemplos orientativos</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="tooltip-text" style="margin-top:14px;">Fuente del sistema de zonificación: CTE DB-HE (Código Técnico de la Edificación, Documento Básico de Ahorro de Energía), Apéndice B. Los índices de severidad relativa y los ejemplos de municipios son una simplificación de esta herramienta con fines de comparación, no los coeficientes oficiales del CTE.</p>
-    </section>
-
-    <!-- SECCIÓN 04: DATOS DEL EDIFICIO -->
-    <section id="edificio">
-      <div class="eyebrow kicker">04 · Datos del edificio</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="edificio" class="tab-bloque">
+      <div class="eyebrow kicker">Datos del edificio</div>
       <h2>Características generales, envolvente y sistemas actuales.</h2>
-      <p class="lede">Introduce aquí los datos del edificio en su estado actual. Estos campos alimentan automáticamente el escenario de rehabilitación (sección 05), los resultados (sección 06) y el informe final (sección 07).</p>
+      <p class="lede">Introduce aquí los datos del edificio en su estado actual. Estos campos alimentan automáticamente el escenario de rehabilitación (pestaña Simulación), los resultados (pestaña Simulación) y el informe final (pestaña Informe).</p>
 
       <div class="card">
         <div class="fieldset-title" style="margin-top:0;">Datos generales</div>
@@ -467,11 +323,10 @@
         </div>
       </div>
       <p class="tooltip-text" style="margin-top:14px;">Estos datos quedan disponibles en el navegador (no se envían a ningún servidor) y se reutilizan directamente en las secciones "Escenario de rehabilitación", "Resultados" e "Informe final".</p>
-    </section>
-
-    <!-- SECCIÓN 05: ESCENARIO DE REHABILITACIÓN -->
-    <section id="rehabilitacion">
-      <div class="eyebrow kicker">05 · Escenario de rehabilitación</div>
+    
+      </div>
+      <div id="rehabilitacion" class="tab-bloque">
+      <div class="eyebrow kicker">Escenario de rehabilitación</div>
       <h2>Marca las medidas que quieres simular sobre el edificio.</h2>
       <p class="lede">Cada medida activa modifica el escenario "reformado" que se compara con el estado actual en la sección de resultados. Los costes son orientativos (rangos de mercado habituales en España) y no sustituyen a un presupuesto real.</p>
 
@@ -549,13 +404,12 @@
       </div>
 
       <button class="btn primary" onclick="calcularSimulacion(); showToast('Escenario recalculado. Ve a Resultados de la simulación.');" style="width:100%; margin-top:12px;">Recalcular escenario de rehabilitación</button>
-    </section>
-
-    <!-- SECCIÓN 06: RESULTADOS -->
-    <section id="resultados">
-      <div class="eyebrow kicker">06 · Resultados de la simulación</div>
+    
+      </div>
+      <div id="resultados" class="tab-bloque">
+      <div class="eyebrow kicker">Resultados de la simulación</div>
       <h2>Comparativa entre el estado actual y el escenario rehabilitado.</h2>
-      <p class="lede">Resultados calculados a partir de los datos del edificio (sección 04) y las medidas marcadas en el escenario de rehabilitación (sección 05).</p>
+      <p class="lede">Resultados calculados a partir de los datos del edificio (pestaña Simulación) y las medidas marcadas en el escenario de rehabilitación (pestaña Simulación).</p>
 
       <button class="btn primary" onclick="calcularSimulacion()" style="margin-bottom:24px;">Calcular / actualizar resultados</button>
       <div id="res_aviso" class="tooltip-text" style="margin-bottom:16px;"></div>
@@ -581,11 +435,172 @@
         <div class="fieldset-title">Análisis económico del paquete de medidas</div>
         <div class="grid3" id="res_economico"></div>
       </div>
+    
+      </div>
     </section>
 
-    <!-- SECCIÓN 07: INFORME FINAL -->
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Resumen ejecutivo</span></summary><div class="acc-cuerpo">
+<div id="resumen">
+      <h2>Simulador de rehabilitación energética de edificios, para cualquier punto de España.</h2>
+      <p class="lede">Herramienta interactiva  de rehabilitación de edificios construida sobre el sistema de <b>zonas climáticas del CTE DB-HE</b>, válido para las 12 zonas climáticas peninsulares y de referencia para todo el territorio nacional. Introduce las características de tu edificio, elige las medidas de rehabilitación que te interesan y compara al instante la demanda, el consumo, el coste y las emisiones antes y después, con un informe final descargable.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del edificio <em>actual</em> al edificio <em>rehabilitado</em>.</h1>
+            <p class="sub">Un único flujo de datos: el tipo de edificio, la zona climática, el año de construcción y los sistemas instalados alimentan automáticamente la comparativa de escenarios, el análisis económico de las medidas y el informe final descargable en PDF.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">12 zonas climáticas</div><div class="l">sistema CTE DB-HE, válido en toda España</div></div>
+          <div class="stat"><div class="v">3 tipologías</div><div class="l">unifamiliar, bloque de viviendas, oficina</div></div>
+          <div class="stat"><div class="v">Envolvente + sistemas + FV</div><div class="l">fachada, cubierta, ventanas, calefacción, ACS, fotovoltaica</div></div>
+          <div class="stat"><div class="v">Calificación A–G</div><div class="l">estimación simplificada, no oficial</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
+      <h2 style="font-size:18px;">Un flujo de trabajo, seis pasos.</h2>
+      <div class="grid4">
+        <div class="comp-card"><h4>01 · Marco y zonas</h4><p>Repasa el método de cálculo simplificado y localiza tu zona climática CTE entre las 12 de España.</p></div>
+        <div class="comp-card"><h4>02 · Datos del edificio</h4><p>Tipo de edificio, superficie, año de construcción y sistemas de calefacción, refrigeración y ACS actuales.</p></div>
+        <div class="comp-card"><h4>03 · Escenario de rehabilitación</h4><p>Marca las medidas de envolvente y sistemas que quieres simular: aislamiento, ventanas, bomba de calor, solar térmica, fotovoltaica.</p></div>
+        <div class="comp-card"><h4>04 · Resultados</h4><p>Compara demanda, consumo, coste, emisiones y calificación estimada entre el estado actual y el rehabilitado.</p></div>
+      </div>
+      <div class="grid2" style="margin-top:16px;">
+        <div class="comp-card"><h4>05 · Análisis económico</h4><p>Inversión total de las medidas seleccionadas, ahorro anual y periodo de retorno simple.</p></div>
+        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera automáticamente el informe con los datos, la comparativa y las medidas evaluadas, listo para imprimir en PDF.</p></div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco y metodología</span></summary><div class="acc-cuerpo">
+<div id="marco">
+      <h2>Cómo se estima el ahorro de una rehabilitación energética.</h2>
+      <p class="lede">Esta herramienta usa un modelo <b>simplificado de sensibilización</b>, similar en espíritu a los simuladores de rehabilitación de edificios que publican algunas comunidades autónomas (como el simulador del ICAEN en Cataluña), pero referenciado al sistema de <b>zonas climáticas del Código Técnico de la Edificación (CTE DB-HE)</b>, que cubre toda España. No sustituye a un certificado de eficiencia energética oficial (procedimientos CE3, CE3X o CERMA/HULC) ni a un proyecto de rehabilitación firmado por un técnico competente.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Lógica del cálculo</div>
+      <div class="grid2">
+        <div class="theory-card">
+          <h3>1 · Demanda de referencia</h3>
+          <p>Cada tipología de edificio tiene una demanda energética específica de referencia (kWh/m²·año), repartida entre calefacción, refrigeración, ACS y otros usos (iluminación, equipos).</p>
+        </div>
+        <div class="theory-card">
+          <h3>2 · Ajuste por antigüedad y clima</h3>
+          <p>Esa demanda se ajusta con un factor según el periodo constructivo (a peor envolvente térmica, mayor factor) y con un factor de severidad climática según la zona CTE del edificio (invierno y verano).</p>
+        </div>
+        <div class="theory-card">
+          <h3>3 · De demanda a consumo</h3>
+          <p>La demanda de cada uso se transforma en consumo de energía final dividiendo por el rendimiento (o COP/EER) del sistema que la cubre: calefacción, refrigeración y ACS.</p>
+        </div>
+        <div class="theory-card">
+          <h3>4 · Medidas de rehabilitación</h3>
+          <p>Cada medida (aislamiento, ventanas, cambio de sistema, solar térmica, fotovoltaica) reduce la demanda o mejora el rendimiento, generando el "escenario reformado" que se compara con el estado actual.</p>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Factores de severidad climática (simplificados, no oficiales)</div>
+      <p class="lede" style="margin-bottom:16px;">El CTE DB-HE define 12 zonas climáticas peninsulares combinando una letra (severidad de invierno, de A a E) y un número (severidad de verano, de 1 a 4). Esta herramienta usa un índice relativo simplificado —no los coeficientes oficiales del CTE— para escalar la demanda de calefacción y refrigeración según la zona.</p>
+      <div class="grid2">
+        <div class="theory-card">
+          <h3>Severidad de invierno (letra)</h3>
+          <p>A: invierno muy suave · B: suave · C: moderado · D: frío · E: muy frío. A mayor letra, más peso relativo de la calefacción en la demanda total.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Severidad de verano (número)</h3>
+          <p>1: verano suave · 2: moderado · 3: caluroso · 4: muy caluroso. A mayor número, más peso relativo de la refrigeración en la demanda total.</p>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Escala de calificación energética simplificada (A–G)</div>
+      <div class="formula-box">
+        <div class="f">Calificación ≈ f(emisiones de CO₂ totales / superficie útil), por tipo de edificio</div>
+      </div>
+      <p class="tooltip-text">Escala orientativa de sensibilización con la misma forma que la escala oficial de certificación energética (A a G), pero con umbrales aproximados propios de esta herramienta. Para un certificado válido a efectos legales (compraventa, alquiler, ayudas), es necesario un procedimiento reconocido (CE3, CE3X, CERMA, HULC) realizado por un técnico competente.</p>
+
+      <div class="fieldset-title">Guías técnicas IDAE de referencia (rehabilitación de la envolvente)</div>
+      <p class="lede" style="margin-bottom:16px;">Las soluciones de aislamiento y acristalamiento que se pueden elegir en la pestaña Simulación "Escenario de rehabilitación" están inspiradas en la colección de <b>Guías Técnicas para la Rehabilitación de la Envolvente Térmica de los Edificios</b> del IDAE (Instituto para la Diversificación y Ahorro de la Energía). Los porcentajes de ahorro y los costes de esta herramienta son estimaciones propias orientativas; las guías originales no fijan un porcentaje de ahorro único, sino criterios de diseño, ejecución y detalles constructivos.</p>
+      <div class="grid3">
+        <div class="comp-card"><h4>SATE — aislamiento térmico exterior</h4><p>Guías IDAE 002: "Sistemas de Aislamiento Térmico Exterior (SATE) para la Rehabilitación de la Envolvente Térmica de los Edificios" (2012). Aislamiento continuo por el exterior, elimina puentes térmicos.</p></div>
+        <div class="comp-card"><h4>Acristalamiento y cerramientos</h4><p>"Soluciones de acristalamiento y cerramiento acristalado" (2019). Tipos de vidrio (doble, bajo emisivo, triple), carpinterías y rotura de puente térmico.</p></div>
+        <div class="comp-card"><h4>Aislamiento con lana mineral</h4><p>"Soluciones de aislamiento con lana mineral" (2008). Paneles y rollos de lana de vidrio o roca para fachada, cubierta y cámaras.</p></div>
+        <div class="comp-card"><h4>Poliestireno expandido (EPS)</h4><p>"Soluciones de aislamiento con poliestireno expandido (EPS)" (2008). Paneles rígidos para trasdosados, cubiertas y SATE.</p></div>
+        <div class="comp-card"><h4>Poliestireno extruido (XPS)</h4><p>"Soluciones de aislamiento con poliestireno extruido (XPS)" (2008). Mayor resistencia a la humedad; cubiertas invertidas y soleras.</p></div>
+        <div class="comp-card"><h4>Poliuretano proyectado</h4><p>"Soluciones de aislamiento con poliuretano" (2008). Espuma rígida proyectada in situ, menor conductividad térmica del grupo.</p></div>
+        <div class="comp-card"><h4>Espumas flexibles</h4><p>"Soluciones de aislamiento con espumas flexibles" (2008). Aislamiento de tuberías y conductos de ACS y climatización, reduce pérdidas de distribución.</p></div>
+      </div>
+
+      <div class="fieldset-title">Limitaciones del modelo</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>No es un cálculo horario</h4><p>No simula hora a hora ni usa un archivo climático real; usa factores anuales agregados por zona y periodo constructivo.</p></div>
+        <div class="comp-card"><h4>Geometría simplificada</h4><p>No calcula superficies de fachada, cubierta y huecos a partir de planos; se introducen como estimaciones directas.</p></div>
+        <div class="comp-card"><h4>Para decidir, no para certificar</h4><p>Sirve para comparar órdenes de magnitud entre medidas y priorizar inversiones, no como justificación técnica ni administrativa.</p></div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Zonas climáticas de España</span></summary><div class="acc-cuerpo">
+<div id="zonas">
+      <h2>Las 12 zonas climáticas del CTE DB-HE, con ejemplos orientativos de localización.</h2>
+      <p class="lede">El Apéndice B del CTE DB-HE asigna una zona climática a cada municipio en función de la provincia y la altitud sobre el nivel del mar. Los ejemplos de esta tabla son aproximados (referidos a la capital de provincia habitual); un municipio de la misma provincia a mayor altitud puede pertenecer a una zona más fría. En Canarias se usan además zonas "α", de invierno extremadamente suave: si tu municipio está allí, aproxímalo con la zona A3 o A4 que más se parezca, o consulta el Apéndice B para tu término municipal exacto.</p>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="tablaZonas">
+          <thead>
+            <tr><th>Zona</th><th>Invierno</th><th>Verano</th><th>Ejemplos orientativos</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Fuente del sistema de zonificación: CTE DB-HE (Código Técnico de la Edificación, Documento Básico de Ahorro de Energía), Apéndice B. Los índices de severidad relativa y los ejemplos de municipios son una simplificación de esta herramienta con fines de comparación, no los coeficientes oficiales del CTE.</p>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">07 · Informe final</div>
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / edificio simulado</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto / edificio</label><input type="text" id="p_proyecto" value="Simulación de rehabilitación energética"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Técnico / autor de la simulación</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente del edificio simulado</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección del edificio</label><input type="text" id="p_dest_dir" placeholder="Dirección del edificio simulado"></div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
+    
+</div>
+      </div></details>
+
       <h2>Informe de simulación de rehabilitación energética, generado a partir de tus datos.</h2>
       <p class="lede">Estructura orientativa: datos generales, metodología, estado actual, escenario propuesto, resultados comparativos, análisis económico y conclusiones. Rellena las secciones 01 (datos del proyecto), 04 y 05 antes de generar el informe.</p>
 
@@ -597,6 +612,7 @@
       <div class="report-sheet" id="reportOutput">
         <p class="tooltip-text">Pulsa "Generar / actualizar vista previa" para componer el documento con los datos introducidos, y "Descargar informe en PDF" para obtener el informe descargable.</p>
       </div>
+    
     </section>
 
     <footer>
@@ -612,9 +628,18 @@
 // ===================== NAV COMO TABS =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'resumen';
+const SECCION_POR_DEFECTO = 'simulacion';
 
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));

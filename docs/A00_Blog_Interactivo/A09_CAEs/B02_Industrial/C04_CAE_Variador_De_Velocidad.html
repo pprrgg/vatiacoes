@@ -177,6 +177,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -189,11 +202,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco normativo CAE</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">02</span>Datos del proyecto</a>
-    <a href="#economicos" data-sec="economicos"><span class="tag">03</span>Parámetros económicos</a>
-    <a href="#informe" data-sec="informe"><span class="tag">04</span>Actuaciones e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -221,7 +232,74 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="economicos" class="tab-bloque">
+      <div class="eyebrow kicker">Parámetros económicos y subvenciones</div>
+      <h2>Los supuestos financieros, compartidos por todas las actuaciones.</h2>
+      <p class="lede">Coste de la inversión, financiación, y el paquete de subvenciones aplicable. Se usan para calcular el flujo de caja de cada actuación que añadas más abajo.</p>
+      <div class="card">
+        <div class="fieldset-title">Inversión y financiación</div>
+        <div class="grid3">
+          <div class="field"><label>Coste de la inversión (€/kWh ahorro)</label><input type="number" id="e_coste_unit" value="1.1" min="0" step="0.01"></div>
+          <div class="field"><label>Porcentaje financiado (%)</label><input type="number" id="e_pct_financiado" value="27" min="0" max="100" step="1"></div>
+          <div class="field"><label>Años de financiación</label><input type="number" id="e_anos_financiacion" value="10" min="0" step="1"></div>
+          <div class="field"><label>Interés anual (%)</label><input type="number" id="e_interes" value="6.5" min="0" step="0.1"></div>
+          <div class="field"><label>IPC anual (%)</label><input type="number" id="e_ipc" value="2" min="0" step="0.1"></div>
+          <div class="field"><label>Tasa de descuento (%)</label><input type="number" id="e_tasa_descuento" value="8" min="0" step="0.1"></div>
+          <div class="field"><label>Precio de la energía (€/kWh)</label><input type="number" id="e_precio_energia" value="0.12" min="0" step="0.01"></div>
+          <div class="field"><label>Costes operativos (€/año)</label><input type="number" id="e_opex" value="2000" min="0" step="10"></div>
+        </div>
+        <div class="fieldset-title">Subvenciones</div>
+        <div class="grid3">
+          <div class="field"><label>CAE (€/AE, año 1)</label><input type="number" id="s_cae" value="0.140" min="0" step="0.001"></div>
+          <div class="field"><label>IBI año 1 (€)</label><input type="number" id="s_ibi1" value="100" min="0" step="10"></div>
+          <div class="field"><label>IBI año 2 (€)</label><input type="number" id="s_ibi2" value="100" min="0" step="10"></div>
+          <div class="field"><label>IBI año 3 (€)</label><input type="number" id="s_ibi3" value="100" min="0" step="10"></div>
+          <div class="field"><label>ICIO año 1 (€)</label><input type="number" id="s_icio" value="100" min="0" step="10"></div>
+          <div class="field"><label>IRPF año 1 (€)</label><input type="number" id="s_irpf" value="200" min="0" step="10"></div>
+          <div class="field"><label>Next Generation año 1 (% del coste)</label><input type="number" id="s_nextgen" value="30" min="0" max="100" step="1"></div>
+          <div class="field"><label>Otros año 1 (€)</label><input type="number" id="s_otros" value="0" min="0" step="10"></div>
+        </div>
+      </div>
+    
+      </div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Actuaciones e informe</div>
+      <h2>Añade cada motor a regular, y genera el informe.</h2>
+      <p class="lede">Cada actuación calcula su propio ahorro energético, reducción de CO₂, flujo de caja e indicadores de rentabilidad, usando los parámetros económicos compartidos indicados más arriba.</p>
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir actuación (implantación de variador)</div>
+        <div class="field"><label>Nombre / ubicación de la actuación</label><input type="text" id="i_nombre" placeholder="Ej: Bomba de proceso nave 2"></div>
+        <div class="fieldset-title">Datos técnicos</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia nominal motor, P (kW)</label><input type="number" id="i_p" value="11" min="0" step="0.1"></div>
+          <div class="field"><label>Velocidad inicial, N₁ (rpm)</label><input type="number" id="i_n1" value="1450" min="0" step="1"></div>
+          <div class="field"><label>Velocidad final, N₂ (rpm)</label><input type="number" id="i_n2" value="1200" min="0" step="1"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Número de variadores, n</label><input type="number" id="i_nvar" value="1" min="1" step="1"></div>
+          <div class="field"><label>Pérdidas del variador, p (%)</label><input type="number" id="i_perdidas" value="3" min="0" max="100" step="0.1"></div>
+          <div class="field"><label>Horas de funcionamiento anuales, h (h/año)</label><input type="number" id="i_h" value="4000" min="0" max="8760" step="1"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Duración de la actuación, D_i (años)</label><input type="number" id="i_di" value="20" min="1" step="1"></div>
+        </div>
+        <div class="field"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Calcular y añadir al informe</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
@@ -242,8 +320,6 @@
         <div class="stat"><div class="v">0,25 kg CO₂/kWh</div><div class="l">factor de emisión de la red eléctrica española</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
       <h2>Del ahorro en kWh a la rentabilidad del proyecto.</h2>
       <p class="lede">El informe técnico-económico de una actuación CAE tiene dos mitades: cuánta energía se deja de consumir (evaluación técnica), y si compensa económicamente hacerlo (evaluación económica).</p>
 
@@ -311,11 +387,11 @@
           <p>Cada indicador se acompaña de una lectura cualitativa (excelente / viable / riesgo alto / rechazable) según umbrales estándar de evaluación de proyectos, igual que en el informe generado por esta calculadora.</p>
         </div>
       </div>
-    </section>
-
-    <!-- 01 MARCO NORMATIVO -->
-    <section id="marco">
-      <div class="eyebrow kicker">01 · Marco normativo CAE</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco normativo CAE</span></summary><div class="acc-cuerpo">
+<div id="marco">
       <h2>Ahorro certificado, no solo ahorro estimado.</h2>
       <p class="lede">El sistema de Certificados de Ahorro Energético obliga a los sujetos delegados a acreditar ahorros de energía final mediante metodologías normalizadas, recogidas en un catálogo oficial de fichas técnicas.</p>
 
@@ -325,13 +401,16 @@
         <div class="comp-card"><h4>Reglamentación técnica</h4><p>Las pérdidas del variador y los requisitos de eficiencia del conjunto motor-variador deben ajustarse al Reglamento (UE) 2019/1781 de diseño ecológico, además de la reglamentación de seguridad industrial que resulte de aplicación.</p></div>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:20px;">Referencias: <a href="https://www.miteco.gob.es/es/energia/eficiencia/cae.html" target="_blank" rel="noopener" style="color:var(--cyan);">Certificados de Ahorro Energético (CAE) — MITECO</a>. <a href="https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX:32019R1781" target="_blank" rel="noopener" style="color:var(--cyan);">Reglamento (UE) 2019/1781</a>, requisitos de diseño ecológico para motores eléctricos y variadores de velocidad. <a href="https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX:32019H1658" target="_blank" rel="noopener" style="color:var(--cyan);">Recomendación (UE) 2019/1658</a>, transposición de la obligación de ahorro de energía.</p>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 02 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">02 · Datos del proyecto</div>
-      <h2>¿Para quién es este informe?</h2>
-      <p class="lede">Estos datos aparecerán en la portada del PDF y son compartidos por todas las actuaciones del informe.</p>
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
       <div class="card">
         <div class="fieldset-title">Proyecto</div>
         <div class="grid2">
@@ -358,71 +437,15 @@
           <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
         </div>
       </div>
-    </section>
+    
+</div>
+      </div></details>
 
-    <!-- 03 PARAMETROS ECONOMICOS -->
-    <section id="economicos">
-      <div class="eyebrow kicker">03 · Parámetros económicos y subvenciones</div>
-      <h2>Los supuestos financieros, compartidos por todas las actuaciones.</h2>
-      <p class="lede">Coste de la inversión, financiación, y el paquete de subvenciones aplicable. Se usan para calcular el flujo de caja de cada actuación que añadas en la sección siguiente.</p>
-      <div class="card">
-        <div class="fieldset-title">Inversión y financiación</div>
-        <div class="grid3">
-          <div class="field"><label>Coste de la inversión (€/kWh ahorro)</label><input type="number" id="e_coste_unit" value="1.1" min="0" step="0.01"></div>
-          <div class="field"><label>Porcentaje financiado (%)</label><input type="number" id="e_pct_financiado" value="27" min="0" max="100" step="1"></div>
-          <div class="field"><label>Años de financiación</label><input type="number" id="e_anos_financiacion" value="10" min="0" step="1"></div>
-          <div class="field"><label>Interés anual (%)</label><input type="number" id="e_interes" value="6.5" min="0" step="0.1"></div>
-          <div class="field"><label>IPC anual (%)</label><input type="number" id="e_ipc" value="2" min="0" step="0.1"></div>
-          <div class="field"><label>Tasa de descuento (%)</label><input type="number" id="e_tasa_descuento" value="8" min="0" step="0.1"></div>
-          <div class="field"><label>Precio de la energía (€/kWh)</label><input type="number" id="e_precio_energia" value="0.12" min="0" step="0.01"></div>
-          <div class="field"><label>Costes operativos (€/año)</label><input type="number" id="e_opex" value="2000" min="0" step="10"></div>
-        </div>
-        <div class="fieldset-title">Subvenciones</div>
-        <div class="grid3">
-          <div class="field"><label>CAE (€/AE, año 1)</label><input type="number" id="s_cae" value="0.140" min="0" step="0.001"></div>
-          <div class="field"><label>IBI año 1 (€)</label><input type="number" id="s_ibi1" value="100" min="0" step="10"></div>
-          <div class="field"><label>IBI año 2 (€)</label><input type="number" id="s_ibi2" value="100" min="0" step="10"></div>
-          <div class="field"><label>IBI año 3 (€)</label><input type="number" id="s_ibi3" value="100" min="0" step="10"></div>
-          <div class="field"><label>ICIO año 1 (€)</label><input type="number" id="s_icio" value="100" min="0" step="10"></div>
-          <div class="field"><label>IRPF año 1 (€)</label><input type="number" id="s_irpf" value="200" min="0" step="10"></div>
-          <div class="field"><label>Next Generation año 1 (% del coste)</label><input type="number" id="s_nextgen" value="30" min="0" max="100" step="1"></div>
-          <div class="field"><label>Otros año 1 (€)</label><input type="number" id="s_otros" value="0" min="0" step="10"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 04 ACTUACIONES E INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">04 · Actuaciones e informe</div>
-      <h2>Añade cada motor a regular, y genera el informe.</h2>
-      <p class="lede">Cada actuación calcula su propio ahorro energético, reducción de CO₂, flujo de caja e indicadores de rentabilidad, usando los parámetros económicos compartidos de la sección anterior.</p>
-
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:6px;">Añadir actuación (implantación de variador)</div>
-        <div class="field"><label>Nombre / ubicación de la actuación</label><input type="text" id="i_nombre" placeholder="Ej: Bomba de proceso nave 2"></div>
-        <div class="fieldset-title">Datos técnicos</div>
-        <div class="grid3">
-          <div class="field"><label>Potencia nominal motor, P (kW)</label><input type="number" id="i_p" value="11" min="0" step="0.1"></div>
-          <div class="field"><label>Velocidad inicial, N₁ (rpm)</label><input type="number" id="i_n1" value="1450" min="0" step="1"></div>
-          <div class="field"><label>Velocidad final, N₂ (rpm)</label><input type="number" id="i_n2" value="1200" min="0" step="1"></div>
-        </div>
-        <div class="grid3">
-          <div class="field"><label>Número de variadores, n</label><input type="number" id="i_nvar" value="1" min="1" step="1"></div>
-          <div class="field"><label>Pérdidas del variador, p (%)</label><input type="number" id="i_perdidas" value="3" min="0" max="100" step="0.1"></div>
-          <div class="field"><label>Horas de funcionamiento anuales, h (h/año)</label><input type="number" id="i_h" value="4000" min="0" max="8760" step="1"></div>
-        </div>
-        <div class="grid3">
-          <div class="field"><label>Duración de la actuación, D_i (años)</label><input type="number" id="i_di" value="20" min="1" step="1"></div>
-        </div>
-        <div class="field"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
-        <div class="btn-row">
-          <button class="btn primary" id="btnAddInst">+ Calcular y añadir al informe</button>
-        </div>
-      </div>
+      
 
       <div class="eyebrow" style="margin-bottom:10px;">Actuaciones del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has añadido ninguna actuación. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ninguna actuación. Rellena el formulario de la pestaña Simulación y pulsa "Calcular y añadir al informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -432,6 +455,7 @@
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todas las actuaciones</button>
       </div>
+    
     </section>
 
     <footer>
@@ -822,8 +846,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1090,7 +1123,7 @@ function renderInstallations(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(installations.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has añadido ninguna actuación. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ninguna actuación. Rellena el formulario de la pestaña Simulación y pulsa "Calcular y añadir al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';

@@ -205,6 +205,19 @@
     section{display:block !important; padding:6px 0; page-break-after:always;}
     .card, .line-card, .check-item, .theory-card, .comp-card{border-color:#ccc; background:#fff;}
   }
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -216,13 +229,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#diagrama" data-sec="diagrama"><span class="tag">01</span>Diagrama unifilar</a>
-    <a href="#cadenas" data-sec="cadenas"><span class="tag">02</span>Panel, cadenas, inversor</a>
-    <a href="#ccprot" data-sec="ccprot"><span class="tag">03</span>Protecciones CC</a>
-    <a href="#caprot" data-sec="caprot"><span class="tag">04</span>Protecciones CA</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">05</span>Datos del proyecto</a>
-    <a href="#informe" data-sec="informe"><span class="tag">06</span>Informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -234,86 +243,11 @@
 
     <!-- 00 PANEL Y OBJETIVO -->
     <!-- 00 TEORIA -->
-    <section id="teoria">
-      <header class="hero">
-        <div class="hero-top">
-          <div>
-            <div class="eyebrow">Dimensionado eléctrico · Fase de cadenas, inversores y protecciones</div>
-            <h1>De los <em>vatios pico</em><br>al cuadro de protecciones.</h1>
-            <p class="sub">A partir de las características eléctricas del panel y del inversor, esta herramienta calcula cuántos paneles van en serie por cadena, cuántas cadenas caben en cada entrada MPPT, cuántos inversores hacen falta para la potencia objetivo, y cómo calibrar las protecciones de corriente continua (CC) y corriente alterna (CA).</p>
-          </div>
-          <div class="hero-meta">
-            <span>Encadena con</span>
-            <span style="color:var(--amber)">C01 · Diseño de Sistemas FV</span>
-            <span>Datos propios: guardados en <code class="inline" style="color:inherit; background:transparent; padding:0;">VatiaCo</code></span>
-          </div>
-        </div>
-        <div class="stat-row">
-          <div class="stat"><div class="v">Cadenas CC</div><div class="l">nº de paneles en serie compatible con Voc en frío y Vmp en caliente</div></div>
-          <div class="stat"><div class="v">Inversores y MPPT</div><div class="l">distribución de cadenas por entrada y por inversor según el kWp objetivo</div></div>
-          <div class="stat"><div class="v">Protecciones CC/CA</div><div class="l">fusibles, seccionadores, magnetotérmicos, diferenciales, SPD y secciones de cable</div></div>
-        </div>
-      </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
-      <h2>Las reglas que fijan cuántos paneles van en serie, cuántos en paralelo y cómo se protege el circuito.</h2>
-      <p class="lede">Un generador fotovoltaico se dimensiona en dos pasos: primero la <b style="color:var(--text);">cadena</b> (tensión), después el <b style="color:var(--text);">paralelo</b> (corriente). Las protecciones se calculan a partir de las corrientes y tensiones resultantes.</p>
-
-      <div class="theory-grid">
-        <div class="theory-card">
-          <h3>① Corrección de tensión por temperatura</h3>
-          <p>Los datos de placa (Voc, Vmp) se miden a 25°C (condiciones STC). En campo, la tensión varía con la temperatura de la célula según el coeficiente de temperatura del fabricante.</p>
-          <div class="formula-box"><div class="f">V(T) = V<sub>STC</sub> · [1 + (β/100) · (T − 25)]<small>β = coeficiente de temperatura en %/°C (negativo para Voc)</small></div></div>
-          <p>Con frío, Voc sube (riesgo de superar la tensión máxima del inversor). Con calor, Vmp baja (riesgo de caer por debajo del rango MPPT).</p>
-        </div>
-        <div class="theory-card">
-          <h3>② Nº de paneles en serie (cadena)</h3>
-          <ul>
-            <li><b>Máximo</b>: Voc corregido a la temperatura mínima × Nserie ≤ tensión máxima CC del inversor (con margen de seguridad).</li>
-            <li><b>Mínimo</b>: Vmp corregido a la temperatura máxima × Nserie ≥ tensión mínima del rango MPPT.</li>
-            <li><b>Recomendado</b>: el mayor Nserie posible sin superar el rango MPPT en condiciones STC, para aprovechar mejor la ventana de seguimiento del inversor.</li>
-          </ul>
-        </div>
-        <div class="theory-card">
-          <h3>③ Nº de cadenas en paralelo por entrada MPPT</h3>
-          <div class="formula-box"><div class="f">N<sub>paralelo,máx</sub> = I<sub>máx,MPPT</sub> / I<sub>sc,panel</sub><small>limitado también por el nº de entradas físicas por MPPT del inversor</small></div></div>
-          <p>A partir de 3 cadenas en paralelo en la misma entrada suele exigirse fusible de cadena, porque una cadena en falta de aislamiento puede recibir la corriente inversa acumulada del resto.</p>
-        </div>
-        <div class="theory-card">
-          <h3>④ Ratio DC/AC (sobredimensionado)</h3>
-          <div class="formula-box"><div class="f">Ratio = kWp<sub>CC</sub> conectados / kW<sub>CA</sub> nominal del inversor<small>habitual entre 1.0 y 1.3; por encima, el inversor recorta pico (clipping)</small></div></div>
-          <p>Un ratio moderadamente superior a 1 suele ser rentable porque el inversor rara vez alcanza su potencia CC máxima teórica; por encima del límite del fabricante hay recorte de producción en las horas centrales.</p>
-        </div>
-        <div class="theory-card">
-          <h3>⑤ Sección de los conductores</h3>
-          <div class="formula-box"><div class="f">S = (k · L · I<sub>b</sub>) / (κ · ΔV)<small>k=2 en CC y monofásico, k=√3 en trifásico; κ = conductividad del cobre</small></div></div>
-          <p>La sección final es la mayor entre la exigida por caída de tensión y la exigida por capacidad térmica del conductor (ampacidad), redondeada a la sección comercial superior.</p>
-        </div>
-        <div class="theory-card">
-          <h3>⑥ Protecciones en CC</h3>
-          <ul>
-            <li><b>Fusibles de cadena</b> (tipo gPV): si hay 3 o más cadenas en paralelo por entrada.</li>
-            <li><b>Seccionador CC</b>: obligatorio antes de la entrada del inversor, dimensionado a la Isc total con margen.</li>
-            <li><b>Descargador de sobretensiones (SPD) CC</b>: recomendado tipo II (o I+II si hay pararrayos externo) cuando el cableado CC exterior es largo.</li>
-            <li><b>Caja de conexión / combiner box</b>: cuando hay más cadenas por entrada de las que el inversor admite directamente por conector.</li>
-          </ul>
-        </div>
-        <div class="theory-card">
-          <h3>⑦ Protecciones en CA</h3>
-          <ul>
-            <li><b>Magnetotérmico</b>: calibre normalizado inmediatamente superior a 1.25 × la corriente nominal del inversor.</li>
-            <li><b>Diferencial</b>: mismo calibre que el magnetotérmico; sensibilidad y tipo (A o B) según si el inversor tiene o no aislamiento galvánico.</li>
-            <li><b>SPD CA</b>: recomendado en la mayoría de instalaciones FV por la exposición a sobretensiones inducidas.</li>
-            <li><b>IGM (interruptor general)</b>: cuando hay varios inversores compartiendo cuadro, dimensionado a la suma de sus corrientes nominales.</li>
-          </ul>
-        </div>
-      </div>
-      <p class="disclaimer">Esta herramienta es una ayuda de predimensionado con criterios habituales de diseño (IEC 62548, buenas prácticas de instalación FV). No sustituye el cálculo justificativo del proyecto ni el criterio del instalador autorizado: verifica siempre los resultados frente a la normativa vigente (REBT y sus ITC, UNE-HD 60364) y las hojas de datos reales de los equipos.</p>
-    </section>
-
-    <!-- 01 DIAGRAMA UNIFILAR -->
-    <section id="diagrama">
-      <div class="eyebrow kicker">01 · Diagrama unifilar</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="diagrama" class="tab-bloque">
+      <div class="eyebrow kicker">Diagrama unifilar</div>
       <h2>Diagrama unifilar interactivo: panel, cadenas, inversor y protecciones.</h2>
       <p class="lede">Configura aquí el panel y el inversor directamente en sus nodos; el resto de nodos se recalculan al momento a partir de estos datos y del resto de ajustes de la herramienta.</p>
 
@@ -419,13 +353,12 @@
         <div id="unifilarNodoManiobraCA"></div>
         <div id="unifilarNodoRed"></div>
       </div>
-    </section>
-
-    <!-- 02 PANEL, CADENAS, INVERSOR -->
-    <section id="cadenas">
-      <div class="eyebrow kicker">02 · Panel, cadenas, inversor</div>
+    
+      </div>
+      <div id="cadenas" class="tab-bloque">
+      <div class="eyebrow kicker">Panel, cadenas, inversor</div>
       <h2>Comprobaciones de la cadena y distribución del generador.</h2>
-      <p class="lede">El panel y el inversor se configuran en sus nodos del <a href="#diagrama" onclick="irASeccion('#diagrama'); return false;" style="color:var(--cyan);">diagrama unifilar</a> (pestaña anterior). Aquí se ajusta la cadena, se comprueba su compatibilidad y se ve el resultado del generador y su reparto entre inversores.</p>
+      <p class="lede">El panel y el inversor se configuran en sus nodos del <a href="#diagrama" onclick="irASeccion('#diagrama'); return false;" style="color:var(--cyan);">diagrama unifilar</a> (más arriba). Aquí se ajusta la cadena, se comprueba su compatibilidad y se ve el resultado del generador y su reparto entre inversores.</p>
 
       <div class="btn-row" style="margin-bottom:20px;"><button class="btn primary" id="btnRecalcular" type="button">⚡ Calcular dimensionado</button></div>
 
@@ -448,11 +381,10 @@
 
       <div class="subsection-title">Distribución por inversor y por entrada MPPT</div>
       <div id="listaInversores"></div>
-    </section>
-
-    <!-- 03 PROTECCIONES CC -->
-    <section id="ccprot">
-      <div class="eyebrow kicker">03 · Protecciones CC</div>
+    
+      </div>
+      <div id="ccprot" class="tab-bloque">
+      <div class="eyebrow kicker">Protecciones CC</div>
       <h2>Fusibles, seccionador, sección de cable y SPD del lado de corriente continua.</h2>
       <p class="lede">Se calculan sobre la cadena y la agrupación por entrada MPPT resultantes de las secciones anteriores.</p>
 
@@ -479,13 +411,12 @@
 
       <div class="subsection-title">Resultado de protecciones CC</div>
       <div id="proteccionesCCResultado"></div>
-    </section>
-
-    <!-- 05 PROTECCIONES CA -->
-    <section id="caprot">
-      <div class="eyebrow kicker">04 · Protecciones CA</div>
+    
+      </div>
+      <div id="caprot" class="tab-bloque">
+      <div class="eyebrow kicker">Protecciones CA</div>
       <h2>Magnetotérmico, diferencial, sección de cable, SPD e interruptor general del lado de corriente alterna.</h2>
-      <p class="lede">Se calculan por inversor y para el conjunto de la instalación, a partir del nº de inversores resultante de la sección 02.</p>
+      <p class="lede">Se calculan por inversor y para el conjunto de la instalación, a partir del nº de inversores resultante de la pestaña Simulación.</p>
 
       <div class="card">
         <div class="fieldset-title" style="margin-top:0;">Datos de la instalación CA</div>
@@ -517,13 +448,98 @@
 
       <div class="subsection-title">Resultado de protecciones CA</div>
       <div id="proteccionesCAResultado"></div>
+    
+      </div>
     </section>
 
-    <!-- 06 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">05 · Datos del proyecto</div>
-      <h2>¿Para quién es este informe?</h2>
-      <p class="lede">Estos datos se comparten con el resto de documentos del sitio (misma memoria del navegador).</p>
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
+      <header class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow">Dimensionado eléctrico · Fase de cadenas, inversores y protecciones</div>
+            <h1>De los <em>vatios pico</em><br>al cuadro de protecciones.</h1>
+            <p class="sub">A partir de las características eléctricas del panel y del inversor, esta herramienta calcula cuántos paneles van en serie por cadena, cuántas cadenas caben en cada entrada MPPT, cuántos inversores hacen falta para la potencia objetivo, y cómo calibrar las protecciones de corriente continua (CC) y corriente alterna (CA).</p>
+          </div>
+          <div class="hero-meta">
+            <span>Encadena con</span>
+            <span style="color:var(--amber)">C01 · Diseño de Sistemas FV</span>
+            <span>Datos propios: guardados en <code class="inline" style="color:inherit; background:transparent; padding:0;">VatiaCo</code></span>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">Cadenas CC</div><div class="l">nº de paneles en serie compatible con Voc en frío y Vmp en caliente</div></div>
+          <div class="stat"><div class="v">Inversores y MPPT</div><div class="l">distribución de cadenas por entrada y por inversor según el kWp objetivo</div></div>
+          <div class="stat"><div class="v">Protecciones CC/CA</div><div class="l">fusibles, seccionadores, magnetotérmicos, diferenciales, SPD y secciones de cable</div></div>
+        </div>
+      </header>
+      <h2>Las reglas que fijan cuántos paneles van en serie, cuántos en paralelo y cómo se protege el circuito.</h2>
+      <p class="lede">Un generador fotovoltaico se dimensiona en dos pasos: primero la <b style="color:var(--text);">cadena</b> (tensión), después el <b style="color:var(--text);">paralelo</b> (corriente). Las protecciones se calculan a partir de las corrientes y tensiones resultantes.</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>① Corrección de tensión por temperatura</h3>
+          <p>Los datos de placa (Voc, Vmp) se miden a 25°C (condiciones STC). En campo, la tensión varía con la temperatura de la célula según el coeficiente de temperatura del fabricante.</p>
+          <div class="formula-box"><div class="f">V(T) = V<sub>STC</sub> · [1 + (β/100) · (T − 25)]<small>β = coeficiente de temperatura en %/°C (negativo para Voc)</small></div></div>
+          <p>Con frío, Voc sube (riesgo de superar la tensión máxima del inversor). Con calor, Vmp baja (riesgo de caer por debajo del rango MPPT).</p>
+        </div>
+        <div class="theory-card">
+          <h3>② Nº de paneles en serie (cadena)</h3>
+          <ul>
+            <li><b>Máximo</b>: Voc corregido a la temperatura mínima × Nserie ≤ tensión máxima CC del inversor (con margen de seguridad).</li>
+            <li><b>Mínimo</b>: Vmp corregido a la temperatura máxima × Nserie ≥ tensión mínima del rango MPPT.</li>
+            <li><b>Recomendado</b>: el mayor Nserie posible sin superar el rango MPPT en condiciones STC, para aprovechar mejor la ventana de seguimiento del inversor.</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>③ Nº de cadenas en paralelo por entrada MPPT</h3>
+          <div class="formula-box"><div class="f">N<sub>paralelo,máx</sub> = I<sub>máx,MPPT</sub> / I<sub>sc,panel</sub><small>limitado también por el nº de entradas físicas por MPPT del inversor</small></div></div>
+          <p>A partir de 3 cadenas en paralelo en la misma entrada suele exigirse fusible de cadena, porque una cadena en falta de aislamiento puede recibir la corriente inversa acumulada del resto.</p>
+        </div>
+        <div class="theory-card">
+          <h3>④ Ratio DC/AC (sobredimensionado)</h3>
+          <div class="formula-box"><div class="f">Ratio = kWp<sub>CC</sub> conectados / kW<sub>CA</sub> nominal del inversor<small>habitual entre 1.0 y 1.3; por encima, el inversor recorta pico (clipping)</small></div></div>
+          <p>Un ratio moderadamente superior a 1 suele ser rentable porque el inversor rara vez alcanza su potencia CC máxima teórica; por encima del límite del fabricante hay recorte de producción en las horas centrales.</p>
+        </div>
+        <div class="theory-card">
+          <h3>⑤ Sección de los conductores</h3>
+          <div class="formula-box"><div class="f">S = (k · L · I<sub>b</sub>) / (κ · ΔV)<small>k=2 en CC y monofásico, k=√3 en trifásico; κ = conductividad del cobre</small></div></div>
+          <p>La sección final es la mayor entre la exigida por caída de tensión y la exigida por capacidad térmica del conductor (ampacidad), redondeada a la sección comercial superior.</p>
+        </div>
+        <div class="theory-card">
+          <h3>⑥ Protecciones en CC</h3>
+          <ul>
+            <li><b>Fusibles de cadena</b> (tipo gPV): si hay 3 o más cadenas en paralelo por entrada.</li>
+            <li><b>Seccionador CC</b>: obligatorio antes de la entrada del inversor, dimensionado a la Isc total con margen.</li>
+            <li><b>Descargador de sobretensiones (SPD) CC</b>: recomendado tipo II (o I+II si hay pararrayos externo) cuando el cableado CC exterior es largo.</li>
+            <li><b>Caja de conexión / combiner box</b>: cuando hay más cadenas por entrada de las que el inversor admite directamente por conector.</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>⑦ Protecciones en CA</h3>
+          <ul>
+            <li><b>Magnetotérmico</b>: calibre normalizado inmediatamente superior a 1.25 × la corriente nominal del inversor.</li>
+            <li><b>Diferencial</b>: mismo calibre que el magnetotérmico; sensibilidad y tipo (A o B) según si el inversor tiene o no aislamiento galvánico.</li>
+            <li><b>SPD CA</b>: recomendado en la mayoría de instalaciones FV por la exposición a sobretensiones inducidas.</li>
+            <li><b>IGM (interruptor general)</b>: cuando hay varios inversores compartiendo cuadro, dimensionado a la suma de sus corrientes nominales.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="disclaimer">Esta herramienta es una ayuda de predimensionado con criterios habituales de diseño (IEC 62548, buenas prácticas de instalación FV). No sustituye el cálculo justificativo del proyecto ni el criterio del instalador autorizado: verifica siempre los resultados frente a la normativa vigente (REBT y sus ITC, UNE-HD 60364) y las hojas de datos reales de los equipos.</p>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
       <div class="card">
         <div class="fieldset-title" style="margin-top:0;">Proyecto</div>
         <div class="grid2">
@@ -550,11 +566,10 @@
           <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
         </div>
       </div>
-    </section>
+    
+</div>
+      </div></details>
 
-    <!-- 07 INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">06 · Resultados e informe</div>
       <h2>Resumen completo del dimensionado.</h2>
       <p class="lede">Vuelve a calcular si has cambiado algún dato en las secciones anteriores.</p>
       <div class="btn-row" style="margin-bottom:24px;">
@@ -563,6 +578,7 @@
       </div>
       <div id="informeResumen"></div>
       <p class="disclaimer">Informe de predimensionado generado automáticamente. Antes de ejecutar la instalación, valida los cálculos con el proyecto justificativo, la normativa vigente (REBT e ITC aplicables, UNE-HD 60364) y las hojas de características reales de los equipos elegidos.</p>
+    
     </section>
 
   </main>
@@ -578,8 +594,17 @@
 // ===================== NAV COMO TABS HORIZONTALES =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));

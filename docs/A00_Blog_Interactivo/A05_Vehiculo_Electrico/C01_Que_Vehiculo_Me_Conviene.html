@@ -171,6 +171,19 @@
     .grid5{grid-template-columns:1fr;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -183,11 +196,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#perfil" data-sec="perfil"><span class="tag">01</span>Perfil de movilidad</a>
-    <a href="#parametros" data-sec="parametros"><span class="tag">02</span>Parámetros económicos</a>
-    <a href="#vehiculos" data-sec="vehiculos"><span class="tag">03</span>Vehículos a comparar</a>
-    <a href="#resultado" data-sec="resultado"><span class="tag">04</span>Resultado e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#resultado" data-sec="resultado"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -215,7 +226,86 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="perfil" class="tab-bloque">
+      <div class="eyebrow kicker">Perfil de movilidad</div>
+      <h2>¿Cuánto y cómo conduces?</h2>
+      <p class="lede">Estos datos determinan cuánta energía consume cada motorización al año y si el eléctrico o el híbrido enchufable encajan con tu forma real de moverte.</p>
+      <div class="card">
+        <div class="fieldset-title">Uso anual</div>
+        <div class="grid3">
+          <div class="field"><label>Kilómetros al año</label><input type="number" id="m_km_anno" value="15000" min="0" step="500"></div>
+          <div class="field"><label>% de conducción urbana</label><input type="number" id="m_pct_urbano" value="40" min="0" max="100" step="5">
+            <div class="hint">El resto se considera interurbano o de carretera.</div>
+          </div>
+          <div class="field"><label>Años de uso previstos</label><input type="number" id="m_anios" value="8" min="1" max="25" step="1"></div>
+        </div>
+        <div class="fieldset-title">Recarga eléctrica</div>
+        <div class="grid3">
+          <div class="field checkfield"><input type="checkbox" id="m_recarga_casa" checked><label for="m_recarga_casa">Dispongo de punto de recarga habitual (casa o trabajo)</label></div>
+          <div class="field"><label>Cuota eléctrica de uso del PHEV (%)</label><input type="number" id="m_cuota_phev" value="65" min="0" max="100" step="5">
+            <div class="hint">Parte de los km que el híbrido enchufable hace en modo eléctrico en vez de con el motor de combustión.</div>
+          </div>
+          <div class="field"><label>Autonomía útil asumida del eléctrico (km)</label><input type="number" id="m_autonomia" value="300" min="50" step="10"></div>
+        </div>
+      </div>
+    
+      </div>
+      <div id="parametros" class="tab-bloque">
+      <div class="eyebrow kicker">Parámetros económicos</div>
+      <h2>Los precios de la energía, compartidos por todas las motorizaciones.</h2>
+      <p class="lede">Los precios de combustible y electricidad se escalan cada año con la inflación energética indicada; el resto de costes (mantenimiento, seguro, impuesto de circulación) se escalan con la inflación general.</p>
+      <div class="card">
+        <div class="fieldset-title">Precios de la energía</div>
+        <div class="grid4">
+          <div class="field"><label>Gasolina (€/L)</label><input type="number" id="e_precio_gasolina" value="1.65" min="0" step="0.01"></div>
+          <div class="field"><label>Diésel (€/L)</label><input type="number" id="e_precio_diesel" value="1.55" min="0" step="0.01"></div>
+          <div class="field"><label>Electricidad en casa (€/kWh)</label><input type="number" id="e_precio_elec_casa" value="0.15" min="0" step="0.01"></div>
+          <div class="field"><label>Electricidad en recarga pública (€/kWh)</label><input type="number" id="e_precio_elec_publica" value="0.42" min="0" step="0.01"></div>
+        </div>
+        <div class="fieldset-title">Escalado anual e indicadores</div>
+        <div class="grid4">
+          <div class="field"><label>Inflación energética anual (%)</label><input type="number" id="e_inflacion_energia" value="3" min="0" step="0.5"></div>
+          <div class="field"><label>Inflación de otros costes (%)</label><input type="number" id="e_inflacion_otros" value="2" min="0" step="0.5"></div>
+          <div class="field"><label>Tasa de descuento, r (%)</label><input type="number" id="e_tasa_descuento" value="5" min="0" step="0.5">
+            <div class="hint">Para calcular el valor actual de los costes futuros.</div>
+          </div>
+          <div class="field checkfield" style="margin-top:28px;"><input type="checkbox" id="e_aplicar_moves" checked><label for="e_aplicar_moves">Aplicar ayudas MOVES III a eléctricos e híbridos enchufables</label></div>
+        </div>
+        <div class="fieldset-title">Factores de emisión de CO₂ (orientativos)</div>
+        <div class="grid3">
+          <div class="field"><label>Gasolina (kg CO₂/L)</label><input type="number" id="e_co2_gasolina" value="2.3" min="0" step="0.05"></div>
+          <div class="field"><label>Diésel (kg CO₂/L)</label><input type="number" id="e_co2_diesel" value="2.6" min="0" step="0.05"></div>
+          <div class="field"><label>Red eléctrica española (kg CO₂/kWh)</label><input type="number" id="e_co2_red" value="0.25" min="0" step="0.01"></div>
+        </div>
+      </div>
+    
+      </div>
+      <div id="vehiculos" class="tab-bloque">
+      <div class="eyebrow kicker">Vehículos a comparar</div>
+      <h2>Cinco motorizaciones, un mismo segmento.</h2>
+      <p class="lede">Elige el segmento para precargar valores orientativos de precio y consumo, y ajusta después cualquier campo con los datos reales de los vehículos que estés valorando.</p>
+
+      <div class="seg-row" id="segRow">
+        <button class="seg-btn" data-seg="AB">A/B · Urbano y utilitario</button>
+        <button class="seg-btn active" data-seg="CD">C/D · Compacto y berlina</button>
+        <button class="seg-btn" data-seg="EF">E/F/SUV · Grande y premium</button>
+        <button class="seg-btn" data-seg="N1">N1 · Furgoneta</button>
+      </div>
+
+      <div class="grid5" id="vehGrid" style="margin-top:20px;"></div>
+    
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
@@ -232,8 +322,6 @@
         <div class="stat"><div class="v">0,25 kg CO₂/kWh</div><div class="l">factor de emisión de la red eléctrica española</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
       <h2>Comprar es solo el primer pago.</h2>
       <p class="lede">Comparar vehículos solo por su precio de compra esconde el resto de la factura: energía, mantenimiento, seguro, impuestos y la pérdida de valor con el tiempo. Esta calculadora reconstruye el coste completo de cada alternativa a lo largo de los años que la vayas a usar, con tus propios kilómetros y precios de energía.</p>
 
@@ -288,83 +376,15 @@
         </div>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:20px;">Referencias:  Programa de ayudas <a href="https://www.idae.es/ayudas-y-financiacion/para-movilidad-y-vehiculos/programa-moves-iii" target="_blank" rel="noopener" style="color:var(--cyan);">MOVES III — IDAE</a>. Todos los precios y consumos por defecto son valores orientativos y completamente editables: sustitúyelos por los datos reales de los vehículos que estés valorando.</p>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 01 PERFIL DE MOVILIDAD -->
-    <section id="perfil">
-      <div class="eyebrow kicker">01 · Perfil de movilidad</div>
-      <h2>¿Cuánto y cómo conduces?</h2>
-      <p class="lede">Estos datos determinan cuánta energía consume cada motorización al año y si el eléctrico o el híbrido enchufable encajan con tu forma real de moverte.</p>
-      <div class="card">
-        <div class="fieldset-title">Uso anual</div>
-        <div class="grid3">
-          <div class="field"><label>Kilómetros al año</label><input type="number" id="m_km_anno" value="15000" min="0" step="500"></div>
-          <div class="field"><label>% de conducción urbana</label><input type="number" id="m_pct_urbano" value="40" min="0" max="100" step="5">
-            <div class="hint">El resto se considera interurbano o de carretera.</div>
-          </div>
-          <div class="field"><label>Años de uso previstos</label><input type="number" id="m_anios" value="8" min="1" max="25" step="1"></div>
-        </div>
-        <div class="fieldset-title">Recarga eléctrica</div>
-        <div class="grid3">
-          <div class="field checkfield"><input type="checkbox" id="m_recarga_casa" checked><label for="m_recarga_casa">Dispongo de punto de recarga habitual (casa o trabajo)</label></div>
-          <div class="field"><label>Cuota eléctrica de uso del PHEV (%)</label><input type="number" id="m_cuota_phev" value="65" min="0" max="100" step="5">
-            <div class="hint">Parte de los km que el híbrido enchufable hace en modo eléctrico en vez de con el motor de combustión.</div>
-          </div>
-          <div class="field"><label>Autonomía útil asumida del eléctrico (km)</label><input type="number" id="m_autonomia" value="300" min="50" step="10"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 02 PARAMETROS ECONOMICOS -->
-    <section id="parametros">
-      <div class="eyebrow kicker">02 · Parámetros económicos</div>
-      <h2>Los precios de la energía, compartidos por todas las motorizaciones.</h2>
-      <p class="lede">Los precios de combustible y electricidad se escalan cada año con la inflación energética indicada; el resto de costes (mantenimiento, seguro, impuesto de circulación) se escalan con la inflación general.</p>
-      <div class="card">
-        <div class="fieldset-title">Precios de la energía</div>
-        <div class="grid4">
-          <div class="field"><label>Gasolina (€/L)</label><input type="number" id="e_precio_gasolina" value="1.65" min="0" step="0.01"></div>
-          <div class="field"><label>Diésel (€/L)</label><input type="number" id="e_precio_diesel" value="1.55" min="0" step="0.01"></div>
-          <div class="field"><label>Electricidad en casa (€/kWh)</label><input type="number" id="e_precio_elec_casa" value="0.15" min="0" step="0.01"></div>
-          <div class="field"><label>Electricidad en recarga pública (€/kWh)</label><input type="number" id="e_precio_elec_publica" value="0.42" min="0" step="0.01"></div>
-        </div>
-        <div class="fieldset-title">Escalado anual e indicadores</div>
-        <div class="grid4">
-          <div class="field"><label>Inflación energética anual (%)</label><input type="number" id="e_inflacion_energia" value="3" min="0" step="0.5"></div>
-          <div class="field"><label>Inflación de otros costes (%)</label><input type="number" id="e_inflacion_otros" value="2" min="0" step="0.5"></div>
-          <div class="field"><label>Tasa de descuento, r (%)</label><input type="number" id="e_tasa_descuento" value="5" min="0" step="0.5">
-            <div class="hint">Para calcular el valor actual de los costes futuros.</div>
-          </div>
-          <div class="field checkfield" style="margin-top:28px;"><input type="checkbox" id="e_aplicar_moves" checked><label for="e_aplicar_moves">Aplicar ayudas MOVES III a eléctricos e híbridos enchufables</label></div>
-        </div>
-        <div class="fieldset-title">Factores de emisión de CO₂ (orientativos)</div>
-        <div class="grid3">
-          <div class="field"><label>Gasolina (kg CO₂/L)</label><input type="number" id="e_co2_gasolina" value="2.3" min="0" step="0.05"></div>
-          <div class="field"><label>Diésel (kg CO₂/L)</label><input type="number" id="e_co2_diesel" value="2.6" min="0" step="0.05"></div>
-          <div class="field"><label>Red eléctrica española (kg CO₂/kWh)</label><input type="number" id="e_co2_red" value="0.25" min="0" step="0.01"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 03 VEHICULOS A COMPARAR -->
-    <section id="vehiculos">
-      <div class="eyebrow kicker">03 · Vehículos a comparar</div>
-      <h2>Cinco motorizaciones, un mismo segmento.</h2>
-      <p class="lede">Elige el segmento para precargar valores orientativos de precio y consumo, y ajusta después cualquier campo con los datos reales de los vehículos que estés valorando.</p>
-
-      <div class="seg-row" id="segRow">
-        <button class="seg-btn" data-seg="AB">A/B · Urbano y utilitario</button>
-        <button class="seg-btn active" data-seg="CD">C/D · Compacto y berlina</button>
-        <button class="seg-btn" data-seg="EF">E/F/SUV · Grande y premium</button>
-        <button class="seg-btn" data-seg="N1">N1 · Furgoneta</button>
-      </div>
-
-      <div class="grid5" id="vehGrid" style="margin-top:20px;"></div>
-    </section>
-
-    <!-- 04 RESULTADO E INFORME -->
+    <!-- 02 INFORME -->
     <section id="resultado">
-      <div class="eyebrow kicker">04 · Resultado e informe</div>
+      <div class="eyebrow kicker">02 · Informe</div>
+
       <h2>Comparativa de TCO y recomendación.</h2>
       <p class="lede">Pulsa «Calcular comparativa» tras revisar los datos de las secciones anteriores. Los resultados y el informe en PDF usan siempre los valores vigentes en el formulario.</p>
 
@@ -424,6 +444,7 @@
       <div class="btn-row" style="margin-top:20px;">
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
       </div>
+    
     </section>
 
     <footer>
@@ -814,8 +835,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));

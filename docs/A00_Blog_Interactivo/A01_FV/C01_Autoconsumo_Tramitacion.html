@@ -182,6 +182,19 @@
   .flow-svg-wrap, .gantt-svg-wrap{background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin:14px 0; overflow-x:auto;}
   .flow-svg-wrap svg, .gantt-svg-wrap svg{display:block; margin:0 auto;}
   .subsection-title{font-family:var(--font-mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:0.06em; margin:18px 0 6px;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -194,15 +207,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco legal</a>
-    <a href="#previa" data-sec="previa"><span class="tag">02</span>Tramitación previa</a>
-    <a href="#posterior" data-sec="posterior"><span class="tag">03</span>Tramitación posterior</a>
-    <a href="#colectivas" data-sec="colectivas"><span class="tag">04</span>Instalaciones colectivas</a>
-    <a href="#economico" data-sec="economico"><span class="tag">05</span>Régimen económico</a>
-    <a href="#plazos" data-sec="plazos"><span class="tag">06</span>Plazos y otras autorizaciones</a>
-    <a href="#problematica" data-sec="problematica"><span class="tag">07</span>Problemática frecuente</a>
-    <a href="#informe" data-sec="informe"><span class="tag">08</span>Caso práctico e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -230,7 +237,80 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Caso práctico e informe</div>
+      <h2>Resuelve el caso, genera el informe.</h2>
+      <p class="lede">Introduce los datos de tu instalación: la calculadora reproduce el mismo razonamiento del caso práctico del documento (potencia → tensión → suelo → modalidad → superficie) y determina qué trámites aplican, con memoria justificativa por cada respuesta.</p>
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir instalación (caso a resolver)</div>
+        <div class="field"><label>Nombre / dirección de la instalación</label><input type="text" id="i_nombre" placeholder="Ej: C/Chile 28, Coslada"></div>
+
+        <div class="fieldset-title">Características técnicas</div>
+        <div class="grid3">
+          <div class="field"><label>Potencia (kW)</label><input type="number" id="i_potencia" value="12" min="0" step="0.1"></div>
+          <div class="field">
+            <label>Tensión de conexión</label>
+            <select id="i_tension">
+              <option value="BT" selected>Baja tensión (BT)</option>
+              <option value="MT">Media tensión (MT)</option>
+              <option value="AT">Alta tensión (AT)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Modalidad</label>
+            <select id="i_modalidad">
+              <option value="sin_excedentes">Sin excedentes</option>
+              <option value="con_comp" selected>Con excedentes, compensación</option>
+              <option value="con_venta">Con excedentes, venta a mercado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="fieldset-title">Ubicación y suelo</div>
+        <div class="grid3">
+          <div class="field">
+            <label>Tipo de suelo (catastro)</label>
+            <select id="i_suelo">
+              <option value="urbano" selected>Urbano / urbanizado</option>
+              <option value="no_urbanizable">No urbanizable</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ubicación de los paneles</label>
+            <select id="i_ubicacion">
+              <option value="cubierta_coplanar" selected>Cubierta, coplanar</option>
+              <option value="cubierta_no_coplanar">Cubierta, no coplanar / sobre estructura</option>
+              <option value="suelo">Suelo / terreno</option>
+            </select>
+          </div>
+          <div class="field"><label>Superficie estimada (m²)</label><input type="number" id="i_superficie" value="60" min="0" step="1">
+            <div class="hint">Orientativo: kW × 5 (paneles de 400W ≈ 2m² cada uno)</div>
+          </div>
+        </div>
+
+        <div class="fieldset-title">Servidumbres y otros</div>
+        <div class="checkline"><input type="checkbox" id="i_servidumbre" checked><label for="i_servidumbre" style="margin:0; text-transform:none; font-family:var(--font-body);">Está en zona de servidumbre aeronáutica (comprobado en el visor de AESA)</label></div>
+        <div class="checkline"><input type="checkbox" id="i_altera"><label for="i_altera" style="margin:0; text-transform:none; font-family:var(--font-body);">Supera la altura del edificio/entorno o altera la configuración arquitectónica</label></div>
+        <div class="checkline"><input type="checkbox" id="i_agrupacion"><label for="i_agrupacion" style="margin:0; text-transform:none; font-family:var(--font-body);">Forma parte de una agrupación de instalaciones que supera 1 MW conjunto</label></div>
+
+        <div class="field" style="margin-top:6px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Resolver y añadir al informe</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
@@ -252,8 +332,6 @@
         <div class="stat"><div class="v">15 kW</div><div class="l">exención de acceso y conexión en suelo urbanizado</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
       <h2>Tres preguntas deciden casi todos los trámites.</h2>
       <p class="lede">Antes de mirar ninguna norma: ¿cuánta potencia tiene la instalación?, ¿en qué tensión se conecta? y ¿qué modalidad de autoconsumo eligen? Con esas tres respuestas, el resto de la tramitación es prácticamente mecánico.</p>
 
@@ -315,15 +393,15 @@
       </div>
 
       <div class="eyebrow" style="margin:32px 0 14px;">Diagrama de flujo completo</div>
-      <p class="lede" style="margin-bottom:20px;">Las mismas decisiones de arriba, encadenadas en un único diagrama. Cuando resuelvas un caso en la sección 08, este mismo diagrama se repetirá con el camino realmente seguido resaltado en ámbar.</p>
+      <p class="lede" style="margin-bottom:20px;">Las mismas decisiones de arriba, encadenadas en un único diagrama. Cuando resuelvas un caso en la pestaña Informe, este mismo diagrama se repetirá con el camino realmente seguido resaltado en ámbar.</p>
       <div class="card" style="padding:20px;">
         <div id="masterFlowWrap"></div>
       </div>
-    </section>
-
-    <!-- 01 MARCO LEGAL -->
-    <section id="marco">
-      <div class="eyebrow kicker">01 · Marco legal</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco legal</span></summary><div class="acc-cuerpo">
+<div id="marco">
       <h2>El autoconsumo es legal en España desde 2018.</h2>
       <p class="lede">Una cascada de normas fue simplificando la tramitación desde el RDL 15/2018 (eliminación de cargos) hasta hoy. Estas son las piezas clave.</p>
 
@@ -345,11 +423,11 @@
         </table>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">Normativa complementaria: RD 842/2002 (REBT), RD 1699/2011 y RD 1955/2000 (conexión con vertido de excedentes), Ley 21/2013 (evaluación ambiental).</p>
-    </section>
-
-    <!-- 02 TRAMITACION PREVIA -->
-    <section id="previa">
-      <div class="eyebrow kicker">02 · Tramitación previa a la obra</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Tramitación previa</span></summary><div class="acc-cuerpo">
+<div id="previa">
       <h2>Lo que hay que pedir antes de instalar un solo panel.</h2>
       <p class="lede">El esquema cambia según si la instalación tiene excedentes o no.</p>
 
@@ -369,11 +447,11 @@
         <div class="card"><p style="font-size:13px; color:var(--text-dim);">La <b style="color:var(--text);">memoria</b> incluye datos del propietario, emplazamiento, cálculos justificativos, esquema unifilar y croquis de trazado.</p></div>
         <div class="card"><p style="font-size:13px; color:var(--text-dim);">El <b style="color:var(--text);">proyecto</b> añade secciones de conductores, diámetros de canalización y cálculos justificativos del diseño completo, con planos suficientes para la empresa instaladora.</p></div>
       </div>
-    </section>
-
-    <!-- 03 TRAMITACION POSTERIOR -->
-    <section id="posterior">
-      <div class="eyebrow kicker">03 · Tramitación posterior a la obra</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Tramitación posterior</span></summary><div class="acc-cuerpo">
+<div id="posterior">
       <h2>Terminada la instalación, empieza el papeleo de verdad.</h2>
       <p class="lede">Certificados, inspecciones, notificaciones operacionales y registros — variables según potencia y tensión.</p>
 
@@ -395,11 +473,11 @@
           </tbody>
         </table>
       </div>
-    </section>
-
-    <!-- 04 COLECTIVAS -->
-    <section id="colectivas">
-      <div class="eyebrow kicker">04 · Instalaciones colectivas</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Instalaciones colectivas</span></summary><div class="acc-cuerpo">
+<div id="colectivas">
       <h2>Repartir la generación entre varios consumidores.</h2>
       <p class="lede">Añaden una capa administrativa propia: acuerdo de reparto entre los autoconsumidores y, en propiedad horizontal, acuerdo de la comunidad de propietarios.</p>
 
@@ -414,11 +492,11 @@
         </div>
       </div>
       <p style="font-size:12.5px; color:var(--text-dimmer); margin-top:20px; max-width:680px;">Consideración técnica clave: en propiedad horizontal está prohibido conectarse a la instalación interior de otro autoconsumidor; se requiere contador de generación neta independiente.</p>
-    </section>
-
-    <!-- 05 REGIMEN ECONOMICO -->
-    <section id="economico">
-      <div class="eyebrow kicker">05 · Régimen económico</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Régimen económico</span></summary><div class="acc-cuerpo">
+<div id="economico">
       <h2>Compensar excedentes, o venderlos a mercado.</h2>
       <p class="lede">La compensación simplificada resulta, en igualdad de condiciones, más beneficiosa que la venta a mercado.</p>
 
@@ -436,11 +514,11 @@
         <div class="f">Ing = &Sigma; [(E &times; Pool) &times; (1 &minus; 0,07)] &minus; (E &times; Pg)</div>
         <small>E: energía exportada (kWh) · Pool: precio horario del mercado · Pg: peaje a la generación (0 actualmente)</small>
       </div>
-    </section>
-
-    <!-- 06 PLAZOS Y OTRAS AUTORIZACIONES -->
-    <section id="plazos">
-      <div class="eyebrow kicker">06 · Plazos y otras autorizaciones</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Plazos y otras autorizaciones</span></summary><div class="acc-cuerpo">
+<div id="plazos">
       <h2>Cuánto tarda cada paso, y quién más puede vetarlo.</h2>
       <p class="lede">Los plazos oficiales del RD 1183/2020 para el procedimiento de acceso y conexión, los hitos administrativos que mantienen vivo un permiso, y el resto de autorizaciones sectoriales que pueden aplicar según la ubicación.</p>
 
@@ -486,11 +564,11 @@
         <div class="def-card"><h4>Costas</h4><p>Servidumbre de protección 100-200m (limitaciones estrictas) y zona de influencia de 500m (limitaciones urbanísticas).</p></div>
         <div class="def-card"><h4>Evaluación ambiental</h4><p>Ordinaria si &gt;100ha fuera de cubierta, o &gt;10ha en espacios protegidos destinados a venta; simplificada en el resto de casos no exentos.</p></div>
       </div>
-    </section>
-
-    <!-- 07 PROBLEMATICA -->
-    <section id="problematica">
-      <div class="eyebrow kicker">07 · Problemática frecuente en la tramitación</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Problemática frecuente</span></summary><div class="acc-cuerpo">
+<div id="problematica">
       <h2>Donde se atasca la mayoría de los expedientes.</h2>
       <p class="lede">Puntos recurrentes de fricción, de la propia experiencia de tramitación de VatiaCo.</p>
 
@@ -499,15 +577,17 @@
         <div class="comp-card"><h4>Industria</h4><p>Criterios dispares entre delegaciones, tiempos no establecidos o incumplidos, opacidad hacia el interesado, silencios negativos.</p></div>
         <div class="comp-card"><h4>Otras autorizaciones</h4><p>Servidumbres aeronáuticas (AESA/Defensa), zonas de policía de confederaciones hidrográficas, servidumbres de costas y de carreteras, afecciones ferroviarias (ADIF).</p></div>
       </div>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 07 CASO PRACTICO / INFORME (formulario) -->
+    <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">08 · Caso práctico e informe</div>
-      <h2>Resuelve el caso, genera el informe.</h2>
-      <p class="lede">Introduce los datos de tu instalación: la calculadora reproduce el mismo razonamiento del caso práctico del documento (potencia → tensión → suelo → modalidad → superficie) y determina qué trámites aplican, con memoria justificativa por cada respuesta.</p>
+      <div class="eyebrow kicker">02 · Informe</div>
 
-      <div class="card" style="margin-bottom:28px;">
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div class="card" style="margin-bottom:28px;">
         <div class="eyebrow" style="margin-bottom:14px;">Datos del proyecto</div>
         <div class="grid2">
           <div class="field"><label>Cliente</label><input type="text" id="p_cliente" placeholder="Nombre del cliente"></div>
@@ -517,69 +597,14 @@
           <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
         </div>
       </div>
+      </div></details>
+      
 
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:6px;">Añadir instalación (caso a resolver)</div>
-        <div class="field"><label>Nombre / dirección de la instalación</label><input type="text" id="i_nombre" placeholder="Ej: C/Chile 28, Coslada"></div>
-
-        <div class="fieldset-title">Características técnicas</div>
-        <div class="grid3">
-          <div class="field"><label>Potencia (kW)</label><input type="number" id="i_potencia" value="12" min="0" step="0.1"></div>
-          <div class="field">
-            <label>Tensión de conexión</label>
-            <select id="i_tension">
-              <option value="BT" selected>Baja tensión (BT)</option>
-              <option value="MT">Media tensión (MT)</option>
-              <option value="AT">Alta tensión (AT)</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Modalidad</label>
-            <select id="i_modalidad">
-              <option value="sin_excedentes">Sin excedentes</option>
-              <option value="con_comp" selected>Con excedentes, compensación</option>
-              <option value="con_venta">Con excedentes, venta a mercado</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="fieldset-title">Ubicación y suelo</div>
-        <div class="grid3">
-          <div class="field">
-            <label>Tipo de suelo (catastro)</label>
-            <select id="i_suelo">
-              <option value="urbano" selected>Urbano / urbanizado</option>
-              <option value="no_urbanizable">No urbanizable</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Ubicación de los paneles</label>
-            <select id="i_ubicacion">
-              <option value="cubierta_coplanar" selected>Cubierta, coplanar</option>
-              <option value="cubierta_no_coplanar">Cubierta, no coplanar / sobre estructura</option>
-              <option value="suelo">Suelo / terreno</option>
-            </select>
-          </div>
-          <div class="field"><label>Superficie estimada (m²)</label><input type="number" id="i_superficie" value="60" min="0" step="1">
-            <div class="hint">Orientativo: kW × 5 (paneles de 400W ≈ 2m² cada uno)</div>
-          </div>
-        </div>
-
-        <div class="fieldset-title">Servidumbres y otros</div>
-        <div class="checkline"><input type="checkbox" id="i_servidumbre" checked><label for="i_servidumbre" style="margin:0; text-transform:none; font-family:var(--font-body);">Está en zona de servidumbre aeronáutica (comprobado en el visor de AESA)</label></div>
-        <div class="checkline"><input type="checkbox" id="i_altera"><label for="i_altera" style="margin:0; text-transform:none; font-family:var(--font-body);">Supera la altura del edificio/entorno o altera la configuración arquitectónica</label></div>
-        <div class="checkline"><input type="checkbox" id="i_agrupacion"><label for="i_agrupacion" style="margin:0; text-transform:none; font-family:var(--font-body);">Forma parte de una agrupación de instalaciones que supera 1 MW conjunto</label></div>
-
-        <div class="field" style="margin-top:6px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
-
-        <div class="btn-row">
-          <button class="btn primary" id="btnAddInst">+ Resolver y añadir al informe</button>
-        </div>
-      </div>
+      
 
       <div class="eyebrow" style="margin-bottom:10px;">Instalaciones del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de arriba y pulsa "Resolver y añadir al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de la pestaña Simulación y pulsa "Resolver y añadir al informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -589,6 +614,7 @@
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todas las instalaciones</button>
       </div>
+    
     </section>
 
     <footer>
@@ -979,8 +1005,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1230,7 +1265,7 @@ function renderInstallations(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(installations.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de arriba y pulsa "Resolver y añadir al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de la pestaña Simulación y pulsa "Resolver y añadir al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';

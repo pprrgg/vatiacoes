@@ -178,6 +178,22 @@
   .flow-col .chart-svg-wrap{margin-top:0;}
   .flow-row .editor-card{margin-bottom:0;}
   .flow-col{min-width:0;}
+  .portada-acordeon{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
+  .portada-acordeon summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  .portada-acordeon summary::-webkit-details-marker{display:none;}
+  .portada-acordeon summary::after{content:"▸"; position:absolute; right:20px; top:15px; color:var(--cyan); transition:transform .15s;}
+  .portada-acordeon[open] summary::after{transform:rotate(90deg);}
+  .portada-acordeon summary:focus-visible{outline:2px solid var(--cyan); outline-offset:2px; border-radius:var(--radius);}
+  .portada-titulo{font-size:16px; font-weight:600; color:var(--text);}
+  .portada-sub{font-size:13px; color:var(--text-dim);}
+  .portada-body{border:none; border-top:1px solid var(--line-soft); border-radius:0 0 var(--radius) var(--radius); margin:0;}
+  .notas-simplificaciones{margin-top:28px; padding:20px 24px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
+  .notas-simplificaciones h4{font-size:14px; color:var(--text); margin-bottom:12px;}
+  .notas-columnas{columns:2 360px; column-gap:32px;}
+  .notas-grupo{break-inside:avoid; margin-bottom:16px;}
+  .notas-grupo h5{font-family:var(--font-mono); font-size:11px; font-weight:400; color:var(--cyan); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;}
+  .notas-grupo ul{margin:0; padding-left:18px; font-size:13px; line-height:1.5; color:var(--text-dim);}
+  .notas-grupo li{margin-bottom:4px;}
   .editor-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; margin-bottom:20px;}
   .editor-card .eh, .flujo-caja-chart-col .eh{display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px;}
   .editor-card .eh h4, .flujo-caja-chart-col .eh h4{font-size:14px; color:var(--text);}
@@ -200,7 +216,6 @@
   #sombraChart{touch-action:none;}
   svg.editor-chart{touch-action:none; user-select:none; cursor:pointer; display:block; width:100%; height:auto;}
   svg.editor-chart.readonly{cursor:default; touch-action:auto;}
-  #flowCurveWrap svg{touch-action:none; user-select:none; cursor:pointer;}
   .preset-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
   .preset-row select, .preset-row input[type=number]{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:8px 10px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px;}
   .preset-row select{flex:1; min-width:110px;}
@@ -222,6 +237,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -272,20 +300,72 @@
         <div class="flow-col">
           <div class="editor-card" style="margin-bottom:20px;">
             <div class="eh">
-              <h4>Reparto horario del día tipo</h4>
+              <h4>Curva de consumo</h4>
               <div class="chart-inline-fields" style="margin:0;">
-                <label title="Tipo de consumidor (perfil típico)">Perfil de carga<select id="tipoConsumidorGlobal"><option value="domestico">Doméstico</option><option value="comercial">Comercial</option><option value="industrial">Industrial</option><option value="constante">Constante (carga plana 24h)</option></select></label>
+                <label title="Consumo diario">Consumo (kWh/día)<input type="number" id="kwhdia_con" min="0" step="0.1" value="10"></label>
+                <label title="Tipo de consumidor (perfil típico)">Perfil<select id="tipoConsumidorGlobal"><option value="domestico">Doméstico</option><option value="comercial">Comercial</option><option value="industrial">Industrial</option><option value="constante">Constante (carga plana 24h)</option></select></label>
                 <label title="Laborable o festivo (forma horaria de la demanda)">Jornada<select id="jornadaSelector"><option value="laborable">Laborable</option><option value="festivo">Festivo</option></select></label>
               </div>
             </div>
+            <svg class="editor-chart" id="chart-consumo" viewBox="0 0 640 220"></svg>
+          </div>
+        </div>
+        <div class="flow-col">
+          <div class="editor-card" style="margin-bottom:20px;">
+            <div class="eh">
+              <h4>Reparto horario del día tipo</h4>
+            </div>
             <div class="reparto-legend" id="flowCurveLegend"></div>
             <div class="chart-inline-fields">
-              <label title="Potencia FV instalada">FV · Potencia (kWp)<input type="number" id="gen_kwp" min="0" step="0.1" value="5"></label>
-              <label title="Capacidad de la batería">Batería · Capacidad (kWh)<input type="number" id="bat_capacidad" value="5" min="0" step="0.5"></label>
-              <label title="Potencia contratada: límite de importación y exportación con la red — 0 kW: sistema aislado, sin conexión a red">Red · Contratada (kW)<input type="number" id="pot_contratada" min="0" step="0.1" value="4.6"></label>
-              <label title="Consumo diario">Consumo (kWh/día)<input type="number" id="kwhdia_con" min="0" step="0.1" value="10"></label>
+              <label title="Potencia fotovoltaica instalada">FV (kWp)<input type="number" id="gen_kwp" min="0" step="0.1" value="5"></label>
+              <label title="Se estima al cambiar los kWp; se puede sobrescribir con el valor de PVGIS (producción anual ÷ 365)">Generación (kWh/día)<input type="number" id="fv_kwh_dia" min="0" step="0.1" value="23"></label>
+              <label title="Capacidad de la batería">Batería (kWh)<input type="number" id="bat_capacidad" value="5" min="0" step="0.5"></label>
+              <label title="Estado de carga de la batería al empezar el día">SOC inicial (%)<input type="number" id="bat_soc_ini" value="10" min="0" max="100" step="1"></label>
             </div>
             <div class="chart-svg-wrap" id="flowCurveWrap" style="margin:10px 0 0;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Precio de la energía y coste del consumo</div>
+      <div class="flow-row" style="margin-bottom:24px;">
+        <div class="flow-col">
+          <div class="editor-card" style="margin-bottom:20px;">
+            <div class="eh">
+              <h4>Curva de precio PVPC</h4>
+              <div class="chart-inline-fields" style="margin:0;">
+                <label><input type="checkbox" id="precio_constante">Constante todo el día</label>
+              </div>
+            </div>
+            <svg class="editor-chart" id="chart-precio" viewBox="0 0 640 220"></svg>
+          </div>
+        </div>
+        <div class="flow-col">
+          <div class="editor-card" style="margin-bottom:20px;">
+            <div class="eh">
+              <h4>Precio de la energía excedentaria</h4>
+            </div>
+            <svg class="editor-chart" id="chart-excedente" viewBox="0 0 640 220"></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row" style="margin-bottom:24px;">
+        <div class="flow-col">
+          <div class="editor-card" style="margin-bottom:20px;">
+            <div class="eh">
+              <h4>Coste horario</h4>
+              <span class="total-group">
+                <span class="total" id="total-coste">con FV 0,00 €</span>
+                <span class="total sin-fv" id="total-coste-sin">sin FV 0,00 €</span>
+                <span class="total ahorro" id="total-ahorro">ahorro 0,00 €</span>
+              </span>
+            </div>
+            <div class="chart-inline-fields">
+              <label title="Resultado calculado a partir del coste FV (€/kWp), el interés y la duración">LCOE FV (€/kWh)<input type="text" id="lcoe_fv" value="0,000" readonly></label>
+              <label title="Resultado calculado a partir del coste de batería (€/kWh), el interés y la duración">LCOE batería (€/kWh)<input type="text" id="lcoe_bat" value="0,000" readonly></label>
+            </div>
+            <svg class="editor-chart readonly" id="chart-coste" viewBox="0 0 640 220"></svg>
           </div>
         </div>
         <div class="flow-col">
@@ -301,62 +381,18 @@
               </span>
             </div>
             <div class="chart-inline-fields">
-              <label>Coste  FV (€/kWp)<input type="number" id="lcoe_fv_coste" value="900" min="0" step="10"></label>
-              <label>Coste  batería (€/kWh)<input type="number" id="lcoe_bat_coste" value="400" min="0" step="10"></label>
+              <label>FV (€/kWp)<input type="number" id="lcoe_fv_coste" value="900" min="0" step="10"></label>
+              <label>Batería (€/kWh)<input type="number" id="lcoe_bat_coste" value="400" min="0" step="10"></label>
               <label>Interés (%)<input type="number" id="lcoe_interes" value="5" min="0" step="0.1"></label>
-              <label>Años de vida útil FV<input type="number" id="lcoe_fv_anios" value="25" min="1" step="1"></label>
-              <label>Ciclos de vida útil batería<input type="number" id="lcoe_bat_ciclos" value="4000" min="1" step="50"></label>
+              <label>Duracion (años)<input type="number" id="lcoe_fv_anios" value="25" min="1" step="1"></label>
             </div>
             <div class="chart-svg-wrap" id="flujoCajaWrap"></div>
           </div>
         </div>
       </div>
 
-      <div class="fieldset-title">Precio de la energía y coste del consumo</div>
-      <div class="flow-row" style="margin-bottom:24px;">
-        <div class="flow-col">
-          <div class="editor-card" style="margin-bottom:20px;">
-            <div class="eh">
-              <h4>Curva de precio PVPC</h4>
-              <div class="chart-inline-fields" style="margin:0;">
-                <label>Precio medio (€/kWh)<input type="number" id="precio_medio" value="0.15" min="0" step="0.001"></label>
-                <label><input type="checkbox" id="precio_constante">Constante todo el día</label>
-              </div>
-            </div>
-            <svg class="editor-chart" id="chart-precio" viewBox="0 0 640 220"></svg>
-          </div>
-        </div>
-        <div class="flow-col">
-          <div class="editor-card" style="margin-bottom:20px;">
-            <div class="eh">
-              <h4>Coste horario</h4>
-              <span class="total-group">
-                <span class="total" id="total-coste">con FV 0,00 €</span>
-                <span class="total sin-fv" id="total-coste-sin">sin FV 0,00 €</span>
-                <span class="total ahorro" id="total-ahorro">ahorro 0,00 €</span>
-              </span>
-            </div>
-            <div class="chart-inline-fields">
-              <label title="Al editarlo se recalcula el coste  FV (€/kWp), y con él la inversión y el flujo de caja">LCOE FV (€/kWh)<input type="number" id="lcoe_fv" value="0" min="0" step="0.001"></label>
-              <label title="Al editarlo se recalcula el coste  de la batería (€/kWh), y con él la inversión y el flujo de caja">LCOE batería (€/kWh)<input type="number" id="lcoe_bat" value="0" min="0" step="0.001"></label>
-            </div>
-            <svg class="editor-chart readonly" id="chart-coste" viewBox="0 0 640 220"></svg>
-          </div>
-        </div>
-      </div>
-
       <div class="card">
         <p class="hint" style="margin-top:0;" id="lcoe_bat_nota"></p>
-      </div>
-
-      <div class="fieldset-title">Batería</div>
-      <div class="card">
-        <div class="grid3">
-          <div class="field"><label>Eficiencia de ida y vuelta (%)</label><input type="number" id="bat_eficiencia" value="92" min="1" max="100" step="1"></div>
-          <div class="field"><label>&nbsp;</label><label style="display:flex; align-items:center; gap:8px; font-family:var(--font-body); text-transform:none; font-size:13px; color:var(--text); margin-top:9px;"><input type="checkbox" id="bat_incluir" checked style="width:auto;"> Incluir batería en resultados</label></div>
-          <div class="field"><label>Potencia máx. carga/descarga (kW)</label><input type="number" id="bat_potencia" value="3" min="0" step="0.1"></div>
-          <div class="field"><label>SOC inicial (%)</label><input type="number" id="bat_soc_inicial" value="50" min="0" max="100" step="1"></div>
-        </div>
       </div>
 
       <div class="fieldset-title">Resultados del día tipo</div>
@@ -371,16 +407,22 @@
           <button class="btn primary" id="btnAddCaso">+ Guardar caso en el informe</button>
         </div>
       </div>
+
+      <div class="notas-simplificaciones" data-notas-simplificaciones></div>
     </section>
 
     <!-- 01 AYUDA: fundamento teorico y metodologia -->
     <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
         <div class="hero-top">
           <div>
             <div class="eyebrow">Autoconsumo fotovoltaico · Generación vs Consumo</div>
             <h1>¿Cuánta de tu propia energía<br><em>consumes tú mismo</em>?</h1>
-            <p class="sub">Elige un día tipo (laborable o festivo) e introduce sus curvas horarias de generación y de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
+            <p class="sub">Elige un día tipo (laborable o festivo) indica la potencia FV instalada y ajusta la curva horaria de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
           </div>
           <div class="hero-meta">
             <span>Método</span>
@@ -395,8 +437,6 @@
           <div class="stat"><div class="v">% del día estudiado</div><div class="l">resultado del día tipo seleccionado</div></div>
         </div>
       </header>
-
-      <div class="eyebrow kicker">01 · Ayuda · Fundamento teórico</div>
       <h2>Autoconsumo: la parte de tu generación que no exportas.</h2>
       <p class="lede">No toda la energía que genera un sistema fotovoltaico se consume en el momento; si generas más de lo que necesitas en una hora, ese excedente se exporta a la red (o se pierde, sin batería). El autoconsumo mide qué fracción de la energía generada usas tú directamente.</p>
 
@@ -429,47 +469,47 @@
 
         <div class="theory-card">
           <h3>4 · Editor de curvas horarias</h3>
-          <p>Cada curva (generación o consumo) se introduce arrastrando directamente sobre el gráfico "Reparto horario del día tipo" de la pestaña Simulación — su mitad superior edita la generación, la inferior el consumo — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El reparto horario se recalcula al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
+          <p>La generación diaria se estima a partir de los kWp indicados, o se escribe a mano con el valor de PVGIS (producción anual ÷ 365), y se reparte con un perfil solar típico, y no se edita sobre el gráfico. La curva de consumo se ajusta arrastrando sobre el gráfico "Curva de consumo" de la pestaña Simulación: al cambiar una hora, las demás se reajustan en proporción para que el consumo diario se mantenga — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El reparto horario se recalcula al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
         </div>
 
         <div class="theory-card">
           <h3>5 · Batería: cargar en vez de "malvender"</h3>
-          <p>Cuando generas más de lo que consumes, ese excedente normalmente se exporta a la red a un precio bajo. Aquí, en su lugar, ese excedente carga primero una batería (hasta su capacidad y potencia máximas); solo si la batería ya está llena se exporta el resto. En las horas de déficit, la batería se descarga para cubrir consumo antes de tirar de red. El SOC inicial (configurable, 50% por defecto) es el estado de carga con el que arranca el día tipo seleccionado.</p>
+          <p>Cuando generas más de lo que consumes, ese excedente normalmente se exporta a la red a un precio bajo. Aquí, en su lugar, ese excedente carga primero una batería (hasta su capacidad, con una potencia de carga y descarga igual a la mitad de esa capacidad); solo si la batería ya está llena se exporta el resto. En las horas de déficit, la batería se descarga para cubrir consumo antes de tirar de red. El día tipo arranca con el SOC inicial indicado en el gráfico de reparto horario (10% por defecto).</p>
         </div>
 
         <div class="theory-card">
           <h3>6 · Batería: eficiencia de ida y vuelta</h3>
-          <p>La eficiencia se aplica al cargar: por cada kWh de excedente disponible, solo esa fracción queda realmente almacenada. El SOC inicial es el estado de carga con el que la batería empieza el día tipo seleccionado.</p>
+          <p>La eficiencia (92%, un valor estándar) se aplica al cargar: por cada kWh de excedente disponible, solo esa fracción queda realmente almacenada. El SOC inicial es el estado de carga con el que la batería empieza el día tipo seleccionado.</p>
         </div>
 
         <div class="theory-card">
-          <h3>7 · Precio de la energía: la curva PVPC en forma de "pato"</h3>
-          <p>Curva orientativa en forma de "curva de pato", calibrada sobre las curvas reales de precio de excedentes de REE: de madrugada y por la noche (00h-08h) el precio se queda alto y bastante plano, porque de noche no hay sol que lo hunda; entre 09h y 18h cae en picado (a menudo cerca de cero), porque la generación solar de todo el país satura la red; al ponerse el sol pero seguir alta la demanda, sube de golpe entre 19h y 22h de vuelta al nivel de la noche. Festivo con un hundimiento solar igual de profundo pero algo más ancho. Se escala al precio medio del día introducido en la pestaña Simulación — al cambiar de jornada se recarga un precio medio orientativo. Se puede retocar arrastrando sobre el gráfico, igual que generación y consumo; no sustituye a los precios horarios reales de REE/OMIE.</p>
+          <h3>7 · Precio de la energía: curvas PVPC y de excedentes</h3>
+          <p>Las curvas PVPC y de energía excedentaria parten de perfiles típicos por jornada, medias horarias de datos de REE: laborable, del 2 al 6/11/2026; festivo, 31/10, 1/11, 7/11 y 8/11/2026. Al cambiar de jornada se cargan los de esa jornada y se pierden los retoques. La de excedentes aproxima el indicador de ESIOS con el precio spot, y se usa para compensar los excedentes en el coste horario. Ambas se pueden retocar hora a hora arrastrando sobre su gráfico; son una referencia de unos pocos días, no una serie anual.</p>
         </div>
 
         <div class="theory-card">
           <h3>8 · Coste horario del consumo: cómo se valora</h3>
-          <p>Coste de cada kWh consumido esa hora: lo importado de red se paga al precio PVPC de esa hora; lo autoconsumido directo de la FV y lo aportado por la batería se valoran a su LCOE (coste nivelado de generar ese kWh, ver el punto 9 — calculado a partir de la inversión, no introducido a mano). La línea de puntos que muestra el gráfico de la pestaña Simulación es lo que costaría el mismo consumo sin instalación, comprándolo todo a la red.</p>
+          <p>Coste de cada kWh consumido esa hora: lo importado de red se paga al precio PVPC de esa hora; lo autoconsumido directo de la FV y lo aportado por la batería se valoran a su LCOE (coste nivelado de generar ese kWh, ver el punto 9 — calculado a partir de la inversión, no introducido a mano). A cada hora se le resta el ingreso por sus excedentes exportados, valorados a la curva de excedentes; el coste de esa hora nunca baja de cero. La línea de puntos que muestra el gráfico de la pestaña Simulación es lo que costaría el mismo consumo sin instalación, comprándolo todo a la red.</p>
         </div>
 
         <div class="theory-card">
           <h3>9 · LCOE: cómo se calcula</h3>
-          <p>El LCOE convierte la inversión en un €/kWh: anualiza el coste del sistema con el interés y los años de vida introducidos (como la cuota constante de una hipoteca) y lo divide entre la energía que produce en un año. Mientras no se haya guardado ningún caso en la pestaña Informe, esa energía anual se estima repitiendo el día tipo actual (pestaña Simulación) los 365 días; en cuanto se guarda uno o más casos, se usa la suma ponderada de todos ellos (generación y aporte de batería de cada caso × los días al año que se le haya asignado al guardarlo), una base más realista que un único día. La batería suele durar menos años que la instalación FV: si sus años de vida son menores, aquí se cuenta que hay que volver a comprarla varias veces a lo largo de esos mismos años (cada reposición traída a valor presente con el interés) antes de anualizar el conjunto. El día tipo simulado en la pestaña Simulación representa una única jornada (laborable o festivo); las fracciones "días de la semana" y "meses del año" (ajustables por caso en la pestaña Informe) dicen a cuántos días del año se le aplica ese mismo ahorro diario, para poder ir cubriendo el año completo combinando varios días tipo.</p>
+          <p>El LCOE convierte la inversión en un €/kWh: anualiza el coste del sistema con el interés y los años de vida introducidos (como la cuota constante de una hipoteca) y lo divide entre la energía que produce en un año. Mientras no se haya guardado ningún caso en la pestaña Informe, esa energía anual se estima repitiendo el día tipo actual (pestaña Simulación) los 365 días; en cuanto se guarda uno o más casos, se usa la suma ponderada de todos ellos (generación y aporte de batería de cada caso × los días al año que se le haya asignado al guardarlo), una base más realista que un único día. Es un resultado de los costes específicos indicados en el flujo de caja, no un dato de entrada. La batería se considera con una vida fija de 15 años: si la FV dura más, se cuentan las baterías necesarias para cubrir sus años de vida, con todo su coste en la inversión inicial. El día tipo simulado en la pestaña Simulación representa una única jornada (laborable o festivo); las fracciones "días de la semana" y "meses del año" (ajustables por caso en la pestaña Informe) dicen a cuántos días del año se le aplica ese mismo ahorro diario, para poder ir cubriendo el año completo combinando varios días tipo.</p>
         </div>
 
         <div class="theory-card">
           <h3>10 · Flujo de caja, VAN, TIR y Payback</h3>
-          <p>Inversión inicial en el año 0 (FV + batería); cada año siguiente aporta el ahorro anual estimado, con una reposición adicional de la batería en los años en que toque. VAN con el interés introducido junto al LCOE (punto 9); TIR: tasa que hace VAN = 0; Payback: primer año con flujo acumulado ≥ 0. No sustituye a un análisis financiero completo (sin IPC, sin financiación, ahorro anual constante).</p>
+          <p>Inversión inicial en el año 0 (FV y todas las baterías necesarias); cada año siguiente aporta el ahorro anual estimado. VAN con el interés introducido junto al LCOE (punto 9); TIR: tasa que hace VAN = 0; Payback: primer año con flujo acumulado ≥ 0. No sustituye a un análisis financiero completo (sin IPC, sin financiación, ahorro anual constante).</p>
         </div>
 
         <div class="theory-card">
           <h3>11 · Limitaciones de este método</h3>
-          <p>Es una estimación a partir de un único día representativo, no de un año horario completo — no captura la variabilidad día a día (nubosidad, estación del año, vacaciones, etc.) ni la de los otros días tipo disponibles. La batería empieza el día con el SOC inicial configurado, y no se ha modelado degradación de la batería con la temperatura ni con la profundidad de descarga.</p>
+          <p>Es una estimación a partir de un único día representativo, no de un año horario completo — no captura la variabilidad día a día (nubosidad, estación del año, vacaciones, etc.) ni la de los otros días tipo disponibles. La batería empieza el día con el SOC inicial indicado, y no se ha modelado degradación de la batería con la temperatura ni con la profundidad de descarga.</p>
         </div>
 
         <div class="theory-card">
           <h3>12 · Cómo dimensionar tu FV y tu batería con esta herramienta</h3>
-          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (pestaña Simulación). Después prueba distintas potencias FV (kWp) y compara, en la pestaña Informe, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, más kWp exporta más sin mejorar mucho el autoconsumo. Por último activa la batería y varía su capacidad y potencia mirando el gráfico de reparto horario (también en la pestaña Simulación) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la pestaña Simulación — la pestaña Informe y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
+          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (pestaña Simulación). Después prueba distintas potencias FV (kWp) y compara, en la pestaña Informe, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, más kWp exporta más sin mejorar mucho el autoconsumo. Por último varía la capacidad de la batería mirando el gráfico de reparto horario (también en la pestaña Simulación) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la pestaña Simulación — la pestaña Informe y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
         </div>
 
         <div class="theory-card">
@@ -478,8 +518,11 @@
         </div>
       </div>
 
-      <div id="metodologia" class="ayuda-bloque">
-      <div class="eyebrow kicker">01 · Ayuda · Metodología</div>
+      
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Metodología</span></summary><div class="acc-cuerpo">
+<div id="metodologia">
       <h2>Cómo se simula un día tipo, hora a hora.</h2>
       <p class="lede">La herramienta estudia un único día tipo cada vez — elegido con el selector de la pestaña Simulación — cruzando su curva de generación con su curva de consumo hora a hora, y simulando la batería sobre ese mismo día.</p>
 
@@ -501,43 +544,49 @@
       <div class="grid3" style="margin-top:28px;">
         <div class="comp-card">
           <h4>Cómo dimensionar la instalación con esta herramienta</h4>
-          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas potencias FV (kWp) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se activa la batería y se varía su capacidad y potencia mirando el gráfico de reparto horario.</p>
+          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas potencias FV (kWp) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se varía la capacidad de la batería mirando el gráfico de reparto horario.</p>
         </div>
       </div>
       </div>
+    
+      </div></details>
     </section>
 
     <!-- 02 INFORME: datos de portada, casos guardados y generacion del PDF -->
     <section id="informe">
       <div class="eyebrow kicker">02 · Informe</div>
-      <h2>¿Para quién es este informe?</h2>
-      <p class="lede">Estos datos aparecerán en la portada del PDF.</p>
-      <div class="card">
-        <div class="fieldset-title">Proyecto</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Análisis de autoconsumo fotovoltaico"></div>
-          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+      <details class="portada-acordeon">
+        <summary>
+          <span class="portada-titulo">¿Para quién es este informe?</span>
+          <span class="portada-sub">Estos datos aparecerán en la portada del PDF.</span>
+        </summary>
+        <div class="card portada-body">
+          <div class="fieldset-title">Proyecto</div>
+          <div class="grid2">
+            <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Análisis de autoconsumo fotovoltaico"></div>
+            <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+          </div>
+          <div class="fieldset-title">Autor</div>
+          <div class="grid2">
+            <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
+            <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+          </div>
+          <div class="fieldset-title">Organización</div>
+          <div class="grid2">
+            <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+            <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+            <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
+            <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
+            <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
+          </div>
+          <div class="fieldset-title">Destinatario</div>
+          <div class="grid2">
+            <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
+            <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
+            <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
+          </div>
         </div>
-        <div class="fieldset-title">Autor</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
-          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
-        </div>
-        <div class="fieldset-title">Organización</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
-          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
-          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
-        </div>
-        <div class="fieldset-title">Destinatario</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
-        </div>
-      </div>
+      </details>
 
       <div class="eyebrow" style="margin:32px 0 10px;">Casos guardados en el informe</div>
       <div id="casosStatsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
@@ -547,10 +596,14 @@
         <table class="summary" id="summaryTable"></table>
       </div>
 
+      <div id="informeFlujoCaja"></div>
+
       <div class="btn-row" style="margin-top:20px;">
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearCasos">Vaciar todos los casos</button>
       </div>
+
+      <div class="notas-simplificaciones" data-notas-simplificaciones></div>
     </section>
 
     <footer>
@@ -937,6 +990,67 @@ function(t){var e=function(){return void 0===this.internal.vFS&&(this.internal.v
 function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,s,o,h,l=e,c=[[0,3,0,1,0,0,0],[0,3,0,1,2,2,0],[0,3,0,17,2,0,1],[0,3,5,5,4,1,0],[0,3,21,21,4,0,1],[0,3,5,5,4,2,0]],u=[[2,0,1,1,0,1,0],[2,0,1,1,0,2,0],[2,0,2,1,3,2,0],[2,0,2,33,3,1,1]],f={L:0,R:1,EN:2,AN:3,N:4,B:5,S:6},d={0:0,5:1,6:2,7:3,32:4,251:5,254:6,255:7},p=["(",")","(","<",">","<","[","]","[","{","}","{","«","»","«","‹","›","‹","⁅","⁆","⁅","⁽","⁾","⁽","₍","₎","₍","≤","≥","≤","〈","〉","〈","﹙","﹚","﹙","﹛","﹜","﹛","﹝","﹞","﹝","﹤","﹥","﹤"],g=new RegExp(/^([1-4|9]|1[0-9]|2[0-9]|3[0168]|4[04589]|5[012]|7[78]|159|16[0-9]|17[0-2]|21[569]|22[03489]|250)$/),m=!1,b=0;this.__bidiEngine__={};var v=function(t){var e=t.charCodeAt(),n=e>>8,r=d[n];return void 0!==r?l[256*r+(255&e)]:252===n||253===n?"AL":g.test(n)?"L":8===n?"R":"N"},w=function(t){for(var e,n=0;n<t.length;n++){if("L"===(e=v(t.charAt(n))))return!1;if("R"===e)return!0}return!1},y=function(t,e,s,o){var h,l,c,u,f=e[o];switch(f){case"L":case"R":case"LRE":case"RLE":case"LRO":case"RLO":case"PDF":m=!1;break;case"N":case"AN":break;case"EN":m&&(f="AN");break;case"AL":m=!0,f="R";break;case"WS":case"BN":f="N";break;case"CS":o<1||o+1>=e.length||"EN"!==(h=s[o-1])&&"AN"!==h||"EN"!==(l=e[o+1])&&"AN"!==l?f="N":m&&(l="AN"),f=l===h?l:"N";break;case"ES":f="EN"===(h=o>0?s[o-1]:"B")&&o+1<e.length&&"EN"===e[o+1]?"EN":"N";break;case"ET":if(o>0&&"EN"===s[o-1]){f="EN";break}if(m){f="N";break}for(c=o+1,u=e.length;c<u&&"ET"===e[c];)c++;f=c<u&&"EN"===e[c]?"EN":"N";break;case"NSM":if(i&&!a){for(u=e.length,c=o+1;c<u&&"NSM"===e[c];)c++;if(c<u){var d=t[o],p=d>=1425&&d<=2303||64286===d;if(h=e[c],p&&("R"===h||"AL"===h)){f="R";break}}}f=o<1||"B"===(h=e[o-1])?"N":s[o-1];break;case"B":m=!1,n=!0,f=b;break;case"S":r=!0,f="N"}return f},_=function(t,e,n){var r=t.split("");return n&&x(r,n,{hiLevel:b}),r.reverse(),e&&e.reverse(),r.join("")},x=function(t,e,i){var a,s,o,h,l,d=-1,p=t.length,g=0,w=[],_=b?u:c,x=[];for(m=!1,n=!1,r=!1,s=0;s<p;s++)x[s]=v(t[s]);for(o=0;o<p;o++){if(l=g,w[o]=y(t,x,w,o),a=240&(g=_[l][f[w[o]]]),g&=15,e[o]=h=_[g][5],a>0)if(16===a){for(s=d;s<o;s++)e[s]=1;d=-1}else d=-1;if(_[g][6])-1===d&&(d=o);else if(d>-1){for(s=d;s<o;s++)e[s]=h;d=-1}"B"===x[o]&&(e[o]=0),i.hiLevel|=h}r&&function(t,e,n){for(var r=0;r<n;r++)if("S"===t[r]){e[r]=b;for(var i=r-1;i>=0&&"WS"===t[i];i--)e[i]=b}}(x,e,p)},A=function(t,e,r,i,a){if(!(a.hiLevel<t)){if(1===t&&1===b&&!n)return e.reverse(),void(r&&r.reverse());for(var s,o,h,l,c=e.length,u=0;u<c;){if(i[u]>=t){for(h=u+1;h<c&&i[h]>=t;)h++;for(l=u,o=h-1;l<o;l++,o--)s=e[l],e[l]=e[o],e[o]=s,r&&(s=r[l],r[l]=r[o],r[o]=s);u=h}u++}}},L=function(t,e,n){var r=t.split(""),i={hiLevel:b};return n||(n=[]),x(r,n,i),function(t,e,n){if(0!==n.hiLevel&&h)for(var r,i=0;i<t.length;i++)1===e[i]&&(r=p.indexOf(t[i]))>=0&&(t[i]=p[r+1])}(r,n,i),A(2,r,e,n,i),A(1,r,e,n,i),r.join("")};return this.__bidiEngine__.doBidiReorder=function(t,e,n){if(function(t,e){if(e)for(var n=0;n<t.length;n++)e[n]=n;void 0===a&&(a=w(t)),void 0===o&&(o=w(t))}(t,e),i||!s||o)if(i&&s&&a^o)b=a?1:0,t=_(t,e,n);else if(!i&&s&&o)b=a?1:0,t=L(t,e,n),t=_(t,e);else if(!i||a||s||o){if(i&&!s&&a^o)t=_(t,e),a?(b=0,t=L(t,e,n)):(b=1,t=L(t,e,n),t=_(t,e));else if(i&&a&&!s&&o)b=1,t=L(t,e,n),t=_(t,e);else if(!i&&!s&&a^o){var r=h;a?(b=1,t=L(t,e,n),b=0,h=!1,t=L(t,e,n),h=r):(b=0,t=L(t,e,n),t=_(t,e),b=1,h=!1,t=L(t,e,n),h=r,t=_(t,e))}}else b=0,t=L(t,e,n);else b=a?1:0,t=L(t,e,n);return t},this.__bidiEngine__.setOptions=function(t){t&&(i=t.isInputVisual,s=t.isOutputVisual,a=t.isInputRtl,o=t.isOutputRtl,h=t.isSymmetricSwapping)},this.__bidiEngine__.setOptions(t),this.__bidiEngine__};var e=["BN","BN","BN","BN","BN","BN","BN","BN","BN","S","B","S","WS","B","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","B","B","B","S","WS","N","N","ET","ET","ET","N","N","N","N","N","ES","CS","ES","CS","CS","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","CS","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","BN","BN","BN","BN","BN","BN","B","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","BN","CS","N","ET","ET","ET","ET","N","N","N","N","L","N","N","BN","N","N","ET","ET","EN","EN","N","L","N","N","N","EN","L","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","L","L","L","L","L","L","L","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","L","N","N","N","N","N","ET","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","R","NSM","R","NSM","NSM","R","NSM","NSM","R","NSM","N","N","N","N","N","N","N","N","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","N","N","N","N","N","R","R","R","R","R","N","N","N","N","N","N","N","N","N","N","N","AN","AN","AN","AN","AN","AN","N","N","AL","ET","ET","AL","CS","AL","N","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AL","AL","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AN","AN","AN","AN","AN","AN","AN","AN","AN","AN","ET","AN","AN","AL","AL","AL","NSM","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AN","N","NSM","NSM","NSM","NSM","NSM","NSM","AL","AL","NSM","NSM","N","NSM","NSM","NSM","NSM","AL","AL","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","N","AL","AL","NSM","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","AL","N","N","N","N","N","N","N","N","N","N","N","N","N","N","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","R","R","N","N","N","N","R","N","N","N","N","N","WS","WS","WS","WS","WS","WS","WS","WS","WS","WS","WS","BN","BN","BN","L","R","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","WS","B","LRE","RLE","PDF","LRO","RLO","CS","ET","ET","ET","ET","ET","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","CS","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","WS","BN","BN","BN","BN","BN","N","LRI","RLI","FSI","PDI","BN","BN","BN","BN","BN","BN","EN","L","N","N","EN","EN","EN","EN","EN","EN","ES","ES","N","N","N","L","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","ES","ES","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","ET","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","L","L","L","L","L","L","L","N","N","N","N","N","N","N","N","N","N","N","N","L","L","L","L","L","N","N","N","N","N","R","NSM","R","R","R","R","R","R","R","R","R","R","ES","R","R","R","R","R","R","R","R","R","R","R","R","R","N","R","R","R","R","R","N","R","N","R","R","N","R","R","N","R","R","R","R","R","R","R","R","R","R","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","NSM","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","CS","N","CS","N","N","CS","N","N","N","N","N","N","N","N","N","ET","N","N","ES","ES","N","N","N","N","N","ET","ET","N","N","N","N","N","AL","AL","AL","AL","AL","N","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","AL","N","N","BN","N","N","N","ET","ET","ET","N","N","N","N","N","ES","CS","ES","CS","CS","EN","EN","EN","EN","EN","EN","EN","EN","EN","EN","CS","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","N","N","N","N","N","N","N","N","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","L","N","N","N","L","L","L","L","L","L","N","N","L","L","L","L","L","L","N","N","L","L","L","L","L","L","N","N","L","L","L","N","N","N","ET","ET","N","N","N","ET","ET","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N"],n=new t.__bidiEngine__({isInputVisual:!0});t.API.events.push(["postProcessText",function(t){var e=t.text;t.x,t.y;var r=t.options||{};t.mutex,r.lang;var i=[];if(r.isInputVisual="boolean"!=typeof r.isInputVisual||r.isInputVisual,n.setOptions(r),"[object Array]"===Object.prototype.toString.call(e)){var a=0;for(i=[],a=0;a<e.length;a+=1)"[object Array]"===Object.prototype.toString.call(e[a])?i.push([n.doBidiReorder(e[a][0]),e[a][1],e[a][2]]):i.push([n.doBidiReorder(e[a])]);t.text=i}else t.text=n.doBidiReorder(e);n.setOptions({isInputVisual:!0})}])}(R),R.API.TTFFont=function(){function t(t){var e;if(this.rawData=t,e=this.contents=new Ta(t),this.contents.pos=4,"ttcf"===e.readString(4))throw new Error("TTCF not supported.");e.pos=0,this.parse(),this.subset=new rs(this),this.registerTTF()}return t.open=function(e){return new t(e)},t.prototype.parse=function(){return this.directory=new Da(this.contents),this.head=new Ua(this),this.name=new Ja(this),this.cmap=new Wa(this),this.toUnicode={},this.hhea=new Va(this),this.maxp=new Xa(this),this.hmtx=new Ka(this),this.post=new Ya(this),this.os2=new Ga(this),this.loca=new ns(this),this.glyf=new Qa(this),this.ascender=this.os2.exists&&this.os2.ascender||this.hhea.ascender,this.decender=this.os2.exists&&this.os2.decender||this.hhea.decender,this.lineGap=this.os2.exists&&this.os2.lineGap||this.hhea.lineGap,this.bbox=[this.head.xMin,this.head.yMin,this.head.xMax,this.head.yMax]},t.prototype.registerTTF=function(){var t,e,n,r,i;if(this.scaleFactor=1e3/this.head.unitsPerEm,this.bbox=function(){var e,n,r,i;for(i=[],e=0,n=(r=this.bbox).length;e<n;e++)t=r[e],i.push(Math.round(t*this.scaleFactor));return i}.call(this),this.stemV=0,this.post.exists?(n=255&(r=this.post.italic_angle),32768&(e=r>>16)&&(e=-(1+(65535^e))),this.italicAngle=+(e+"."+n)):this.italicAngle=0,this.ascender=Math.round(this.ascender*this.scaleFactor),this.decender=Math.round(this.decender*this.scaleFactor),this.lineGap=Math.round(this.lineGap*this.scaleFactor),this.capHeight=this.os2.exists&&this.os2.capHeight||this.ascender,this.xHeight=this.os2.exists&&this.os2.xHeight||0,this.familyClass=(this.os2.exists&&this.os2.familyClass||0)>>8,this.isSerif=1===(i=this.familyClass)||2===i||3===i||4===i||5===i||7===i,this.isScript=10===this.familyClass,this.flags=0,this.post.isFixedPitch&&(this.flags|=1),this.isSerif&&(this.flags|=2),this.isScript&&(this.flags|=8),0!==this.italicAngle&&(this.flags|=64),this.flags|=32,!this.cmap.unicode)throw new Error("No unicode cmap for font")},t.prototype.characterToGlyph=function(t){var e;return(null!=(e=this.cmap.unicode)?e.codeMap[t]:void 0)||0},t.prototype.widthOfGlyph=function(t){var e;return e=1e3/this.head.unitsPerEm,this.hmtx.forGlyph(t).advance*e},t.prototype.widthOfString=function(t,e,n){var r,i,a,s;for(a=0,i=0,s=(t=""+t).length;0<=s?i<s:i>s;i=0<=s?++i:--i)r=t.charCodeAt(i),a+=this.widthOfGlyph(this.characterToGlyph(r))+n*(1e3/e)||0;return a*(e/1e3)},t.prototype.lineHeight=function(t,e){var n;return null==e&&(e=!1),n=e?this.lineGap:0,(this.ascender+n-this.decender)/1e3*t},t}();var Ra,Ta=function(){function t(t){this.data=null!=t?t:[],this.pos=0,this.length=this.data.length}return t.prototype.readByte=function(){return this.data[this.pos++]},t.prototype.writeByte=function(t){return this.data[this.pos++]=t},t.prototype.readUInt32=function(){return 16777216*this.readByte()+(this.readByte()<<16)+(this.readByte()<<8)+this.readByte()},t.prototype.writeUInt32=function(t){return this.writeByte(t>>>24&255),this.writeByte(t>>16&255),this.writeByte(t>>8&255),this.writeByte(255&t)},t.prototype.readInt32=function(){var t;return(t=this.readUInt32())>=2147483648?t-4294967296:t},t.prototype.writeInt32=function(t){return t<0&&(t+=4294967296),this.writeUInt32(t)},t.prototype.readUInt16=function(){return this.readByte()<<8|this.readByte()},t.prototype.writeUInt16=function(t){return this.writeByte(t>>8&255),this.writeByte(255&t)},t.prototype.readInt16=function(){var t;return(t=this.readUInt16())>=32768?t-65536:t},t.prototype.writeInt16=function(t){return t<0&&(t+=65536),this.writeUInt16(t)},t.prototype.readString=function(t){var e,n;for(n=[],e=0;0<=t?e<t:e>t;e=0<=t?++e:--e)n[e]=String.fromCharCode(this.readByte());return n.join("")},t.prototype.writeString=function(t){var e,n,r;for(r=[],e=0,n=t.length;0<=n?e<n:e>n;e=0<=n?++e:--e)r.push(this.writeByte(t.charCodeAt(e)));return r},t.prototype.readShort=function(){return this.readInt16()},t.prototype.writeShort=function(t){return this.writeInt16(t)},t.prototype.readLongLong=function(){var t,e,n,r,i,a,s,o;return t=this.readByte(),e=this.readByte(),n=this.readByte(),r=this.readByte(),i=this.readByte(),a=this.readByte(),s=this.readByte(),o=this.readByte(),128&t?-1*(72057594037927940*(255^t)+281474976710656*(255^e)+1099511627776*(255^n)+4294967296*(255^r)+16777216*(255^i)+65536*(255^a)+256*(255^s)+(255^o)+1):72057594037927940*t+281474976710656*e+1099511627776*n+4294967296*r+16777216*i+65536*a+256*s+o},t.prototype.writeLongLong=function(t){var e,n;return e=Math.floor(t/4294967296),n=4294967295&t,this.writeByte(e>>24&255),this.writeByte(e>>16&255),this.writeByte(e>>8&255),this.writeByte(255&e),this.writeByte(n>>24&255),this.writeByte(n>>16&255),this.writeByte(n>>8&255),this.writeByte(255&n)},t.prototype.readInt=function(){return this.readInt32()},t.prototype.writeInt=function(t){return this.writeInt32(t)},t.prototype.read=function(t){var e,n;for(e=[],n=0;0<=t?n<t:n>t;n=0<=t?++n:--n)e.push(this.readByte());return e},t.prototype.write=function(t){var e,n,r,i;for(i=[],n=0,r=t.length;n<r;n++)e=t[n],i.push(this.writeByte(e));return i},t}(),Da=function(){var t;function e(t){var e,n,r;for(this.scalarType=t.readInt(),this.tableCount=t.readShort(),this.searchRange=t.readShort(),this.entrySelector=t.readShort(),this.rangeShift=t.readShort(),this.tables={},n=0,r=this.tableCount;0<=r?n<r:n>r;n=0<=r?++n:--n)e={tag:t.readString(4),checksum:t.readInt(),offset:t.readInt(),length:t.readInt()},this.tables[e.tag]=e}return e.prototype.encode=function(e){var n,r,i,a,s,o,h,l,c,u,f,d,p;for(p in f=Object.keys(e).length,o=Math.log(2),c=16*Math.floor(Math.log(f)/o),a=Math.floor(c/o),l=16*f-c,(r=new Ta).writeInt(this.scalarType),r.writeShort(f),r.writeShort(c),r.writeShort(a),r.writeShort(l),i=16*f,h=r.pos+i,s=null,d=[],e)for(u=e[p],r.writeString(p),r.writeInt(t(u)),r.writeInt(h),r.writeInt(u.length),d=d.concat(u),"head"===p&&(s=h),h+=u.length;h%4;)d.push(0),h++;return r.write(d),n=2981146554-t(r.data),r.pos=s+8,r.writeUInt32(n),r.data},t=function(t){var e,n,r,i;for(t=$a.call(t);t.length%4;)t.push(0);for(r=new Ta(t),n=0,e=0,i=t.length;e<i;e=e+=4)n+=r.readUInt32();return 4294967295&n},e}(),qa={}.hasOwnProperty,za=function(t,e){for(var n in e)qa.call(e,n)&&(t[n]=e[n]);function r(){this.constructor=t}return r.prototype=e.prototype,t.prototype=new r,t.__super__=e.prototype,t},Ua=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="head",e.prototype.parse=function(t){return t.pos=this.offset,this.version=t.readInt(),this.revision=t.readInt(),this.checkSumAdjustment=t.readInt(),this.magicNumber=t.readInt(),this.flags=t.readShort(),this.unitsPerEm=t.readShort(),this.created=t.readLongLong(),this.modified=t.readLongLong(),this.xMin=t.readShort(),this.yMin=t.readShort(),this.xMax=t.readShort(),this.yMax=t.readShort(),this.macStyle=t.readShort(),this.lowestRecPPEM=t.readShort(),this.fontDirectionHint=t.readShort(),this.indexToLocFormat=t.readShort(),this.glyphDataFormat=t.readShort()},e.prototype.encode=function(t){var e;return(e=new Ta).writeInt(this.version),e.writeInt(this.revision),e.writeInt(this.checkSumAdjustment),e.writeInt(this.magicNumber),e.writeShort(this.flags),e.writeShort(this.unitsPerEm),e.writeLongLong(this.created),e.writeLongLong(this.modified),e.writeShort(this.xMin),e.writeShort(this.yMin),e.writeShort(this.xMax),e.writeShort(this.yMax),e.writeShort(this.macStyle),e.writeShort(this.lowestRecPPEM),e.writeShort(this.fontDirectionHint),e.writeShort(t),e.writeShort(this.glyphDataFormat),e.data},e}(Ra=function(){function t(t){var e;this.file=t,e=this.file.directory.tables[this.tag],this.exists=!!e,e&&(this.offset=e.offset,this.length=e.length,this.parse(this.file.contents))}return t.prototype.parse=function(){},t.prototype.encode=function(){},t.prototype.raw=function(){return this.exists?(this.file.contents.pos=this.offset,this.file.contents.read(this.length)):null},t}()),Ha=function(){function t(t,e){var n,r,i,a,s,o,h,l,c,u,f,d,p,g,m,b,v;switch(this.platformID=t.readUInt16(),this.encodingID=t.readShort(),this.offset=e+t.readInt(),c=t.pos,t.pos=this.offset,this.format=t.readUInt16(),this.length=t.readUInt16(),this.language=t.readUInt16(),this.isUnicode=3===this.platformID&&1===this.encodingID&&4===this.format||0===this.platformID&&4===this.format,this.codeMap={},this.format){case 0:for(o=0;o<256;++o)this.codeMap[o]=t.readByte();break;case 4:for(f=t.readUInt16(),u=f/2,t.pos+=6,i=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),t.pos+=2,p=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),h=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),l=function(){var e,n;for(n=[],o=e=0;0<=u?e<u:e>u;o=0<=u?++e:--e)n.push(t.readUInt16());return n}(),r=(this.length-t.pos+this.offset)/2,s=function(){var e,n;for(n=[],o=e=0;0<=r?e<r:e>r;o=0<=r?++e:--e)n.push(t.readUInt16());return n}(),o=m=0,v=i.length;m<v;o=++m)for(g=i[o],n=b=d=p[o];d<=g?b<=g:b>=g;n=d<=g?++b:--b)0===l[o]?a=n+h[o]:0!==(a=s[l[o]/2+(n-d)-(u-o)]||0)&&(a+=h[o]),this.codeMap[n]=65535&a}t.pos=c}return t.encode=function(t,e){var n,r,i,a,s,o,h,l,c,u,f,d,p,g,m,b,v,w,y,_,x,A,L,N,S,k,P,F,I,C,j,E,O,B,M,R,T,D,q,z,U,H,W,V,G,Y;switch(F=new Ta,a=Object.keys(t).sort(function(t,e){return t-e}),e){case"macroman":for(p=0,g=function(){var t=[];for(d=0;d<256;++d)t.push(0);return t}(),b={0:0},i={},I=0,O=a.length;I<O;I++)null==b[W=t[r=a[I]]]&&(b[W]=++p),i[r]={old:t[r],new:b[t[r]]},g[r]=b[t[r]];return F.writeUInt16(1),F.writeUInt16(0),F.writeUInt32(12),F.writeUInt16(0),F.writeUInt16(262),F.writeUInt16(0),F.write(g),{charMap:i,subtable:F.data,maxGlyphID:p+1};case"unicode":for(k=[],c=[],v=0,b={},n={},m=h=null,C=0,B=a.length;C<B;C++)null==b[y=t[r=a[C]]]&&(b[y]=++v),n[r]={old:y,new:b[y]},s=b[y]-r,null!=m&&s===h||(m&&c.push(m),k.push(r),h=s),m=r;for(m&&c.push(m),c.push(65535),k.push(65535),N=2*(L=k.length),A=2*Math.pow(Math.log(L)/Math.LN2,2),u=Math.log(A/2)/Math.LN2,x=2*L-A,o=[],_=[],f=[],d=j=0,M=k.length;j<M;d=++j){if(S=k[d],l=c[d],65535===S){o.push(0),_.push(0);break}if(S-(P=n[S].new)>=32768)for(o.push(0),_.push(2*(f.length+L-d)),r=E=S;S<=l?E<=l:E>=l;r=S<=l?++E:--E)f.push(n[r].new);else o.push(P-S),_.push(0)}for(F.writeUInt16(3),F.writeUInt16(1),F.writeUInt32(12),F.writeUInt16(4),F.writeUInt16(16+8*L+2*f.length),F.writeUInt16(0),F.writeUInt16(N),F.writeUInt16(A),F.writeUInt16(u),F.writeUInt16(x),U=0,R=c.length;U<R;U++)r=c[U],F.writeUInt16(r);for(F.writeUInt16(0),H=0,T=k.length;H<T;H++)r=k[H],F.writeUInt16(r);for(V=0,D=o.length;V<D;V++)s=o[V],F.writeUInt16(s);for(G=0,q=_.length;G<q;G++)w=_[G],F.writeUInt16(w);for(Y=0,z=f.length;Y<z;Y++)p=f[Y],F.writeUInt16(p);return{charMap:n,subtable:F.data,maxGlyphID:v+1}}},t}(),Wa=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="cmap",e.prototype.parse=function(t){var e,n,r;for(t.pos=this.offset,this.version=t.readUInt16(),r=t.readUInt16(),this.tables=[],this.unicode=null,n=0;0<=r?n<r:n>r;n=0<=r?++n:--n)e=new Ha(t,this.offset),this.tables.push(e),e.isUnicode&&null==this.unicode&&(this.unicode=e);return!0},e.encode=function(t,e){var n,r;return null==e&&(e="macroman"),n=Ha.encode(t,e),(r=new Ta).writeUInt16(0),r.writeUInt16(1),n.table=r.data.concat(n.subtable),n},e}(Ra),Va=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="hhea",e.prototype.parse=function(t){return t.pos=this.offset,this.version=t.readInt(),this.ascender=t.readShort(),this.decender=t.readShort(),this.lineGap=t.readShort(),this.advanceWidthMax=t.readShort(),this.minLeftSideBearing=t.readShort(),this.minRightSideBearing=t.readShort(),this.xMaxExtent=t.readShort(),this.caretSlopeRise=t.readShort(),this.caretSlopeRun=t.readShort(),this.caretOffset=t.readShort(),t.pos+=8,this.metricDataFormat=t.readShort(),this.numberOfMetrics=t.readUInt16()},e}(Ra),Ga=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="OS/2",e.prototype.parse=function(t){if(t.pos=this.offset,this.version=t.readUInt16(),this.averageCharWidth=t.readShort(),this.weightClass=t.readUInt16(),this.widthClass=t.readUInt16(),this.type=t.readShort(),this.ySubscriptXSize=t.readShort(),this.ySubscriptYSize=t.readShort(),this.ySubscriptXOffset=t.readShort(),this.ySubscriptYOffset=t.readShort(),this.ySuperscriptXSize=t.readShort(),this.ySuperscriptYSize=t.readShort(),this.ySuperscriptXOffset=t.readShort(),this.ySuperscriptYOffset=t.readShort(),this.yStrikeoutSize=t.readShort(),this.yStrikeoutPosition=t.readShort(),this.familyClass=t.readShort(),this.panose=function(){var e,n;for(n=[],e=0;e<10;++e)n.push(t.readByte());return n}(),this.charRange=function(){var e,n;for(n=[],e=0;e<4;++e)n.push(t.readInt());return n}(),this.vendorID=t.readString(4),this.selection=t.readShort(),this.firstCharIndex=t.readShort(),this.lastCharIndex=t.readShort(),this.version>0&&(this.ascent=t.readShort(),this.descent=t.readShort(),this.lineGap=t.readShort(),this.winAscent=t.readShort(),this.winDescent=t.readShort(),this.codePageRange=function(){var e,n;for(n=[],e=0;e<2;e=++e)n.push(t.readInt());return n}(),this.version>1))return this.xHeight=t.readShort(),this.capHeight=t.readShort(),this.defaultChar=t.readShort(),this.breakChar=t.readShort(),this.maxContext=t.readShort()},e}(Ra),Ya=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="post",e.prototype.parse=function(t){var e,n,r;switch(t.pos=this.offset,this.format=t.readInt(),this.italicAngle=t.readInt(),this.underlinePosition=t.readShort(),this.underlineThickness=t.readShort(),this.isFixedPitch=t.readInt(),this.minMemType42=t.readInt(),this.maxMemType42=t.readInt(),this.minMemType1=t.readInt(),this.maxMemType1=t.readInt(),this.format){case 65536:case 196608:break;case 131072:var i;for(n=t.readUInt16(),this.glyphNameIndex=[],i=0;0<=n?i<n:i>n;i=0<=n?++i:--i)this.glyphNameIndex.push(t.readUInt16());for(this.names=[],r=[];t.pos<this.offset+this.length;)e=t.readByte(),r.push(this.names.push(t.readString(e)));return r;case 151552:return n=t.readUInt16(),this.offsets=t.read(n);case 262144:return this.map=function(){var e,n,r;for(r=[],i=e=0,n=this.file.maxp.numGlyphs;0<=n?e<n:e>n;i=0<=n?++e:--e)r.push(t.readUInt32());return r}.call(this)}},e}(Ra),Za=function(t,e){this.raw=t,this.length=t.length,this.platformID=e.platformID,this.encodingID=e.encodingID,this.languageID=e.languageID},Ja=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="name",e.prototype.parse=function(t){var e,n,r,i,a,s,o,h,l,c,u;for(t.pos=this.offset,t.readShort(),e=t.readShort(),s=t.readShort(),n=[],i=0;0<=e?i<e:i>e;i=0<=e?++i:--i)n.push({platformID:t.readShort(),encodingID:t.readShort(),languageID:t.readShort(),nameID:t.readShort(),length:t.readShort(),offset:this.offset+s+t.readShort()});for(o={},i=l=0,c=n.length;l<c;i=++l)r=n[i],t.pos=r.offset,h=t.readString(r.length),a=new Za(h,r),null==o[u=r.nameID]&&(o[u]=[]),o[r.nameID].push(a);this.strings=o,this.copyright=o[0],this.fontFamily=o[1],this.fontSubfamily=o[2],this.uniqueSubfamily=o[3],this.fontName=o[4],this.version=o[5];try{this.postscriptName=o[6][0].raw.replace(/[\x00-\x19\x80-\xff]/g,"")}catch(is){this.postscriptName=o[4][0].raw.replace(/[\x00-\x19\x80-\xff]/g,"")}return this.trademark=o[7],this.manufacturer=o[8],this.designer=o[9],this.description=o[10],this.vendorUrl=o[11],this.designerUrl=o[12],this.license=o[13],this.licenseUrl=o[14],this.preferredFamily=o[15],this.preferredSubfamily=o[17],this.compatibleFull=o[18],this.sampleText=o[19]},e}(Ra),Xa=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="maxp",e.prototype.parse=function(t){return t.pos=this.offset,this.version=t.readInt(),this.numGlyphs=t.readUInt16(),this.maxPoints=t.readUInt16(),this.maxContours=t.readUInt16(),this.maxCompositePoints=t.readUInt16(),this.maxComponentContours=t.readUInt16(),this.maxZones=t.readUInt16(),this.maxTwilightPoints=t.readUInt16(),this.maxStorage=t.readUInt16(),this.maxFunctionDefs=t.readUInt16(),this.maxInstructionDefs=t.readUInt16(),this.maxStackElements=t.readUInt16(),this.maxSizeOfInstructions=t.readUInt16(),this.maxComponentElements=t.readUInt16(),this.maxComponentDepth=t.readUInt16()},e}(Ra),Ka=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="hmtx",e.prototype.parse=function(t){var e,n,r,i,a,s,o;for(t.pos=this.offset,this.metrics=[],e=0,s=this.file.hhea.numberOfMetrics;0<=s?e<s:e>s;e=0<=s?++e:--e)this.metrics.push({advance:t.readUInt16(),lsb:t.readInt16()});for(r=this.file.maxp.numGlyphs-this.file.hhea.numberOfMetrics,this.leftSideBearings=function(){var n,i;for(i=[],e=n=0;0<=r?n<r:n>r;e=0<=r?++n:--n)i.push(t.readInt16());return i}(),this.widths=function(){var t,e,n,r;for(r=[],t=0,e=(n=this.metrics).length;t<e;t++)i=n[t],r.push(i.advance);return r}.call(this),n=this.widths[this.widths.length-1],o=[],e=a=0;0<=r?a<r:a>r;e=0<=r?++a:--a)o.push(this.widths.push(n));return o},e.prototype.forGlyph=function(t){return t in this.metrics?this.metrics[t]:{advance:this.metrics[this.metrics.length-1].advance,lsb:this.leftSideBearings[t-this.metrics.length]}},e}(Ra),$a=[].slice,Qa=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="glyf",e.prototype.parse=function(){return this.cache={}},e.prototype.glyphFor=function(t){var e,n,r,i,a,s,o,h,l,c;return t in this.cache?this.cache[t]:(i=this.file.loca,e=this.file.contents,n=i.indexOf(t),0===(r=i.lengthOf(t))?this.cache[t]=null:(e.pos=this.offset+n,a=(s=new Ta(e.read(r))).readShort(),h=s.readShort(),c=s.readShort(),o=s.readShort(),l=s.readShort(),this.cache[t]=-1===a?new es(s,h,c,o,l):new ts(s,a,h,c,o,l),this.cache[t]))},e.prototype.encode=function(t,e,n){var r,i,a,s,o;for(a=[],i=[],s=0,o=e.length;s<o;s++)r=t[e[s]],i.push(a.length),r&&(a=a.concat(r.encode(n)));return i.push(a.length),{table:a,offsets:i}},e}(Ra),ts=function(){function t(t,e,n,r,i,a){this.raw=t,this.numberOfContours=e,this.xMin=n,this.yMin=r,this.xMax=i,this.yMax=a,this.compound=!1}return t.prototype.encode=function(){return this.raw.data},t}(),es=function(){function t(t,e,n,r,i){var a,s;for(this.raw=t,this.xMin=e,this.yMin=n,this.xMax=r,this.yMax=i,this.compound=!0,this.glyphIDs=[],this.glyphOffsets=[],a=this.raw;s=a.readShort(),this.glyphOffsets.push(a.pos),this.glyphIDs.push(a.readUInt16()),32&s;)a.pos+=1&s?4:2,128&s?a.pos+=8:64&s?a.pos+=4:8&s&&(a.pos+=2)}return t.prototype.encode=function(){var t,e,n;for(e=new Ta($a.call(this.raw.data)),t=0,n=this.glyphIDs.length;t<n;++t)e.pos=this.glyphOffsets[t];return e.data},t}(),ns=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return za(e,t),e.prototype.tag="loca",e.prototype.parse=function(t){var e,n;return t.pos=this.offset,e=this.file.head.indexToLocFormat,this.offsets=0===e?function(){var e,r;for(r=[],n=0,e=this.length;n<e;n+=2)r.push(2*t.readUInt16());return r}.call(this):function(){var e,r;for(r=[],n=0,e=this.length;n<e;n+=4)r.push(t.readUInt32());return r}.call(this)},e.prototype.indexOf=function(t){return this.offsets[t]},e.prototype.lengthOf=function(t){return this.offsets[t+1]-this.offsets[t]},e.prototype.encode=function(t,e){for(var n=new Uint32Array(this.offsets.length),r=0,i=0,a=0;a<n.length;++a)if(n[a]=r,i<e.length&&e[i]==a){++i,n[a]=r;var s=this.offsets[a],o=this.offsets[a+1]-s;o>0&&(r+=o)}for(var h=new Array(4*n.length),l=0;l<n.length;++l)h[4*l+3]=255&n[l],h[4*l+2]=(65280&n[l])>>8,h[4*l+1]=(16711680&n[l])>>16,h[4*l]=(4278190080&n[l])>>24;return h},e}(Ra),rs=function(){function t(t){this.font=t,this.subset={},this.unicodes={},this.next=33}return t.prototype.generateCmap=function(){var t,e,n,r,i;for(e in r=this.font.cmap.tables[0].codeMap,t={},i=this.subset)n=i[e],t[e]=r[n];return t},t.prototype.glyphsFor=function(t){var e,n,r,i,a,s,o;for(r={},a=0,s=t.length;a<s;a++)r[i=t[a]]=this.font.glyf.glyphFor(i);for(i in e=[],r)(null!=(n=r[i])?n.compound:void 0)&&e.push.apply(e,n.glyphIDs);if(e.length>0)for(i in o=this.glyphsFor(e))n=o[i],r[i]=n;return r},t.prototype.encode=function(t,e){var n,r,i,a,s,o,h,l,c,u,f,d,p,g,m;for(r in n=Wa.encode(this.generateCmap(),"unicode"),a=this.glyphsFor(t),f={0:0},m=n.charMap)f[(o=m[r]).old]=o.new;for(d in u=n.maxGlyphID,a)d in f||(f[d]=u++);return l=function(t){var e,n;for(e in n={},t)n[t[e]]=e;return n}(f),c=Object.keys(l).sort(function(t,e){return t-e}),p=function(){var t,e,n;for(n=[],t=0,e=c.length;t<e;t++)s=c[t],n.push(l[s]);return n}(),i=this.font.glyf.encode(a,p,f),h=this.font.loca.encode(i.offsets,p),g={cmap:this.font.cmap.raw(),glyf:i.table,loca:h,hmtx:this.font.hmtx.raw(),hhea:this.font.hhea.raw(),maxp:this.font.maxp.raw(),post:this.font.post.raw(),name:this.font.name.raw(),head:this.font.head.encode(e)},this.font.os2.exists&&(g["OS/2"]=this.font.os2.raw()),this.font.directory.encode(g)},t}();R.API.PDFObject=function(){var t;function e(){}return t=function(t,e){return(Array(e+1).join("0")+t).slice(-e)},e.convert=function(n){var r,i,a,s;if(Array.isArray(n))return"["+function(){var t,i,a;for(a=[],t=0,i=n.length;t<i;t++)r=n[t],a.push(e.convert(r));return a}().join(" ")+"]";if("string"==typeof n)return"/"+n;if(null!=n?n.isString:void 0)return"("+n+")";if(n instanceof Date)return"(D:"+t(n.getUTCFullYear(),4)+t(n.getUTCMonth(),2)+t(n.getUTCDate(),2)+t(n.getUTCHours(),2)+t(n.getUTCMinutes(),2)+t(n.getUTCSeconds(),2)+"Z)";if("[object Object]"==={}.toString.call(n)){for(i in a=["<<"],n)s=n[i],a.push("/"+i+" "+e.convert(s));return a.push(">>"),a.join("\n")}return""+n},e}(),t.AcroForm=St,t.AcroFormAppearance=Lt,t.AcroFormButton=bt,t.AcroFormCheckBox=_t,t.AcroFormChoiceField=dt,t.AcroFormComboBox=gt,t.AcroFormEditBox=mt,t.AcroFormListBox=pt,t.AcroFormPasswordField=At,t.AcroFormPushButton=vt,t.AcroFormRadioButton=wt,t.AcroFormTextField=xt,t.GState=E,t.ShadingPattern=B,t.TilingPattern=M,t.default=R,t.jsPDF=R,Object.defineProperty(t,"__esModule",{value:!0})});
 //# sourceMappingURL=jspdf.umd.min.js.map
 
+// ===================== NOTAS: SIMPLIFICACIONES DEL MODELO =====================
+// Lista unica para las notas de las pestañas Simulacion e Informe y para el PDF.
+const SIMPLIFICACIONES = [
+  {tema:'Alcance y resolución', items:[
+    'Cada caso simula un único día tipo de 24 horas, no un año horario completo (8.760 h). La variabilidad entre días (nubosidad, vacaciones, estaciones) solo se recoge en la medida en que se guarden varios casos.',
+    'Cada caso se extrapola al año multiplicándolo por los días asignados (fracción de la semana × fracción del año). Si los casos no suman 365 días, el resto del año no se contabiliza.',
+    'Resolución horaria: dentro de cada hora se supone que generación y consumo son uniformes y simultáneos.',
+    'El resultado es orientativo y no sustituye a un dimensionado técnico normativo.',
+  ]},
+  {tema:'Generación fotovoltaica', items:[
+    'La curva es un semiseno entre el orto y el ocaso, con la latitud de Madrid (40,4°) y declinación 0° (equinoccio), igual para todo el año y para ambas jornadas.',
+    'La generación se ajusta a los valores típicos de PVGIS mediante un factor fijo (0,6), calibrado para una latitud de unos 40° (aproximadamente 3,5 kWh/kWp al día en diciembre y 5,5 en junio), lo que equivale a unos 4,6 kWh/kWp al día. No son datos de PVGIS de la ubicación concreta, salvo que se escriba a mano el valor obtenido para ella. La generación diaria se estima multiplicando los kWp indicados por ese rendimiento, y es un valor medio aproximado, ya que una instalación real rendiría distinto según ubicación, orientación y época del año.',
+    'La generación diaria se puede sustituir a mano por el valor de PVGIS: cambia el total del día, pero no la forma de la curva, y la inversión sigue dependiendo de los kWp. Cambiar los kWp vuelve a sobrescribirla con la estimación.',
+    'No se consideran orientación, inclinación, sombras, nubosidad, temperatura, degradación de los módulos ni límites del inversor.',
+  ]},
+  {tema:'Consumo', items:[
+    'Los perfiles (doméstico, comercial, industrial y constante) son formas típicas orientativas, no datos medidos.',
+    'Al editar una hora, las demás se reajustan en proporción para mantener el consumo diario indicado.',
+  ]},
+  {tema:'Batería', items:[
+    'Rendimiento de ida y vuelta fijo del 92 %, aplicado íntegramente durante la carga.',
+    'La potencia máxima de carga y descarga es siempre la mitad de la capacidad, sin otras limitaciones del inversor.',
+    'Se puede usar del 0 al 100 % de la capacidad, sin reserva ni SOC mínimo.',
+    'Solo se carga con excedente fotovoltaico y solo se descarga para cubrir consumo: no intercambia energía directamente con la red.',
+    'El día empieza con el SOC inicial indicado y no enlaza con el día anterior ni con el siguiente, de modo que el SOC final puede ser distinto del inicial.',
+    'Vida útil fija de 15 años (valor por defecto), independiente de los ciclos reales. No se modela pérdida de capacidad, ni efecto de la temperatura o de la profundidad de descarga.',
+    'No hay reposiciones durante la vida útil: las baterías necesarias para cubrir los años de la FV (redondeando hacia arriba) se pagan todas en la inversión inicial, al mismo coste y sin descuento financiero.',
+  ]},
+  {tema:'Red eléctrica', items:[
+    'La red está siempre disponible y no tiene límite de importación ni de exportación: no se aplica potencia contratada ni límite de inyección.',
+    'No se simulan sistemas aislados.',
+  ]},
+  {tema:'Precios y coste de la energía', items:[
+    'Las curvas PVPC y de excedentes son perfiles típicos por jornada, medias de pocos días de REE (laborable: 2-6/11/2026; festivo: 31/10, 1/11, 7/11 y 8/11/2026), y se usan para todo el año.',
+    'La curva de excedentes aproxima el indicador de ESIOS con la media horaria del precio spot.',
+    'Solo se valora la energía: no se incluyen término de potencia, peajes ni impuestos desglosados.',
+    'El ingreso por excedentes se resta hora a hora del coste de esa misma hora, con mínimo cero: lo que sobra en una hora no se traslada a otras. La compensación simplificada real se liquida por periodo de facturación.',
+    'La energía autoconsumida de la FV y de la batería se valora a su LCOE; la importada, al precio de cada hora.',
+  ]},
+  {tema:'Análisis económico', items:[
+    'El LCOE de la FV reparte su coste entre toda la generación, incluida la exportada; el de la batería, entre la energía descargada.',
+    'La inversión de la FV es la potencia indicada (kWp) por su coste específico. La inversión total usa la potencia, los kWh de batería y los costes específicos actuales de la pestaña Simulación, no los de cada caso guardado.',
+  ]},
+  {tema:'Extrapolación del día al flujo de caja anual (VAN, TIR y PR)', items:[
+    'Solo se introducen valores de un día: el ahorro anual es el ahorro de ese día multiplicado por los días asignados a cada caso, sumando todos los casos. Por defecto, el primer caso representa los 365 días del año.',
+    'Todos los días asignados a un caso se consideran idénticos a su día tipo: misma generación, consumo y precios, sin estaciones ni meteorología. Laborables y festivos solo se distinguen si se guardan como casos distintos con sus días.',
+    'Los días asignados no se normalizan: si los casos suman menos o más de 365 días, el ahorro anual se calcula con esa suma.',
+    'La energía anual usada para el LCOE se extrapola del mismo modo.',
+    'El ahorro anual es constante durante toda la vida útil: no se consideran inflación, evolución de precios, mantenimiento, seguros, subvenciones, impuestos ni valor residual.',
+    'Los flujos son anuales: la inversión se sitúa en el año 0 y cada ahorro al final de su año, durante la duración indicada.',
+    'VAN: flujos descontados con el interés indicado, constante todos los años. TIR: tasa que anula el VAN de esos flujos; si no existe, no se muestra valor.',
+    'PR (Payback o periodo de retorno): primer año entero en que el flujo acumulado es positivo o cero, sin descontar y sin fracciones de año. Si no se alcanza dentro de la duración, la inversión no se recupera.',
+    'El ahorro del flujo de caja ya lleva descontado el coste de la instalación a través del LCOE, y además se resta la inversión: la inversión pesa por partida doble, de modo que VAN, TIR y Payback resultan conservadores.',
+  ]},
+];
+document.querySelectorAll('[data-notas-simplificaciones]').forEach(el=>{
+  el.innerHTML = '<h4>Notas: simplificaciones del modelo</h4><div class="notas-columnas">'+
+    SIMPLIFICACIONES.map(g=>'<div class="notas-grupo"><h5>'+g.tema+'</h5><ul>'+g.items.map(t=>'<li>'+t+'</li>').join('')+'</ul></div>').join('')+
+  '</div>';
+});
+
 // ===================== TABS (apartados como pestañas, no scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
@@ -1034,8 +1148,19 @@ let curvasRestauradasDeVatiaco = false;
 // Curva de precio (€/kWh), editable arrastrando igual que generacion/consumo pero con su
 // propia escala vertical (fuera de CURVAS: sus valores, de decimas de euro, no son
 // comparables a los kWh de generacion/consumo que comparten eje). Se guarda en la misma
-// VatiaCo.fv_autoconsumo_fv_bateria.inputs.curvas, como una clave "precio" mas.
+// VatiaCo.fv_autoconsumo_fv_bateria.inputs.curvas, como las claves "pvpc_tipico" y "excedente_tipico".
+// Perfiles tipicos en €/kWh, medias horarias de datos de REE: laborable, lunes a viernes del
+// 2 al 6/11/2026; festivo, 31/10, 1/11, 7/11 y 8/11/2026. La curva de excedentes aproxima el
+// indicador ESIOS 1739 (no accesible sin token) con el precio spot.
+const PRECIOS_REFERENCIA = {
+  laborable: { pvpc: [0.218,0.209,0.201,0.196,0.198,0.207,0.244,0.284,0.281,0.19,0.184,0.172,0.17,0.173,0.113,0.133,0.203,0.28,0.397,0.394,0.394,0.382,0.291,0.266],
+    excedente: [0.24,0.228,0.22,0.215,0.217,0.225,0.254,0.284,0.26,0.191,0.127,0.114,0.113,0.116,0.123,0.139,0.202,0.264,0.304,0.301,0.301,0.289,0.271,0.252] },
+  festivo: { pvpc: [0.243,0.236,0.233,0.229,0.223,0.221,0.226,0.244,0.23,0.158,0.1,0.077,0.07,0.072,0.077,0.092,0.138,0.223,0.272,0.277,0.279,0.267,0.249,0.229],
+    excedente: [0.254,0.245,0.241,0.237,0.23,0.228,0.232,0.24,0.227,0.164,0.117,0.099,0.093,0.095,0.099,0.109,0.147,0.226,0.264,0.264,0.265,0.263,0.252,0.236] },
+};
 let PRECIO_HORARIO = new Array(24).fill(0);
+let PRECIO_EXCEDENTE_HORARIO = PRECIOS_REFERENCIA.laborable.excedente.slice();
+let excedenteRestauradoDeVatiaco = false;
 let precioRestauradoDeVatiaco = false;
 // Casos guardados del informe (pestaña Informe): declarados aqui, no donde se usan mas abajo,
 // porque calcularProduccionAnualAgregada() y calcularFlujoCaja() (pestaña Simulacion) ya los leen
@@ -1045,10 +1170,14 @@ let casoNextId = 1;
 (function restaurarPrecioDesdeVatiaco(){
   const guardado = vatiacoLeer();
   const curvasGuardadas = guardado[DOC_KEY_C04] && guardado[DOC_KEY_C04].inputs && guardado[DOC_KEY_C04].inputs.curvas;
-  const arr = curvasGuardadas && curvasGuardadas.precio;
-  if(Array.isArray(arr) && arr.length === 24 && arr.every(v => typeof v === 'number' && isFinite(v))){
-    PRECIO_HORARIO = arr.slice();
+  const valida = arr => Array.isArray(arr) && arr.length === 24 && arr.every(v => typeof v === 'number' && isFinite(v));
+  if(curvasGuardadas && valida(curvasGuardadas.pvpc_tipico)){
+    PRECIO_HORARIO = curvasGuardadas.pvpc_tipico.slice();
     precioRestauradoDeVatiaco = true;
+  }
+  if(curvasGuardadas && valida(curvasGuardadas.excedente_tipico)){
+    PRECIO_EXCEDENTE_HORARIO = curvasGuardadas.excedente_tipico.slice();
+    excedenteRestauradoDeVatiaco = true;
   }
 })();
 function guardarCurvasEnVatiaco(){
@@ -1057,62 +1186,92 @@ function guardarCurvasEnVatiaco(){
   v[DOC_KEY_C04].inputs = v[DOC_KEY_C04].inputs || {};
   const curvas = {};
   Object.keys(CURVAS).forEach(clave => { curvas[clave] = CURVAS[clave].valores.slice(); });
-  curvas.precio = PRECIO_HORARIO.slice();
+  curvas.pvpc_tipico = PRECIO_HORARIO.slice();
+  curvas.excedente_tipico = PRECIO_EXCEDENTE_HORARIO.slice();
   v[DOC_KEY_C04].inputs.curvas = curvas;
   vatiacoGuardar(v);
 }
 
-// ===================== EDITOR DE CURVA (arrastrar sobre el reparto horario, pestaña Simulacion) =====================
-// Generacion y consumo ya no tienen graficos de barras propios -- se editan arrastrando
-// directamente sobre "Reparto horario del dia tipo" (ver repartoSetFromEvent, mas abajo).
-// renderTodosLosEditores() se queda solo con la persistencia en VatiaCo: la llaman todos
+// ===================== EDITOR DE CURVA DE CONSUMO (pestaña Simulacion) =====================
+// La generacion sale del campo de kWh/dia y el consumo se edita en su propia curva
+// (ver renderChartConsumo, mas abajo); "Reparto horario del dia tipo" es solo de lectura.
+// renderTodosLosEditores() repinta la curva de consumo y persiste en VatiaCo: la llaman todos
 // los sitios que cambian CURVAS (arrastrar, perfiles tipicos, importar PVGIS/VatiaCo...).
-function renderTodosLosEditores(){ guardarCurvasEnVatiaco(); }
+const LAYOUT_BARRAS_HORARIAS = {W:640, H:220, padL:64, padR:10, padT:10, padB:32};
+function renderTodosLosEditores(){ renderChartConsumo(); guardarCurvasEnVatiaco(); }
 
-// Unico editor de generacion/consumo: arrastrar directamente sobre el grafico "Reparto
-// horario del dia tipo": mitad superior del nudo (por encima del 0, ver calcularLayoutReparto)
-// edita generacion, mitad inferior edita demanda -- con la MISMA escala que usa
-// buildComparativoChartSVG para que el punto quede justo bajo el cursor. Una vez fijada la
-// curva al empezar el arrastre (repartoArrastrando) no cambia aunque el cursor cruce la
-// linea de cero a mitad de gesto. El innerHTML de flowCurveWrap se sustituye entero en
-// cada render (el <svg> no es estable), asi que los listeners van en el div contenedor,
-// no en el <svg> (que se recrea cada vez).
-let repartoArrastrando = null;
-function repartoSetFromEvent(evt){
-  const wrap = document.getElementById('flowCurveWrap');
-  const svg = wrap.querySelector('svg');
-  if(!svg) return;
-  const rect = svg.getBoundingClientRect();
+// Reparte el resto del consumo diario (campo kWh/dia) entre las demas horas, en proporcion a
+// lo que ya tenian, para que el total del dia no cambie al editar una hora.
+function ajustarHoraConsumo(idx, valor){
+  const total = Math.max(0, parseFloat(document.getElementById('kwhdia_con').value)||0);
+  const con = CURVAS.con.valores;
+  con[idx] = Math.min(valor, total);
+  reescalarHoras(con, total-con[idx], idx);
+}
+// Escala todas las horas de arr (menos horaFija, si se indica) para que sumen objetivo.
+function reescalarHoras(arr, objetivo, horaFija){
+  const horas = arr.map((_,h)=>h).filter(h=>h!==horaFija);
+  const suma = horas.reduce((a,h)=>a+(arr[h]||0), 0);
+  horas.forEach(h=>{ arr[h] = suma>0 ? (arr[h]||0)*objetivo/suma : objetivo/horas.length; });
+}
+renderTodosLosEditores();
+
+// Curva de consumo: barras arrastrables, mismo estilo y mecanica que la curva de precio. Cada
+// hora editada reajusta las demas para mantener el consumo diario (ver ajustarHoraConsumo).
+function calcularEscalaMaxConsumo(valores){
+  const conMargen = Math.max.apply(null, valores.concat([0]))*1.15;
+  if(conMargen<=0) return 0.5;
+  const paso = conMargen<=1 ? 0.1 : conMargen<=4 ? 0.2 : conMargen<=10 ? 0.5 : 1;
+  return Math.ceil(conMargen/paso)*paso;
+}
+// Contenido SVG de una curva horaria de barras: lo comparten los graficos editables y los
+// graficos fijos de cada caso en la pestaña Informe.
+function barrasHorariasSVG(valores, color, max, decimalesEje){
+  const { W, H, padL, padR, padT, padB } = LAYOUT_BARRAS_HORARIAS;
+  const chartW = W-padL-padR, chartH = H-padT-padB, step = chartW/24;
+  let s = '';
+  for(let g=0; g<=4; g++){
+    const gv = max*g/4, gy = padT+chartH-(gv/max)*chartH;
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(gv,decimalesEje)+'</text>';
+  }
+  valores.forEach((v,i)=>{
+    const x = padL+step*i;
+    const bh = Math.min(v,max)/max*chartH;
+    const y = padT+chartH-bh;
+    s += '<rect class="barra" data-idx="'+i+'" x="'+x+'" y="'+y+'" width="'+step+'" height="'+Math.max(bh,1)+'" fill="'+color+'" opacity="0.85" rx="1"/>';
+    const lx = x+step/2, ly = Math.max(y-5, padT+30);
+    s += '<text x="'+lx+'" y="'+ly+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')" font-family="IBM Plex Mono" font-size="10" fill="#1c2735">'+fmtNum(v,2)+'</text>';
+    if(i%3===0){ s += '<text x="'+(x+step/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
+  });
+  return s;
+}
+function renderChartConsumo(){
+  document.getElementById('chart-consumo').innerHTML = barrasHorariasSVG(CURVAS.con.valores, '#2457e6', calcularEscalaMaxConsumo(CURVAS.con.valores), 2);
+}
+function consumoSetFromEvent(evt){
+  const { W, H, padL, padR, padT, padB } = LAYOUT_BARRAS_HORARIAS;
+  const rect = document.getElementById('chart-consumo').getBoundingClientRect();
   const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
   const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-  const bateria = ultimoResultadoDiaTipo ? ultimoResultadoDiaTipo.bateria : null;
-  const cargaH = bateria ? bateria.cargaHoraria : CURVAS.gen.valores.map(()=>0);
-  const descargaH = bateria ? bateria.descargaHoraria : CURVAS.gen.valores.map(()=>0);
-  const potenciaContratada = ultimoResultadoDiaTipo ? (ultimoResultadoDiaTipo.potenciaContratada||0) : 0;
-  const layout = calcularLayoutReparto(CURVAS.gen.valores, CURVAS.con.valores, cargaH, descargaH, !!bateria, potenciaContratada, true);
-  const scaleX = layout.W/rect.width, scaleY = layout.H/rect.height;
-  const x = (clientX-rect.left)*scaleX;
-  const y = (clientY-rect.top)*scaleY;
-  let idx = Math.floor((x-layout.padL)/layout.step);
-  idx = Math.max(0, Math.min(23, idx));
-  const clave = repartoArrastrando || (y<=layout.y(0) ? 'gen' : 'con');
-  const val = Math.max(0, Math.round(Math.abs(layout.valorDesdeY(y))*20)/20); // redondeo a 0.05 kWh, sin limite superior
-  CURVAS[clave].valores[idx] = val;
-  repartoArrastrando = clave;
+  const chartH = H-padT-padB, step = (W-padL-padR)/24;
+  const x = (clientX-rect.left)*W/rect.width, y = (clientY-rect.top)*H/rect.height;
+  const idx = Math.max(0, Math.min(23, Math.floor((x-padL)/step)));
+  const val = ((padT+chartH-y)/chartH)*calcularEscalaMaxConsumo(CURVAS.con.valores);
+  ajustarHoraConsumo(idx, Math.max(0, Math.round(val*20)/20)); // redondeo a 0,05 kWh
   renderTodosLosEditores();
   renderResultados();
 }
+let arrastrandoConsumo = false;
 (function(){
-  const wrap = document.getElementById('flowCurveWrap');
-  wrap.addEventListener('mousedown', (e)=>{ repartoArrastrando=null; repartoSetFromEvent(e); });
-  wrap.addEventListener('touchstart', (e)=>{ repartoArrastrando=null; repartoSetFromEvent(e); e.preventDefault(); }, {passive:false});
-  wrap.addEventListener('touchmove', (e)=>{ if(repartoArrastrando){ repartoSetFromEvent(e); e.preventDefault(); } }, {passive:false});
+  const svg = document.getElementById('chart-consumo');
+  svg.addEventListener('mousedown', (e)=>{ arrastrandoConsumo=true; consumoSetFromEvent(e); });
+  svg.addEventListener('touchstart', (e)=>{ arrastrandoConsumo=true; consumoSetFromEvent(e); e.preventDefault(); }, {passive:false});
+  svg.addEventListener('touchmove', (e)=>{ if(arrastrandoConsumo){ consumoSetFromEvent(e); e.preventDefault(); } }, {passive:false});
 })();
-window.addEventListener('mousemove', (e)=>{ if(repartoArrastrando) repartoSetFromEvent(e); });
-window.addEventListener('mouseup', ()=>{ repartoArrastrando=null; });
-window.addEventListener('touchend', ()=>{ repartoArrastrando=null; });
-
-renderTodosLosEditores();
+window.addEventListener('mousemove', (e)=>{ if(arrastrandoConsumo) consumoSetFromEvent(e); });
+window.addEventListener('mouseup', ()=>{ arrastrandoConsumo=false; });
+window.addEventListener('touchend', ()=>{ arrastrandoConsumo=false; });
 
 // ===================== PERFILES TIPICOS DE CONSUMO (domestico/comercial/industrial) =====================
 // Pesos relativos por hora, no normalizados: se dividen por su propia suma y se
@@ -1157,67 +1316,26 @@ const DEFAULT_KWH_DIA = {
   constante: { laborable: 15, festivo: 15 },
 };
 
-// ===================== PRECIO PVPC: CURVA HORARIA TIPICA (laborable/festivo) =====================
-// Forma horaria orientativa del precio PVPC (peso relativo de cada hora, no el precio en
-// si), calibrada sobre las curvas reales de precio de excedentes de REE (ESIOS, mecanismo
-// de compensacion simplificada): con la potencia solar ya instalada en España, la
-// madrugada y la noche YA NO son las horas mas baratas -- se quedan altas y bastante
-// planas (00h-08h), porque de noche no hay solar que hunda el precio y lo fija el
-// generador marginal (normalmente ciclo combinado). El hundimiento de precio ocurre en
-// una franja ancha de sol pleno (09h-18h aprox.), donde la generacion solar de todo el
-// pais (no solo la de esta instalacion) satura la red y el precio mayorista cae en
-// picado, a menudo cerca de cero -- el "vientre" del pato, con transiciones muy bruscas
-// de subida/bajada en sus dos bordes (08h-10h y 18h-20h). Al ponerse el sol pero seguir
-// alta la demanda, el precio sube de golpe al nivel de la noche -- el "cuello" del pato,
-// 19h-22h. En festivo el hundimiento solar es igual de profundo (la generacion solar no
-// distingue laborable de festivo) pero algo mas ancho y con menos demanda de fondo que lo
-// amortigüe. No son precios reales de REE/OMIE -- una forma de partida que se escala al
-// precio medio del dia (campo editable, ver mas abajo), y que despues se puede retocar
-// arrastrando.
-const PESOS_PRECIO_PVPC = {
-  laborable: [0.95,0.92,0.90,0.88,0.87,0.88,0.93,1.02, 1.08,0.85,0.45,0.28, 0.20,0.18,0.18,0.20,0.25,0.35, 0.55,0.85,1.15,1.20, 1.10,1.00],
-  festivo:   [1.00,0.97,0.95,0.93,0.92,0.93,0.97,1.08, 1.15,0.75,0.20,0.10, 0.06,0.06,0.06,0.07,0.09,0.13, 0.30,0.70,1.10,1.15, 1.10,1.02],
-};
-// Precio medio orientativo del dia (Espana, PVPC, impuestos incluidos), generico para
-// todo el año -- media aproximada de los precios tipicos por mes. Punto de partida
-// ilustrativo, no una serie historica -- se sobreescribe con el precio medio real del dia
-// que se quiera analizar, en el campo "Precio medio del dia" (seccion de coste, mas abajo).
-const DEFAULT_PRECIO_GENERICO = 0.12;
-// Escala los pesos relativos de la jornada (laborable/festivo) para que su propia media
-// horaria coincida con el precio medio del dia introducido -- igual que
-// aplicarPerfilConsumoTipico() escala pesos de consumo al kWh/dia introducido.
-function generarPerfilPrecioTipico(jornada, precioMedio){
-  const pesos = PESOS_PRECIO_PVPC[jornada] || PESOS_PRECIO_PVPC.laborable;
-  const media = pesos.reduce((a,v)=>a+v,0)/pesos.length;
-  const precio = isFinite(precioMedio) && precioMedio>=0 ? precioMedio : 0;
-  return pesos.map(p => Math.round((p/media*precio)*1000)/1000);
-}
-// Recarga la curva de precio con la forma tipica (curva de pato) de la jornada actual,
-// escalada al precio medio del campo -- igual que aplicarPerfilConsumoActual() para el
-// consumo. Se llama al tocar el campo "precio medio" o el check "constante", o al cambiar
-// de jornada; despues se puede seguir retocando arrastrando sobre el grafico, sin
-// perder eso al recalcular (renderResultados() no vuelve a llamar a esta funcion, solo lee
-// PRECIO_HORARIO). Con el check "constante todo el dia" marcado, se ignora la forma de
-// pato y se aplica el mismo precio medio a las 24 horas -- util para comparar contra una
-// tarifa plana en vez de PVPC.
+// ===================== PRECIO PVPC: CURVA HORARIA DE REFERENCIA =====================
+// Recarga la curva tipica de la jornada; se llama al tocar el check "constante" o al cambiar
+// de jornada. Con "constante todo el dia" marcado aplica la media de la curva actual a las
+// 24 horas -- util para comparar contra una tarifa plana.
 function aplicarPerfilPrecioActual(){
-  const precioMedio = parseFloat(document.getElementById('precio_medio').value);
-  if(!isFinite(precioMedio) || precioMedio<0) return;
   const constante = document.getElementById('precio_constante').checked;
+  const mediaActual = PRECIO_HORARIO.reduce((a,v)=>a+v,0)/24;
   PRECIO_HORARIO = constante
-    ? new Array(24).fill(Math.round(precioMedio*1000)/1000)
-    : generarPerfilPrecioTipico(diaTipoActual().jornada, precioMedio);
+    ? new Array(24).fill(Math.round(mediaActual*1000)/1000)
+    : PRECIOS_REFERENCIA[diaTipoActual().jornada].pvpc.slice();
   renderChartPrecio();
   renderResultados();
 }
 document.getElementById('precio_constante').addEventListener('change', aplicarPerfilPrecioActual);
-document.getElementById('precio_medio').addEventListener('input', aplicarPerfilPrecioActual);
 
 function aplicarPerfilConsumoTipico(jornada, tipo, kwhDia){
   const pesos = (PERFILES_CONSUMO_TIPICOS[tipo]||{})[jornada];
   if(!pesos || !isFinite(kwhDia) || kwhDia<=0) return false;
   const sumaPesos = pesos.reduce((a,v)=>a+v,0);
-  CURVAS.con.valores = pesos.map(p=>Math.round((p/sumaPesos*kwhDia)*20)/20);
+  CURVAS.con.valores = pesos.map(p=>p/sumaPesos*kwhDia);
   return true;
 }
 // Se aplica automaticamente en cada cambio, sin boton: al tipo de consumidor global o al
@@ -1274,28 +1392,51 @@ function generarPerfilGeneracionTipico(latDeg, kwp, declDeg){
   const pico = kwp*0.6;
   for(let h=0; h<24; h++){
     const t = h+0.5;
-    if(t>orto && t<ocaso) valores[h] = Math.round(pico*Math.sin(Math.PI*(t-orto)/horasSol)*100)/100;
+    if(t>orto && t<ocaso) valores[h] = pico*Math.sin(Math.PI*(t-orto)/horasSol);
   }
   return valores;
 }
 // Se actualiza automaticamente en cada cambio de potencia instalada, sin boton — igual
 // que el resto de perfiles tipicos de la herramienta.
+// Potencia instalada del campo FV: fija la curva de generacion y la inversion (€/kWp).
+function kwpInstalados(){
+  return parseFloat(document.getElementById('gen_kwp').value)||0;
+}
+function kwhDiaPorKwp(){
+  return generarPerfilGeneracionTipico(LATITUD_MADRID, 1, DECLINACION_GENERICA).reduce((a,v)=>a+v, 0);
+}
+// La curva reparte exactamente los kWh/dia del campo, estimados o escritos a mano (PVGIS).
+function generarCurvaFvDesdeCampo(){
+  const kwhDia = parseFloat(document.getElementById('fv_kwh_dia').value)||0;
+  CURVAS.gen.valores = generarPerfilGeneracionTipico(LATITUD_MADRID, kwhDia/kwhDiaPorKwp(), DECLINACION_GENERICA);
+}
 function actualizarPerfilGeneracionTipico(){
-  const kwp = parseFloat(document.getElementById('gen_kwp').value);
-  // kwp=0 es un valor valido (sin FV instalada, curva a cero) -- solo se descarta si el
-  // campo esta vacio/no es un numero, o es negativo.
-  if(!isFinite(kwp) || kwp<0) return;
-  CURVAS.gen.valores = generarPerfilGeneracionTipico(LATITUD_MADRID, kwp, DECLINACION_GENERICA);
+  // 0 es un valor valido (sin FV, curva a cero) -- solo se descarta si el campo esta
+  // vacio/no es un numero, o es negativo.
+  const kwhDia = parseFloat(document.getElementById('fv_kwh_dia').value);
+  if(!isFinite(kwhDia) || kwhDia<0) return;
+  generarCurvaFvDesdeCampo();
   renderTodosLosEditores();
   renderResultados();
 }
-document.getElementById('gen_kwp').addEventListener('input', actualizarPerfilGeneracionTipico);
+document.getElementById('fv_kwh_dia').addEventListener('input', actualizarPerfilGeneracionTipico);
+// Cambiar los kWp reestima la generacion; se lanza 'input' para que tambien se persista.
+document.getElementById('gen_kwp').addEventListener('input', ()=>{
+  const kwp = parseFloat(document.getElementById('gen_kwp').value);
+  if(!isFinite(kwp) || kwp<0) return;
+  const campo = document.getElementById('fv_kwh_dia');
+  campo.value = (kwp*kwhDiaPorKwp()).toFixed(1);
+  campo.dispatchEvent(new Event('input', {bubbles:true}));
+  renderResultados(); // la inversion depende de los kWp aunque la estimacion no cambie
+});
 
-// Al cambiar la jornada se recargan valores por defecto de generacion, consumo y, si esta
-// activada, el SOC inicial de la bateria — el punto de partida para ese caso, editable
+// Al cambiar la jornada se recargan valores por defecto de generacion y consumo — el punto de partida para ese caso, editable
 // despues arrastrando sobre los graficos.
 function cargarValoresPorDefectoDiaTipo(){
-  document.getElementById('precio_medio').value = DEFAULT_PRECIO_GENERICO;
+  const preciosJornada = PRECIOS_REFERENCIA[diaTipoActual().jornada];
+  PRECIO_HORARIO = preciosJornada.pvpc.slice(); // base para "constante": la media de la nueva jornada
+  PRECIO_EXCEDENTE_HORARIO = preciosJornada.excedente.slice();
+  renderChartExcedente();
   aplicarPerfilPrecioActual();
   actualizarPerfilGeneracionTipico();
   const tipo = document.getElementById('tipoConsumidorGlobal').value;
@@ -1368,13 +1509,18 @@ function simularBateria(genValores, conValores, capacidadKwh, potenciaMaxKw, efi
   };
 }
 
+// Bateria: se eligen la capacidad (0 kWh = sin bateria) y el SOC inicial; el resto son supuestos fijos.
+const EFICIENCIA_BATERIA_PCT = 92;
+const POTENCIA_BATERIA_POR_KWH = 0.5; // kW de carga/descarga por kWh de capacidad
+
 function getParametrosBateria(){
+  const capacidad = parseFloat(document.getElementById('bat_capacidad').value)||0;
   return {
-    incluir: document.getElementById('bat_incluir').checked,
-    capacidad: parseFloat(document.getElementById('bat_capacidad').value)||0,
-    potencia: parseFloat(document.getElementById('bat_potencia').value)||0,
-    eficiencia: parseFloat(document.getElementById('bat_eficiencia').value)||100,
-    socInicialPct: Math.min(100, Math.max(0, parseFloat(document.getElementById('bat_soc_inicial').value)||0)),
+    incluir: capacidad>0,
+    capacidad,
+    potencia: capacidad*POTENCIA_BATERIA_POR_KWH,
+    eficiencia: EFICIENCIA_BATERIA_PCT,
+    socInicialPct: Math.min(100, Math.max(0, parseFloat(document.getElementById('bat_soc_ini').value)||0)),
   };
 }
 
@@ -1389,12 +1535,7 @@ function calcularResultadoDiaTipo(){
   // en vez de que fraccion de la GENERACION se aprovecha (% autoconsumo). Son indicadores
   // distintos -- ver teoria 2 -- y con bateria suelen divergir bastante.
   const bateria = bat.incluir ? simularBateria(genV, conV, bat.capacidad, bat.potencia, bat.eficiencia, bat.socInicialPct) : null;
-  // Potencia contratada (kW): limite continuo de importacion/exportacion hora a hora (0
-  // kW = aislado por completo, un valor positivo limita en vez de cortar del todo). Se lee
-  // aqui y se cuelga del resultado para que viaje congelada dentro de cada caso guardado
-  // (res.potenciaContratada), igual que bat/bateria -- ver calcularFlujosDiagramaTotal.
-  const potenciaContratada = parseFloat(document.getElementById('pot_contratada').value)||0;
-  return Object.assign({}, r, { bat, bateria, potenciaContratada });
+  return Object.assign({}, r, { bat, bateria });
 }
 
 // ===================== GRAFICO COMPARATIVO (flujos del nudo Electricidad, 24h) =====================
@@ -1416,57 +1557,42 @@ function calcularFlujosHorarios(genValores, conValores, cargaH, descargaH){
   return { exportHoraria, importHoraria };
 }
 
-// Geometria y escala del grafico "Reparto horario del dia tipo" (buildComparativoChartSVG)
-// factorizada aparte para poder invertir la misma escala al arrastrar sobre el propio
-// grafico (ver repartoSetFromEvent) sin duplicar la formula ni desincronizarla.
-function calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, potenciaContratada, leyendaExterna){
+// Geometria y escala del grafico "Reparto horario del dia tipo" (buildComparativoChartSVG).
+function calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, leyendaExterna){
   const { exportHoraria, importHoraria } = calcularFlujosHorarios(genValores, conValores, cargaH, descargaH);
   const nivelDescarga = genValores.map((v,i)=>(v||0)+descargaH[i]);
   const nivelImport = nivelDescarga.map((v,i)=>v+importHoraria[i]);
   const nivelCarga = conValores.map((v,i)=>(v||0)+cargaH[i]);
   const nivelExport = nivelCarga.map((v,i)=>v+exportHoraria[i]);
-  const limite = Math.max(0, potenciaContratada||0);
-  // Hay recorte si en alguna hora la exportacion/importacion supera el limite de potencia
-  // contratada -- no solo cuando ese limite es 0 (aislado por completo).
-  const hayRecorte = exportHoraria.some(v=>v>limite+0.0001) || importHoraria.some(v=>v>limite+0.0001);
-  const extraLegendRows = (conBateria?1:0) + (hayRecorte?1:0);
-  const W=640, H=442, padL=76, padR=conBateria?58:16, padT=leyendaExterna ? 14 : 28+extraLegendRows*24, padB=38;
+  const extraLegendRows = conBateria?1:0;
+  const W=640, H=leyendaExterna ? 220 : 442, padL=76, padR=conBateria?58:16, padT=leyendaExterna ? 14 : 28+extraLegendRows*24, padB=38;
   const chartW = W-padL-padR, chartH = H-padT-padB;
   const step = chartW/24;
   const maxPos = Math.max(...nivelImport, 0.1);
   const maxNeg = Math.max(...nivelExport, 0.1);
   const totalRange = (maxPos+maxNeg) || 1;
   const y = v => padT + chartH*(maxPos-v)/totalRange;
-  const valorDesdeY = yy => maxPos - (yy-padT)*totalRange/chartH;
-  return { W, H, padL, padR, padT, padB, chartW, chartH, step, maxPos, maxNeg, totalRange, y, valorDesdeY,
-    exportHoraria, importHoraria, nivelDescarga, nivelImport, nivelCarga, nivelExport, potenciaContratada: limite, hayRecorte };
+  return { W, H, padL, padR, padT, padB, chartW, chartH, step, maxPos, maxNeg, totalRange, y,
+    exportHoraria, importHoraria, nivelDescarga, nivelImport, nivelCarga, nivelExport };
 }
 
 // Leyenda en HTML del grafico en vivo: va fuera del <svg> para poder colocar debajo los
 // campos editables, que no pueden estar dentro porque el <svg> se recrea en cada render.
-function leyendaRepartoHTML(conBateria, hayRecorte){
+function leyendaRepartoHTML(conBateria){
   const m = (c,t)=>'<i style="color:'+c+'">'+t+'</i>';
   let h = '<div>'+m('#c27c00','■')+' generación &nbsp; '+m('#A3E635','■')+' descarga batería &nbsp; '+m('#FF3B30','■')+' importación &nbsp; entran (arriba)</div>'+
     '<div>'+m('#2457e6','■')+' demanda &nbsp; '+m('#6366F1','■')+' carga batería &nbsp; '+m('#22D46B','■')+' exportación &nbsp; salen (abajo)</div>';
   if(conBateria) h += '<div>'+m('#FF6AC2','┅')+' SOC, % de la capacidad (nivel, no acumulado)</div>';
-  if(hayRecorte) h += '<div>'+m('#FF3B30','▨')+' recorte por límite de potencia contratada (esa parte no se aprovecha/cubre)</div>';
   return h;
 }
 
-function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descargaHoraria, socHoraria, capacidadKwh, potenciaMaxKw, potenciaContratada, leyendaExterna){
+function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descargaHoraria, socHoraria, capacidadKwh, potenciaMaxKw, leyendaExterna){
   const conBateria = !!(cargaHoraria && descargaHoraria);
   const cargaH = cargaHoraria || genValores.map(()=>0);
   const descargaH = descargaHoraria || genValores.map(()=>0);
-  const layout = calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, potenciaContratada, leyendaExterna);
-  const { W, H, padL, padR, padT, padB, chartW, chartH, step, maxPos, maxNeg, y, hayRecorte,
+  const layout = calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, leyendaExterna);
+  const { W, H, padL, padR, padT, padB, chartW, chartH, step, maxPos, maxNeg, y,
     exportHoraria, importHoraria, nivelDescarga, nivelImport, nivelCarga, nivelExport } = layout;
-  const limite = layout.potenciaContratada;
-  // Generacion/demanda limitadas por la potencia contratada: lo que de verdad se
-  // aprovecha/cubre cada hora sin poder exportar/importar mas del limite de la conexion a
-  // red -- se dibujan como linea aparte, sin tocar las pilas de arriba/abajo (que siguen
-  // representando los valores sin ese limite, para comparar ambos a la vez).
-  const genLimitada = hayRecorte ? genValores.map((g,i)=> limpiarFP((g||0)-Math.max(0,exportHoraria[i]-limite))) : null;
-  const conLimitada = hayRecorte ? conValores.map((c,i)=> limpiarFP((c||0)-Math.max(0,importHoraria[i]-limite))) : null;
   const ZERO = genValores.map(()=>0);
   // Eje del SOC en % de la capacidad (0-100%), no en kWh -- asi se lee igual sea cual
   // sea la capacidad de bateria configurada.
@@ -1482,10 +1608,6 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   let legendY = 46;
   if(conBateria){
     s += '<text x="'+padL+'" y="'+legendY+'" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d"><tspan fill="#FF6AC2">┅</tspan> SOC, % de la capacidad (nivel, no acumulado)</text>';
-    legendY += 16;
-  }
-  if(hayRecorte){
-    s += '<text x="'+padL+'" y="'+legendY+'" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d"><tspan fill="#FF3B30">▨</tspan> recorte por límite de potencia contratada (esa parte no se aprovecha/cubre)</text>';
     legendY += 16;
   }
   }
@@ -1523,27 +1645,6 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   s += band(ZERO, conValores, -1, y, '#2457e6');
   s += band(conValores, nivelCarga, -1, y, '#6366F1');
   s += band(nivelCarga, nivelExport, -1, y, '#22D46B');
-  if(hayRecorte){
-    // Recorte por limite de potencia contratada, mismo achurado (patron rojo diagonal)
-    // que en los editores de Generacion/Consumo -- sobre la propia banda de generacion/demanda (que se deja
-    // tal cual, con conexion a red), la parte entre lo limitado y lo real que no se
-    // aprovecha/cubre sin esa conexion.
-    s = '<defs><pattern id="recorte-reparto" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'+
-      '<rect width="6" height="6" fill="#ffffff" opacity="0.65"/><line x1="0" y1="0" x2="0" y2="6" stroke="#FF3B30" stroke-width="2"/></pattern></defs>'+s;
-    s += band(genLimitada, genValores, 1, y, 'url(#recorte-reparto)');
-    s += band(conLimitada, conValores, -1, y, 'url(#recorte-reparto)');
-  }
-  // Etiquetas de generacion/demanda hora a hora, mismo estilo (girado -90°, se lee de
-  // abajo a arriba) que en los editores de Generacion/Consumo -- generacion crece hacia
-  // arriba desde el borde de su banda, demanda crece hacia abajo desde el suyo, ya que
-  // ambas curvas se pueden arrastrar tambien directamente sobre este grafico.
-  for(let i=0;i<24;i++){
-    const lx = padL+step*i+step/2;
-    const lyGen = Math.max(y(genValores[i]||0)-5, padT+2);
-    s += '<text x="'+lx+'" y="'+lyGen+'" text-anchor="start" transform="rotate(-90 '+lx+' '+lyGen+')" font-family="IBM Plex Mono" font-size="9" fill="#1c2735">'+fmtNum(genValores[i]||0,1)+'</text>';
-    const lyCon = Math.min(y(-(conValores[i]||0))+5, H-padB-2);
-    s += '<text x="'+lx+'" y="'+lyCon+'" text-anchor="end" transform="rotate(-90 '+lx+' '+lyCon+')" font-family="IBM Plex Mono" font-size="9" fill="#1c2735">'+fmtNum(conValores[i]||0,1)+'</text>';
-  }
   if(conBateria){
     s += '<polyline points="'+stepPts(socPct, ySoc).map(p=>p.join(',')).join(' ')+'" fill="none" stroke="#FF6AC2" stroke-width="1.8" stroke-dasharray="4 2"/>';
   }
@@ -1557,10 +1658,9 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
 // ===================== PRECIO Y COSTE HORARIO (pestaña Simulacion, curvas y bateria) =====================
 // Editor de la curva de precio (barras arrastrables, €/kWh) -- su propia funcion porque
 // PRECIO_HORARIO no vive en CURVAS: sus valores (decimas de euro) no comparten escala con
-// los kWh de generacion/consumo (que ahora se editan sobre el reparto horario, ver
-// repartoSetFromEvent).
-function calcularEscalaMaxPrecio(){
-  const max = Math.max.apply(null, PRECIO_HORARIO.concat([0]));
+// los kWh de generacion/consumo (ver renderChartConsumo).
+function calcularEscalaMaxPrecio(valores){
+  const max = Math.max.apply(null, valores.concat([0]));
   if(max<=0) return 0.05;
   const conMargen = max*1.15;
   let paso;
@@ -1570,79 +1670,69 @@ function calcularEscalaMaxPrecio(){
   else paso=0.1;
   return Math.ceil(conMargen/paso)*paso;
 }
+function pintarCurvaPrecio(svgId, valores, color){
+  document.getElementById(svgId).innerHTML = barrasHorariasSVG(valores, color, calcularEscalaMaxPrecio(valores), 3);
+}
 function renderChartPrecio(){
-  const svg = document.getElementById('chart-precio');
-  const W=640, H=220, padL=64, padR=10, padT=10, padB=32;
-  const chartW = W-padL-padR, chartH = H-padT-padB, step = chartW/24, barW = step;
-  const max = calcularEscalaMaxPrecio();
-  let s = '';
-  for(let g=0; g<=4; g++){
-    const gv = max*g/4, gy = padT+chartH-(gv/max)*chartH;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
-    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(gv,3)+'</text>';
-  }
-  PRECIO_HORARIO.forEach((v,i)=>{
-    const x = padL+step*i;
-    const bh = Math.min(v,max)/max*chartH;
-    const y = padT+chartH-bh;
-    s += '<rect class="barra" data-idx="'+i+'" x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#F2C94C" opacity="0.85" rx="1"/>';
-    const lx = x+barW/2, ly = Math.max(y-5, padT+30);
-    s += '<text x="'+lx+'" y="'+ly+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')" font-family="IBM Plex Mono" font-size="10" fill="#1c2735">'+fmtNum(v,2)+'</text>';
-    if(i%3===0){ s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
-  });
-  svg.innerHTML = s;
+  pintarCurvaPrecio('chart-precio', PRECIO_HORARIO, '#F2C94C');
   guardarCurvasEnVatiaco();
 }
-function precioSetFromEvent(evt){
-  const svg = document.getElementById('chart-precio');
-  const rect = svg.getBoundingClientRect();
-  const W=640, H=220, padL=64, padR=10, padT=10, padB=32;
-  const chartW = W-padL-padR, chartH = H-padT-padB, step = chartW/24;
-  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
-  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-  const scaleX = W/rect.width, scaleY = H/rect.height;
-  const x = (clientX-rect.left)*scaleX;
-  const y = (clientY-rect.top)*scaleY;
-  let idx = Math.floor((x-padL)/step);
-  idx = Math.max(0, Math.min(23, idx));
-  const maxActual = calcularEscalaMaxPrecio();
-  let val = ((padT+chartH-y)/chartH)*maxActual;
-  val = Math.max(0, Math.round(val*200)/200); // redondeo a 0,005 €/kWh, sin limite superior
-  PRECIO_HORARIO[idx] = val;
-  renderChartPrecio();
-  renderResultados();
+function renderChartExcedente(){
+  pintarCurvaPrecio('chart-excedente', PRECIO_EXCEDENTE_HORARIO, '#22D46B');
+  guardarCurvasEnVatiaco();
 }
-let arrastrandoPrecio = false;
-(function(){
-  const svg = document.getElementById('chart-precio');
-  svg.addEventListener('mousedown', (e)=>{ arrastrandoPrecio=true; precioSetFromEvent(e); });
-  svg.addEventListener('touchstart', (e)=>{ arrastrandoPrecio=true; precioSetFromEvent(e); e.preventDefault(); }, {passive:false});
-  svg.addEventListener('touchmove', (e)=>{ if(arrastrandoPrecio){ precioSetFromEvent(e); e.preventDefault(); } }, {passive:false});
-})();
-window.addEventListener('mousemove', (e)=>{ if(arrastrandoPrecio) precioSetFromEvent(e); });
-window.addEventListener('mouseup', ()=>{ arrastrandoPrecio=false; });
-window.addEventListener('touchend', ()=>{ arrastrandoPrecio=false; });
+// Arrastre comun a las curvas de precio: alAjustar(hora, valor) aplica el cambio.
+function instalarArrastrePrecio(svgId, leerValores, alAjustar){
+  const svg = document.getElementById(svgId);
+  let arrastrando = false;
+  function aplicar(evt){
+    const { W, H, padL, padR, padT, padB } = LAYOUT_BARRAS_HORARIAS;
+    const rect = svg.getBoundingClientRect();
+    const chartH = H-padT-padB, step = (W-padL-padR)/24;
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    const x = (clientX-rect.left)*W/rect.width, y = (clientY-rect.top)*H/rect.height;
+    const idx = Math.max(0, Math.min(23, Math.floor((x-padL)/step)));
+    const val = ((padT+chartH-y)/chartH)*calcularEscalaMaxPrecio(leerValores());
+    alAjustar(idx, Math.max(0, Math.round(val*200)/200)); // redondeo a 0,005 €/kWh, sin limite superior
+  }
+  svg.addEventListener('mousedown', (e)=>{ arrastrando=true; aplicar(e); });
+  svg.addEventListener('touchstart', (e)=>{ arrastrando=true; aplicar(e); e.preventDefault(); }, {passive:false});
+  svg.addEventListener('touchmove', (e)=>{ if(arrastrando){ aplicar(e); e.preventDefault(); } }, {passive:false});
+  window.addEventListener('mousemove', (e)=>{ if(arrastrando) aplicar(e); });
+  window.addEventListener('mouseup', ()=>{ arrastrando=false; });
+  window.addEventListener('touchend', ()=>{ arrastrando=false; });
+}
+instalarArrastrePrecio('chart-precio', ()=>PRECIO_HORARIO, (h,v)=>{ PRECIO_HORARIO[h]=v; renderChartPrecio(); renderResultados(); });
+instalarArrastrePrecio('chart-excedente', ()=>PRECIO_EXCEDENTE_HORARIO, (h,v)=>{ PRECIO_EXCEDENTE_HORARIO[h]=v; renderChartExcedente(); renderResultados(); });
 
 // Coste horario del consumo, en euros: barras apiladas con el origen de cada kWh
 // consumido esa hora (autoconsumo FV directo a su LCOE, aporte de bateria a su LCOE,
 // importacion de red al precio PVPC de esa hora) mas una linea de puntos con lo que
 // costaria el mismo consumo sin instalacion (todo importado de red).
-function buildCosteChartSVG(costeFv, costeBat, costeRed, costeSinInstalacion){
+function buildCosteChartSVG(costeFv, costeBat, costeRed, ingresoExcedentes, costeNeto, costeSinInstalacion, ahorroDiario){
   const W=640, H=220, padL=64, padR=10, padT=46, padB=32;
   const chartW = W-padL-padR, chartH = H-padT-padB, step = chartW/24, barW = step;
   const nivel1 = costeFv;
   const nivel2 = nivel1.map((v,i)=>v+costeBat[i]);
   const nivel3 = nivel2.map((v,i)=>v+costeRed[i]);
   const maxV = Math.max(Math.max.apply(null, nivel3), Math.max.apply(null, costeSinInstalacion), 0.01)*1.15;
-  const y = v => padT+chartH-(v/maxV)*chartH;
+  const minV = -Math.max.apply(null, ingresoExcedentes)*1.15;
+  const y = v => padT+chartH-((v-minV)/(maxV-minV))*chartH;
   let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
-    '<tspan fill="#c27c00">■</tspan> FV directa &nbsp; <tspan fill="#A3E635">■</tspan> batería &nbsp; <tspan fill="#FF3B30">■</tspan> red</text>';
+    '<tspan fill="#c27c00">■</tspan> FV directa &nbsp; <tspan fill="#A3E635">■</tspan> batería &nbsp; <tspan fill="#FF3B30">■</tspan> red &nbsp; <tspan fill="#22D46B">■</tspan> excedentes (ingreso)</text>';
   s += '<text x="'+padL+'" y="30" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
-    '<tspan fill="#4f5b6d">┅</tspan> sin instalación</text>';
+    '<tspan fill="#1c2735">━</tspan> con instalación (mínimo 0) &nbsp; <tspan fill="#4f5b6d">┅</tspan> sin instalación</text>';
+  s += '<text x="'+(W-padR)+'" y="30" text-anchor="end" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#15803d">ahorro diario '+fmtNum(ahorroDiario,2)+' €</text>';
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4, gy = y(gv);
     s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
     s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(gv,2)+' €</text>';
+  }
+  if(minV<0){
+    s += '<line x1="'+padL+'" y1="'+y(minV)+'" x2="'+(W-padR)+'" y2="'+y(minV)+'" stroke="#eceff4" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(y(minV)+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(minV,2)+' €</text>';
+    s += '<line x1="'+padL+'" y1="'+y(0)+'" x2="'+(W-padR)+'" y2="'+y(0)+'" stroke="#b4bfcd" stroke-width="1"/>';
   }
   function seg(y0v, y1v, color, i){
     const x = padL+step*i, yy0 = y(y0v), yy1 = y(y1v);
@@ -1653,6 +1743,7 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costeSinInstalacion){
     seg(0, nivel1[i], '#c27c00', i);
     seg(nivel1[i], nivel2[i], '#A3E635', i);
     seg(nivel2[i], nivel3[i], '#FF3B30', i);
+    seg(-ingresoExcedentes[i], 0, '#22D46B', i);
   }
   function linea(arr, color, width, dash){
     const pts = [];
@@ -1663,6 +1754,7 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costeSinInstalacion){
     s += '<polyline points="'+pts.map(p=>p.join(',')).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="'+width+'" stroke-dasharray="'+dash+'"/>';
   }
   linea(costeSinInstalacion, '#4f5b6d', 1.8, '4 2');
+  linea(costeNeto, '#1c2735', 2, 'none');
   for(let i=0;i<24;i++){
     if(i%3===0){ s += '<text x="'+(padL+step*i+step/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
   }
@@ -1692,36 +1784,27 @@ function diasAnualesDesdeFraccion(dias){
 // potencia FV instalada (campo "kWp" del diagrama, seccion de curvas) y por la capacidad
 // de bateria configurada (seccion "Bateria"), respectivamente. Actualiza tambien los
 // campos de solo lectura que muestran esos totales calculados.
+// Vida fija de la bateria: las compras necesarias durante la vida de la FV se imputan todas
+// a la inversion inicial, sin reposiciones posteriores.
+const VIDA_BATERIA_ANIOS = 15;
+function comprasBateria(){
+  const aniosFv = parseFloat(document.getElementById('lcoe_fv_anios').value)||0;
+  return Math.max(1, Math.ceil(aniosFv/VIDA_BATERIA_ANIOS));
+}
 function costesInstalacion(){
-  const kwp = parseFloat(document.getElementById('gen_kwp').value)||0;
+  const kwp = kwpInstalados();
   const capacidadBat = parseFloat(document.getElementById('bat_capacidad').value)||0;
   const costeEspecificoFv = parseFloat(document.getElementById('lcoe_fv_coste').value)||0;
   const costeEspecificoBat = parseFloat(document.getElementById('lcoe_bat_coste').value)||0;
   const costeFv = kwp*costeEspecificoFv;
-  const costeBat = capacidadBat*costeEspecificoBat;
-  const elFvKwp = document.getElementById('lcoe_fv_kwp');
+  const costeBat = capacidadBat*costeEspecificoBat*comprasBateria();
   const elFvTotal = document.getElementById('lcoe_fv_coste_total');
   const elBatKwh = document.getElementById('lcoe_bat_kwh');
   const elBatTotal = document.getElementById('lcoe_bat_coste_total');
-  if(elFvKwp) elFvKwp.value = fmtNum(kwp,2)+' kWp';
   if(elFvTotal) elFvTotal.textContent = fmtNum(costeFv,0)+' €';
   if(elBatKwh) elBatKwh.value = fmtNum(capacidadBat,2)+' kWh';
   if(elBatTotal) elBatTotal.textContent = fmtNum(costeBat,0)+' €';
   return { costeFv, costeBat, kwp, capacidadBat, costeEspecificoFv, costeEspecificoBat };
-}
-
-// Vida util de la bateria en ciclos completos de carga/descarga, no en anios -- asi es
-// como se suele dar en la ficha tecnica de una bateria, no como una cifra de anios. Se
-// convierte a anios suponiendo un ciclo diario (una carga/descarga completa cada dia):
-// anios = ciclos / 365. Actualiza tambien el campo de solo lectura con el equivalente en
-// anios, y devuelve ese valor numerico (no el texto formateado del campo) para el resto
-// de calculos (LCOE, flujo de caja).
-function aniosVidaBateria(){
-  const ciclos = parseFloat(document.getElementById('lcoe_bat_ciclos').value)||0;
-  const anios = ciclos/365;
-  const el = document.getElementById('lcoe_bat_anios');
-  if(el) el.value = fmtNum(anios,1)+' años';
-  return anios;
 }
 
 function factorRecuperacionCapital(i, n){
@@ -1730,74 +1813,58 @@ function factorRecuperacionCapital(i, n){
   const f = Math.pow(1+i, n);
   return i*f/(f-1);
 }
-// LCOE (coste nivelado de la energia, €/kWh) de la FV y de la bateria, a partir de la
-// inversion (coste especifico × kWp / kWh, ver costesInstalacion()), el interes y los
-// anios de vida de cada una -- en vez de introducir el €/kWh a mano. La bateria casi
-// siempre dura menos anios que la instalacion FV: si sus anios de vida son menores que
-// los de la FV, se cuenta que hay que volver a comprarla las veces que hagan falta para
-// cubrir esos mismos anios (en el anio 0, anios_bat, 2×anios_bat...), cada reposicion
-// traida a valor presente con el interes, antes de anualizar el conjunto sobre los anios
-// de vida de la FV (el horizonte del analisis). produccionAnualFv/Bat son la energia
-// autoconsumida directa de la FV / aportada por la bateria en un anio, estimadas como el
-// dia tipo actual × 365 (se recalculan en cada render).
+// LCOE (coste nivelado de la energia, €/kWh): resultado de la inversion (ver
+// costesInstalacion()), el interes y los anios de vida de la FV, dividido entre la energia
+// anual de la FV o la aportada por la bateria.
 function calcularLCOE(produccionAnualFv, produccionAnualBat){
-  const { costeFv, costeBat } = costesInstalacion();
+  const { costeFv, costeBat, capacidadBat } = costesInstalacion();
   const interes = (parseFloat(document.getElementById('lcoe_interes').value)||0)/100;
   const aniosFv = parseFloat(document.getElementById('lcoe_fv_anios').value)||0;
-  const aniosBat = Math.max(1, Math.round(aniosVidaBateria())); // reposicion solo en anios enteros
-
-  const crfFv = factorRecuperacionCapital(interes, aniosFv);
-  const anualidadFv = costeFv*crfFv;
-  const lcoeFv = produccionAnualFv>0 ? anualidadFv/produccionAnualFv : 0;
-
-  let lcoeBat = 0, nReposiciones = 0;
-  if(aniosFv>0 && aniosBat>0 && costeBat>0){
-    nReposiciones = Math.max(1, Math.ceil(aniosFv/aniosBat));
-    let vpBateria = 0;
-    for(let k=0; k<nReposiciones; k++){
-      vpBateria += costeBat/Math.pow(1+interes, k*aniosBat);
-    }
-    const crfFvHorizonte = factorRecuperacionCapital(interes, aniosFv);
-    const anualidadBat = vpBateria*crfFvHorizonte;
-    lcoeBat = produccionAnualBat>0 ? anualidadBat/produccionAnualBat : 0;
-  }
+  const crf = aniosFv>0 ? factorRecuperacionCapital(interes, aniosFv) : 0;
+  const lcoeFv = produccionAnualFv>0 ? costeFv*crf/produccionAnualFv : 0;
+  const lcoeBat = produccionAnualBat>0 ? costeBat*crf/produccionAnualBat : 0;
   const nota = document.getElementById('lcoe_bat_nota');
   if(nota){
-    nota.textContent = (aniosFv>0 && aniosBat>0)
-      ? (nReposiciones<=1
-          ? 'La batería dura lo mismo (o más) que la FV: se compra una sola vez, dentro de los '+fmtNum(aniosFv,0)+' años del análisis.'
-          : 'Con '+fmtNum(aniosBat,0)+' años de vida, la batería se compra '+nReposiciones+' veces a lo largo de los '+fmtNum(aniosFv,0)+' años de la FV (año 0'+Array.from({length:nReposiciones-1},(_,k)=>', '+((k+1)*aniosBat)).join('')+'), cada reposición descontada al '+fmtNum(interes*100,1)+'% antes de anualizar.')
+    const compras = comprasBateria();
+    nota.textContent = capacidadBat>0
+      ? 'La batería se considera con '+VIDA_BATERIA_ANIOS+' años de vida: para los '+fmtNum(aniosFv,0)+' años de la FV se '+(compras>1?'cuentan '+compras+' baterías':'cuenta 1 batería')+', con todo su coste en la inversión inicial.'
       : '';
   }
-  return { lcoeFv, lcoeBat, nReposiciones };
+  return { lcoeFv, lcoeBat };
 }
 
 // Coste horario de un dia (kWh de FV directa/bateria/red a lo largo de 24h, con su propio
 // precio y LCOE) -- funcion pura, reutilizada tanto para el dia tipo en vivo (pestaña Simulacion)
 // como para cada caso guardado (pestaña Informe y agregados de flujo de caja), cada uno con sus
 // propias curvas de generacion/consumo/bateria y su propio precio horario congelado.
-// potenciaContratada: limita la importacion horaria -- lo que exceda ese limite no puede
-// importarse, igual que en el diagrama de flujo (ver limitarPorPotenciaContratada).
-function calcularCosteDia(genV, conV, bateria, precioHoraria, lcoeFv, lcoeBat, potenciaContratada){
+// El ingreso por excedentes de cada hora se resta del coste de esa misma hora, que nunca baja
+// de 0: lo que sobre esa hora se pierde. costeFv/Bat/Red son brutos; costeNeto, el resultado.
+function calcularCosteDia(genV, conV, bateria, precioHoraria, lcoeFv, lcoeBat, precioExcedenteHoraria){
   const descargaH = bateria ? bateria.descargaHoraria : genV.map(()=>0);
-  const costeFv=[], costeBat=[], costeRed=[], costeSinInstalacion=[];
-  let totalConInstalacion=0, totalSinInstalacion=0;
+  const cargaH = bateria ? bateria.cargaHoraria : genV.map(()=>0);
+  const { exportHoraria } = calcularFlujosHorarios(genV, conV, cargaH, descargaH);
+  const costeFv=[], costeBat=[], costeRed=[], ingresoExcedentes=[], costeNeto=[], costeSinInstalacion=[];
+  let totalConInstalacion=0, totalSinInstalacion=0, totalCompensacion=0;
   for(let h=0; h<24; h++){
     const g = genV[h]||0, c = conV[h]||0;
     const directa = Math.min(g,c);
     const descarga = descargaH[h]||0;
-    const importeCruda = Math.max(0, limpiarFP(c-directa-descarga));
-    const importe = Math.min(importeCruda, Math.max(0, potenciaContratada||0));
+    const importe = Math.max(0, limpiarFP(c-directa-descarga));
     const cFv = directa*lcoeFv, cBat = descarga*lcoeBat, cRed = importe*(precioHoraria[h]||0);
+    const ingreso = (exportHoraria[h]||0)*(precioExcedenteHoraria[h]||0);
+    const bruto = cFv+cBat+cRed;
+    const neto = Math.max(0, bruto-ingreso);
     costeFv.push(cFv); costeBat.push(cBat); costeRed.push(cRed);
+    ingresoExcedentes.push(ingreso); costeNeto.push(neto);
     const cSin = c*(precioHoraria[h]||0);
     costeSinInstalacion.push(cSin);
-    totalConInstalacion += cFv+cBat+cRed;
+    totalConInstalacion += neto;
     totalSinInstalacion += cSin;
+    totalCompensacion += bruto-neto;
   }
   const ahorro = totalSinInstalacion-totalConInstalacion;
   const pctAhorro = totalSinInstalacion>0 ? (ahorro/totalSinInstalacion*100) : 0;
-  return { costeFv, costeBat, costeRed, costeSinInstalacion, totalConInstalacion, totalSinInstalacion, ahorro, pctAhorro };
+  return { costeFv, costeBat, costeRed, ingresoExcedentes, costeNeto, costeSinInstalacion, totalConInstalacion, totalSinInstalacion, totalCompensacion, ahorro, pctAhorro };
 }
 
 // Produccion anual (kWh/anio) usada como base del LCOE: si todavia no se ha guardado
@@ -1832,22 +1899,18 @@ function renderPrecioYCoste(res){
   const genV = CURVAS.gen.valores, conV = CURVAS.con.valores;
   const { produccionAnualFv, produccionAnualBat } = calcularProduccionAnualAgregada(res, genV);
   const { lcoeFv, lcoeBat } = calcularLCOE(produccionAnualFv, produccionAnualBat);
-  // El campo que se esta escribiendo no se reformatea, para no mover el cursor.
-  [['lcoe_fv',lcoeFv],['lcoe_bat',lcoeBat]].forEach(([id,valor])=>{
-    const el = document.getElementById(id);
-    if(document.activeElement!==el) el.value = valor.toFixed(3);
-  });
+  document.getElementById('lcoe_fv').value = fmtNum(lcoeFv,3);
+  document.getElementById('lcoe_bat').value = fmtNum(lcoeBat,3);
 
-  const potenciaContratada = parseFloat(document.getElementById('pot_contratada').value)||0;
-  const c = calcularCosteDia(genV, conV, res.bateria, precioHoraria, lcoeFv, lcoeBat, potenciaContratada);
-  document.getElementById('chart-coste').innerHTML = buildCosteChartSVG(c.costeFv, c.costeBat, c.costeRed, c.costeSinInstalacion);
+  const c = calcularCosteDia(genV, conV, res.bateria, precioHoraria, lcoeFv, lcoeBat, PRECIO_EXCEDENTE_HORARIO);
+  document.getElementById('chart-coste').innerHTML = buildCosteChartSVG(c.costeFv, c.costeBat, c.costeRed, c.ingresoExcedentes, c.costeNeto, c.costeSinInstalacion, c.ahorro);
   document.getElementById('total-coste').textContent = 'con FV '+fmtNum(c.totalConInstalacion,2)+' €';
   document.getElementById('total-coste-sin').textContent = 'sin FV '+fmtNum(c.totalSinInstalacion,2)+' €';
   document.getElementById('total-ahorro').textContent = 'ahorro '+fmtNum(c.ahorro,2)+' € ('+fmtNum(c.pctAhorro,1)+'%)';
   return {
     precioHoraria, lcoeFv, lcoeBat,
     totalConInstalacion: c.totalConInstalacion, totalSinInstalacion: c.totalSinInstalacion,
-    ahorro: c.ahorro, pctAhorro: c.pctAhorro,
+    ahorro: c.ahorro, pctAhorro: c.pctAhorro, totalCompensacion: c.totalCompensacion,
   };
 }
 
@@ -1897,7 +1960,7 @@ function calcularAhorroAnualAgregado(ahorroDiarioActual, lcoeFv, lcoeBat){
   }
   let ahorroAnual=0, diasAnuales=0;
   casos.forEach(c=>{
-    const cc = calcularCosteDia(c.curvas.gen, c.curvas.con, c.res.bateria, c.precioHoraria, lcoeFv, lcoeBat, c.potenciaContratada);
+    const cc = calcularCosteDia(c.curvas.gen, c.curvas.con, c.res.bateria, c.precioHoraria, lcoeFv, lcoeBat, c.precioExcedenteHoraria);
     ahorroAnual += cc.ahorro*c.diasAnuales;
     diasAnuales += c.diasAnuales;
   });
@@ -1905,25 +1968,21 @@ function calcularAhorroAnualAgregado(ahorroDiarioActual, lcoeFv, lcoeBat){
 }
 
 // Construye la serie de flujos anuales (anio 0..anios de vida de la FV): inversion inicial
-// en el anio 0 (FV + primera bateria), ahorro anual (constante ano a ano, ponderado por
-// dias entre los casos guardados -- ver calcularAhorroAnualAgregado) menos una reposicion
-// de bateria en los anios en que corresponda -- misma cadencia que calcularLCOE(), para que
-// ambas secciones cuenten el mismo numero de baterias a lo largo del mismo horizonte.
+// en el anio 0 (FV + todas las baterias), y ahorro anual constante ano a ano, ponderado por
+// dias entre los casos guardados -- ver calcularAhorroAnualAgregado.
 function calcularFlujoCaja(ahorroDiarioActual, lcoeFv, lcoeBat){
   const { costeFv, costeBat } = costesInstalacion();
   const interes = (parseFloat(document.getElementById('lcoe_interes').value)||0)/100;
   const aniosFv = Math.max(1, Math.round(parseFloat(document.getElementById('lcoe_fv_anios').value)||0));
-  const aniosBat = Math.max(1, Math.round(aniosVidaBateria())); // reposicion solo en anios enteros
 
   const { ahorroAnual, diasAnuales, nCasos } = calcularAhorroAnualAgregado(ahorroDiarioActual, lcoeFv, lcoeBat);
   const inversionInicial = costeFv+costeBat;
 
-  const filas = [{año:0, flujoNeto:-inversionInicial, acumulado:-inversionInicial, reposicion:0}];
+  const filas = [{año:0, flujoNeto:-inversionInicial, acumulado:-inversionInicial}];
   for(let año=1; año<=aniosFv; año++){
-    const reponeBateria = (aniosBat>0 && año<aniosFv && año%aniosBat===0) ? costeBat : 0;
-    const flujoNeto = ahorroAnual-reponeBateria;
+    const flujoNeto = ahorroAnual;
     const prevAcum = filas[filas.length-1].acumulado;
-    filas.push({año, flujoNeto, acumulado:prevAcum+flujoNeto, reposicion:reponeBateria});
+    filas.push({año, flujoNeto, acumulado:prevAcum+flujoNeto});
   }
   const flujos = filas.map(f=>f.flujoNeto);
   const van = calcNPV(interes, flujos);
@@ -2007,7 +2066,6 @@ function buildFlowDiagramSVG(f){
   };
   const C = {amber:'#c27c00', cyan:'#2457e6', violet:'#6366F1', teal:'#A3E635', green:'#22D46B', crimson:'#FF3B30', magenta:'#D946EF'};
   const dimBat = !f.conBateria;
-  const dimRed = (f.potenciaContratada||0)<=0;
 
   function edgePoint(a,b){
     const ang = Math.atan2(b.y-a.y, b.x-a.x);
@@ -2065,19 +2123,16 @@ function buildFlowDiagramSVG(f){
   defs += '</defs>';
 
   let s = defs;
-  s += oneWay(N.pv, N.bus, 'amber', f.aislado ? (fmtNum(f.genDiariaConRed,1)+' → '+fmtNum(f.genDiaria,1)) : fmtNum(f.genDiaria,1), 12);
-  s += oneWay(N.bus, N.dem, 'cyan', f.aislado ? (fmtNum(f.conDiariaConRed,1)+' → '+fmtNum(f.conDiaria,1)) : fmtNum(f.conDiaria,1), 34);
+  s += oneWay(N.pv, N.bus, 'amber', fmtNum(f.genDiaria,1), 12);
+  s += oneWay(N.bus, N.dem, 'cyan', fmtNum(f.conDiaria,1), 34);
   s += twoWay(N.bus, N.bat, 'violet',fmtNum(f.cargaDiaria,1), 'teal',fmtNum(f.descargaDiaria,1), dimBat);
-  s += twoWay(N.bus, N.red, 'green',fmtNum(f.exportDiaria,1), 'crimson',fmtNum(f.importDiaria,1), dimRed, false);
+  s += twoWay(N.bus, N.red, 'green',fmtNum(f.exportDiaria,1), 'crimson',fmtNum(f.importDiaria,1), false, false);
 
   [N.pv,N.bus,N.dem].forEach(n=>{ s += nodeEl(n); });
   s += nodeEl(N.bat, dimBat);
-  s += nodeEl(N.red, dimRed);
+  s += nodeEl(N.red);
   if(dimBat){
     s += '<text x="'+N.bat.x+'" y="'+(N.bat.y+N.bat.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">(desactivada)</text>';
-  }
-  if(dimRed){
-    s += '<text x="'+N.red.x+'" y="'+(N.red.y+N.red.ry+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#7b8696">(aislada, sin red)</text>';
   }
 
   // Leyenda arriba, con el mismo tamano de letra que la del grafico de reparto horario de
@@ -2090,41 +2145,10 @@ function buildFlowDiagramSVG(f){
   return '<svg viewBox="0 0 780 538" width="100%" style="max-width:740px;">'+s+'</svg>';
 }
 
-// Potencia contratada (kW): limite continuo de la conexion a red, hora a hora -- no un
-// interruptor de todo o nada. Cada hora, lo que la generacion/bateria dejan como
-// excedente (exportacion) o deficit (importacion) no puede superar ese limite: el exceso,
-// si lo hay, no puede fluir por la conexion esa hora, y se resta de la generacion
-// (exportacion recortada) o de la demanda (importacion recortada) mostradas para que
-// ambas pilas del diagrama sigan cuadrando sin ese exceso. Con potencia contratada = 0
-// esto reduce exactamente al caso aislado de antes (nada puede fluir, se recorta todo);
-// con un valor positivo pero insuficiente en algunas horas, solo se recorta el exceso de
-// esas horas, no el dia entero. genDiariaConRed/conDiariaConRed conservan los valores sin
-// recortar, para poder mostrar ambos a la vez -- el "antes/despues" -- en el diagrama y en
-// las curvas. "aislado" en el resultado ahora significa "hay recorte" (algo se ha
-// limitado hoy), no "potencia contratada = 0" -- ese caso concreto se comprueba aparte,
-// con res.potenciaContratada<=0, donde haga falta.
-function limitarPorPotenciaContratada(genDiariaCruda, conDiariaCruda, autocDiaria, cargaDiaria, descargaDiaria, exportHoraria, importHoraria, potenciaContratada, conBateria){
-  const limite = Math.max(0, potenciaContratada||0);
-  let exportDiaria=0, importDiaria=0, exportRecortada=0, importRecortada=0;
-  exportHoraria.forEach(v=>{ const lim=Math.min(v,limite); exportDiaria+=lim; exportRecortada+=(v-lim); });
-  importHoraria.forEach(v=>{ const lim=Math.min(v,limite); importDiaria+=lim; importRecortada+=(v-lim); });
-  return {
-    genDiaria: limpiarFP(genDiariaCruda-exportRecortada),
-    autocDiaria, conDiaria: limpiarFP(conDiariaCruda-importRecortada),
-    cargaDiaria, descargaDiaria,
-    exportDiaria: limpiarFP(exportDiaria), importDiaria: limpiarFP(importDiaria),
-    conBateria,
-    genDiariaConRed: genDiariaCruda, conDiariaConRed: conDiariaCruda,
-    potenciaContratada: limite,
-    aislado: (exportRecortada>0.0001 || importRecortada>0.0001),
-  };
-}
-
 // Totales del dia de los flujos, a partir de las curvas explicitas en vez de
 // leer la CURVAS global -- para poder recalcular los totales del dia de un caso guardado
 // (pestaña Informe), cuyas curvas ya no son las que hay actualmente en el editor.
 function calcularFlujosDiagramaTotal(res, genValores, conValores){
-  const genDiariaCruda = res.gen, autocDiaria = res.autoc, conDiariaCruda = res.con;
   let cargaDiaria=0, descargaDiaria=0;
   const cargaH = res.bateria ? res.bateria.cargaHoraria : genValores.map(()=>0);
   const descargaH = res.bateria ? res.bateria.descargaHoraria : genValores.map(()=>0);
@@ -2133,14 +2157,17 @@ function calcularFlujosDiagramaTotal(res, genValores, conValores){
     descargaDiaria = res.bateria.autocBateria;
   }
   const { exportHoraria, importHoraria } = calcularFlujosHorarios(genValores, conValores, cargaH, descargaH);
-  return limitarPorPotenciaContratada(genDiariaCruda, conDiariaCruda, autocDiaria, cargaDiaria, descargaDiaria, exportHoraria, importHoraria, res.potenciaContratada, !!res.bateria);
+  const suma = arr => limpiarFP(arr.reduce((a,v)=>a+v, 0));
+  return {
+    genDiaria: res.gen, autocDiaria: res.autoc, conDiaria: res.con,
+    cargaDiaria, descargaDiaria,
+    exportDiaria: suma(exportHoraria), importDiaria: suma(importHoraria),
+    conBateria: !!res.bateria,
+  };
 }
 
 // ===================== RENDER RESULTADOS (pestaña Informe) =====================
 
-// Ultimo resultado calculado por renderResultados(), reutilizado por el arrastre sobre el
-// grafico de reparto horario para leer la bateria y la potencia contratada vigentes.
-let ultimoResultadoDiaTipo = null;
 
 function renderResultados(){
   actualizarCasoAutomatico();
@@ -2161,7 +2188,6 @@ function renderResultados(){
     '<div class="stat-chip"><div class="v">'+fmtNum(res.con,2)+' kWh</div><div class="l">consumo del día</div></div>';
   statsRow.innerHTML = statsHtml;
 
-  ultimoResultadoDiaTipo = res;
 
   const chart = buildComparativoChartSVG(
     CURVAS.gen.valores, CURVAS.con.valores,
@@ -2170,15 +2196,10 @@ function renderResultados(){
     res.bateria ? res.bateria.socHoraria : null,
     res.bateria ? res.bat.capacidad : null,
     res.bateria ? res.bat.potencia : null,
-    res.potenciaContratada,
     true
   );
   document.getElementById('flowCurveWrap').innerHTML = chart;
-  const layoutReparto = calcularLayoutReparto(CURVAS.gen.valores, CURVAS.con.valores,
-    res.bateria ? res.bateria.cargaHoraria : CURVAS.gen.valores.map(()=>0),
-    res.bateria ? res.bateria.descargaHoraria : CURVAS.gen.valores.map(()=>0),
-    !!res.bateria, res.potenciaContratada, true);
-  document.getElementById('flowCurveLegend').innerHTML = leyendaRepartoHTML(!!res.bateria, layoutReparto.hayRecorte);
+  document.getElementById('flowCurveLegend').innerHTML = leyendaRepartoHTML(!!res.bateria);
 
   const coste = renderPrecioYCoste(res);
   const flujo = renderFlujoCaja(coste.ahorro, coste.lcoeFv, coste.lcoeBat);
@@ -2194,10 +2215,10 @@ function renderResultados(){
       '<tr><td>Excedente exportado (batería llena)</td><td>'+fmtNum(res.bateria.excedenteNoAprovechado,2)+' kWh</td></tr>'+
       '<tr><td>Déficit importado (batería vacía)</td><td>'+fmtNum(res.bateria.deficitNoAprovechado,2)+' kWh</td></tr>';
   }
-  const sinContrato = (res.potenciaContratada||0)<=0;
   const filasCoste =
-    '<tr><td>Coste del día con FV'+(res.bateria?' y batería':'')+(sinContrato?' (sistema aislado)':'')+'</td><td>'+fmtNum(coste.totalConInstalacion,2)+' €</td></tr>'+
+    '<tr><td>Coste del día con FV'+(res.bateria?' y batería':'')+'</td><td>'+fmtNum(coste.totalConInstalacion,2)+' €</td></tr>'+
     '<tr><td>Coste del día solo con red (sin FV)</td><td>'+fmtNum(coste.totalSinInstalacion,2)+' €</td></tr>'+
+    '<tr><td>Compensación de excedentes</td><td>'+fmtNum(coste.totalCompensacion,2)+' €</td></tr>'+
     '<tr><td>Ahorro ese día</td><td>'+fmtNum(coste.ahorro,2)+' € ('+fmtNum(coste.pctAhorro,1)+'%)</td></tr>';
   const filasFlujo =
     '<tr><td>Inversión inicial (FV + batería)</td><td>'+fmtNum(flujo.inversionInicial,0)+' €</td></tr>'+
@@ -2222,32 +2243,12 @@ function renderResultados(){
 
 renderResultados();
 
-['bat_incluir','bat_capacidad','bat_potencia','bat_eficiencia','bat_soc_inicial'].forEach(id=>{
+['bat_capacidad','bat_soc_ini'].forEach(id=>{
   document.getElementById(id).addEventListener('input', renderResultados);
   document.getElementById(id).addEventListener('change', renderResultados);
 });
-['lcoe_fv_coste','lcoe_interes','lcoe_fv_anios','lcoe_bat_coste','lcoe_bat_ciclos','pot_contratada'].forEach(id=>{
+['lcoe_fv_coste','lcoe_interes','lcoe_fv_anios','lcoe_bat_coste'].forEach(id=>{
   document.getElementById(id).addEventListener('input', renderResultados);
-});
-
-// LCOE editable: escribir un €/kWh recalcula el coste especifico equivalente, que sigue
-// siendo el unico dato de entrada -- asi coste horario, inversion y flujo de caja no se
-// contradicen. El LCOE es proporcional al coste especifico, de modo que basta medir el LCOE
-// que sale con 1 €. Sin produccion (p.ej. sin bateria) no hay equivalencia y no se toca nada.
-[['lcoe_fv','lcoe_fv_coste','lcoeFv'],['lcoe_bat','lcoe_bat_coste','lcoeBat']].forEach(([idLcoe,idCoste,clave])=>{
-  const campo = document.getElementById(idLcoe);
-  const coste = document.getElementById(idCoste);
-  campo.addEventListener('input', ()=>{
-    const objetivo = parseFloat(campo.value);
-    if(!isFinite(objetivo) || objetivo<0 || !ultimoResultadoDiaTipo) return;
-    const { produccionAnualFv, produccionAnualBat } = calcularProduccionAnualAgregada(ultimoResultadoDiaTipo, CURVAS.gen.valores);
-    const previo = coste.value;
-    coste.value = 1;
-    const lcoePorEuro = calcularLCOE(produccionAnualFv, produccionAnualBat)[clave];
-    coste.value = lcoePorEuro>0 ? Math.round(objetivo/lcoePorEuro*100)/100 : previo;
-    coste.dispatchEvent(new Event('input', {bubbles:true}));
-  });
-  campo.addEventListener('blur', renderResultados);
 });
 
 // ===================== CASOS: varios dias tipo en el mismo informe =====================
@@ -2271,18 +2272,16 @@ function snapshotCasoActual(nombre){
     id: casoNextId++,
     nombre: nombre || dt.nombre,
     diaTipoNombre: dt.nombre,
-    kwp: parseFloat(document.getElementById('gen_kwp').value)||0,
+    kwp: kwpInstalados(),
     tipoConsumidor: tipoConsumidorEl.options[tipoConsumidorEl.selectedIndex].text,
     kwhDia: parseFloat(document.getElementById('kwhdia_con').value)||0,
     curvas: { gen: CURVAS.gen.valores.slice(), con: CURVAS.con.valores.slice() },
     // Precio horario, congelado en el momento de guardar el caso --
     // asi cada caso lleva su propio precio, y tocar los campos de la pestaña Simulacion despues de
     // guardarlo no lo cambia retroactivamente (igual que kwp o kwhDia, ya congelados
-    // arriba). La potencia contratada en si (res.potenciaContratada) ya viaja congelada
-    // dentro de res, y con ella el limite de importacion/exportacion hora a hora (ver
-    // limitarPorPotenciaContratada).
+    // arriba).
     precioHoraria: PRECIO_HORARIO.slice(),
-    potenciaContratada: parseFloat(document.getElementById('pot_contratada').value)||0,
+    precioExcedenteHoraria: PRECIO_EXCEDENTE_HORARIO.slice(),
     dias, diasAnuales: diasAnualesDesdeFraccion(dias),
     res,
   };
@@ -2336,6 +2335,7 @@ function renderCasos(){
     btnPdf.disabled = true;
     summaryWrap.style.display='none';
     document.getElementById('summaryTable').innerHTML='';
+    document.getElementById('informeFlujoCaja').innerHTML='';
     return;
   }
   btnPdf.disabled = false;
@@ -2355,6 +2355,11 @@ function renderCasos(){
     '<div class="stat-chip"><div class="v">'+fmtNum(autarquiaMedia,1)+'%</div><div class="l">autarquía media entre casos</div></div>'+
     '<div class="stat-chip"><div class="v">'+conBatCount+'/'+casos.length+'</div><div class="l">casos con batería</div></div>';
 
+  const { produccionAnualFv, produccionAnualBat } = calcularProduccionAnualAgregada();
+  const { lcoeFv, lcoeBat } = calcularLCOE(produccionAnualFv, produccionAnualBat);
+  const svgBarras = (valores, color, max, decimales) => '<svg viewBox="0 0 640 220" width="100%" style="max-width:640px;">'+barrasHorariasSVG(valores, color, max, decimales)+'</svg>';
+  const bloqueCurva = (titulo, svg) => '<div class="subsection-title">'+titulo+'</div><div class="chart-svg-wrap">'+svg+'</div>';
+  document.getElementById('informeFlujoCaja').innerHTML = '<div class="subsection-title">Flujo de caja del conjunto de casos</div><div class="chart-svg-wrap">'+buildCashFlowSVG(calcularFlujoCaja(0, lcoeFv, lcoeBat).filas)+'</div>';
   container.innerHTML = casos.map((caso,idx)=>{
     const r = caso.res;
     const pct = pctCaso(caso), autarquia = autarquiaCaso(caso);
@@ -2382,9 +2387,15 @@ function renderCasos(){
       r.bateria ? r.bateria.descargaHoraria : null,
       r.bateria ? r.bateria.socHoraria : null,
       r.bateria ? r.bat.capacidad : null,
-      r.bateria ? r.bat.potencia : null,
-      r.potenciaContratada
+      r.bateria ? r.bat.potencia : null
     );
+
+    const costeCaso = calcularCosteDia(caso.curvas.gen, caso.curvas.con, r.bateria, caso.precioHoraria, lcoeFv, lcoeBat, caso.precioExcedenteHoraria);
+    const curvasCaso =
+      bloqueCurva('Curva de consumo', svgBarras(caso.curvas.con, '#2457e6', calcularEscalaMaxConsumo(caso.curvas.con), 2))+
+      bloqueCurva('Curva de precio PVPC', svgBarras(caso.precioHoraria, '#F2C94C', calcularEscalaMaxPrecio(caso.precioHoraria), 3))+
+      bloqueCurva('Precio de la energía excedentaria', svgBarras(caso.precioExcedenteHoraria, '#22D46B', calcularEscalaMaxPrecio(caso.precioExcedenteHoraria), 3))+
+      bloqueCurva('Coste horario', buildCosteChartSVG(costeCaso.costeFv, costeCaso.costeBat, costeCaso.costeRed, costeCaso.ingresoExcedentes, costeCaso.costeNeto, costeCaso.costeSinInstalacion, costeCaso.ahorro));
 
     return '<div class="line-card">'+
       '<div class="line-head" onclick="toggleCaso('+caso.id+')">'+
@@ -2405,6 +2416,7 @@ function renderCasos(){
         '<div class="chart-svg-wrap">'+diagramSvg+'</div>'+
         '<div class="subsection-title">Reparto horario del día tipo</div>'+
         '<div class="chart-svg-wrap">'+chartSvg+'</div>'+
+        curvasCaso+
       '</div>'+
     '</div>';
   }).join('');
@@ -2554,19 +2566,11 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     // conservacion de energia en el nudo, ambas pilas miden lo mismo cada hora. El SOC
     // (un nivel horario, no un flujo del nudo) usa un segundo eje a la derecha,
     // tambien en escalera.
-    function drawComparativoChartPdf(yy, genValores, conValores, cargaHoraria, descargaHoraria, socHoraria, capacidadKwh, potenciaMaxKw, potenciaContratada){
+    function drawComparativoChartPdf(yy, genValores, conValores, cargaHoraria, descargaHoraria, socHoraria, capacidadKwh, potenciaMaxKw){
       const conBateria = !!(cargaHoraria && descargaHoraria);
       const cargaH = cargaHoraria || genValores.map(()=>0);
       const descargaH = descargaHoraria || genValores.map(()=>0);
       const { exportHoraria, importHoraria } = calcularFlujosHorarios(genValores, conValores, cargaH, descargaH);
-      const limite = Math.max(0, potenciaContratada||0);
-      const hayRecorte = exportHoraria.some(v=>v>limite+0.0001) || importHoraria.some(v=>v>limite+0.0001);
-      // Generacion/demanda limitadas por el limite de potencia contratada -- ver la
-      // version SVG (buildComparativoChartSVG) para la explicacion; las barras se dejan
-      // tal cual (sin ese limite) y esto se dibuja aparte, con el mismo achurado que los
-      // editores de Generacion/Consumo, para comparar ambos a la vez.
-      const genLimitada = hayRecorte ? genValores.map((g,i)=> limpiarFP((g||0)-Math.max(0,exportHoraria[i]-limite))) : null;
-      const conLimitada = hayRecorte ? conValores.map((c,i)=> limpiarFP((c||0)-Math.max(0,importHoraria[i]-limite))) : null;
       const nivelDescarga = genValores.map((v,i)=>(v||0)+descargaH[i]);
       const nivelImport = nivelDescarga.map((v,i)=>v+importHoraria[i]);
       const nivelCarga = conValores.map((v,i)=>(v||0)+cargaH[i]);
@@ -2615,37 +2619,12 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
           if(i<23){ const byNext=fnY(sign*valores[i+1]); doc.line(bx1,by,bx1,byNext); }
         }
       }
-      // Recorte por aislamiento: mismo achurado (fondo oscuro + diagonales rojas) que en
-      // el HTML (buildComparativoChartSVG) y en los editores de Generacion/Consumo, en vez
-      // de la linea discontinua anterior -- rect + clip para que las diagonales, trazadas
-      // de sobra, no se salgan de la banda de esa hora.
-      function hatchRect(bx0, byTop, bx1, byBot){
-        const h = byBot-byTop, w = bx1-bx0;
-        if(h<=0.05 || w<=0.05) return;
-        doc.saveGraphicsState();
-        doc.rect(bx0, byTop, w, h); doc.clip(); doc.discardPath();
-        doc.setFillColor(10,18,28); doc.rect(bx0, byTop, w, h, 'F');
-        doc.setDrawColor(255,59,48); doc.setLineWidth(0.35);
-        for(let d=-h; d<=w+h; d+=1.8){ doc.line(bx0+d, byTop, bx0+d-h, byBot); }
-        doc.restoreGraphicsState();
-      }
-      function recorteHoras(limitadaArr, valoresArr, sign, fnY){
-        for(let i=0;i<24;i++){
-          const bx0=x0+padL+step*i, bx1=x0+padL+step*(i+1);
-          const yA=fnY(sign*limitadaArr[i]), yB=fnY(sign*valoresArr[i]);
-          hatchRect(bx0, Math.min(yA,yB), bx1, Math.max(yA,yB));
-        }
-      }
       banda(ZERO, genValores, 1, y, [255,176,32]);
       banda(genValores, nivelDescarga, 1, y, [132,204,22]);
       banda(nivelDescarga, nivelImport, 1, y, [230,30,20]);
       banda(ZERO, conValores, -1, y, [55,207,255]);
       banda(conValores, nivelCarga, -1, y, [79,70,229]);
       banda(nivelCarga, nivelExport, -1, y, [20,170,85]);
-      if(hayRecorte){
-        recorteHoras(genLimitada, genValores, 1, y);
-        recorteHoras(conLimitada, conValores, -1, y);
-      }
       if(conBateria){
         doc.setLineDashPattern([0.8,0.6], 0);
         escalera(socPct, 1, [244,114,182], ySoc);
@@ -2666,11 +2645,6 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       if(conBateria){
         doc.setFont('helvetica','bold'); doc.setFontSize(6);
         doc.setTextColor(219,39,119); doc.text('- SOC, % de la capacidad (nivel, no acumulado)', x0+padL, capY);
-        capY += 6; returnExtra += 6;
-      }
-      if(hayRecorte){
-        doc.setFont('helvetica','bold'); doc.setFontSize(6);
-        doc.setTextColor(255,59,48); doc.text('- recorte por limite de potencia contratada (esa parte no se aprovecha/cubre)', x0+padL, capY);
         capY += 6; returnExtra += 6;
       }
       return y0+chartH+returnExtra;
@@ -2697,7 +2671,6 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       };
       const AMBER=[255,176,32], CYAN=[55,207,255], VIOLET=[79,70,229], TEAL=[132,204,22], GREEN=[20,170,85], RED=[230,30,20];
       const dimBat = !f.conBateria;
-      const dimRed = (f.potenciaContratada||0)<=0;
 
       function edgePoint(a,b){
         const ang = Math.atan2(b.y-a.y, b.x-a.x);
@@ -2757,10 +2730,10 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         }
       }
 
-      oneWay(N.pv, N.bus, AMBER, f.aislado ? (fmtNum(f.genDiariaConRed,1)+' -> '+fmtNum(f.genDiaria,1)) : fmtNum(f.genDiaria,1), 4);
-      oneWay(N.bus, N.dem, CYAN, f.aislado ? (fmtNum(f.conDiariaConRed,1)+' -> '+fmtNum(f.conDiaria,1)) : fmtNum(f.conDiaria,1), 4);
+      oneWay(N.pv, N.bus, AMBER, fmtNum(f.genDiaria,1), 4);
+      oneWay(N.bus, N.dem, CYAN, fmtNum(f.conDiaria,1), 4);
       twoWay(N.bus, N.bat, VIOLET,fmtNum(f.cargaDiaria,1), TEAL,fmtNum(f.descargaDiaria,1), dimBat);
-      twoWay(N.bus, N.red, GREEN,fmtNum(f.exportDiaria,1), RED,fmtNum(f.importDiaria,1), dimRed, false);
+      twoWay(N.bus, N.red, GREEN,fmtNum(f.exportDiaria,1), RED,fmtNum(f.importDiaria,1), false, false);
 
       nodeEl(N.pv); nodeEl(N.bus); nodeEl(N.dem);
       nodeEl(N.bat, dimBat);
@@ -2768,11 +2741,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         doc.setFont('helvetica','normal'); doc.setFontSize(4); doc.setTextColor(150,155,163);
         doc.text('(desactivada)', N.bat.x, N.bat.y+N.bat.ry+4, {align:'center'});
       }
-      nodeEl(N.red, dimRed);
-      if(dimRed){
-        doc.setFont('helvetica','normal'); doc.setFontSize(4); doc.setTextColor(150,155,163);
-        doc.text('(aislada, sin red)', N.red.x, N.red.y+N.red.ry+4, {align:'center'});
-      }
+      nodeEl(N.red);
 
       // Leyenda arriba, mismo orden y colores que en el HTML (buildFlowDiagramSVG), con el
       // mismo estilo "- etiqueta" que usa la leyenda de drawComparativoChartPdf.
@@ -2807,7 +2776,8 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     }
     // Curva de precio PVPC del dia (€/kWh), en escalera -- version vectorial del grafico
     // de pantalla (buildPrecioChartSVG/renderChartPrecio).
-    function drawPrecioChartPdf(yy, precioHoraria){
+    function drawPrecioChartPdf(yy, precioHoraria, estilo){
+      const { color, texto, decimales } = Object.assign({color:[230,175,20], texto:'- precio PVPC (€/kWh)', decimales:3}, estilo);
       const chartH=40, chartW=pageW-2*marginX;
       yy = checkPage(yy, chartH+14);
       const x0=marginX, y0=yy+6;
@@ -2820,9 +2790,9 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       [0, maxV/2, maxV].forEach(gv=>{
         doc.line(x0+padL, y(gv), x0+chartW-padR, y(gv));
         doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(150,155,163);
-        doc.text(fmtNum(gv,3), x0+padL-1.5, y(gv)+1, {align:'right'});
+        doc.text(fmtNum(gv,decimales), x0+padL-1.5, y(gv)+1, {align:'right'});
       });
-      doc.setDrawColor(230,175,20); doc.setLineWidth(0.5);
+      doc.setDrawColor(...color); doc.setLineWidth(0.5);
       for(let i=0;i<24;i++){
         const bx0=x0+padL+step*i, bx1=x0+padL+step*(i+1), by=y(precioHoraria[i]||0);
         doc.line(bx0,by,bx1,by);
@@ -2830,14 +2800,14 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       }
       doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,155,163);
       [0,6,12,18,23].forEach(i=>{ doc.text(i+'h', x0+padL+step*i+step/2, y0+chartH-1, {align:'center'}); });
-      doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(180,140,10);
-      doc.text('- precio PVPC (€/kWh)', x0+padL, y0-2);
+      doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(...color);
+      doc.text(texto, x0+padL, y0-2);
       return y0+chartH+6;
     }
     // Coste horario del consumo (€), barras apiladas por origen (FV directa/bateria/red a
     // su LCOE o precio) mas la linea de puntos de lo que costaria sin instalacion --
     // version vectorial de buildCosteChartSVG.
-    function drawCosteChartPdf(yy, costeFv, costeBat, costeRed, costeSinInstalacion){
+    function drawCosteChartPdf(yy, costeFv, costeBat, costeRed, ingresoExcedentes, costeNeto, costeSinInstalacion, ahorroDiario){
       const nivel1 = costeFv;
       const nivel2 = nivel1.map((v,i)=>v+costeBat[i]);
       const nivel3 = nivel2.map((v,i)=>v+costeRed[i]);
@@ -2848,9 +2818,10 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       const padL=16, padR=4, padT=4, padB=8;
       const step=(chartW-padL-padR)/24;
       const maxV = Math.max(Math.max.apply(null, nivel3), Math.max.apply(null, costeSinInstalacion), 0.01)*1.15;
-      const y = v => y0+padT+(chartH-padT-padB)*(1-v/maxV);
+      const minV = -Math.max.apply(null, ingresoExcedentes)*1.15;
+      const y = v => y0+padT+(chartH-padT-padB)*(1-(v-minV)/(maxV-minV));
       doc.setDrawColor(225,225,230); doc.setLineWidth(0.12);
-      [0, maxV/2, maxV].forEach(gv=>{
+      (minV<0 ? [minV, 0, maxV/2, maxV] : [0, maxV/2, maxV]).forEach(gv=>{
         doc.line(x0+padL, y(gv), x0+chartW-padR, y(gv));
         doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(150,155,163);
         doc.text(fmtNum(gv,2)+'€', x0+padL-1.5, y(gv)+1, {align:'right'});
@@ -2866,6 +2837,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         seg(0, nivel1[i], [255,176,32], i);
         seg(nivel1[i], nivel2[i], [132,204,22], i);
         seg(nivel2[i], nivel3[i], [230,30,20], i);
+        seg(-ingresoExcedentes[i], 0, [20,170,85], i);
       }
       function linea(arr, colorRgb, ancho, dash){
         doc.setDrawColor(...colorRgb); doc.setLineWidth(ancho);
@@ -2878,13 +2850,17 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         doc.setLineDashPattern([], 0);
       }
       linea(costeSinInstalacion, [140,150,165], 0.4, [0.8,0.6]);
+      linea(costeNeto, [28,39,53], 0.5, []);
       doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,155,163);
       [0,6,12,18,23].forEach(i=>{ doc.text(i+'h', x0+padL+step*i+step/2, y0+chartH-1, {align:'center'}); });
       doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
       doc.setTextColor(255,176,32); doc.text('- FV directa', x0+padL, y0-8);
       doc.setTextColor(132,204,22); doc.text('- bateria', x0+padL+22, y0-8);
       doc.setTextColor(230,30,20); doc.text('- red', x0+padL+36, y0-8);
+      doc.setTextColor(20,170,85); doc.text('- excedentes (ingreso)', x0+padL+50, y0-8);
       doc.setTextColor(120,128,140); doc.text('- - sin instalacion', x0+padL, y0-2);
+      doc.setTextColor(28,39,53); doc.text('--- con instalacion (minimo 0)', x0+padL+34, y0-2);
+      doc.setFontSize(6.5); doc.setTextColor(21,128,61); doc.text('ahorro diario '+fmtNum(ahorroDiario,2)+' EUR', x0+chartW-padR, y0-2, {align:'right'});
       return y0+chartH+6;
     }
     // Flujo de caja anual (barras verde/rojo) + acumulado (linea azul) -- version vectorial
@@ -2976,7 +2952,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     y = H.formulaBlock(y, ['%Autoconsumo = suma Autoconsumida(h) / suma Generacion(h) x 100']);
     y = H.formulaBlock(y, ['%Autarquia = (suma Autoconsumida(h) + Aportado por bateria) / suma Consumo(h) x 100']);
     y = H.subTitle(y, '3.3', 'Como dimensionar la instalacion con esta herramienta');
-    y = H.paragraph(y, 'La herramienta no calcula un tamaño optimo de forma automatica: se encuentra por iteracion. Primero se fija la curva de consumo lo mas parecida posible a la real para el dia tipo elegido. Despues se prueban distintas potencias FV (kWp) y se compara como cambian el porcentaje de autoconsumo y el excedente exportado: a partir de cierto punto, mas kWp exporta mas sin mejorar mucho el autoconsumo. Por ultimo se activa la bateria y se varia su capacidad y potencia, comparando el diagrama de flujos. Cada combinacion de datos de partida que se quiera comparar se guarda como un caso independiente, y todos ellos se incluyen en el mismo informe.');
+    y = H.paragraph(y, 'La herramienta no calcula un tamaño optimo de forma automatica: se encuentra por iteracion. Primero se fija la curva de consumo lo mas parecida posible a la real para el dia tipo elegido. Despues se prueban distintas potencias FV (kWp) y se compara como cambian el porcentaje de autoconsumo y el excedente exportado: a partir de cierto punto, mas kWp exporta mas sin mejorar mucho el autoconsumo. Por ultimo se varia la capacidad de la bateria, comparando el diagrama de flujos. Cada combinacion de datos de partida que se quiera comparar se guarda como un caso independiente, y todos ellos se incluyen en el mismo informe.');
     y = H.paragraph(y, 'Limitaciones para el dimensionado: el tamaño resultante es orientativo, no un dimensionado tecnico normativo. Cada caso se basa en un unico dia representativo, no en un año horario real medido, y no considera la potencia maxima de inyeccion permitida por la distribuidora, la orientacion e inclinacion real de los paneles ni las perdidas por sombreado. Antes de adquirir equipos, se recomienda contrastar el resultado con un estudio de dimensionado normativo.', {bold:true});
 
     y = H.sectionTitle(y, '4.', 'Datos del proyecto', collect);
@@ -3033,30 +3009,38 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         conBateria ? r.bateria.descargaHoraria : null,
         conBateria ? r.bateria.socHoraria : null,
         conBateria ? r.bat.capacidad : null,
-        conBateria ? r.bat.potencia : null,
-        r.potenciaContratada
+        conBateria ? r.bat.potencia : null
       );
       y = H.figureCaption(y, FIG(), 'Generacion, consumo'+(conBateria?' y bateria (carga/descarga/SOC)':'')+' horario - '+caso.nombre, collect);
 
-      const costeCaso = calcularCosteDia(caso.curvas.gen, caso.curvas.con, r.bateria, caso.precioHoraria, lcoeFv, lcoeBat, caso.potenciaContratada);
+      y = H.paragraph(y, 'Curva de consumo horario de este caso:');
+      y = H.drawPrecioChartPdf(y, caso.curvas.con, {color:[36,87,230], texto:'- consumo horario (kWh)', decimales:2});
+      y = H.figureCaption(y, FIG(), 'Curva de consumo - '+caso.nombre, collect);
+
+      const costeCaso = calcularCosteDia(caso.curvas.gen, caso.curvas.con, r.bateria, caso.precioHoraria, lcoeFv, lcoeBat, caso.precioExcedenteHoraria);
       y = H.kv(y, 'Dias al anio asignados a este caso', fmtNum(caso.diasAnuales,0)+' ('+caso.dias.diasNum+'/'+caso.dias.diasDen+' dias semana x '+caso.dias.mesesNum+'/'+caso.dias.mesesDen+' meses)');
       y = H.kv(y, 'Coste del dia con FV'+(conBateria?' y bateria':''), fmtNum(costeCaso.totalConInstalacion,2)+' EUR');
       y = H.kv(y, 'Coste del dia solo con red (sin FV)', fmtNum(costeCaso.totalSinInstalacion,2)+' EUR');
+      y = H.kv(y, 'Compensacion de excedentes', fmtNum(costeCaso.totalCompensacion,2)+' EUR');
       y = H.kv(y, 'Ahorro ese dia', fmtNum(costeCaso.ahorro,2)+' EUR ('+fmtNum(costeCaso.pctAhorro,1)+'%)');
 
       y = H.paragraph(y, 'Precio de la energia (PVPC) usado para este caso:');
       y = H.drawPrecioChartPdf(y, caso.precioHoraria);
       y = H.figureCaption(y, FIG(), 'Curva de precio PVPC - '+caso.nombre, collect);
 
-      y = H.paragraph(y, 'Coste horario del consumo, valorando lo autoconsumido (FV/bateria) al LCOE de la seccion 7 y lo importado de red al precio de arriba:');
-      y = H.drawCosteChartPdf(y, costeCaso.costeFv, costeCaso.costeBat, costeCaso.costeRed, costeCaso.costeSinInstalacion);
+      y = H.paragraph(y, 'Precio de la energia excedentaria usado para este caso:');
+      y = H.drawPrecioChartPdf(y, caso.precioExcedenteHoraria, {color:[20,170,85], texto:'- precio de excedentes (€/kWh)'});
+      y = H.figureCaption(y, FIG(), 'Precio de la energia excedentaria - '+caso.nombre, collect);
+
+      y = H.paragraph(y, 'Coste horario del consumo, descontado el ingreso por excedentes, valorando lo autoconsumido (FV/bateria) al LCOE de la seccion 7 y lo importado de red al precio de arriba:');
+      y = H.drawCosteChartPdf(y, costeCaso.costeFv, costeCaso.costeBat, costeCaso.costeRed, costeCaso.ingresoExcedentes, costeCaso.costeNeto, costeCaso.costeSinInstalacion, costeCaso.ahorro);
       y = H.figureCaption(y, FIG(), 'Coste horario del consumo (EUR) - '+caso.nombre, collect);
 
       y += 4;
     });
 
     y = H.sectionTitle(y, '7.', 'LCOE y flujo de caja del conjunto', collect);
-    y = H.paragraph(y, 'El LCOE (coste nivelado de la energia, en EUR/kWh) anualiza la inversion del sistema con el interes y los anios de vida introducidos, y la divide entre la energia que produce en un anio: la generacion FV y el aporte de la bateria de todos los casos guardados, cada uno ponderado por los dias al anio que se le han asignado (ver el detalle de cada caso en la seccion anterior). La bateria, si dura menos anios que la FV, se cuenta como repuesta las veces necesarias dentro del mismo horizonte, cada reposicion descontada al interes antes de anualizar.');
+    y = H.paragraph(y, 'El LCOE (coste nivelado de la energia, en EUR/kWh) anualiza la inversion del sistema con el interes y los anios de vida introducidos, y la divide entre la energia que produce en un anio: la generacion FV y el aporte de la bateria de todos los casos guardados, cada uno ponderado por los dias al anio que se le han asignado (ver el detalle de cada caso en la seccion anterior). La bateria se considera con una vida fija de 15 anios: las necesarias para cubrir los anios de la FV se incluyen todas en la inversion inicial.');
     y = H.kv(y, 'LCOE generacion FV', fmtNum(lcoeFv,3)+' EUR/kWh');
     y = H.kv(y, 'LCOE bateria', fmtNum(lcoeBat,3)+' EUR/kWh');
     y = H.kv(y, 'Produccion FV anual estimada', fmtNum(produccionAnualFv,0)+' kWh/anio');
@@ -3082,6 +3066,8 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       y = H.paragraph(y, 'De los '+casos.length+' casos analizados, el autoconsumo estimado oscila entre '+fmtNum(Math.min(...casos.map(pctCaso)),1)+'% y '+fmtNum(Math.max(...casos.map(pctCaso)),1)+'%, con una media del '+fmtNum(pctMedio,1)+'%; la autarquia oscila entre '+fmtNum(Math.min(...casos.map(autarquiaCaso)),1)+'% y '+fmtNum(Math.max(...casos.map(autarquiaCaso)),1)+'%, con una media del '+fmtNum(autarquiaMedia,1)+'%.');
     }
     y = H.paragraph(y, 'Esta estimacion se basa, para cada caso, en un unico dia representativo, no en un calculo horario completo del año (8.760 horas): no captura la variabilidad dia a dia (nubosidad, vacaciones, cambios de ocupacion) ni la de otras epocas del año no cubiertas por los casos guardados. La bateria (en los casos que la incluyen) empieza el dia con el SOC inicial configurado, y no se ha modelado degradacion por temperatura ni por profundidad de descarga.');
+    y = H.paragraph(y, 'Simplificaciones del modelo:', {bold:true});
+    SIMPLIFICACIONES.forEach(g=>{ y = H.paragraph(y, g.tema+'. '+g.items.join(' ')); });
   }
 
   // ===================== PASE 1: MEDICION =====================
@@ -3314,21 +3300,23 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
 // Va al final del script para que ya existan todas las funciones y constantes que usa
 // renderResultados().
 (function aplicarPerfilesPorDefecto(){
+  // La generacion sale siempre del campo de kWh/dia, aunque se hayan restaurado curvas.
+  generarCurvaFvDesdeCampo();
   if(!curvasRestauradasDeVatiaco){
-    const kwp = parseFloat(document.getElementById('gen_kwp').value);
-    CURVAS.gen.valores = generarPerfilGeneracionTipico(LATITUD_MADRID, kwp, DECLINACION_GENERICA);
     const tipoGlobal = document.getElementById('tipoConsumidorGlobal').value;
     const inputKwh = document.getElementById('kwhdia_con');
     const kwhDia = parseFloat(inputKwh.value) || 10;
     inputKwh.value = kwhDia;
     aplicarPerfilConsumoTipico(diaTipoActual().jornada, tipoGlobal, kwhDia);
+  } else {
+    reescalarHoras(CURVAS.con.valores, Math.max(0, parseFloat(document.getElementById('kwhdia_con').value)||0)); // curvas guardadas antes de fijar el total
   }
   if(!precioRestauradoDeVatiaco){
-    const inputPrecio = document.getElementById('precio_medio');
-    inputPrecio.value = DEFAULT_PRECIO_GENERICO;
-    PRECIO_HORARIO = generarPerfilPrecioTipico(diaTipoActual().jornada, parseFloat(inputPrecio.value)||0);
+    PRECIO_HORARIO = PRECIOS_REFERENCIA[diaTipoActual().jornada].pvpc.slice();
   }
+  if(!excedenteRestauradoDeVatiaco) PRECIO_EXCEDENTE_HORARIO = PRECIOS_REFERENCIA[diaTipoActual().jornada].excedente.slice();
   renderChartPrecio();
+  renderChartExcedente();
   renderTodosLosEditores();
   casos.push(Object.assign(snapshotCasoActual(''), {auto:true}));
   renderResultados();
