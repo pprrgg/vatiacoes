@@ -172,6 +172,19 @@
     .report-sheet{padding:24px 20px;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -184,15 +197,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
     <nav class="tabbar" id="sidenav">
-      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
-      <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
-      <a href="#marco" data-sec="marco"><span class="tag">02</span>Marco y metodología</a>
-      <a href="#ubicacion" data-sec="ubicacion"><span class="tag">03</span>Ubicación y datos PVGIS</a>
-      <a href="#estadistico" data-sec="estadistico"><span class="tag">04</span>Análisis estadístico</a>
-      <a href="#perfil" data-sec="perfil"><span class="tag">05</span>Distribución y perfil de velocidades</a>
-      <a href="#weibull" data-sec="weibull"><span class="tag">06</span>Weibull y energía del aerogenerador</a>
-      <a href="#informe" data-sec="informe"><span class="tag">07</span>Informe final</a>
-    </nav>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
+  </nav>
     <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
@@ -219,156 +227,11 @@
   <main>
 
     <!-- SECCIÓN 00: RESUMEN -->
-    <section id="resumen">
-      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
-      <h2>Estudio del recurso eólico en cualquier punto de la península, con datos reales de PVGIS.</h2>
-      <p class="lede">Herramienta interactiva de análisis estadístico del viento, inspirada en un informe técnico académico tipo "Estudio del Recurso Eólico" (Master en Blog de un ingeniero jubilado Industrial, UPM): análisis anual, estacional y diurno/nocturno, histograma de velocidades, rosa de los vientos, extrapolación con la altura, ajuste de la distribución de Weibull y cálculo de energía y factor de capacidad de un aerogenerador. En vez de un fichero de datos descargado a mano, esta herramienta llama en tiempo real a la API TMY (año meteorológico típico) de <b>PVGIS</b> para cualquier coordenada de España, y amplía la teoría con el manual <b>Energía Eólica (IDAE, 2006)</b>.</p>
-
-      <div class="hero">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
-          <div>
-            <h1>Del dato horario <em>de viento</em> a la energía <em>del aerogenerador</em>.</h1>
-            <p class="sub">Introduce una coordenada, llama a PVGIS para obtener un año meteorológico típico (8.760 horas de velocidad y dirección del viento), y la herramienta calcula automáticamente las estadísticas, el ajuste de Weibull, la extrapolación a la altura de buje y la energía anual estimada de un aerogenerador, con informe final descargable.</p>
-          </div>
-        </div>
-        <div class="stat-row">
-          <div class="stat"><div class="v">PVGIS TMY</div><div class="l">año meteorológico típico, 8.760 h de viento a 10 m</div></div>
-          <div class="stat"><div class="v">Weibull k · C</div><div class="l">ajuste por linealización (mínimos cuadrados)</div></div>
-          <div class="stat"><div class="v">Ley logarítmica</div><div class="l">extrapolación de velocidad a la altura de buje</div></div>
-          <div class="stat"><div class="v">Energía · Factor de capacidad</div><div class="l">densidad de Weibull × curva de potencia</div></div>
-        </div>
-      </div>
-
-      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
-      <h2 style="font-size:18px;">Un flujo de trabajo, cinco pasos.</h2>
-      <div class="grid4">
-        <div class="comp-card"><h4>01 · Marco teórico</h4><p>Repasa la aerodinámica básica (límite de Betz), la curva de potencia, la ley de variación con la altura y el método de Weibull, con la guía IDAE de energía eólica.</p></div>
-        <div class="comp-card"><h4>02 · Ubicación</h4><p>Introduce latitud/longitud (o elige un emplazamiento de ejemplo) y llama a la API TMY de PVGIS para obtener un año típico de viento.</p></div>
-        <div class="comp-card"><h4>03 · Estadística</h4><p>Consulta la velocidad media y varianza anual, mensual y por franja horaria (diurna/nocturna), igual que en un informe de recurso eólico.</p></div>
-        <div class="comp-card"><h4>04 · Distribución</h4><p>Analiza el histograma, la rosa de los vientos y el perfil de velocidades extrapolado a la altura de buje según la rugosidad del terreno.</p></div>
-      </div>
-      <div class="grid2" style="margin-top:16px;">
-        <div class="comp-card"><h4>05 · Weibull y energía</h4><p>Ajusta k y C, elige un aerogenerador (tabla genérica o modelo cúbico) y obtén la energía anual y el factor de capacidad estimados.</p></div>
-        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera el informe con datos, gráficos, tablas y conclusiones de viabilidad, listo para exportar a PDF con índice y glosario.</p></div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 01: DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">01 · Datos del proyecto</div>
-      <h2>¿Para quién y por quién se realiza este estudio?</h2>
-      <p class="lede">Estos datos aparecen en la portada y en los encabezados del informe en PDF (sección 07).</p>
-
-      <div class="card">
-        <div class="fieldset-title" style="margin-top:0;">Proyecto / emplazamiento estudiado</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del proyecto / emplazamiento</label><input type="text" id="p_proyecto" value="Estudio del recurso eólico"></div>
-          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
-        </div>
-
-        <div class="fieldset-title">Técnico / autor del estudio</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
-          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
-        </div>
-
-        <div class="fieldset-title">Organización</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
-          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
-          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
-        </div>
-
-        <div class="fieldset-title">Titular / cliente del estudio</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
-          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección del emplazamiento</label><input type="text" id="p_dest_dir" placeholder="Dirección o paraje del emplazamiento"></div>
-        </div>
-      </div>
-      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
-    </section>
-
-    <!-- SECCIÓN 02: MARCO Y METODOLOGÍA -->
-    <section id="marco">
-      <div class="eyebrow kicker">02 · Marco y metodología</div>
-      <h2>Fundamentos de energía eólica y del análisis estadístico del recurso.</h2>
-      <p class="lede">Esta herramienta amplía la teoría con el manual <b>Energía Eólica</b> del IDAE (colección Manuales de Energías Renovables, 2006) y con el <i>European Wind Atlas</i>, y aplica el mismo método estadístico de un informe técnico de recurso eólico: análisis descriptivo, extrapolación con la altura y ajuste de Weibull. No sustituye a una campaña de medición in situ (mástil meteorológico) ni a un estudio de viabilidad firmado por un técnico competente.</p>
-
-      <div class="fieldset-title" style="margin-top:0;">Componentes de un aerogenerador (IDAE, Energía Eólica)</div>
-      <div class="grid3" id="componentesGrid"></div>
-
-      <div class="fieldset-title">Aerodinámica: el límite de Betz</div>
-      <div class="theory-card">
-        <p>La potencia máxima que puede extraerse teóricamente del viento con un rotor viene limitada por el <b>límite de Betz</b>: ningún aerogenerador puede aprovechar más del 59,3&nbsp;% de la energía cinética del viento que atraviesa el área barrida por el rotor.</p>
-        <div class="formula-box">
-          <div class="f">P = ½ · ρ · A · v³ · Cp&nbsp;&nbsp;&nbsp;&nbsp;Cp,max (Betz) = 16/27 ≈ 0,593</div>
-        </div>
-        <p>En la práctica, los aerogeneradores comerciales alcanzan coeficientes de potencia (Cp) de entre 0,35 y 0,45, por las pérdidas aerodinámicas, mecánicas y eléctricas del conjunto rotor-tren de potencia-generador.</p>
-      </div>
-
-      <div class="fieldset-title">La curva de potencia del aerogenerador</div>
-      <div class="grid3">
-        <div class="comp-card"><h4>v &lt; v_cut-in</h4><p>Por debajo de la velocidad de conexión (típicamente 3-4 m/s) el aerogenerador no produce energía: el par disponible no vence las pérdidas.</p></div>
-        <div class="comp-card"><h4>v_cut-in ≤ v &lt; v_nominal</h4><p>Tramo de producción creciente (aprox. cúbico con la velocidad) hasta alcanzar la potencia nominal, normalmente entre 11 y 15 m/s.</p></div>
-        <div class="comp-card"><h4>v_nominal ≤ v &lt; v_cut-out</h4><p>El sistema de control (paso de pala o pérdida aerodinámica) limita la potencia al valor nominal, hasta la velocidad de corte por seguridad (20-25 m/s).</p></div>
-      </div>
-
-      <div class="fieldset-title">Ley de variación de la velocidad con la altura</div>
-      <p class="lede" style="margin-bottom:16px;">La velocidad del viento aumenta con la altura por el rozamiento con la superficie terrestre (capa límite atmosférica). Esta herramienta usa la <b>ley logarítmica</b> (la misma del informe de referencia), en función de la longitud de rugosidad z0 del terreno:</p>
-      <div class="formula-box">
-        <div class="f">v(h) = v_ref · ln(h / z0) / ln(h_ref / z0)</div>
-      </div>
-      <p class="tooltip-text">Una alternativa habitual en Blog de un ingeniero jubilado eólica es la <b>ley potencial</b>, v(h) = v_ref·(h/h_ref)^α, con α típico entre 0,10 (terreno muy liso) y 0,40 (terreno muy rugoso o urbano). Esta herramienta usa la ley logarítmica por coherencia con el informe de referencia, pero ambos métodos dan resultados similares para alturas de buje habituales.</p>
-
-      <div class="fieldset-title">Clases y longitudes de rugosidad (European Wind Atlas)</div>
-      <div style="overflow-x:auto;">
-        <table class="data-table" id="tablaRugosidad">
-          <thead><tr><th>Clase</th><th>z0 (m)</th><th>Tipo de paisaje</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="tooltip-text" style="margin-top:10px;">Fuente: <i>European Wind Atlas</i>, reproducida también en manuales técnicos del IDAE. Selecciona la clase más parecida a tu emplazamiento en la sección 05.</p>
-
-      <div class="fieldset-title">Distribución de Weibull</div>
-      <div class="theory-card">
-        <p>La velocidad del viento en un emplazamiento se modela habitualmente con la <b>distribución de Weibull</b> de dos parámetros: k (factor de forma) y C (factor de escala, próximo a la velocidad media).</p>
-        <div class="formula-box">
-          <div class="f">f(v) = (k/C)·(v/C)^(k-1)·e^(-(v/C)^k)</div>
-        </div>
-        <p>Esta herramienta estima k y C mediante <b>linealización y regresión por mínimos cuadrados</b>: se ordenan las velocidades, se calcula su frecuencia acumulada empírica F(v), y se ajusta la recta</p>
-        <div class="formula-box">
-          <div class="f">ln(−ln(1−F)) = k·ln(v) − k·ln(C)</div>
-        </div>
-        <p>donde la pendiente de la recta es k y el término independiente permite despejar C. En terrenos abiertos, k suele estar entre 1,5 y 2,5; valores más altos indican una distribución de velocidades más uniforme.</p>
-      </div>
-
-      <div class="fieldset-title">Energía anual y factor de capacidad</div>
-      <div class="theory-card">
-        <p>La energía anual esperada se calcula integrando el producto de la densidad de probabilidad de Weibull por la curva de potencia del aerogenerador, a lo largo de todo el rango de velocidades:</p>
-        <div class="formula-box">
-          <div class="f">E_anual ≈ 8.760 h · ∫ f(v) · P(v) dv</div>
-        </div>
-        <p>El <b>factor de capacidad</b> (CF) es el cociente entre la energía realmente producida y la que se produciría funcionando siempre a potencia nominal:</p>
-        <div class="formula-box">
-          <div class="f">CF = E_anual / (P_nominal · 8.760 h)</div>
-        </div>
-        <p class="tooltip-text">Referencias orientativas: CF &gt; 35&nbsp;% emplazamiento excelente · 25-35&nbsp;% bueno · 15-25&nbsp;% moderado · &lt; 15&nbsp;% poco favorable para eólica a gran escala.</p>
-      </div>
-
-      <div class="fieldset-title">Limitaciones del modelo</div>
-      <div class="grid3">
-        <div class="comp-card"><h4>Año típico, no serie real</h4><p>PVGIS TMY compone un año "típico" mes a mes a partir de varios años de reanálisis; no es la medición continua de un mástil en el emplazamiento.</p></div>
-        <div class="comp-card"><h4>Resolución del reanálisis</h4><p>Los datos de viento proceden de un modelo meteorológico (ERA5), con una resolución espacial de varias decenas de km; el microclima local puede diferir.</p></div>
-        <div class="comp-card"><h4>Para orientar, no para certificar</h4><p>Un proyecto real de parque eólico exige una campaña de medición in situ de al menos 12 meses con mástil meteorológico certificado.</p></div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 03: UBICACIÓN Y DATOS PVGIS -->
-    <section id="ubicacion">
-      <div class="eyebrow kicker">03 · Ubicación y datos PVGIS</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="ubicacion" class="tab-bloque">
+      <div class="eyebrow kicker">Ubicación y datos PVGIS</div>
       <h2>Introduce una coordenada y obtén un año meteorológico típico de viento.</h2>
       <p class="lede">Esta calculadora llama en tiempo real a la API <code class="inline">tmy</code> de PVGIS (Comisión Europea, Joint Research Centre), que devuelve 8.760 horas de un año meteorológico típico con velocidad (<code class="inline">WS10m</code>) y dirección (<code class="inline">WD10m</code>) del viento a 10 m de altura, entre otras variables.</p>
 
@@ -408,13 +271,12 @@
       </div>
 
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:20px;">Referencias: <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener" style="color:var(--cyan);">PVGIS — Comisión Europea, Joint Research Centre</a>. La API TMY no siempre envía cabeceras CORS; la llamada automática prueba primero directo y luego varios proxies CORS públicos en cadena, pero para una respuesta de este tamaño pueden fallar o dar timeout. Si eso ocurre, usa la vía manual de arriba — no depende de ningún proxy y siempre funciona.</p>
-    </section>
-
-    <!-- SECCIÓN 04: ANÁLISIS ESTADÍSTICO -->
-    <section id="estadistico">
-      <div class="eyebrow kicker">04 · Análisis estadístico</div>
+    
+      </div>
+      <div id="estadistico" class="tab-bloque">
+      <div class="eyebrow kicker">Análisis estadístico</div>
       <h2>Velocidad media y varianza: anual, mensual y por franja horaria.</h2>
-      <p class="lede">Se calcula automáticamente en cuanto se obtienen datos de PVGIS en la sección 03. Igual que en un informe de recurso eólico: análisis anual, análisis estacional (mensual) y análisis estacional por periodo (diurno 10:00-18:00 / nocturno 22:00-06:00).</p>
+      <p class="lede">Se calcula automáticamente en cuanto se obtienen datos de PVGIS en la pestaña Simulación. Igual que en un informe de recurso eólico: análisis anual, análisis estacional (mensual) y análisis estacional por periodo (diurno 10:00-18:00 / nocturno 22:00-06:00).</p>
       <div id="est_aviso" class="tooltip-text"></div>
       <div id="est_contenido" style="display:none;">
         <div class="grid4" id="est_chips"></div>
@@ -427,13 +289,12 @@
         <div class="chart-wrap" id="est_chart_periodo"></div>
         <div style="overflow-x:auto;"><table class="data-table" id="est_tabla_periodo"><thead><tr><th>Mes</th><th>Media diurna</th><th>Var diurna</th><th>Media nocturna</th><th>Var nocturna</th></tr></thead><tbody></tbody></table></div>
       </div>
-    </section>
-
-    <!-- SECCIÓN 05: DISTRIBUCIÓN Y PERFIL DE VELOCIDADES -->
-    <section id="perfil">
-      <div class="eyebrow kicker">05 · Distribución y perfil de velocidades</div>
+    
+      </div>
+      <div id="perfil" class="tab-bloque">
+      <div class="eyebrow kicker">Distribución y perfil de velocidades</div>
       <h2>Histograma, rosa de los vientos y extrapolación a la altura de buje.</h2>
-      <p class="lede">A partir del año típico obtenido en la sección 03, se representa la distribución de velocidades a 10 m, la rosa de los vientos por dirección, y el perfil de velocidades con la altura según la clase de rugosidad del terreno.</p>
+      <p class="lede">A partir del año típico obtenido en la pestaña Simulación, se representa la distribución de velocidades a 10 m, la rosa de los vientos por dirección, y el perfil de velocidades con la altura según la clase de rugosidad del terreno.</p>
       <div id="perfil_aviso" class="tooltip-text"></div>
       <div id="perfil_contenido" style="display:none;">
 
@@ -465,13 +326,12 @@
         <div class="subsection-title">Histograma de frecuencia acumulada a la altura de buje</div>
         <div class="chart-wrap" id="perfil_hist_acum"></div>
       </div>
-    </section>
-
-    <!-- SECCIÓN 06: WEIBULL Y ENERGÍA -->
-    <section id="weibull">
-      <div class="eyebrow kicker">06 · Weibull y energía del aerogenerador</div>
+    
+      </div>
+      <div id="weibull" class="tab-bloque">
+      <div class="eyebrow kicker">Weibull y energía del aerogenerador</div>
       <h2>Ajuste de Weibull, curva de potencia y energía anual estimada.</h2>
-      <p class="lede">Ajusta la distribución de Weibull a la velocidad extrapolada a la altura de buje (sección 05), elige un aerogenerador y obtén la energía anual y el factor de capacidad estimados.</p>
+      <p class="lede">Ajusta la distribución de Weibull a la velocidad extrapolada a la altura de buje (pestaña Simulación), elige un aerogenerador y obtén la energía anual y el factor de capacidad estimados.</p>
       <div id="wb_aviso" class="tooltip-text"></div>
       <div id="wb_contenido" style="display:none;">
 
@@ -500,11 +360,165 @@
         <div class="fieldset-title">Viabilidad orientativa del emplazamiento</div>
         <p id="wb_viabilidad_texto" class="tooltip-text"></p>
       </div>
+    
+      </div>
     </section>
 
-    <!-- SECCIÓN 07: INFORME FINAL -->
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Resumen ejecutivo</span></summary><div class="acc-cuerpo">
+<div id="resumen">
+      <h2>Estudio del recurso eólico en cualquier punto de la península, con datos reales de PVGIS.</h2>
+      <p class="lede">Herramienta interactiva de análisis estadístico del viento, inspirada en un informe técnico académico tipo "Estudio del Recurso Eólico" (Master en Blog de un ingeniero jubilado Industrial, UPM): análisis anual, estacional y diurno/nocturno, histograma de velocidades, rosa de los vientos, extrapolación con la altura, ajuste de la distribución de Weibull y cálculo de energía y factor de capacidad de un aerogenerador. En vez de un fichero de datos descargado a mano, esta herramienta llama en tiempo real a la API TMY (año meteorológico típico) de <b>PVGIS</b> para cualquier coordenada de España, y amplía la teoría con el manual <b>Energía Eólica (IDAE, 2006)</b>.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del dato horario <em>de viento</em> a la energía <em>del aerogenerador</em>.</h1>
+            <p class="sub">Introduce una coordenada, llama a PVGIS para obtener un año meteorológico típico (8.760 horas de velocidad y dirección del viento), y la herramienta calcula automáticamente las estadísticas, el ajuste de Weibull, la extrapolación a la altura de buje y la energía anual estimada de un aerogenerador, con informe final descargable.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">PVGIS TMY</div><div class="l">año meteorológico típico, 8.760 h de viento a 10 m</div></div>
+          <div class="stat"><div class="v">Weibull k · C</div><div class="l">ajuste por linealización (mínimos cuadrados)</div></div>
+          <div class="stat"><div class="v">Ley logarítmica</div><div class="l">extrapolación de velocidad a la altura de buje</div></div>
+          <div class="stat"><div class="v">Energía · Factor de capacidad</div><div class="l">densidad de Weibull × curva de potencia</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
+      <h2 style="font-size:18px;">Un flujo de trabajo, cinco pasos.</h2>
+      <div class="grid4">
+        <div class="comp-card"><h4>01 · Marco teórico</h4><p>Repasa la aerodinámica básica (límite de Betz), la curva de potencia, la ley de variación con la altura y el método de Weibull, con la guía IDAE de energía eólica.</p></div>
+        <div class="comp-card"><h4>02 · Ubicación</h4><p>Introduce latitud/longitud (o elige un emplazamiento de ejemplo) y llama a la API TMY de PVGIS para obtener un año típico de viento.</p></div>
+        <div class="comp-card"><h4>03 · Estadística</h4><p>Consulta la velocidad media y varianza anual, mensual y por franja horaria (diurna/nocturna), igual que en un informe de recurso eólico.</p></div>
+        <div class="comp-card"><h4>04 · Distribución</h4><p>Analiza el histograma, la rosa de los vientos y el perfil de velocidades extrapolado a la altura de buje según la rugosidad del terreno.</p></div>
+      </div>
+      <div class="grid2" style="margin-top:16px;">
+        <div class="comp-card"><h4>05 · Weibull y energía</h4><p>Ajusta k y C, elige un aerogenerador (tabla genérica o modelo cúbico) y obtén la energía anual y el factor de capacidad estimados.</p></div>
+        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera el informe con datos, gráficos, tablas y conclusiones de viabilidad, listo para exportar a PDF con índice y glosario.</p></div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco y metodología</span></summary><div class="acc-cuerpo">
+<div id="marco">
+      <h2>Fundamentos de energía eólica y del análisis estadístico del recurso.</h2>
+      <p class="lede">Esta herramienta amplía la teoría con el manual <b>Energía Eólica</b> del IDAE (colección Manuales de Energías Renovables, 2006) y con el <i>European Wind Atlas</i>, y aplica el mismo método estadístico de un informe técnico de recurso eólico: análisis descriptivo, extrapolación con la altura y ajuste de Weibull. No sustituye a una campaña de medición in situ (mástil meteorológico) ni a un estudio de viabilidad firmado por un técnico competente.</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Componentes de un aerogenerador (IDAE, Energía Eólica)</div>
+      <div class="grid3" id="componentesGrid"></div>
+
+      <div class="fieldset-title">Aerodinámica: el límite de Betz</div>
+      <div class="theory-card">
+        <p>La potencia máxima que puede extraerse teóricamente del viento con un rotor viene limitada por el <b>límite de Betz</b>: ningún aerogenerador puede aprovechar más del 59,3&nbsp;% de la energía cinética del viento que atraviesa el área barrida por el rotor.</p>
+        <div class="formula-box">
+          <div class="f">P = ½ · ρ · A · v³ · Cp&nbsp;&nbsp;&nbsp;&nbsp;Cp,max (Betz) = 16/27 ≈ 0,593</div>
+        </div>
+        <p>En la práctica, los aerogeneradores comerciales alcanzan coeficientes de potencia (Cp) de entre 0,35 y 0,45, por las pérdidas aerodinámicas, mecánicas y eléctricas del conjunto rotor-tren de potencia-generador.</p>
+      </div>
+
+      <div class="fieldset-title">La curva de potencia del aerogenerador</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>v &lt; v_cut-in</h4><p>Por debajo de la velocidad de conexión (típicamente 3-4 m/s) el aerogenerador no produce energía: el par disponible no vence las pérdidas.</p></div>
+        <div class="comp-card"><h4>v_cut-in ≤ v &lt; v_nominal</h4><p>Tramo de producción creciente (aprox. cúbico con la velocidad) hasta alcanzar la potencia nominal, normalmente entre 11 y 15 m/s.</p></div>
+        <div class="comp-card"><h4>v_nominal ≤ v &lt; v_cut-out</h4><p>El sistema de control (paso de pala o pérdida aerodinámica) limita la potencia al valor nominal, hasta la velocidad de corte por seguridad (20-25 m/s).</p></div>
+      </div>
+
+      <div class="fieldset-title">Ley de variación de la velocidad con la altura</div>
+      <p class="lede" style="margin-bottom:16px;">La velocidad del viento aumenta con la altura por el rozamiento con la superficie terrestre (capa límite atmosférica). Esta herramienta usa la <b>ley logarítmica</b> (la misma del informe de referencia), en función de la longitud de rugosidad z0 del terreno:</p>
+      <div class="formula-box">
+        <div class="f">v(h) = v_ref · ln(h / z0) / ln(h_ref / z0)</div>
+      </div>
+      <p class="tooltip-text">Una alternativa habitual en Blog de un ingeniero jubilado eólica es la <b>ley potencial</b>, v(h) = v_ref·(h/h_ref)^α, con α típico entre 0,10 (terreno muy liso) y 0,40 (terreno muy rugoso o urbano). Esta herramienta usa la ley logarítmica por coherencia con el informe de referencia, pero ambos métodos dan resultados similares para alturas de buje habituales.</p>
+
+      <div class="fieldset-title">Clases y longitudes de rugosidad (European Wind Atlas)</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="tablaRugosidad">
+          <thead><tr><th>Clase</th><th>z0 (m)</th><th>Tipo de paisaje</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="tooltip-text" style="margin-top:10px;">Fuente: <i>European Wind Atlas</i>, reproducida también en manuales técnicos del IDAE. Selecciona la clase más parecida a tu emplazamiento en la pestaña Simulación.</p>
+
+      <div class="fieldset-title">Distribución de Weibull</div>
+      <div class="theory-card">
+        <p>La velocidad del viento en un emplazamiento se modela habitualmente con la <b>distribución de Weibull</b> de dos parámetros: k (factor de forma) y C (factor de escala, próximo a la velocidad media).</p>
+        <div class="formula-box">
+          <div class="f">f(v) = (k/C)·(v/C)^(k-1)·e^(-(v/C)^k)</div>
+        </div>
+        <p>Esta herramienta estima k y C mediante <b>linealización y regresión por mínimos cuadrados</b>: se ordenan las velocidades, se calcula su frecuencia acumulada empírica F(v), y se ajusta la recta</p>
+        <div class="formula-box">
+          <div class="f">ln(−ln(1−F)) = k·ln(v) − k·ln(C)</div>
+        </div>
+        <p>donde la pendiente de la recta es k y el término independiente permite despejar C. En terrenos abiertos, k suele estar entre 1,5 y 2,5; valores más altos indican una distribución de velocidades más uniforme.</p>
+      </div>
+
+      <div class="fieldset-title">Energía anual y factor de capacidad</div>
+      <div class="theory-card">
+        <p>La energía anual esperada se calcula integrando el producto de la densidad de probabilidad de Weibull por la curva de potencia del aerogenerador, a lo largo de todo el rango de velocidades:</p>
+        <div class="formula-box">
+          <div class="f">E_anual ≈ 8.760 h · ∫ f(v) · P(v) dv</div>
+        </div>
+        <p>El <b>factor de capacidad</b> (CF) es el cociente entre la energía realmente producida y la que se produciría funcionando siempre a potencia nominal:</p>
+        <div class="formula-box">
+          <div class="f">CF = E_anual / (P_nominal · 8.760 h)</div>
+        </div>
+        <p class="tooltip-text">Referencias orientativas: CF &gt; 35&nbsp;% emplazamiento excelente · 25-35&nbsp;% bueno · 15-25&nbsp;% moderado · &lt; 15&nbsp;% poco favorable para eólica a gran escala.</p>
+      </div>
+
+      <div class="fieldset-title">Limitaciones del modelo</div>
+      <div class="grid3">
+        <div class="comp-card"><h4>Año típico, no serie real</h4><p>PVGIS TMY compone un año "típico" mes a mes a partir de varios años de reanálisis; no es la medición continua de un mástil en el emplazamiento.</p></div>
+        <div class="comp-card"><h4>Resolución del reanálisis</h4><p>Los datos de viento proceden de un modelo meteorológico (ERA5), con una resolución espacial de varias decenas de km; el microclima local puede diferir.</p></div>
+        <div class="comp-card"><h4>Para orientar, no para certificar</h4><p>Un proyecto real de parque eólico exige una campaña de medición in situ de al menos 12 meses con mástil meteorológico certificado.</p></div>
+      </div>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">07 · Informe final</div>
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / emplazamiento estudiado</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto / emplazamiento</label><input type="text" id="p_proyecto" value="Estudio del recurso eólico"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Técnico / autor del estudio</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente del estudio</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección del emplazamiento</label><input type="text" id="p_dest_dir" placeholder="Dirección o paraje del emplazamiento"></div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
+    
+</div>
+      </div></details>
+
       <h2>Informe del estudio de recurso eólico, generado a partir de tus datos.</h2>
       <p class="lede">Estructura orientativa: datos generales, metodología, ubicación y fuente de datos, análisis estadístico, distribución y perfil de velocidades, ajuste de Weibull, energía y conclusiones de viabilidad. Rellena las secciones 01 y 03 (y calcula 05 y 06) antes de generar el informe.</p>
 
@@ -516,6 +530,7 @@
       <div class="report-sheet" id="reportOutput">
         <p class="tooltip-text">Pulsa "Generar / actualizar vista previa" para componer el documento con los datos introducidos, y "Descargar informe en PDF" para obtener el informe descargable.</p>
       </div>
+    
     </section>
 
     <footer>
@@ -532,16 +547,25 @@
 // ===================== NAV COMO TABS =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'resumen';
+const SECCION_POR_DEFECTO = 'simulacion';
 
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
   window.scrollTo({top:0, left:0, behavior:'auto'});
   // El mapa Leaflet se crea mientras su pestaña esta oculta (display:none), asi que
   // calcula mal su tamano hasta que se le pide que lo recalcule una vez visible.
-  if(id==='ubicacion' && window.mapaUbicacionInstancia){
+  if(id==='simulacion' && window.mapaUbicacionInstancia){
     setTimeout(()=>window.mapaUbicacionInstancia.invalidateSize(), 60);
   }
 }
@@ -1316,7 +1340,7 @@ function buildWindRoseSVG(rose){
 // ===================== SECCIÓN 07: INFORME FINAL (VISTA PREVIA HTML) =====================
 function generarInforme(){
   if(!tmy || !est || !perfil){
-    document.getElementById('reportOutput').innerHTML = '<p class="tooltip-text">Completa primero la sección 03 (obtener datos PVGIS); las secciones 04 y 05 se calculan automáticamente. Calcula también la sección 06 (Weibull y energía) antes de generar el informe.</p>';
+    document.getElementById('reportOutput').innerHTML = '<p class="tooltip-text">Completa primero la pestaña Simulación (obtener datos PVGIS); las secciones 04 y 05 se calculan automáticamente. Calcula también la pestaña Simulación (Weibull y energía) antes de generar el informe.</p>';
     return;
   }
   if(!wb){ calcularEnergia(); }
@@ -1382,9 +1406,9 @@ function generarInforme(){
 
 // ===================== DESCARGAR INFORME EN PDF (con índice, figuras, tablas y glosario) =====================
 document.getElementById('btnPdf').addEventListener('click', ()=>{
-  if(!tmy || !est || !perfil){ showToast('Obtén primero los datos de PVGIS (sección 03).'); return; }
+  if(!tmy || !est || !perfil){ showToast('Obtén primero los datos de PVGIS (pestaña Simulación).'); return; }
   if(!wb) calcularEnergia();
-  if(!wb){ showToast('Calcula primero la energía anual (sección 06).'); return; }
+  if(!wb){ showToast('Calcula primero la energía anual (pestaña Simulación).'); return; }
 
   const { jsPDF } = window.jspdf;
   const pageW = 210, marginX = 20, topY = 30, bottomY = 275;

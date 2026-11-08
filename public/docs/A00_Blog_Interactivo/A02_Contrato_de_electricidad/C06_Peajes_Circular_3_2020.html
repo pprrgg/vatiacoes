@@ -180,6 +180,19 @@
   @media(max-width:960px){
     .informe-fab{right:14px; bottom:14px;}
   }
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -192,18 +205,14 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
     <nav class="tabbar" id="sidenav">
-      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
-      <div class="nav-item-dropdown" id="fundamentoNavItem">
-        <a href="#fundamento" data-sec="fundamento" id="fundamentoNavLink"><span class="tag">01</span>Fundamento teórico</a>
-        <button type="button" class="nav-dropdown-caret" id="fundamentoNavCaret" aria-label="Ver fórmulas F1 a F7" aria-haspopup="true" aria-expanded="false">
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <div class="nav-item-dropdown" id="fundamentoNavItem">
+      <a href="#ayuda" data-sec="ayuda" id="fundamentoNavLink"><span class="tag">01</span>Ayuda</a>
+      <button type="button" class="nav-dropdown-caret" id="fundamentoNavCaret" aria-label="Ver fórmulas F1 a F7" aria-haspopup="true" aria-expanded="false">
           <svg class="caret-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
-      </div>
-      <a href="#marco" data-sec="marco"><span class="tag">02</span>Metodología regulatoria</a>
-      <a href="#componentes" data-sec="componentes"><span class="tag">03</span>Componentes de peajes</a>
-      <a href="#calculadora" data-sec="calculadora"><span class="tag">04</span>Calculadora interactiva</a>
-      <a href="#comparativa" data-sec="comparativa"><span class="tag">05</span>Análisis comparativo</a>
-    </nav>
+    </div>
+  </nav>
     <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
@@ -242,213 +251,11 @@
   <main>
 
     <!-- SECCIÓN 00: RESUMEN -->
-    <section id="resumen">
-      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
-      <h2>Circular 3/2020: Peajes de transporte y distribución.</h2>
-      <p class="lede">Entiende la metodología regulatoria para el cálculo de peajes de acceso a las redes de transporte y distribución de energía eléctrica en España, con ejemplos interactivos del desglose de costes.</p>
-
-      <div class="hero">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
-          <div>
-            <h1>Del <em>generador al consumidor</em>: cada componente tiene un peaje.</h1>
-            <p class="sub">Tu factura de electricidad incluye cargos por transporte y distribución. La Circular 3/2020 establece cómo calcularlos, qué criterios se usan (potencia, energía, horario) y cómo se discrimina entre usuarios.</p>
-          </div>
-        </div>
-        <div class="stat-row">
-          <div class="stat"><div class="v">2 niveles de red</div><div class="l">Transporte (alta) y Distribución (media/baja)</div></div>
-          <div class="stat"><div class="v">3 componentes</div><div class="l">Potencia, Energía, Otros cargos</div></div>
-          <div class="stat"><div class="v">Regulación anual</div><div class="l">Metodología sometida a audiencia pública y aprobación</div></div>
-        </div>
-      </div>
-
-      <div class="eyebrow kicker" style="margin-top:40px;">¿Qué es un peaje?</div>
-      <div class="grid3">
-        <div class="comp-card">
-          <h4>Compensación de costes regulados</h4>
-          <p>El peaje remunera la inversión en infraestructura de la red (cables, subestaciones, etc.) y los costes de operación y mantenimiento.</p>
-        </div>
-        <div class="comp-card">
-          <h4>Basado en costes reales históricos</h4>
-          <p>La metodología de la Circular 3/2020 usa datos de activos, producción y demanda de años anteriores para fijar los peajes del año siguiente.</p>
-        </div>
-        <div class="comp-card">
-          <h4>Diferenciado por usuario y red</h4>
-          <p>Existen categorías distintas de tarifas para BT (baja tensión, residencial), MT (media tensión, comercial/industrial) y AT (alta tensión).</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 02: MARCO REGULATORIO -->
-    <section id="marco">
-      <div class="eyebrow kicker">02 · Metodología regulatoria</div>
-      <h2>Cómo se calculan los peajes según la Circular 3/2020.</h2>
-      <p class="lede">La metodología desglosa costes históricos en componentes de potencia y energía, los distribuye entre categorías de usuarios, y aplica criterios de discriminación tarifaria para incentivar un consumo eficiente.</p>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px;">
-        <div class="theory-card">
-          <h3>Fase 1: Costes regulados totales</h3>
-          <p>La CNMC agrega todos los costes operacionales e inversiones de los distribuidores y transportistas del año anterior:</p>
-          <ul>
-            <li><b>OPEX:</b> Mantenimiento, personal, seguros</li>
-            <li><b>CAPEX:</b> Renovación de infraestructuras (amortizado)</li>
-            <li><b>Tasa de retorno:</b> Rentabilidad regulada (~6–7%)</li>
-            <li><b>Déficit tarifario:</b> Deuda acumulada (si aplica)</li>
-          </ul>
-        </div>
-        <div class="theory-card">
-          <h3>Fase 2: Segregación por nivel de red</h3>
-          <p>Los costes se reparten entre:</p>
-          <ul>
-            <li><b>Transporte (AT):</b> Red principal 220/400 kV</li>
-            <li><b>Distribución (MT):</b> Redes de media tensión 10–30 kV</li>
-            <li><b>Distribución (BT):</b> Redes de baja tensión &lt;1 kV (acometidas finales)</li>
-            <li><b>Pérdidas:</b> Coste de pérdidas técnicas en cada nivel</li>
-          </ul>
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
-        <div class="theory-card">
-          <h3>Fase 3: Segregación por componentes</h3>
-          <p>Dentro de cada nivel, los costes se dividen en:</p>
-          <ul>
-            <li><b>Componente potencia (€/kW):</b> Proporcional a demanda simultánea (hobbholder)</li>
-            <li><b>Componente energía (€/MWh):</b> Proporcional a volumen consumido/inyectado</li>
-            <li><b>Componente fija (€/usuario):</b> Conexión, lectura, inspección</li>
-            <li><b>Otros cargos:</b> Retirada de instalaciones, etc.</li>
-          </ul>
-        </div>
-        <div class="theory-card">
-          <h3>Fase 4: Aplicación de criterios de discriminación</h3>
-          <p>Se aplican reglas para diferenciar entre usuarios según:</p>
-          <ul>
-            <li><b>Tensión de suministro:</b> BT paga más (costes de distribución local)</li>
-            <li><b>Horario:</b> Pico vs. valle (incentivo a consumo en horas bajas)</li>
-            <li><b>Estacionalidad:</b> Invierno vs. verano</li>
-            <li><b>Factor de carga:</b> Usuarios con demanda simultánea alta pagan menos por kW</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="theory-card" style="margin-top:24px; background:linear-gradient(135deg, rgba(194,124,0,0.12) 0%, rgba(37,99,235,0.12) 100%);">
-        <h3 style="color:var(--amber);">Fórmula simplificada del peaje anual</h3>
-        <div class="formula-box">
-          <div class="f">Peaje anual = (Potencia contratada × Tarifa potencia) + (Energía consumida × Tarifa energía) + Cuota fija</div>
-        </div>
-        <p style="margin-top:12px;">Donde:</p>
-        <ul>
-          <li><b>Tarifa potencia (€/kW/año):</b> Fija en contrato, discriminada por AT/MT/BT y hora punta</li>
-          <li><b>Tarifa energía (€/MWh):</b> Se aplica al consumo real, con franjas arancelarias</li>
-          <li><b>Cuota fija:</b> No varía con consumo, cubre costes administrativos</li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 03: COMPONENTES -->
-    <section id="componentes">
-      <div class="eyebrow kicker">03 · Componentes de peajes</div>
-      <h2>Desglose detallado de cada elemento tarifario.</h2>
-      <p class="lede">Los peajes mezclan componentes de capacidad, energía y servicios auxiliares. Cada uno responde a un coste distinto en la operación de la red.</p>
-
-      <table class="data-table" style="margin-top:24px;">
-        <thead>
-          <tr>
-            <th>Componente</th>
-            <th>Unidad</th>
-            <th>Base de cálculo</th>
-            <th>Qué cubre</th>
-            <th>Ejemplo valor (2024)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><b>Peaje potencia</b></td>
-            <td>€/kW/año</td>
-            <td>Potencia contratada in hora punta</td>
-            <td>Inversión en transformadores, líneas MT, acometidas</td>
-            <td>35–50 €/kW</td>
-          </tr>
-          <tr>
-            <td><b>Peaje energía punta</b></td>
-            <td>€/MWh</td>
-            <td>kWh consumidos 12–22h (lun–vie, abr–oct)</td>
-            <td>Mantenimiento y operación de red en demanda máxima</td>
-            <td>20–30 €/MWh</td>
-          </tr>
-          <tr>
-            <td><b>Peaje energía llano</b></td>
-            <td>€/MWh</td>
-            <td>kWh consumidos en horario intermedio</td>
-            <td>Operación equilibrada de la red</td>
-            <td>10–15 €/MWh</td>
-          </tr>
-          <tr>
-            <td><b>Peaje energía valle</b></td>
-            <td>€/MWh</td>
-            <td>kWh consumidos 0–8h o 22–24h</td>
-            <td>Recuperación parcial de costes fijos (Discriminación horaria)</td>
-            <td>3–8 €/MWh</td>
-          </tr>
-          <tr>
-            <td><b>Cuota fija</b></td>
-            <td>€/mes</td>
-            <td>Número de usuarios conectados</td>
-            <td>Lectura de contador, inspección, gestión administrativo</td>
-            <td>0,50–2,00 €/mes</td>
-          </tr>
-          <tr>
-            <td><b>Margen de comercialización</b></td>
-            <td>€/MWh</td>
-            <td>Energía total</td>
-            <td>Retribución de la comercializadora (no es peaje, pero aparece en la factura)</td>
-            <td>3–8 €/MWh</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div style="margin-top:32px;">
-        <div class="eyebrow kicker">Ejemplo: desglose mensual para BT residencial</div>
-        <div class="example-card">
-          <h4>Hogar medio: 300 kWh/mes, 3,45 kW contratados</h4>
-          <table class="example-table">
-            <tr>
-              <td class="label">Peaje potencia (3,45 kW × 40 €/kW/año ÷ 12)</td>
-              <td class="value">11,50 €</td>
-            </tr>
-            <tr>
-              <td class="label">Peaje energía punta (100 kWh × 25 €/MWh)</td>
-              <td class="value">2,50 €</td>
-            </tr>
-            <tr>
-              <td class="label">Peaje energía llano (120 kWh × 12 €/MWh)</td>
-              <td class="value">1,44 €</td>
-            </tr>
-            <tr>
-              <td class="label">Peaje energía valle (80 kWh × 5 €/MWh)</td>
-              <td class="value">0,40 €</td>
-            </tr>
-            <tr>
-              <td class="label">Cuota fija (acceso a red)</td>
-              <td class="value">1,20 €</td>
-            </tr>
-            <tr style="border-top:2px solid var(--line-soft);">
-              <td class="label"><b>Total peaje + acceso (sin energía ni impuestos)</b></td>
-              <td class="value"><b>17,04 €</b></td>
-            </tr>
-          </table>
-        </div>
-      </div>
-
-      <div class="theory-card" style="margin-top:24px;">
-        <h3>¿Por qué se discrimina horariamente?</h3>
-        <p style="margin:12px 0;">Incentivar el desplazamiento de consumo desde horas punta: si todos consum consumieramos al máximo a la vez, la red sería muy cara. Desplazando demanda a horas bajas (carga de coches, lavadora, bomba solar) se aprovecha mejor la infraestructura.</p>
-        <p style="margin:12px 0;"><b>Impacto en instalaciones FV:</b> Una bomba de riego solar que funciona de día está en el horario "punta" o "llano" (dependiendo del mes). Si inyecta en red, el distribuidor se beneficia (la demanda externa baja). La compensación por inyectados también está basada en estos peajes: no se compensa el 100% porque la inyección "solo" evita algunos costes (por ejemplo, no evita costes de distribución capilar BT).</p>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 04: CALCULADORA -->
-    <section id="calculadora">
-      <div class="eyebrow kicker">04 · Calculadora interactiva</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="calculadora" class="tab-bloque">
+      <div class="eyebrow kicker">Calculadora interactiva</div>
       <h2>Calcula tu peaje anual según tus parámetros.</h2>
       <p class="lede">Introduce consumo, potencia contratada y tu tipo de usuario para ver el desglose completo de peajes de transporte y distribución.</p>
 
@@ -838,15 +645,225 @@
         <div class="eyebrow kicker">¿Cuánto cuesta acceder a la red?</div>
         <p style="font-size:12px; color:var(--text-dim); margin-top:12px; margin-bottom:16px;">En el contexto de una instalación solar con autoconsumo compensado o productor: los peajes de transporte y distribución son un coste adicional. La factura de energía que "ahorras" con solar se reduce por estos peajes. Por eso es importante reducir la potencia contratada o desplazar consumo a Valle (tarifa roja nocional) cuando hay generación solar.</p>
       </div>
+    
+      </div>
     </section>
 
-    <!-- SECCIÓN 01: FUNDAMENTO TEÓRICO -->
-    <section id="fundamento">
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Resumen ejecutivo</span></summary><div class="acc-cuerpo">
+<div id="resumen">
+      <h2>Circular 3/2020: Peajes de transporte y distribución.</h2>
+      <p class="lede">Entiende la metodología regulatoria para el cálculo de peajes de acceso a las redes de transporte y distribución de energía eléctrica en España, con ejemplos interactivos del desglose de costes.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del <em>generador al consumidor</em>: cada componente tiene un peaje.</h1>
+            <p class="sub">Tu factura de electricidad incluye cargos por transporte y distribución. La Circular 3/2020 establece cómo calcularlos, qué criterios se usan (potencia, energía, horario) y cómo se discrimina entre usuarios.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">2 niveles de red</div><div class="l">Transporte (alta) y Distribución (media/baja)</div></div>
+          <div class="stat"><div class="v">3 componentes</div><div class="l">Potencia, Energía, Otros cargos</div></div>
+          <div class="stat"><div class="v">Regulación anual</div><div class="l">Metodología sometida a audiencia pública y aprobación</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">¿Qué es un peaje?</div>
+      <div class="grid3">
+        <div class="comp-card">
+          <h4>Compensación de costes regulados</h4>
+          <p>El peaje remunera la inversión en infraestructura de la red (cables, subestaciones, etc.) y los costes de operación y mantenimiento.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Basado en costes reales históricos</h4>
+          <p>La metodología de la Circular 3/2020 usa datos de activos, producción y demanda de años anteriores para fijar los peajes del año siguiente.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Diferenciado por usuario y red</h4>
+          <p>Existen categorías distintas de tarifas para BT (baja tensión, residencial), MT (media tensión, comercial/industrial) y AT (alta tensión).</p>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Metodología regulatoria</span></summary><div class="acc-cuerpo">
+<div id="marco">
+      <h2>Cómo se calculan los peajes según la Circular 3/2020.</h2>
+      <p class="lede">La metodología desglosa costes históricos en componentes de potencia y energía, los distribuye entre categorías de usuarios, y aplica criterios de discriminación tarifaria para incentivar un consumo eficiente.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px;">
+        <div class="theory-card">
+          <h3>Fase 1: Costes regulados totales</h3>
+          <p>La CNMC agrega todos los costes operacionales e inversiones de los distribuidores y transportistas del año anterior:</p>
+          <ul>
+            <li><b>OPEX:</b> Mantenimiento, personal, seguros</li>
+            <li><b>CAPEX:</b> Renovación de infraestructuras (amortizado)</li>
+            <li><b>Tasa de retorno:</b> Rentabilidad regulada (~6–7%)</li>
+            <li><b>Déficit tarifario:</b> Deuda acumulada (si aplica)</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>Fase 2: Segregación por nivel de red</h3>
+          <p>Los costes se reparten entre:</p>
+          <ul>
+            <li><b>Transporte (AT):</b> Red principal 220/400 kV</li>
+            <li><b>Distribución (MT):</b> Redes de media tensión 10–30 kV</li>
+            <li><b>Distribución (BT):</b> Redes de baja tensión &lt;1 kV (acometidas finales)</li>
+            <li><b>Pérdidas:</b> Coste de pérdidas técnicas en cada nivel</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+        <div class="theory-card">
+          <h3>Fase 3: Segregación por componentes</h3>
+          <p>Dentro de cada nivel, los costes se dividen en:</p>
+          <ul>
+            <li><b>Componente potencia (€/kW):</b> Proporcional a demanda simultánea (hobbholder)</li>
+            <li><b>Componente energía (€/MWh):</b> Proporcional a volumen consumido/inyectado</li>
+            <li><b>Componente fija (€/usuario):</b> Conexión, lectura, inspección</li>
+            <li><b>Otros cargos:</b> Retirada de instalaciones, etc.</li>
+          </ul>
+        </div>
+        <div class="theory-card">
+          <h3>Fase 4: Aplicación de criterios de discriminación</h3>
+          <p>Se aplican reglas para diferenciar entre usuarios según:</p>
+          <ul>
+            <li><b>Tensión de suministro:</b> BT paga más (costes de distribución local)</li>
+            <li><b>Horario:</b> Pico vs. valle (incentivo a consumo en horas bajas)</li>
+            <li><b>Estacionalidad:</b> Invierno vs. verano</li>
+            <li><b>Factor de carga:</b> Usuarios con demanda simultánea alta pagan menos por kW</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="theory-card" style="margin-top:24px; background:linear-gradient(135deg, rgba(194,124,0,0.12) 0%, rgba(37,99,235,0.12) 100%);">
+        <h3 style="color:var(--amber);">Fórmula simplificada del peaje anual</h3>
+        <div class="formula-box">
+          <div class="f">Peaje anual = (Potencia contratada × Tarifa potencia) + (Energía consumida × Tarifa energía) + Cuota fija</div>
+        </div>
+        <p style="margin-top:12px;">Donde:</p>
+        <ul>
+          <li><b>Tarifa potencia (€/kW/año):</b> Fija en contrato, discriminada por AT/MT/BT y hora punta</li>
+          <li><b>Tarifa energía (€/MWh):</b> Se aplica al consumo real, con franjas arancelarias</li>
+          <li><b>Cuota fija:</b> No varía con consumo, cubre costes administrativos</li>
+        </ul>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Componentes de peajes</span></summary><div class="acc-cuerpo">
+<div id="componentes">
+      <h2>Desglose detallado de cada elemento tarifario.</h2>
+      <p class="lede">Los peajes mezclan componentes de capacidad, energía y servicios auxiliares. Cada uno responde a un coste distinto en la operación de la red.</p>
+
+      <table class="data-table" style="margin-top:24px;">
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Unidad</th>
+            <th>Base de cálculo</th>
+            <th>Qué cubre</th>
+            <th>Ejemplo valor (2024)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Peaje potencia</b></td>
+            <td>€/kW/año</td>
+            <td>Potencia contratada in hora punta</td>
+            <td>Inversión en transformadores, líneas MT, acometidas</td>
+            <td>35–50 €/kW</td>
+          </tr>
+          <tr>
+            <td><b>Peaje energía punta</b></td>
+            <td>€/MWh</td>
+            <td>kWh consumidos 12–22h (lun–vie, abr–oct)</td>
+            <td>Mantenimiento y operación de red en demanda máxima</td>
+            <td>20–30 €/MWh</td>
+          </tr>
+          <tr>
+            <td><b>Peaje energía llano</b></td>
+            <td>€/MWh</td>
+            <td>kWh consumidos en horario intermedio</td>
+            <td>Operación equilibrada de la red</td>
+            <td>10–15 €/MWh</td>
+          </tr>
+          <tr>
+            <td><b>Peaje energía valle</b></td>
+            <td>€/MWh</td>
+            <td>kWh consumidos 0–8h o 22–24h</td>
+            <td>Recuperación parcial de costes fijos (Discriminación horaria)</td>
+            <td>3–8 €/MWh</td>
+          </tr>
+          <tr>
+            <td><b>Cuota fija</b></td>
+            <td>€/mes</td>
+            <td>Número de usuarios conectados</td>
+            <td>Lectura de contador, inspección, gestión administrativo</td>
+            <td>0,50–2,00 €/mes</td>
+          </tr>
+          <tr>
+            <td><b>Margen de comercialización</b></td>
+            <td>€/MWh</td>
+            <td>Energía total</td>
+            <td>Retribución de la comercializadora (no es peaje, pero aparece en la factura)</td>
+            <td>3–8 €/MWh</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:32px;">
+        <div class="eyebrow kicker">Ejemplo: desglose mensual para BT residencial</div>
+        <div class="example-card">
+          <h4>Hogar medio: 300 kWh/mes, 3,45 kW contratados</h4>
+          <table class="example-table">
+            <tr>
+              <td class="label">Peaje potencia (3,45 kW × 40 €/kW/año ÷ 12)</td>
+              <td class="value">11,50 €</td>
+            </tr>
+            <tr>
+              <td class="label">Peaje energía punta (100 kWh × 25 €/MWh)</td>
+              <td class="value">2,50 €</td>
+            </tr>
+            <tr>
+              <td class="label">Peaje energía llano (120 kWh × 12 €/MWh)</td>
+              <td class="value">1,44 €</td>
+            </tr>
+            <tr>
+              <td class="label">Peaje energía valle (80 kWh × 5 €/MWh)</td>
+              <td class="value">0,40 €</td>
+            </tr>
+            <tr>
+              <td class="label">Cuota fija (acceso a red)</td>
+              <td class="value">1,20 €</td>
+            </tr>
+            <tr style="border-top:2px solid var(--line-soft);">
+              <td class="label"><b>Total peaje + acceso (sin energía ni impuestos)</b></td>
+              <td class="value"><b>17,04 €</b></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="theory-card" style="margin-top:24px;">
+        <h3>¿Por qué se discrimina horariamente?</h3>
+        <p style="margin:12px 0;">Incentivar el desplazamiento de consumo desde horas punta: si todos consum consumieramos al máximo a la vez, la red sería muy cara. Desplazando demanda a horas bajas (carga de coches, lavadora, bomba solar) se aprovecha mejor la infraestructura.</p>
+        <p style="margin:12px 0;"><b>Impacto en instalaciones FV:</b> Una bomba de riego solar que funciona de día está en el horario "punta" o "llano" (dependiendo del mes). Si inyecta en red, el distribuidor se beneficia (la demanda externa baja). La compensación por inyectados también está basada en estos peajes: no se compensa el 100% porque la inyección "solo" evita algunos costes (por ejemplo, no evita costes de distribución capilar BT).</p>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="fundamento">
       <div id="teor_intro" class="teor-panel active">
-        <div class="eyebrow kicker">01 · Fundamento teórico</div>
         <h2>Todas las fórmulas oficiales de la Circular 3/2020, con sus referencias normativas.</h2>
         <p class="lede">Desarrollo completo de las fórmulas de facturación de peajes según el «Acuerdo por el que se contestan consultas relativas a la aplicación de la Circular 3/2020» de la CNMC (expediente CNS/DE/1467/20, 18 de marzo de 2021), con los cambios introducidos por la Circular 1/2025 y sus referencias normativas exactas.</p>
-        <p style="font-size:11px; color:var(--text-dimmer); margin-bottom:4px;">📋 Cada fórmula es una pestaña independiente: pasa el ratón por «01 · Fundamento teórico» en el menú superior (o toca la flecha) para saltar directamente a F1–F7. Los ejemplos marcados con 📌 son interactivos: cambia los datos y el resultado se recalcula al instante y se añade automáticamente al informe final (botón 🧾 Informe).</p>
+        <p style="font-size:11px; color:var(--text-dimmer); margin-bottom:4px;">📋 Cada fórmula es una pestaña independiente: pasa el ratón por «01 · Ayuda» en el menú superior (o toca la flecha) para saltar directamente a F1–F7. Los ejemplos marcados con 📌 son interactivos: cambia los datos y el resultado se recalcula al instante y se añade automáticamente al informe final (botón 🧾 Informe).</p>
       </div>
 
       <div id="teor_f1" class="calculator teor-panel" style="background:rgba(194,124,0,0.08); border:1px solid rgba(194,124,0,0.2); border-left:3px solid var(--amber);">
@@ -1270,11 +1287,11 @@ cos φ = Ea / √(Ea² + Er²)
           </li>
         </ul>
       </div>
-    </section>
-
-    <!-- SECCIÓN 05: COMPARATIVA -->
-    <section id="comparativa">
-      <div class="eyebrow kicker">05 · Análisis comparativo</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Análisis comparativo</span></summary><div class="acc-cuerpo">
+<div id="comparativa">
       <h2>Peajes según nivel de red y tipo de usuario.</h2>
       <p class="lede">Los peajes varían significativamente entre BT (residencial), MT (comercial) e industria. Esta sección compara costes normalizados.</p>
 
@@ -1405,6 +1422,9 @@ cos φ = Ea / √(Ea² + Er²)
         </table>
         <p style="font-size:11px; color:var(--text-dimmer); margin-top:12px;">Una instalación solar que reduzca la potencia contratada evita peaje de potencia (el componente fijo). Pero si hace tan frío que solar no genera y demanda de simultaneidad sube (calefacción), la distribuidora activa un control de demanda y corta el suministro. Por eso es recomendable bajar solo 20–30% de la potencia original.</p>
       </div>
+    
+</div>
+      </div></details>
     </section>
 
     <footer>
@@ -1425,7 +1445,7 @@ cos φ = Ea / √(Ea² + Er²)
     <h3>Informe final</h3>
     <button class="informe-close" type="button" onclick="toggleInforme(false)" aria-label="Cerrar informe">×</button>
   </div>
-  <p style="font-size:10.5px; color:var(--text-dimmer); padding:0 20px; margin:12px 0 0;">Los 5 componentes de la factura (potencia, energía, excesos de potencia, energía reactiva y recargo por duración) se calculan e incluyen aquí automáticamente a partir de los datos introducidos en «01 · Fundamento teórico».</p>
+  <p style="font-size:10.5px; color:var(--text-dimmer); padding:0 20px; margin:12px 0 0;">Los 5 componentes de la factura (potencia, energía, excesos de potencia, energía reactiva y recargo por duración) se calculan e incluyen aquí automáticamente a partir de los datos introducidos en «01 · Ayuda».</p>
   <details class="informe-meta">
     <summary>Datos del informe (portada)</summary>
     <div class="field"><label>Título del informe</label><input type="text" id="rep_proyecto" value="Peajes de transporte y distribución — Circular 3/2020"></div>
@@ -1824,13 +1844,22 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'resumen';
+const SECCION_POR_DEFECTO = 'simulacion';
 
 function idEsSeccion(id){
   return Array.from(sections).some(s => s.id === id);
 }
 
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!idEsSeccion(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1869,6 +1898,8 @@ window.addEventListener('popstate', ()=>{
     const target = document.getElementById(hashId);
     const seccionPadre = target ? target.closest('section[id]') : null;
     if(seccionPadre){
+      const acordeon = target.closest('details.acc');
+      if(acordeon) acordeon.open = true;
       sections.forEach(s=>s.classList.toggle('tab-active', s===seccionPadre));
       navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===seccionPadre.id));
       if(hashId.indexOf('teor_') === 0) mostrarFormula(hashId.slice(5));

@@ -183,6 +183,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--green); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -195,14 +208,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco legal</a>
-    <a href="#fases" data-sec="fases"><span class="tag">02</span>Fases de constitución</a>
-    <a href="#formas" data-sec="formas"><span class="tag">03</span>Formas jurídicas</a>
-    <a href="#financiacion" data-sec="financiacion"><span class="tag">04</span>Financiación y ayudas</a>
-    <a href="#tecnica" data-sec="tecnica"><span class="tag">05</span>Tramitación técnica asociada</a>
-    <a href="#problematica" data-sec="problematica"><span class="tag">06</span>Problemática frecuente</a>
-    <a href="#informe" data-sec="informe"><span class="tag">07</span>Caso práctico e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -230,7 +238,81 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Caso práctico e informe</div>
+      <h2>Resuelve el caso, genera el informe.</h2>
+      <p class="lede">Describe tu comunidad energética: la calculadora determina si encaja mejor como CER o CCE, si cumple los requisitos mínimos, qué forma jurídica y registro le corresponden, y qué trámites técnicos aplican a su instalación de autoconsumo colectivo.</p>
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir comunidad energética (caso a resolver)</div>
+        <div class="field"><label>Nombre de la comunidad</label><input type="text" id="i_nombre" placeholder="Ej: Comunidad Energética Barrio del Sol"></div>
+
+        <div class="fieldset-title">Composición y objetivo</div>
+        <div class="grid3">
+          <div class="field"><label>Número de socios/miembros</label><input type="number" id="i_socios" value="8" min="1" step="1"></div>
+          <div class="field">
+            <label>Fuente energética prevista</label>
+            <select id="i_fuente">
+              <option value="renovable" selected>100% renovable</option>
+              <option value="mixta">Mixta (incluye no renovable)</option>
+            </select>
+          </div>
+          <div class="field"><label>Distancia máxima socio-instalación (km)</label><input type="number" id="i_distancia" value="5" min="0" step="0.5"></div>
+        </div>
+        <div class="checkline"><input type="checkbox" id="i_fisica_pyme" checked><label for="i_fisica_pyme" style="margin:0; text-transform:none; font-family:var(--font-body);">Al menos un socio es persona física o pyme</label></div>
+        <div class="checkline"><input type="checkbox" id="i_entidad_local"><label for="i_entidad_local" style="margin:0; text-transform:none; font-family:var(--font-body);">Participa una entidad local (ayuntamiento u otra administración)</label></div>
+        <div class="checkline"><input type="checkbox" id="i_control_democratico" checked><label for="i_control_democratico" style="margin:0; text-transform:none; font-family:var(--font-body);">Los estatutos garantizan control democrático (1 socio = 1 voto, o equivalente)</label></div>
+
+        <div class="fieldset-title">Forma jurídica e instalación técnica</div>
+        <div class="grid3">
+          <div class="field">
+            <label>Forma jurídica prevista</label>
+            <select id="i_forma">
+              <option value="cooperativa" selected>Cooperativa</option>
+              <option value="asociacion">Asociación</option>
+              <option value="sl">Sociedad Limitada</option>
+              <option value="fundacion">Fundación</option>
+            </select>
+          </div>
+          <div class="field"><label>Potencia de la instalación (kW)</label><input type="number" id="i_potencia" value="30" min="0" step="0.5"></div>
+          <div class="field">
+            <label>Tensión de conexión</label>
+            <select id="i_tension">
+              <option value="BT" selected>Baja tensión (BT)</option>
+              <option value="MT">Media tensión (MT)</option>
+              <option value="AT">Alta tensión (AT)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field">
+            <label>Tipo de suelo (catastro)</label>
+            <select id="i_suelo">
+              <option value="urbano" selected>Urbano / urbanizado</option>
+              <option value="no_urbanizable">No urbanizable</option>
+            </select>
+          </div>
+          <div class="checkline" style="margin-top:28px;"><input type="checkbox" id="i_agrupacion"><label for="i_agrupacion" style="margin:0; text-transform:none; font-family:var(--font-body);">Agrupación de instalaciones &gt;1MW conjunto</label></div>
+          <div class="checkline" style="margin-top:28px;"><input type="checkbox" id="i_financiacion" checked><label for="i_financiacion" style="margin:0; text-transform:none; font-family:var(--font-body);">Solicitará ayuda IDAE (CE-Implementa u otra)</label></div>
+        </div>
+
+        <div class="field" style="margin-top:6px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Resolver y añadir al informe</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
@@ -252,8 +334,6 @@
         <div class="stat"><div class="v">100 M€</div><div class="l">PRTR para programas CE-Aprende/Planifica/Implementa</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
       <h2>Una comunidad energética es, antes que nada, una entidad jurídica.</h2>
       <p class="lede">No es solo "poner paneles entre varios vecinos": para ser una Comunidad Energética en sentido estricto hace falta constituir una persona jurídica que cumpla unos requisitos concretos de apertura, control democrático y finalidad. Solo después llega la parte técnica (que es, en gran medida, un autoconsumo colectivo).</p>
 
@@ -334,15 +414,15 @@
       </div>
 
       <div class="eyebrow" style="margin:32px 0 14px;">Diagrama de flujo completo</div>
-      <p class="lede" style="margin-bottom:20px;">Las mismas decisiones de arriba, encadenadas en un único diagrama. Cuando resuelvas un caso en la sección 07, este mismo diagrama se repetirá con el camino realmente seguido resaltado en verde.</p>
+      <p class="lede" style="margin-bottom:20px;">Las mismas decisiones de arriba, encadenadas en un único diagrama. Cuando resuelvas un caso en la pestaña Informe, este mismo diagrama se repetirá con el camino realmente seguido resaltado en verde.</p>
       <div class="card" style="padding:20px;">
         <div id="masterFlowWrap"></div>
       </div>
-    </section>
-
-    <!-- 01 MARCO LEGAL -->
-    <section id="marco">
-      <div class="eyebrow kicker">01 · Marco legal</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco legal</span></summary><div class="acc-cuerpo">
+<div id="marco">
       <h2>Una transposición europea todavía a medio terminar.</h2>
       <p class="lede">España ha ido incorporando la figura de la comunidad energética mediante retoques sucesivos a normas ya existentes, no con una ley específica y única.</p>
 
@@ -361,11 +441,11 @@
         </table>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">La CCE (Directiva 2019/944) sigue, a la fecha de esta guía, sin una transposición formal completa al ordenamiento español, lo que genera incertidumbre jurídica para quienes optan por esa figura en lugar de la CER.</p>
-    </section>
-
-    <!-- 02 FASES DE CONSTITUCION -->
-    <section id="fases">
-      <div class="eyebrow kicker">02 · Fases de constitución</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Fases de constitución</span></summary><div class="acc-cuerpo">
+<div id="fases">
       <h2>De la idea a la primera factura compartida.</h2>
       <p class="lede">Cinco fases, desde juntar a la gente hasta repartir la energía generada.</p>
 
@@ -378,11 +458,11 @@
         <div class="comp-card"><h4>4 · Tramitación técnica</h4><p>Diseño de la instalación, acuerdo de reparto entre socios, y tramitación completa de autoconsumo colectivo (permisos, legalización, registro) según RD 244/2019.</p></div>
         <div class="comp-card"><h4>5 · Puesta en marcha y financiación</h4><p>Solicitud de ayudas (propias o públicas), contratación con la comercializadora, y arranque del reparto de energía entre los socios.</p></div>
       </div>
-    </section>
-
-    <!-- 03 FORMAS JURIDICAS -->
-    <section id="formas">
-      <div class="eyebrow kicker">03 · Formas jurídicas</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Formas jurídicas</span></summary><div class="acc-cuerpo">
+<div id="formas">
       <h2>No hay una figura legal "oficial" de comunidad energética.</h2>
       <p class="lede">Cualquier persona jurídica que cumpla los requisitos de apertura y control democrático puede ser una CER o una CCE. Estas son las opciones más habituales.</p>
 
@@ -398,11 +478,11 @@
         </table>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">En cualquier caso, los estatutos deben reflejar expresamente: objeto social vinculado a la energía comunitaria, apertura y voluntariedad de la participación, mecanismo de control democrático, y ámbito territorial de actuación.</p>
-    </section>
-
-    <!-- 04 FINANCIACION -->
-    <section id="financiacion">
-      <div class="eyebrow kicker">04 · Financiación y ayudas</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Financiación y ayudas</span></summary><div class="acc-cuerpo">
+<div id="financiacion">
       <h2>100 millones de euros del PRTR, repartidos en tres fases.</h2>
       <p class="lede">El IDAE gestiona líneas de ayuda específicas para cada etapa de vida de una comunidad energética, financiadas con fondos Next Generation EU.</p>
 
@@ -413,11 +493,11 @@
       </div>
 
       <p style="font-size:12.5px; color:var(--text-dim); margin-top:20px; max-width:680px;">Además de las líneas estatales, varias comunidades autónomas (Comunidad Valenciana, Castilla y León, Galicia, Navarra, País Vasco, entre otras) cuentan con programas propios de apoyo a CER y CCE. Y, por supuesto, la propia aportación económica de los socios sigue siendo la fuente de financiación más habitual.</p>
-    </section>
-
-    <!-- 05 TECNICA -->
-    <section id="tecnica">
-      <div class="eyebrow kicker">05 · Tramitación técnica asociada</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Tramitación técnica asociada</span></summary><div class="acc-cuerpo">
+<div id="tecnica">
       <h2>Constituida la entidad, toca tramitar como cualquier autoconsumo colectivo.</h2>
       <p class="lede">La instalación de generación de la comunidad no tiene un procedimiento propio: sigue exactamente las reglas del autoconsumo colectivo con excedentes del RD 244/2019.</p>
 
@@ -448,11 +528,11 @@
           <p>Al ser siempre colectivo, la comunidad necesita un acuerdo de reparto con coeficientes β entre los socios (suma = 1), presentado individualmente a la comercializadora de cada socio.</p>
         </div>
       </div>
-    </section>
-
-    <!-- 06 PROBLEMATICA -->
-    <section id="problematica">
-      <div class="eyebrow kicker">06 · Problemática frecuente</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Problemática frecuente</span></summary><div class="acc-cuerpo">
+<div id="problematica">
       <h2>Donde se atascan la mayoría de las comunidades.</h2>
 
       <div class="grid3">
@@ -460,15 +540,17 @@
         <div class="comp-card"><h4>Social</h4><p>Dificultad para alcanzar el mínimo de socios, mantener el compromiso del grupo motor a lo largo de meses de trámites, y gestionar expectativas económicas poco realistas.</p></div>
         <div class="comp-card"><h4>Técnica y administrativa</h4><p>Los mismos cuellos de botella del autoconsumo colectivo: falta de capacidad de red, plazos de acceso y conexión, y coordinación del acuerdo de reparto entre muchos socios con contratos distintos.</p></div>
       </div>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 07 CASO PRACTICO / INFORME -->
+    <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">07 · Caso práctico e informe</div>
-      <h2>Resuelve el caso, genera el informe.</h2>
-      <p class="lede">Describe tu comunidad energética: la calculadora determina si encaja mejor como CER o CCE, si cumple los requisitos mínimos, qué forma jurídica y registro le corresponden, y qué trámites técnicos aplican a su instalación de autoconsumo colectivo.</p>
+      <div class="eyebrow kicker">02 · Informe</div>
 
-      <div class="card" style="margin-bottom:28px;">
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div class="card" style="margin-bottom:28px;">
         <div class="eyebrow" style="margin-bottom:14px;">Datos del proyecto</div>
         <div class="grid2">
           <div class="field"><label>Promotor / grupo motor</label><input type="text" id="p_cliente" placeholder="Nombre del promotor o asociación"></div>
@@ -478,70 +560,14 @@
           <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
         </div>
       </div>
+      </div></details>
+      
 
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:6px;">Añadir comunidad energética (caso a resolver)</div>
-        <div class="field"><label>Nombre de la comunidad</label><input type="text" id="i_nombre" placeholder="Ej: Comunidad Energética Barrio del Sol"></div>
-
-        <div class="fieldset-title">Composición y objetivo</div>
-        <div class="grid3">
-          <div class="field"><label>Número de socios/miembros</label><input type="number" id="i_socios" value="8" min="1" step="1"></div>
-          <div class="field">
-            <label>Fuente energética prevista</label>
-            <select id="i_fuente">
-              <option value="renovable" selected>100% renovable</option>
-              <option value="mixta">Mixta (incluye no renovable)</option>
-            </select>
-          </div>
-          <div class="field"><label>Distancia máxima socio-instalación (km)</label><input type="number" id="i_distancia" value="5" min="0" step="0.5"></div>
-        </div>
-        <div class="checkline"><input type="checkbox" id="i_fisica_pyme" checked><label for="i_fisica_pyme" style="margin:0; text-transform:none; font-family:var(--font-body);">Al menos un socio es persona física o pyme</label></div>
-        <div class="checkline"><input type="checkbox" id="i_entidad_local"><label for="i_entidad_local" style="margin:0; text-transform:none; font-family:var(--font-body);">Participa una entidad local (ayuntamiento u otra administración)</label></div>
-        <div class="checkline"><input type="checkbox" id="i_control_democratico" checked><label for="i_control_democratico" style="margin:0; text-transform:none; font-family:var(--font-body);">Los estatutos garantizan control democrático (1 socio = 1 voto, o equivalente)</label></div>
-
-        <div class="fieldset-title">Forma jurídica e instalación técnica</div>
-        <div class="grid3">
-          <div class="field">
-            <label>Forma jurídica prevista</label>
-            <select id="i_forma">
-              <option value="cooperativa" selected>Cooperativa</option>
-              <option value="asociacion">Asociación</option>
-              <option value="sl">Sociedad Limitada</option>
-              <option value="fundacion">Fundación</option>
-            </select>
-          </div>
-          <div class="field"><label>Potencia de la instalación (kW)</label><input type="number" id="i_potencia" value="30" min="0" step="0.5"></div>
-          <div class="field">
-            <label>Tensión de conexión</label>
-            <select id="i_tension">
-              <option value="BT" selected>Baja tensión (BT)</option>
-              <option value="MT">Media tensión (MT)</option>
-              <option value="AT">Alta tensión (AT)</option>
-            </select>
-          </div>
-        </div>
-        <div class="grid3">
-          <div class="field">
-            <label>Tipo de suelo (catastro)</label>
-            <select id="i_suelo">
-              <option value="urbano" selected>Urbano / urbanizado</option>
-              <option value="no_urbanizable">No urbanizable</option>
-            </select>
-          </div>
-          <div class="checkline" style="margin-top:28px;"><input type="checkbox" id="i_agrupacion"><label for="i_agrupacion" style="margin:0; text-transform:none; font-family:var(--font-body);">Agrupación de instalaciones &gt;1MW conjunto</label></div>
-          <div class="checkline" style="margin-top:28px;"><input type="checkbox" id="i_financiacion" checked><label for="i_financiacion" style="margin:0; text-transform:none; font-family:var(--font-body);">Solicitará ayuda IDAE (CE-Implementa u otra)</label></div>
-        </div>
-
-        <div class="field" style="margin-top:6px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
-
-        <div class="btn-row">
-          <button class="btn primary" id="btnAddInst">+ Resolver y añadir al informe</button>
-        </div>
-      </div>
+      
 
       <div class="eyebrow" style="margin-bottom:10px;">Comunidades del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de arriba y pulsa "Resolver y añadir al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de la pestaña Simulación y pulsa "Resolver y añadir al informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -551,6 +577,7 @@
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todas las comunidades</button>
       </div>
+    
     </section>
 
     <footer>
@@ -941,8 +968,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1187,7 +1223,7 @@ function renderInstallations(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(installations.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de arriba y pulsa "Resolver y añadir al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has resuelto ningún caso. Rellena el formulario de la pestaña Simulación y pulsa "Resolver y añadir al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';

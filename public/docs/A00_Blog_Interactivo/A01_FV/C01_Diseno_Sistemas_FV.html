@@ -236,6 +236,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -248,11 +261,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#superficies" data-sec="superficies"><span class="tag">00</span>Pinta tus paneles</a>
-    <a href="#teoria" data-sec="teoria"><span class="tag">01</span>Fundamento teórico</a>
-    <a href="#marco" data-sec="marco"><span class="tag">02</span>PVGIS y próximos pasos</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">03</span>Datos del proyecto</a>
-    <a href="#informe" data-sec="informe"><span class="tag">04</span>Resultados e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -280,8 +291,11 @@
   <main>
 
     <!-- 00 SUPERFICIES Y MAPA -->
-    <section id="superficies">
-      <div class="eyebrow kicker">00 · Pinta tus paneles</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="superficies" class="tab-bloque">
+      <div class="eyebrow kicker">Pinta tus paneles</div>
       <h2>Pinta los paneles directamente sobre el mapa satélite.</h2>
       <p class="lede">Arrastra sobre el mapa para pintar (o borrar) paneles; usa el tirador naranja para mover la matriz y el azul para rotarla. Pulsa "⚙ Editar superficie" para ajustar el nombre, la estructura, el modelo de panel y las sombras.</p>
 
@@ -375,10 +389,16 @@
       </div>
       <p class="hint" style="margin:0 0 8px;">Capa base por defecto: mosaico de satélite de Google Maps (mismo proveedor que usa la herramienta de referencia); también puedes cambiar a Esri o OpenStreetMap con el botón "🗺" del mapa.</p>
       <p class="hint" style="margin:0 0 30px;">El informe PDF dibuja los paneles reales de cada superficie sobre la misma capa base que tengas seleccionada en pantalla (Google, Esri u OpenStreetMap), con el mismo zoom con el que hayas diseñado esa superficie — limitado al zoom máximo disponible de esa capa. Si a un zoom muy alto no hay tesela disponible en tu ubicación, esa zona del mapa aparecerá en blanco (el resto del informe y los datos de la superficie no se ven afectados).</p>
+    
+      </div>
     </section>
 
-    <!-- 01 TEORIA -->
-    <section id="teoria">
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
         <div class="hero-top">
           <div>
@@ -399,8 +419,6 @@
           <div class="stat"><div class="v">16 muestras de sombra</div><div class="l">perfil de horizonte de -130° a 130°, listo para PVGIS</div></div>
         </div>
       </header>
-
-      <div class="eyebrow kicker">01 · Fundamento teórico</div>
       <h2>Los cinco datos que necesita cualquier simulador solar.</h2>
       <p class="lede">Antes de calcular energía generada o LCOE, un simulador como PVGIS necesita saber exactamente dónde está cada superficie, cómo mira al sol, y qué le tapa el horizonte.</p>
 
@@ -445,11 +463,11 @@
           <p>Con estos cinco datos por superficie, el siguiente paso (fuera del alcance de este informe) es llamar a la API de PVGIS con cada conjunto de parámetros para obtener la energía generada anual y, combinándola con el coste de la instalación, el LCOE (coste nivelado de la energía).</p>
         </div>
       </div>
-    </section>
-
-    <!-- 02 PVGIS -->
-    <section id="marco">
-      <div class="eyebrow kicker">02 · PVGIS y próximos pasos</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">PVGIS y próximos pasos</span></summary><div class="acc-cuerpo">
+<div id="marco">
       <h2>La herramienta de referencia europea para simular energía solar.</h2>
       <p class="lede">PVGIS (Photovoltaic Geographical Information System) es la herramienta gratuita de la Comisión Europea (Joint Research Centre) para estimar la producción de energía solar en cualquier punto de Europa, África y buena parte de Asia y América.</p>
 
@@ -459,13 +477,16 @@
         <div class="comp-card"><h4>Qué vendrá después</h4><p>En una fase posterior, cada superficie de este informe se enviará a la API de PVGIS (endpoint <code class="inline">PVcalc</code>) para obtener la energía anual generada, y junto con el coste de la instalación se calculará el LCOE de cada superficie y del sistema completo.</p></div>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:20px;">Referencia: <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener" style="color:var(--amber);">PVGIS — Comisión Europea, Joint Research Centre</a>.</p>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 03 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">03 · Datos del proyecto</div>
-      <h2>¿Para quién es este informe?</h2>
-      <p class="lede">Estos datos aparecerán en la portada del PDF.</p>
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
       <div class="card">
         <div class="fieldset-title">Proyecto</div>
         <div class="grid2">
@@ -492,21 +513,21 @@
           <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
         </div>
       </div>
-    </section>
+    
+</div>
+      </div></details>
 
-    <!-- 04 RESULTADOS E INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">04 · Resultados e informe</div>
       <h2>Las superficies pintadas, listas para exportar.</h2>
-      <p class="lede">El informe recoge automáticamente todas las superficies que hayas creado en la sección 03 (con al menos un panel pintado), con todos los parámetros en el formato que necesitará PVGIS en la fase siguiente.</p>
+      <p class="lede">El informe recoge automáticamente todas las superficies que hayas creado en la pestaña Informe (con al menos un panel pintado), con todos los parámetros en el formato que necesitará PVGIS en la fase siguiente.</p>
 
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has pintado ninguna superficie. Ve a la sección 03 y pinta al menos un panel sobre el mapa.</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has pintado ninguna superficie. Ve a la pestaña Informe y pinta al menos un panel sobre el mapa.</div></div>
 
       <div class="btn-row">
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todas las superficies</button>
       </div>
+    
     </section>
 
     <footer>
@@ -897,15 +918,24 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'superficies';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
   const selectMovil = document.querySelector('.mobile-bar select');
   if(selectMovil) selectMovil.value = '#'+id;
   window.scrollTo({top:0, left:0, behavior:'auto'});
-  if(id==='superficies') setTimeout(()=>mapaSuperficies.invalidateSize(), 0);
+  if(id==='simulacion') setTimeout(()=>mapaSuperficies.invalidateSize(), 0);
 }
 function irASeccion(hash){
   const id = hash.replace('#','');
@@ -1799,7 +1829,7 @@ function renderInstallations(){
   const conPaneles = installations.filter(s=>s.paneles.length>0);
   guardarDisenoEnVatiaco(conPaneles);
   if(conPaneles.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has pintado ninguna superficie. Ve a la sección 03 y pinta al menos un panel sobre el mapa.</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has pintado ninguna superficie. Ve a la pestaña Informe y pinta al menos un panel sobre el mapa.</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     return;

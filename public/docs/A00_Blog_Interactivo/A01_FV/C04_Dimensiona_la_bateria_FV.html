@@ -237,6 +237,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -304,8 +317,8 @@
             </div>
             <div class="reparto-legend" id="flowCurveLegend"></div>
             <div class="chart-inline-fields">
-              <label title="Generación fotovoltaica del día; la potencia instalada (kWp) se deduce de este valor">FV (kWh/día)<input type="number" id="kwhdia_gen" min="0" step="0.5" value="23"></label>
-              <label title="Valor medio aproximado, deducido de los kWh/día con un rendimiento fijo; se usa para calcular la inversión inicial">≈ Potencia FV<input type="text" id="lcoe_fv_kwp" value="" readonly></label>
+              <label title="Potencia fotovoltaica instalada">FV (kWp)<input type="number" id="gen_kwp" min="0" step="0.1" value="5"></label>
+              <label title="Se estima al cambiar los kWp; se puede sobrescribir con el valor de PVGIS (producción anual ÷ 365)">Generación (kWh/día)<input type="number" id="fv_kwh_dia" min="0" step="0.1" value="23"></label>
               <label title="Capacidad de la batería">Batería (kWh)<input type="number" id="bat_capacidad" value="5" min="0" step="0.5"></label>
               <label title="Estado de carga de la batería al empezar el día">SOC inicial (%)<input type="number" id="bat_soc_ini" value="10" min="0" max="100" step="1"></label>
             </div>
@@ -400,12 +413,16 @@
 
     <!-- 01 AYUDA: fundamento teorico y metodologia -->
     <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
         <div class="hero-top">
           <div>
             <div class="eyebrow">Autoconsumo fotovoltaico · Generación vs Consumo</div>
             <h1>¿Cuánta de tu propia energía<br><em>consumes tú mismo</em>?</h1>
-            <p class="sub">Elige un día tipo (laborable o festivo) indica la generación diaria y ajusta la curva horaria de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
+            <p class="sub">Elige un día tipo (laborable o festivo) indica la potencia FV instalada y ajusta la curva horaria de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
           </div>
           <div class="hero-meta">
             <span>Método</span>
@@ -420,8 +437,6 @@
           <div class="stat"><div class="v">% del día estudiado</div><div class="l">resultado del día tipo seleccionado</div></div>
         </div>
       </header>
-
-      <div class="eyebrow kicker">01 · Ayuda · Fundamento teórico</div>
       <h2>Autoconsumo: la parte de tu generación que no exportas.</h2>
       <p class="lede">No toda la energía que genera un sistema fotovoltaico se consume en el momento; si generas más de lo que necesitas en una hora, ese excedente se exporta a la red (o se pierde, sin batería). El autoconsumo mide qué fracción de la energía generada usas tú directamente.</p>
 
@@ -454,7 +469,7 @@
 
         <div class="theory-card">
           <h3>4 · Editor de curvas horarias</h3>
-          <p>La generación se obtiene de los kWh/día indicados en el campo FV, repartidos con un perfil solar típico, y no se edita sobre el gráfico. La curva de consumo se ajusta arrastrando sobre el gráfico "Curva de consumo" de la pestaña Simulación: al cambiar una hora, las demás se reajustan en proporción para que el consumo diario se mantenga — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El reparto horario se recalcula al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
+          <p>La generación diaria se estima a partir de los kWp indicados, o se escribe a mano con el valor de PVGIS (producción anual ÷ 365), y se reparte con un perfil solar típico, y no se edita sobre el gráfico. La curva de consumo se ajusta arrastrando sobre el gráfico "Curva de consumo" de la pestaña Simulación: al cambiar una hora, las demás se reajustan en proporción para que el consumo diario se mantenga — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El reparto horario se recalcula al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
         </div>
 
         <div class="theory-card">
@@ -494,7 +509,7 @@
 
         <div class="theory-card">
           <h3>12 · Cómo dimensionar tu FV y tu batería con esta herramienta</h3>
-          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (pestaña Simulación). Después prueba distintas generaciones FV (kWh/día) y compara, en la pestaña Informe, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, generar más exporta más sin mejorar mucho el autoconsumo. Por último varía la capacidad de la batería mirando el gráfico de reparto horario (también en la pestaña Simulación) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la pestaña Simulación — la pestaña Informe y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
+          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (pestaña Simulación). Después prueba distintas potencias FV (kWp) y compara, en la pestaña Informe, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, más kWp exporta más sin mejorar mucho el autoconsumo. Por último varía la capacidad de la batería mirando el gráfico de reparto horario (también en la pestaña Simulación) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la pestaña Simulación — la pestaña Informe y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
         </div>
 
         <div class="theory-card">
@@ -503,8 +518,11 @@
         </div>
       </div>
 
-      <div id="metodologia" class="ayuda-bloque">
-      <div class="eyebrow kicker">01 · Ayuda · Metodología</div>
+      
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Metodología</span></summary><div class="acc-cuerpo">
+<div id="metodologia">
       <h2>Cómo se simula un día tipo, hora a hora.</h2>
       <p class="lede">La herramienta estudia un único día tipo cada vez — elegido con el selector de la pestaña Simulación — cruzando su curva de generación con su curva de consumo hora a hora, y simulando la batería sobre ese mismo día.</p>
 
@@ -526,10 +544,12 @@
       <div class="grid3" style="margin-top:28px;">
         <div class="comp-card">
           <h4>Cómo dimensionar la instalación con esta herramienta</h4>
-          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas generaciones FV (kWh/día) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se varía la capacidad de la batería mirando el gráfico de reparto horario.</p>
+          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas potencias FV (kWp) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se varía la capacidad de la batería mirando el gráfico de reparto horario.</p>
         </div>
       </div>
       </div>
+    
+      </div></details>
     </section>
 
     <!-- 02 INFORME: datos de portada, casos guardados y generacion del PDF -->
@@ -981,7 +1001,8 @@ const SIMPLIFICACIONES = [
   ]},
   {tema:'Generación fotovoltaica', items:[
     'La curva es un semiseno entre el orto y el ocaso, con la latitud de Madrid (40,4°) y declinación 0° (equinoccio), igual para todo el año y para ambas jornadas.',
-    'Se aplica un factor de ajuste fijo (0,6), equivalente a unos 4,6 kWh/kWp al día. La potencia instalada no se introduce: se estima dividiendo los kWh/día indicados entre ese rendimiento, y es un valor medio aproximado, ya que una instalación real rendiría distinto según ubicación, orientación y época del año.',
+    'La generación se ajusta a los valores típicos de PVGIS mediante un factor fijo (0,6), calibrado para una latitud de unos 40° (aproximadamente 3,5 kWh/kWp al día en diciembre y 5,5 en junio), lo que equivale a unos 4,6 kWh/kWp al día. No son datos de PVGIS de la ubicación concreta, salvo que se escriba a mano el valor obtenido para ella. La generación diaria se estima multiplicando los kWp indicados por ese rendimiento, y es un valor medio aproximado, ya que una instalación real rendiría distinto según ubicación, orientación y época del año.',
+    'La generación diaria se puede sustituir a mano por el valor de PVGIS: cambia el total del día, pero no la forma de la curva, y la inversión sigue dependiendo de los kWp. Cambiar los kWp vuelve a sobrescribirla con la estimación.',
     'No se consideran orientación, inclinación, sombras, nubosidad, temperatura, degradación de los módulos ni límites del inversor.',
   ]},
   {tema:'Consumo', items:[
@@ -1010,7 +1031,7 @@ const SIMPLIFICACIONES = [
   ]},
   {tema:'Análisis económico', items:[
     'El LCOE de la FV reparte su coste entre toda la generación, incluida la exportada; el de la batería, entre la energía descargada.',
-    'La inversión de la FV es la potencia estimada (kWp) por su coste específico, por lo que hereda la aproximación de esa potencia. La inversión total usa la potencia, los kWh de batería y los costes específicos actuales de la pestaña Simulación, no los de cada caso guardado.',
+    'La inversión de la FV es la potencia indicada (kWp) por su coste específico. La inversión total usa la potencia, los kWh de batería y los costes específicos actuales de la pestaña Simulación, no los de cada caso guardado.',
   ]},
   {tema:'Extrapolación del día al flujo de caja anual (VAN, TIR y PR)', items:[
     'Solo se introducen valores de un día: el ahorro anual es el ahorro de ese día multiplicado por los días asignados a cada caso, sumando todos los casos. Por defecto, el primer caso representa los 365 días del año.',
@@ -1377,28 +1398,37 @@ function generarPerfilGeneracionTipico(latDeg, kwp, declDeg){
 }
 // Se actualiza automaticamente en cada cambio de potencia instalada, sin boton — igual
 // que el resto de perfiles tipicos de la herramienta.
-// El dato de entrada son los kWh/dia generados; los kWp se deducen de ellos, ya que la curva
-// es proporcional a la potencia. Los kWp solo se usan para la inversion (€/kWp) y el informe.
-function kwpDesdeGeneracionDiaria(kwhDia){
-  const kwhPorKwp = generarPerfilGeneracionTipico(LATITUD_MADRID, 1, DECLINACION_GENERICA).reduce((a,v)=>a+v, 0);
-  return kwhPorKwp>0 ? kwhDia/kwhPorKwp : 0;
-}
+// Potencia instalada del campo FV: fija la curva de generacion y la inversion (€/kWp).
 function kwpInstalados(){
-  return kwpDesdeGeneracionDiaria(parseFloat(document.getElementById('kwhdia_gen').value)||0);
+  return parseFloat(document.getElementById('gen_kwp').value)||0;
 }
+function kwhDiaPorKwp(){
+  return generarPerfilGeneracionTipico(LATITUD_MADRID, 1, DECLINACION_GENERICA).reduce((a,v)=>a+v, 0);
+}
+// La curva reparte exactamente los kWh/dia del campo, estimados o escritos a mano (PVGIS).
 function generarCurvaFvDesdeCampo(){
-  CURVAS.gen.valores = generarPerfilGeneracionTipico(LATITUD_MADRID, kwpInstalados(), DECLINACION_GENERICA);
+  const kwhDia = parseFloat(document.getElementById('fv_kwh_dia').value)||0;
+  CURVAS.gen.valores = generarPerfilGeneracionTipico(LATITUD_MADRID, kwhDia/kwhDiaPorKwp(), DECLINACION_GENERICA);
 }
 function actualizarPerfilGeneracionTipico(){
   // 0 es un valor valido (sin FV, curva a cero) -- solo se descarta si el campo esta
   // vacio/no es un numero, o es negativo.
-  const kwhDia = parseFloat(document.getElementById('kwhdia_gen').value);
+  const kwhDia = parseFloat(document.getElementById('fv_kwh_dia').value);
   if(!isFinite(kwhDia) || kwhDia<0) return;
   generarCurvaFvDesdeCampo();
   renderTodosLosEditores();
   renderResultados();
 }
-document.getElementById('kwhdia_gen').addEventListener('input', actualizarPerfilGeneracionTipico);
+document.getElementById('fv_kwh_dia').addEventListener('input', actualizarPerfilGeneracionTipico);
+// Cambiar los kWp reestima la generacion; se lanza 'input' para que tambien se persista.
+document.getElementById('gen_kwp').addEventListener('input', ()=>{
+  const kwp = parseFloat(document.getElementById('gen_kwp').value);
+  if(!isFinite(kwp) || kwp<0) return;
+  const campo = document.getElementById('fv_kwh_dia');
+  campo.value = (kwp*kwhDiaPorKwp()).toFixed(1);
+  campo.dispatchEvent(new Event('input', {bubbles:true}));
+  renderResultados(); // la inversion depende de los kWp aunque la estimacion no cambie
+});
 
 // Al cambiar la jornada se recargan valores por defecto de generacion y consumo — el punto de partida para ese caso, editable
 // despues arrastrando sobre los graficos.
@@ -1768,11 +1798,9 @@ function costesInstalacion(){
   const costeEspecificoBat = parseFloat(document.getElementById('lcoe_bat_coste').value)||0;
   const costeFv = kwp*costeEspecificoFv;
   const costeBat = capacidadBat*costeEspecificoBat*comprasBateria();
-  const elFvKwp = document.getElementById('lcoe_fv_kwp');
   const elFvTotal = document.getElementById('lcoe_fv_coste_total');
   const elBatKwh = document.getElementById('lcoe_bat_kwh');
   const elBatTotal = document.getElementById('lcoe_bat_coste_total');
-  if(elFvKwp) elFvKwp.value = fmtNum(kwp,2)+' kWp';
   if(elFvTotal) elFvTotal.textContent = fmtNum(costeFv,0)+' €';
   if(elBatKwh) elBatKwh.value = fmtNum(capacidadBat,2)+' kWh';
   if(elBatTotal) elBatTotal.textContent = fmtNum(costeBat,0)+' €';
@@ -2924,7 +2952,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     y = H.formulaBlock(y, ['%Autoconsumo = suma Autoconsumida(h) / suma Generacion(h) x 100']);
     y = H.formulaBlock(y, ['%Autarquia = (suma Autoconsumida(h) + Aportado por bateria) / suma Consumo(h) x 100']);
     y = H.subTitle(y, '3.3', 'Como dimensionar la instalacion con esta herramienta');
-    y = H.paragraph(y, 'La herramienta no calcula un tamaño optimo de forma automatica: se encuentra por iteracion. Primero se fija la curva de consumo lo mas parecida posible a la real para el dia tipo elegido. Despues se prueban distintas generaciones FV (kWh/dia) y se compara como cambian el porcentaje de autoconsumo y el excedente exportado: a partir de cierto punto, generar mas exporta mas sin mejorar mucho el autoconsumo. Por ultimo se varia la capacidad de la bateria, comparando el diagrama de flujos. Cada combinacion de datos de partida que se quiera comparar se guarda como un caso independiente, y todos ellos se incluyen en el mismo informe.');
+    y = H.paragraph(y, 'La herramienta no calcula un tamaño optimo de forma automatica: se encuentra por iteracion. Primero se fija la curva de consumo lo mas parecida posible a la real para el dia tipo elegido. Despues se prueban distintas potencias FV (kWp) y se compara como cambian el porcentaje de autoconsumo y el excedente exportado: a partir de cierto punto, mas kWp exporta mas sin mejorar mucho el autoconsumo. Por ultimo se varia la capacidad de la bateria, comparando el diagrama de flujos. Cada combinacion de datos de partida que se quiera comparar se guarda como un caso independiente, y todos ellos se incluyen en el mismo informe.');
     y = H.paragraph(y, 'Limitaciones para el dimensionado: el tamaño resultante es orientativo, no un dimensionado tecnico normativo. Cada caso se basa en un unico dia representativo, no en un año horario real medido, y no considera la potencia maxima de inyeccion permitida por la distribuidora, la orientacion e inclinacion real de los paneles ni las perdidas por sombreado. Antes de adquirir equipos, se recomienda contrastar el resultado con un estudio de dimensionado normativo.', {bold:true});
 
     y = H.sectionTitle(y, '4.', 'Datos del proyecto', collect);

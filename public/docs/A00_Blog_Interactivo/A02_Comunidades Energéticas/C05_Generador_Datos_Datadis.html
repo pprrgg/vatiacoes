@@ -149,6 +149,19 @@
   .lista-fich span{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dimmer);}
   .prog{height:4px; background:var(--line-soft); margin-top:12px; overflow:hidden;}
   .prog i{display:block; height:100%; width:0; background:var(--amber); transition:width .2s;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -158,19 +171,20 @@
   <div class="tabbar-wrap">
     <div class="tabbar-brand">GENERADOR DATADIS</div>
     <nav class="tabbar" id="sidenav">
-      <a href="#suministro" data-sec="suministro"><span class="tag">00</span>Suministro y peaje</a>
-      <a href="#perfil" data-sec="perfil"><span class="tag">01</span>Perfil de consumo y generación</a>
-      <a href="#vista" data-sec="vista"><span class="tag">02</span>Vista previa</a>
-      <a href="#descarga" data-sec="descarga"><span class="tag">03</span>Descargar ZIP</a>
-      <a href="#normativa" data-sec="normativa"><span class="tag">04</span>Normativa y formato</a>
-    </nav>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#descarga" data-sec="descarga"><span class="tag">02</span>Informe</a>
+  </nav>
   </div>
 
   <main>
 
     <!-- 00 · SUMINISTRO -->
-    <section id="suministro">
-      <div class="eyebrow kicker">00 · Suministro y peaje</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="suministro" class="tab-bloque">
+      <div class="eyebrow kicker">Suministro y peaje</div>
       <h2>Los ficheros que descargarías de Datadis, para un suministro inventado.</h2>
       <p class="lede">Elige el CUPS, el peaje y las potencias contratadas. En las secciones siguientes defines cómo consume o genera, y al final descargas un <b>.zip</b> con los CSV de la descarga web de Datadis: <b>Consumo</b> (curva de carga), <b>Potencias</b> (maxímetro), <b>Contrato</b> y <b>Energía</b> (reactiva), con su formato y para el periodo que elijas.</p>
 
@@ -215,11 +229,10 @@
         <div class="ficha" id="fichaPeaje"></div>
         <div id="avisosPeaje"></div>
       </div>
-    </section>
-
-    <!-- 01 · PERFIL -->
-    <section id="perfil">
-      <div class="eyebrow kicker">01 · Perfil de consumo y generación</div>
+    
+      </div>
+      <div id="perfil" class="tab-bloque">
+      <div class="eyebrow kicker">Perfil de consumo y generación</div>
       <h2>Cómo consume y genera el suministro hora a hora y mes a mes.</h2>
       <p class="lede">Parte de un perfil tipo y retócalo arrastrando las barras: la forma de un día <b>laborable</b>, la de un <b>fin de semana o festivo</b> y el peso de cada <b>mes</b>. El consumo medio diario escala el conjunto. Con autoconsumo, la generación fotovoltaica va en el mismo fichero de consumo, en sus columnas. Cada día y cada cuarto de hora añaden variaciones aleatorias, como en una curva real.</p>
 
@@ -274,11 +287,10 @@
         </div>
         <p class="note">La inductiva sale de la activa consumida con el cos φ (peor con poca carga). La capacitiva aparece cuando el consumo es bajo y queda conectada una batería de condensadores (kVAr); 0 = sin batería.</p>
       </div>
-    </section>
-
-    <!-- 02 · VISTA PREVIA -->
-    <section id="vista">
-      <div class="eyebrow kicker">02 · Vista previa</div>
+    
+      </div>
+      <div id="vista" class="tab-bloque">
+      <div class="eyebrow kicker">Vista previa</div>
       <h2>Lo que traerán los ficheros, antes de descargarlos.</h2>
       <p class="lede">Resumen de los datos generados con lo que has elegido: la energía de cada mes repartida por periodos del peaje, una semana de la curva de carga y el maxímetro de cada mes frente a la potencia contratada.</p>
       <div class="kpis" id="kpis"></div>
@@ -299,30 +311,16 @@
 
       <div class="fieldset-title">Reactiva inductiva mensual (kVArh) por periodo · fichero Energía</div>
       <div class="tabla-scroll"><table class="data-table" id="tablaReac"></table></div>
-    </section>
-
-    <!-- 03 · DESCARGA -->
-    <section id="descarga">
-      <div class="eyebrow kicker">03 · Descargar ZIP</div>
-      <h2>Un .zip con los CSV, con el nombre y el formato de la descarga web.</h2>
-      <p class="lede">Los mismos ficheros que da <b>datadis.es</b> al descargar los datos de un suministro: punto y coma como separador, coma decimal, campos entre comillas, fechas <code class="inline">AAAA/MM/DD</code> y horas de fin de periodo (<code class="inline">01:00</code> a <code class="inline">24:00</code>).</p>
-      <div class="card">
-        <label class="chk"><input type="checkbox" id="conCurvaReac"> Incluir también la curva de reactiva del contador (<code class="inline">Reactiva_….csv</code>: inductiva y capacitiva de cada periodo; Datadis no la publica, la da la distribuidora)</label>
-        <label class="chk"><input type="checkbox" id="conLeeme" checked> Incluir <code class="inline">LEEME.txt</code> con los parámetros de la simulación</label>
-        <ul class="lista-fich" id="listaFich"></ul>
-        <div class="btn-row" style="margin-top:16px;">
-          <button class="btn primary" type="button" id="btnZip">&#8681; Generar y descargar el .zip</button>
-          <span id="estadoZip"></span>
-        </div>
-        <div class="prog"><i id="progZip"></i></div>
+    
       </div>
-      <div class="callout"><b>Datos simulados.</b> Sirven para probar herramientas (la plataforma VatiaCo, las calculadoras de facturación y de optimización de potencia de este blog…) sin pedir datos reales a nadie. No son lecturas de ningún contador: usa un CUPS ficticio si los vas a compartir.</div>
-      <p class="note">En la plataforma VatiaCo se cargan desde la pestaña <i>Socios → Cargar CSV</i> (el de <i>Energía</i> es la reactiva). La plataforma reconoce cada fichero por sus columnas.</p>
     </section>
 
-    <!-- 04 · NORMATIVA -->
-    <section id="normativa">
-      <div class="eyebrow kicker">04 · Normativa y formato</div>
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Normativa y formato</span></summary><div class="acc-cuerpo">
+<div id="normativa">
       <h2>Qué datos da Datadis de cada suministro, y cómo.</h2>
       <div class="grid3">
         <div class="comp-card"><h4>Contadores (RD 1110/2007)</h4><ul>
@@ -349,6 +347,30 @@
       <details class="detalle" style="margin-top:18px;"><summary>¿Cómo se generan los datos?</summary><div class="d-body">Para cada día del periodo se toma la forma del día (laborable o festivo), el peso del mes y una variación aleatoria del día; dentro del día, cada cuarto de hora tiene además su propia variación. El conjunto se escala para que el consumo medio diario sea el que pides. La fotovoltaica sigue la curva media de PVGIS de cada hora y mes con un factor de nubosidad diario, y se escala a la generación media diaria. Con la misma semilla y los mismos datos sale siempre lo mismo.</div></details>
       <details class="detalle"><summary>¿Por qué consumo y generación salen separados?</summary><div class="d-body">El contador mide los flujos en la frontera con la red: <b>consumo_kWh</b> es lo que entra de la red, <b>energiaVertida_kWh</b> lo que sale, <b>energiaGenerada_kWh</b> lo que produce la instalación y <b>energiaAutoconsumida_kWh</b> la parte de la generación que se consume en el mismo periodo.</div></details>
       <details class="detalle"><summary>¿Los ficheros son idénticos a los de Datadis?</summary><div class="d-body">Tienen sus nombres, columnas y formato (campos entre comillas, coma decimal, horas de fin de periodo, días de 23 y 25 horas). Datadis a veces deja meses sin maxímetro o días sin curva; aquí todos los meses y días están completos.</div></details>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
+    <section id="descarga">
+      <div class="eyebrow kicker">02 · Informe</div>
+
+      <h2>Un .zip con los CSV, con el nombre y el formato de la descarga web.</h2>
+      <p class="lede">Los mismos ficheros que da <b>datadis.es</b> al descargar los datos de un suministro: punto y coma como separador, coma decimal, campos entre comillas, fechas <code class="inline">AAAA/MM/DD</code> y horas de fin de periodo (<code class="inline">01:00</code> a <code class="inline">24:00</code>).</p>
+      <div class="card">
+        <label class="chk"><input type="checkbox" id="conCurvaReac"> Incluir también la curva de reactiva del contador (<code class="inline">Reactiva_….csv</code>: inductiva y capacitiva de cada periodo; Datadis no la publica, la da la distribuidora)</label>
+        <label class="chk"><input type="checkbox" id="conLeeme" checked> Incluir <code class="inline">LEEME.txt</code> con los parámetros de la simulación</label>
+        <ul class="lista-fich" id="listaFich"></ul>
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn primary" type="button" id="btnZip">&#8681; Generar y descargar el .zip</button>
+          <span id="estadoZip"></span>
+        </div>
+        <div class="prog"><i id="progZip"></i></div>
+      </div>
+      <div class="callout"><b>Datos simulados.</b> Sirven para probar herramientas (la plataforma VatiaCo, las calculadoras de facturación y de optimización de potencia de este blog…) sin pedir datos reales a nadie. No son lecturas de ningún contador: usa un CUPS ficticio si los vas a compartir.</div>
+      <p class="note">En la plataforma VatiaCo se cargan desde la pestaña <i>Socios → Cargar CSV</i> (el de <i>Energía</i> es la reactiva). La plataforma reconoce cada fichero por sus columnas.</p>
+    
     </section>
 
     <footer>
@@ -364,7 +386,16 @@
 // ===================== NAVEGACION =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = 'suministro';
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -711,7 +742,7 @@ function ejeMax(v){ const p = Math.pow(10, Math.floor(Math.log10(Math.max(v,1e-6
 const nomP = (p, nP) => nP===2 ? ['P1 punta','P2 llano','P3 valle'][p] : 'P'+(p+1);
 
 function pintarVista(){
-  if(!SIM || SIM.error){ $('kpis').innerHTML=''; $('avisosDatos').innerHTML = `<div class="aviso mal">${SIM ? SIM.error : 'Elige un periodo de datos válido (sección 00).'}</div>`; return; }
+  if(!SIM || SIM.error){ $('kpis').innerHTML=''; $('avisosDatos').innerHTML = `<div class="aviso mal">${SIM ? SIM.error : 'Elige un periodo de datos válido (pestaña Simulación).'}</div>`; return; }
   const S = SIM, M = AGR, nd = S.dias.length, nPe = S.nP===2 ? 3 : 6;
   const sum = a => a.reduce((x,y)=>x+y,0), anio = 365/nd;
   const tRed = sum(S.red), tGen = sum(S.genr), tVert = sum(S.vert), tAuto = sum(S.auto), tR1 = sum(S.r1);
@@ -724,7 +755,7 @@ function pintarVista(){
   // avisos de excesos de potencia
   const exc = [];
   M.forEach((m, mes)=> m.max.forEach((x,p)=>{ if(x && x.kw > potPer(S, p)) exc.push(mes); }));
-  $('avisosDatos').innerHTML = exc.length ? `<div class="aviso mal">La demanda supera la potencia contratada en ${new Set(exc).size} meses (excesos de potencia). Puedes subir las potencias o pulsar <i>Ajustar potencias a la demanda</i> en la sección 00.</div>` :
+  $('avisosDatos').innerHTML = exc.length ? `<div class="aviso mal">La demanda supera la potencia contratada en ${new Set(exc).size} meses (excesos de potencia). Puedes subir las potencias o pulsar <i>Ajustar potencias a la demanda</i> en la pestaña Simulación.</div>` :
     '<div class="aviso ok">La potencia demandada no supera la contratada en ningún mes.</div>';
 
   // --- barras apiladas: energia de red por mes y periodo

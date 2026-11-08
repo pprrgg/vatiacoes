@@ -165,6 +165,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -177,12 +190,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco normativo</a>
-    <a href="#tarifas" data-sec="tarifas"><span class="tag">02</span>Tarifas oficiales 2025</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">03</span>Datos del proyecto</a>
-    <a href="#datos" data-sec="datos"><span class="tag">04</span>Contrato, energía y maxímetro</a>
-    <a href="#informe" data-sec="informe"><span class="tag">05</span>Resultados e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -210,7 +220,97 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="tarifas" class="tab-bloque">
+      <div class="eyebrow kicker">Tarifas oficiales 2025</div>
+      <h2>Las tablas que usa la calculadora, tal cual las publica el BOE.</h2>
+      <p class="lede">Precio del término de potencia (T_pp, €/kW·año), término de energía (T_ep, €/kWh) y término de exceso de potencia (tep_p⁴⁻⁵, €/kW·día) por cada período horario y tarifa de acceso.</p>
+
+      <div class="eyebrow" style="margin-bottom:10px;">Tabla T_pp · Precio del término de potencia (€/kW·año)</div>
+      <div class="table-wrap">
+        <table class="data-table" id="tablaTpp"></table>
+      </div>
+
+      <div class="eyebrow" style="margin:24px 0 10px;">Tabla T_ep · Precio del término de energía (€/kWh)</div>
+      <div class="table-wrap">
+        <table class="data-table" id="tablaTep2"></table>
+      </div>
+
+      <div class="eyebrow" style="margin:24px 0 10px;">Tabla tep_p⁴⁻⁵ · Término de exceso de potencia (€/kW·día)</div>
+      <div class="table-wrap">
+        <table class="data-table" id="tablaTep"></table>
+      </div>
+
+      <div class="eyebrow" style="margin:28px 0 10px;">Precios de energía reactiva (apdo. 6.4 — editables)</div>
+      <div class="card">
+        <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px;">Se factura el exceso de reactiva inductiva sobre el 33% de la activa en los períodos 1-5, y el exceso de reactiva capacitiva por debajo de cos φ 0,98 (20%) en el período 6. El precio aplicable en P1-P5 depende del tramo de cos φ; en P6 se aplica un precio único. Solo se factura reactiva a partir de 15 kW contratados — la 2.0 TD está exenta.</p>
+        <div class="grid3">
+          <div class="field"><label>Precio · 0,80 ≤ cos φ &lt; 0,95 (€/kVArh)</label><input type="number" id="s_precio_medio" value="0.041554" min="0" step="0.000001"></div>
+          <div class="field"><label>Precio · cos φ &lt; 0,80 (€/kVArh)</label><input type="number" id="s_precio_alto" value="0.062332" min="0" step="0.000001"></div>
+          <div class="field"><label>Precio capacitiva período 6 (€/kVArh)</label><input type="number" id="s_precio_cap" value="0.00" min="0" step="0.000001"></div>
+        </div>
+      </div>
+    
+      </div>
+      <div id="datos" class="tab-bloque">
+      <div class="eyebrow kicker">Contrato, energía y maxímetro</div>
+      <h2>Añade cada contrato o punto de suministro, y calcula.</h2>
+      <p class="lede">Elige la tarifa de acceso, la potencia contratada por período horario, y los 12 registros mensuales de energía activa, maxímetro y energía reactiva. Los períodos que no aplican a tu tarifa aparecen deshabilitados.</p>
+
+      <div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Añadir caso (contrato / CUPS)</div>
+        <div class="field"><label>Nombre / ubicación del caso</label><input type="text" id="i_nombre" placeholder="Ej: Nave industrial, CUPS ES0031..."></div>
+
+        <div class="fieldset-title">Tarifa de acceso</div>
+        <div class="field" style="max-width:320px;">
+          <label>Tarifa</label>
+          <select id="i_tarifa">
+            <option value="2.0 TD">2.0 TD</option>
+            <option value="3.0 TD">3.0 TD</option>
+            <option value="6.1 TD" selected>6.1 TD</option>
+            <option value="6.2 TD">6.2 TD</option>
+            <option value="6.3 TD">6.3 TD</option>
+            <option value="6.4 TD">6.4 TD</option>
+          </select>
+        </div>
+
+        <div class="fieldset-title">Potencia contratada por período, P_cp (kW)</div>
+        <div class="grid6" id="pcpInputs"></div>
+
+        <div class="fieldset-title">Energía activa consumida mensual por período, E_p (kWh)</div>
+        <div class="table-wrap">
+          <table class="grid-input" id="energiaInputs"></table>
+        </div>
+
+        <div class="fieldset-title">Maxímetro mensual por período, P_dj (kW)</div>
+        <div class="table-wrap">
+          <table class="grid-input" id="maximetroInputs"></table>
+        </div>
+
+        <div class="fieldset-title">Energía reactiva mensual por período, E_rp (kVArh)</div>
+        <div id="reactivaNota" class="hint" style="display:none; margin-bottom:8px;">La tarifa 2.0 TD está exenta de facturación de energía reactiva (apdo. 6.4) — esta rejilla no se usará en el cálculo.</div>
+        <div class="table-wrap">
+          <table class="grid-input" id="reactivaInputs"></table>
+        </div>
+
+        <div class="field" style="margin-top:16px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Calcular y añadir al informe</button>
+          <button class="btn ghost" id="btnLoadExample">Cargar datos de ejemplo</button>
+        </div>
+      </div>
+    
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
@@ -231,8 +331,6 @@
         <div class="stat"><div class="v">12 × 6 × 3</div><div class="l">meses × períodos × conceptos (potencia, energía, reactiva)</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
       <h2>Cuatro términos, una sola factura de red.</h2>
       <p class="lede">El peaje de transporte y distribución que pagas en cada factura eléctrica se compone de cuatro términos independientes, según el artículo 9 de la Circular 3/2020 de la CNMC: lo que contratas de forma fija, lo que consumes, lo que te penalizan si te pasas de potencia, y lo que te penalizan si tu factor de potencia es malo.</p>
 
@@ -302,11 +400,11 @@
           <p>Compara el FPT resultante con lo que pagarías subiendo la potencia contratada al nivel del maxímetro, y con lo que ahorrarías instalando una batería de condensadores para corregir el factor de potencia: ambos ajustes suelen amortizarse rápido frente a pagar excesos y reactiva de forma recurrente.</p>
         </div>
       </div>
-    </section>
-
-    <!-- 01 MARCO NORMATIVO -->
-    <section id="marco">
-      <div class="eyebrow kicker">01 · Marco normativo</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco normativo</span></summary><div class="acc-cuerpo">
+<div id="marco">
       <h2>Una tarifa regulada, actualizada cada año.</h2>
       <p class="lede">Los precios del término de potencia y de los excesos no se negocian: los fija la administración cada año a partir de la metodología de peajes de acceso.</p>
 
@@ -328,45 +426,16 @@
         </table>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">Legislación complementaria: <a href="https://www.miteco.gob.es" target="_blank" rel="noopener" style="color:var(--cyan);">MITECO</a> y <a href="https://www.cnmc.es" target="_blank" rel="noopener" style="color:var(--cyan);">CNMC</a>.</p>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 02 TARIFAS OFICIALES -->
-    <section id="tarifas">
-      <div class="eyebrow kicker">02 · Tarifas oficiales 2025</div>
-      <h2>Las tablas que usa la calculadora, tal cual las publica el BOE.</h2>
-      <p class="lede">Precio del término de potencia (T_pp, €/kW·año), término de energía (T_ep, €/kWh) y término de exceso de potencia (tep_p⁴⁻⁵, €/kW·día) por cada período horario y tarifa de acceso.</p>
-
-      <div class="eyebrow" style="margin-bottom:10px;">Tabla T_pp · Precio del término de potencia (€/kW·año)</div>
-      <div class="table-wrap">
-        <table class="data-table" id="tablaTpp"></table>
-      </div>
-
-      <div class="eyebrow" style="margin:24px 0 10px;">Tabla T_ep · Precio del término de energía (€/kWh)</div>
-      <div class="table-wrap">
-        <table class="data-table" id="tablaTep2"></table>
-      </div>
-
-      <div class="eyebrow" style="margin:24px 0 10px;">Tabla tep_p⁴⁻⁵ · Término de exceso de potencia (€/kW·día)</div>
-      <div class="table-wrap">
-        <table class="data-table" id="tablaTep"></table>
-      </div>
-
-      <div class="eyebrow" style="margin:28px 0 10px;">Precios de energía reactiva (apdo. 6.4 — editables)</div>
-      <div class="card">
-        <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px;">Se factura el exceso de reactiva inductiva sobre el 33% de la activa en los períodos 1-5, y el exceso de reactiva capacitiva por debajo de cos φ 0,98 (20%) en el período 6. El precio aplicable en P1-P5 depende del tramo de cos φ; en P6 se aplica un precio único. Solo se factura reactiva a partir de 15 kW contratados — la 2.0 TD está exenta.</p>
-        <div class="grid3">
-          <div class="field"><label>Precio · 0,80 ≤ cos φ &lt; 0,95 (€/kVArh)</label><input type="number" id="s_precio_medio" value="0.041554" min="0" step="0.000001"></div>
-          <div class="field"><label>Precio · cos φ &lt; 0,80 (€/kVArh)</label><input type="number" id="s_precio_alto" value="0.062332" min="0" step="0.000001"></div>
-          <div class="field"><label>Precio capacitiva período 6 (€/kVArh)</label><input type="number" id="s_precio_cap" value="0.00" min="0" step="0.000001"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 03 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">03 · Datos del proyecto</div>
-      <h2>¿Para quién es este informe?</h2>
-      <p class="lede">Estos datos aparecerán en la portada del PDF y son compartidos por todos los casos del informe.</p>
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
       <div class="card">
         <div class="fieldset-title">Proyecto</div>
         <div class="grid2">
@@ -393,71 +462,21 @@
           <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
         </div>
       </div>
-    </section>
+    
+</div>
+      </div></details>
 
-    <!-- 04 DATOS CONTRATO Y MAXIMETRO -->
-    <section id="datos">
-      <div class="eyebrow kicker">04 · Contrato, energía y maxímetro</div>
-      <h2>Añade cada contrato o punto de suministro, y calcula.</h2>
-      <p class="lede">Elige la tarifa de acceso, la potencia contratada por período horario, y los 12 registros mensuales de energía activa, maxímetro y energía reactiva. Los períodos que no aplican a tu tarifa aparecen deshabilitados.</p>
-
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:6px;">Añadir caso (contrato / CUPS)</div>
-        <div class="field"><label>Nombre / ubicación del caso</label><input type="text" id="i_nombre" placeholder="Ej: Nave industrial, CUPS ES0031..."></div>
-
-        <div class="fieldset-title">Tarifa de acceso</div>
-        <div class="field" style="max-width:320px;">
-          <label>Tarifa</label>
-          <select id="i_tarifa">
-            <option value="2.0 TD">2.0 TD</option>
-            <option value="3.0 TD">3.0 TD</option>
-            <option value="6.1 TD" selected>6.1 TD</option>
-            <option value="6.2 TD">6.2 TD</option>
-            <option value="6.3 TD">6.3 TD</option>
-            <option value="6.4 TD">6.4 TD</option>
-          </select>
-        </div>
-
-        <div class="fieldset-title">Potencia contratada por período, P_cp (kW)</div>
-        <div class="grid6" id="pcpInputs"></div>
-
-        <div class="fieldset-title">Energía activa consumida mensual por período, E_p (kWh)</div>
-        <div class="table-wrap">
-          <table class="grid-input" id="energiaInputs"></table>
-        </div>
-
-        <div class="fieldset-title">Maxímetro mensual por período, P_dj (kW)</div>
-        <div class="table-wrap">
-          <table class="grid-input" id="maximetroInputs"></table>
-        </div>
-
-        <div class="fieldset-title">Energía reactiva mensual por período, E_rp (kVArh)</div>
-        <div id="reactivaNota" class="hint" style="display:none; margin-bottom:8px;">La tarifa 2.0 TD está exenta de facturación de energía reactiva (apdo. 6.4) — esta rejilla no se usará en el cálculo.</div>
-        <div class="table-wrap">
-          <table class="grid-input" id="reactivaInputs"></table>
-        </div>
-
-        <div class="field" style="margin-top:16px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
-        <div class="btn-row">
-          <button class="btn primary" id="btnAddInst">+ Calcular y añadir al informe</button>
-          <button class="btn ghost" id="btnLoadExample">Cargar datos de ejemplo</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 05 RESULTADOS E INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">05 · Resultados e informe</div>
       <h2>Los casos calculados, listos para exportar.</h2>
       <p class="lede">Cada caso muestra su desglose de FPC, FPD, FEA, FER y FPT, con la evolución mensual y la distribución entre los cuatro términos.</p>
 
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún caso. Ve a la sección 04, introduce los datos y pulsa "Calcular y añadir al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún caso. Ve a la pestaña Simulación, introduce los datos y pulsa "Calcular y añadir al informe".</div></div>
 
       <div class="btn-row">
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todos los casos</button>
       </div>
+    
     </section>
 
     <footer>
@@ -847,8 +866,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1215,7 +1243,7 @@ function renderInstallations(){
   const btnPdf = document.getElementById('btnPdf');
 
   if(installations.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún caso. Ve a la sección 04, introduce los datos y pulsa "Calcular y añadir al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún caso. Ve a la pestaña Simulación, introduce los datos y pulsa "Calcular y añadir al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     return;

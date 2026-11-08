@@ -188,6 +188,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -200,14 +213,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#objeto" data-sec="objeto"><span class="tag">01</span>Objeto y definiciones</a>
-    <a href="#diseno" data-sec="diseno"><span class="tag">02</span>Orientación e inclinación</a>
-    <a href="#componentes" data-sec="componentes"><span class="tag">03</span>Componentes</a>
-    <a href="#cableado" data-sec="cableado"><span class="tag">04</span>Cableado y protecciones</a>
-    <a href="#bombeo" data-sec="bombeo"><span class="tag">05</span>Sistema de bombeo</a>
-    <a href="#mantenimiento" data-sec="mantenimiento"><span class="tag">06</span>Mantenimiento y garantías</a>
-    <a href="#informe" data-sec="informe"><span class="tag">07</span>Proyecto e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -235,282 +243,14 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
-      <header class="hero">
-      <div class="hero-top">
-        <div>
-          <div class="eyebrow">IDAE — Pliego de Condiciones Técnicas de Instalaciones Aisladas de Red</div>
-          <h1>Sacar agua de un pozo<br>a golpe de <em>sol</em>, sin<br>quedarse corto.</h1>
-          <p class="sub">Resumen visual e interactivo del PCT-IDAE para instalaciones fotovoltaicas aisladas: los requisitos de componentes, el esquema del sistema de bombeo (Fig. 3, Anexo I) y una calculadora que replica el ejemplo oficial de dimensionado, para generar tu propio informe de proyecto. <strong style="color:var(--text);">Adaptado a acumuladores de litio (LiFePO4)</strong> — el PCT original solo contempla plomo-ácido; aquí se sustituyen sus criterios por los propios de litio.</p>
-        </div>
-        <div class="hero-meta">
-          <span>Guía técnica</span>
-          <span style="color:var(--amber)">PCT-IDAE Aisladas</span>
-          <span>Convocatoria FV 2002</span>
-        </div>
-      </div>
-
-      <div class="stat-row">
-        <div class="stat"><div class="v">3 días</div><div class="l">autonomía mínima del acumulador</div></div>
-        <div class="stat"><div class="v">PD &le; 90-95%</div><div class="l">profundidad de descarga admisible (litio)</div></div>
-        <div class="stat"><div class="v">Pmp &le; 1,2×Pmp,min</div><div class="l">sobredimensionado máx. del generador</div></div>
-        <div class="stat"><div class="v">Hf &lt; 10%</div><div class="l">pérdidas de fricción máx. en tuberías</div></div>
-      </div>
-    </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
-      <h2>Las fórmulas del dimensionado, de la carga al generador.</h2>
-      <p class="lede">Resumen de los cálculos del Anexo I del PCT-IDAE, verificados frente al ejemplo oficial del propio documento (vivienda rural + bombeo, San Agustín de Guadalix). Es la base de la calculadora de la sección 07.</p>
-
-      <div class="theory-grid">
-        <div class="theory-card">
-          <h3>1 · Altura total equivalente de bombeo</h3>
-          <p>Parámetro ficticio que resume la física del pozo, el depósito y las pérdidas de carga en un único valor de altura:</p>
-          <div class="formula-box">
-            <div class="f">H<sub>TE</sub> = H<sub>D</sub> + H<sub>ST</sub> + [(H<sub>DT</sub>−H<sub>ST</sub>)/Q<sub>T</sub>] &times; Q<sub>AP</sub> + H<sub>f</sub></div>
-            <small>Q_AP = Q_d / 24 (caudal medio, m³/h)</small>
-          </div>
-          <div class="var-list">
-            <span><b>H_D</b> altura depósito (m)</span><span><b>H_ST</b> nivel estático (m)</span>
-            <span><b>H_DT</b> nivel dinámico (m)</span><span><b>Q_T</b> caudal de prueba (m³/h)</span>
-            <span><b>H_f</b> pérdida por fricción (m)</span>
-          </div>
-        </div>
-
-        <div class="theory-card">
-          <h3>2 · Energía eléctrica de la motobomba</h3>
-          <p>La constante 2,725 convierte volumen de agua (m³) y altura (m) directamente en energía hidráulica (Wh):</p>
-          <div class="formula-box">
-            <div class="f">E<sub>H</sub> = 2,725 &times; Q<sub>d</sub> &times; H<sub>TE</sub></div>
-            <div class="f" style="margin-top:6px;">E<sub>MB</sub> = E<sub>H</sub> / &eta;<sub>MB</sub></div>
-            <small>Q_d: volumen diario requerido (m³/día) · &eta;_MB: rendimiento motobomba (típico 0,4 para &gt;500W)</small>
-          </div>
-        </div>
-
-        <div class="theory-card">
-          <h3>3 · Irradiación sobre el generador</h3>
-          <p>La irradiación horizontal se corrige por orientación, inclinación y sombras respecto al óptimo del período de diseño:</p>
-          <div class="formula-box">
-            <div class="f">G<sub>dm</sub>(&alpha;,&beta;) = G<sub>dm</sub>(0) &times; K &times; FI &times; FS</div>
-            <small>K según Tabla III (periodo de diseño) · FI: factor de irradiación · FS: factor de sombreado</small>
-          </div>
-          <div class="formula-box">
-            <div class="f" style="font-size:12.5px;">FI = 1 − [1,2&times;10<sup>−4</sup>(&beta;−&beta;<sub>opt</sub>)² + 3,5&times;10<sup>−5</sup>&alpha;²]　[&beta;&gt;15°]</div>
-            <small>Para &beta; &le; 15° se omite el término del azimut</small>
-          </div>
-        </div>
-
-        <div class="theory-card">
-          <h3>4 · Potencia mínima del generador</h3>
-          <p>El generador se dimensiona para cubrir el consumo diario total con el rendimiento energético esperado de la instalación (PR):</p>
-          <div class="formula-box">
-            <div class="f">P<sub>mp,min</sub> = (E<sub>D</sub> &times; G<sub>CEM</sub>) / (G<sub>dm</sub>(&alpha;,&beta;) &times; PR)</div>
-            <small>G_CEM = 1 kW/m² · PR típico: 0,7 con inversor · 0,6 con inversor y batería</small>
-          </div>
-          <p>Límite: la potencia pico elegida no debe superar en más de un 20% este mínimo, salvo justificación expresa.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>5 · Autonomía del acumulador</h3>
-          <p>Días que el sistema puede alimentar el consumo previsto sin ninguna aportación solar, hasta la profundidad de descarga máxima permitida:</p>
-          <div class="formula-box">
-            <div class="f">A = (C &times; PD<sub>max</sub> &times; &eta;<sub>inv</sub> &times; &eta;<sub>rb</sub>) / L<sub>D</sub></div>
-            <small>L_D = E_D / V_NOM (consumo diario en Ah) · C: capacidad nominal del acumulador (Ah) · mínimo exigido: A &ge; 3 días</small>
-          </div>
-        </div>
-
-        <div class="theory-card">
-          <h3>6 · Límites obligatorios de diseño (adaptados a litio)</h3>
-          <ul>
-            <li><b>Generador:</b> P<sub>mp</sub> &le; 1,2 &times; P<sub>mp,min</sub></li>
-            <li><b>Acumulador:</b> I<sub>sc</sub> generador &le; C-rate máx. de carga del BMS &times; C (corriente de carga dentro del límite que admite el BMS)</li>
-            <li><b>Autonomía:</b> mínimo 3 días con el acumulador elegido</li>
-            <li><b>Profundidad de descarga:</b> hasta 90-95% según fabricante (el litio LiFePO4 tolera bien la descarga profunda frecuente, a diferencia del plomo-ácido)</li>
-            <li><b>Fricción hidráulica:</b> H<sub>f</sub> &lt; 10% de H<sub>TE</sub></li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- 01 OBJETO Y DEFINICIONES -->
-    <section id="objeto">
-      <div class="eyebrow kicker">01 · Objeto y definiciones</div>
-      <h2>Un pliego de mínimos para cualquier instalación aislada.</h2>
-      <p class="lede">Fija las condiciones técnicas mínimas de las instalaciones fotovoltaicas aisladas de red: electrificación de viviendas, alumbrado público, aplicaciones agropecuarias, y bombeo y tratamiento de agua.</p>
-
-      <div class="grid4" style="margin-bottom:32px;">
-        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Ámbito</div><p style="font-size:13px; color:var(--text-dim);">Electrificación, alumbrado público, agropecuarias, bombeo, aplicaciones mixtas.</p></div>
-        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Aislamiento</div><p style="font-size:13px; color:var(--text-dim);">Mínimo clase I; se recomienda clase II sobre 50 V<sub>RMS</sub> o 120 V<sub>CC</sub>.</p></div>
-        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Grado IP</div><p style="font-size:13px; color:var(--text-dim);">IP65 mínimo a la intemperie, IP20 en interior.</p></div>
-        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Garantía</div><p style="font-size:13px; color:var(--text-dim);">3 años instalación completa, 8 años los módulos fotovoltaicos.</p></div>
-      </div>
-
-      <div class="grid4">
-        <div class="def-card"><h4>Generador FV</h4><p>Asociación en paralelo de ramas fotovoltaicas, cada una con tensión igual a la nominal del generador.</p></div>
-        <div class="def-card"><h4>Acumulador</h4><p>Baterías de litio LiFePO4 (fosfato de hierro-litio), con BMS (sistema de gestión de batería) integrado obligatorio. Se descarta el plomo-ácido por su menor vida útil y peor tolerancia a la descarga profunda.</p></div>
-        <div class="def-card"><h4>Regulador de carga</h4><p>Protege la batería frente a sobrecargas y sobredescargas, cortando el suministro a las cargas si es necesario.</p></div>
-        <div class="def-card"><h4>Inversor</h4><p>Convierte CC en CA. Preferiblemente de onda senoidal pura; se admite onda no senoidal solo si P&lt;1kVA.</p></div>
-      </div>
-    </section>
-
-    <!-- 02 DISEÑO -->
-    <section id="diseno">
-      <div class="eyebrow kicker">02 · Orientación, inclinación y sombras</div>
-      <h2>Cuánta radiación pierdes por no apuntar bien al sol.</h2>
-      <p class="lede">Las pérdidas por una orientación e inclinación distintas a las óptimas, y por sombreado, tienen topes máximos reglamentarios en el período de diseño elegido.</p>
-
-      <div class="card" style="padding:0; overflow-x:auto; margin-bottom:28px;">
-        <table class="data-table">
-          <thead><tr><th>Pérdida de radiación del generador</th><th>Valor máximo permitido</th></tr></thead>
-          <tbody>
-            <tr><td>Inclinación y orientación</td><td class="cellnum">20%</td></tr>
-            <tr><td>Sombras</td><td class="cellnum">10%</td></tr>
-            <tr><td>Combinación de ambas</td><td class="cellnum">20%</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="eyebrow" style="margin-bottom:14px;">Tabla III · Período de diseño e inclinación óptima</div>
-      <div class="card" style="padding:0; overflow-x:auto;">
-        <table class="data-table">
-          <thead><tr><th>Período de diseño</th><th>&beta;<sub>opt</sub></th><th>K</th><th>Cuándo se usa</th></tr></thead>
-          <tbody>
-            <tr><td>Diciembre</td><td class="cellnum">N + 10°</td><td class="cellnum">1,7</td><td>Consumo constante, mes de menor radiación</td></tr>
-            <tr><td>Julio</td><td class="cellnum">N − 20°</td><td class="cellnum">1,0</td><td>Bombeo con demanda estival, según localidad</td></tr>
-            <tr><td>Anual</td><td class="cellnum">N − 10°</td><td class="cellnum">1,15</td><td>Maximizar la producción anual</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">N = latitud del lugar, en grados. &beta;: inclinación elegida. &alpha;: azimut elegido (0° = sur).</p>
-    </section>
-
-    <!-- 03 COMPONENTES -->
-    <section id="componentes">
-      <div class="eyebrow kicker">03 · Componentes y especificaciones</div>
-      <h2>Los mínimos de calidad, componente a componente.</h2>
-      <p class="lede">Cada elemento del sistema tiene requisitos propios de seguridad, protección y rendimiento.</p>
-
-      <div class="grid2" style="margin-bottom:16px;">
-        <div class="comp-card">
-          <h4>Generador fotovoltaico</h4>
-          <div class="result-row"><span class="lbl">Certificación</span><span class="val">UNE-EN 61215 / 61646</span></div>
-          <div class="result-row"><span class="lbl">Tolerancia potencia/Isc</span><span class="val">±10% s/catálogo</span></div>
-          <div class="result-row"><span class="lbl">Puesta a tierra</span><span class="val">Obligatoria si V&gt;48V</span></div>
-        </div>
-        <div class="comp-card">
-          <h4>Acumulador de litio (LiFePO4)</h4>
-          <div class="result-row"><span class="lbl">Corriente de carga máx.</span><span class="val">según C-rate del BMS (típ. 0,5-1C)</span></div>
-          <div class="result-row"><span class="lbl">Profundidad descarga máx.</span><span class="val">90-95% (según fabricante)</span></div>
-          <div class="result-row"><span class="lbl">Autodescarga a 20°C</span><span class="val">&le; 3%/mes</span></div>
-          <div class="result-row"><span class="lbl">Vida útil</span><span class="val">&gt;3000-6000 ciclos a 80% PD</span></div>
-          <div class="result-row"><span class="lbl">BMS integrado</span><span class="val">Obligatorio</span></div>
-        </div>
-        <div class="comp-card">
-          <h4>Regulador de carga</h4>
-          <div class="result-row"><span class="lbl">Sobrecarga admisible</span><span class="val">+25% Isc generador/consumo</span></div>
-          <div class="result-row"><span class="lbl">Caída de tensión interna</span><span class="val">&le;4% (&lt;1kW) / &le;2% (&gt;1kW)</span></div>
-          <div class="result-row"><span class="lbl">Autoconsumo diario</span><span class="val">&le;3% del consumo diario</span></div>
-        </div>
-        <div class="comp-card">
-          <h4>Inversor</h4>
-          <div class="result-row"><span class="lbl">Tensión / frecuencia salida</span><span class="val">±5% V<sub>NOM</sub> / 50Hz±2%</span></div>
-          <div class="result-row"><span class="lbl">Autoconsumo en vacío</span><span class="val">&le;2% potencia nominal</span></div>
-          <div class="result-row"><span class="lbl">Pérdidas diarias autoconsumo</span><span class="val">&le;5% consumo diario</span></div>
-        </div>
-      </div>
-
-      <div class="eyebrow" style="margin-bottom:14px;">Tabla II · Rendimiento mínimo del inversor</div>
-      <div class="card" style="padding:0; overflow-x:auto;">
-        <table class="data-table">
-          <thead><tr><th>Tipo de inversor</th><th>Rendimiento al 20% P<sub>nom</sub></th><th>Rendimiento a P<sub>nom</sub></th></tr></thead>
-          <tbody>
-            <tr><td>Onda senoidal, P&le;500 VA</td><td class="cellnum">&gt;80%</td><td class="cellnum">&gt;70%</td></tr>
-            <tr><td>Onda senoidal, P&gt;500 VA</td><td class="cellnum">&gt;85%</td><td class="cellnum">&gt;80%</td></tr>
-            <tr><td>Onda no senoidal (solo si P&lt;1kVA)</td><td class="cellnum">&gt;85%</td><td class="cellnum">&gt;80%</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 04 CABLEADO -->
-    <section id="cableado">
-      <div class="eyebrow kicker">04 · Cableado y protecciones</div>
-      <h2>Cada tramo tiene su propio límite de caída de tensión.</h2>
-      <p class="lede">La sección de los conductores de la parte de corriente continua se elige para que la caída de tensión no supere estos límites, referidos a la tensión nominal continua del sistema.</p>
-
-      <div class="grid3" style="margin-bottom:16px;">
-        <div class="comp-card"><h4>Generador → regulador/inversor</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">3%</span></div></div>
-        <div class="comp-card"><h4>Regulador → batería</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
-        <div class="comp-card"><h4>Inversor → batería</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
-        <div class="comp-card"><h4>Regulador → inversor</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
-        <div class="comp-card"><h4>Inversor/regulador → cargas</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">3%</span></div></div>
-        <div class="comp-card"><h4>Puesta a tierra</h4><div class="result-row"><span class="lbl">Obligatoria si</span><span class="val" style="font-size:18px; color:var(--amber);">V&gt;48V</span></div></div>
-      </div>
-      <p style="font-size:12.5px; color:var(--text-dimmer);">La instalación estará protegida frente a cortocircuitos, sobrecargas y sobretensiones; especial atención a la protección de la batería mediante fusible o disyuntor magnetotérmico.</p>
-    </section>
-
-    <!-- 05 BOMBEO -->
-    <section id="bombeo">
-      <div class="eyebrow kicker">05 · Sistema de bombeo</div>
-      <h2>El esquema de la Fig. 3: del pozo al depósito.</h2>
-      <p class="lede">La energía necesaria para bombear no depende solo del volumen de agua, sino de una altura equivalente que resume el pozo, el depósito y las pérdidas por fricción.</p>
-
-      <div class="pump-diagram" style="margin-bottom:28px;">
-        <svg viewBox="0 0 640 340" id="pumpSvg"></svg>
-      </div>
-
-      <div class="grid3">
-        <div class="def-card"><h4>Nivel estático (H<sub>ST</sub>)</h4><p>Distancia entre el nivel del suelo y el nivel del agua antes de bombear.</p></div>
-        <div class="def-card"><h4>Nivel dinámico (H<sub>DT</sub>)</h4><p>Distancia entre el nivel del suelo y el nivel del agua tras la prueba de bombeo (el pozo baja al extraer agua).</p></div>
-        <div class="def-card"><h4>Caudal de prueba (Q<sub>T</sub>)</h4><p>Caudal extraído durante el ensayo que caracteriza el pozo, usado para estimar el descenso dinámico real.</p></div>
-      </div>
-      <p style="font-size:12.5px; color:var(--text-dimmer); margin-top:20px; max-width:680px;">Requisito obligatorio: el caudal bombeado no debe exceder el caudal máximo extraíble del pozo cuando el generador trabaja en Condiciones Estándar de Medida (CEM). Es responsabilidad del instalador solicitar al propietario un estudio de caracterización del pozo.</p>
-    </section>
-
-    <!-- 06 MANTENIMIENTO -->
-    <section id="mantenimiento">
-      <div class="eyebrow kicker">06 · Mantenimiento y garantías</div>
-      <h2>Tres años de contrato, revisión anual mínima.</h2>
-      <p class="lede">El contrato de mantenimiento preventivo y correctivo cubre, como mínimo, tres años, con una revisión anual completa.</p>
-
-      <div class="grid2">
-        <div class="card">
-          <div class="eyebrow" style="margin-bottom:12px;">Revisión anual mínima</div>
-          <div class="result-row"><span class="lbl">Cableado y conexiones</span><span class="val">Incluido</span></div>
-          <div class="result-row"><span class="lbl">Módulos: limpieza y daños</span><span class="val">Incluido</span></div>
-          <div class="result-row"><span class="lbl">Baterías de litio: BMS y balanceo</span><span class="val">Incluido</span></div>
-          <div class="result-row"><span class="lbl">Protecciones y tomas de tierra</span><span class="val">Incluido</span></div>
-          <div class="result-row"><span class="lbl">Sistemas con monitorización</span><span class="val">Revisión cada 6 meses</span></div>
-        </div>
-        <div class="card">
-          <div class="eyebrow" style="margin-bottom:12px;">Garantías</div>
-          <div class="result-row"><span class="lbl">Instalación completa</span><span class="val">3 años</span></div>
-          <div class="result-row"><span class="lbl">Módulos fotovoltaicos</span><span class="val">8 años</span></div>
-          <div class="result-row"><span class="lbl">Aviso si no funciona</span><span class="val">Atención &le;48h</span></div>
-          <div class="result-row"><span class="lbl">Aviso si fallo no crítico</span><span class="val">Atención &le;1 semana</span></div>
-          <div class="result-row"><span class="lbl">Recepción provisional</span><span class="val">&ge;240h sin fallos</span></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 07 PROYECTO E INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">07 · Proyecto e informe</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Proyecto e informe</div>
       <h2>Dimensiona tu sistema de bombeo y genera el informe.</h2>
       <p class="lede">Introduce los datos del pozo, el consumo y la radiación del emplazamiento: la calculadora reproduce paso a paso el método del Anexo I (verificado frente al ejemplo oficial del PCT) y comprueba los límites obligatorios de generador y acumulador.</p>
-
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:14px;">Datos del proyecto</div>
-        <div class="grid2">
-          <div class="field"><label>Cliente</label><input type="text" id="p_cliente" placeholder="Nombre del cliente"></div>
-          <div class="field"><label>Ubicación de la instalación</label><input type="text" id="p_direccion" placeholder="Finca, término municipal..."></div>
-          <div class="field"><label>Instalador / empresa instaladora</label><input type="text" id="p_instalador" placeholder="Nombre y empresa"></div>
-          <div class="field"><label>Referencia / expediente</label><input type="text" id="p_referencia" placeholder="Ref. interna (opcional)"></div>
-          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:28px;">
+<div class="card" style="margin-bottom:28px;">
         <div class="eyebrow" style="margin-bottom:6px;">Añadir sistema de bombeo</div>
         <div class="field"><label>Nombre / ubicación del sistema</label><input type="text" id="i_nombre" placeholder="Ej: Pozo finca Los Álamos"></div>
 
@@ -582,10 +322,296 @@
           <button class="btn primary" id="btnAddInst">+ Añadir sistema al informe</button>
         </div>
       </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
+      <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">IDAE — Pliego de Condiciones Técnicas de Instalaciones Aisladas de Red</div>
+          <h1>Sacar agua de un pozo<br>a golpe de <em>sol</em>, sin<br>quedarse corto.</h1>
+          <p class="sub">Resumen visual e interactivo del PCT-IDAE para instalaciones fotovoltaicas aisladas: los requisitos de componentes, el esquema del sistema de bombeo (Fig. 3, Anexo I) y una calculadora que replica el ejemplo oficial de dimensionado, para generar tu propio informe de proyecto. <strong style="color:var(--text);">Adaptado a acumuladores de litio (LiFePO4)</strong> — el PCT original solo contempla plomo-ácido; aquí se sustituyen sus criterios por los propios de litio.</p>
+        </div>
+        <div class="hero-meta">
+          <span>Guía técnica</span>
+          <span style="color:var(--amber)">PCT-IDAE Aisladas</span>
+          <span>Convocatoria FV 2002</span>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="v">3 días</div><div class="l">autonomía mínima del acumulador</div></div>
+        <div class="stat"><div class="v">PD &le; 90-95%</div><div class="l">profundidad de descarga admisible (litio)</div></div>
+        <div class="stat"><div class="v">Pmp &le; 1,2×Pmp,min</div><div class="l">sobredimensionado máx. del generador</div></div>
+        <div class="stat"><div class="v">Hf &lt; 10%</div><div class="l">pérdidas de fricción máx. en tuberías</div></div>
+      </div>
+    </header>
+      <h2>Las fórmulas del dimensionado, de la carga al generador.</h2>
+      <p class="lede">Resumen de los cálculos del Anexo I del PCT-IDAE, verificados frente al ejemplo oficial del propio documento (vivienda rural + bombeo, San Agustín de Guadalix). Es la base de la calculadora de la pestaña Informe.</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Altura total equivalente de bombeo</h3>
+          <p>Parámetro ficticio que resume la física del pozo, el depósito y las pérdidas de carga en un único valor de altura:</p>
+          <div class="formula-box">
+            <div class="f">H<sub>TE</sub> = H<sub>D</sub> + H<sub>ST</sub> + [(H<sub>DT</sub>−H<sub>ST</sub>)/Q<sub>T</sub>] &times; Q<sub>AP</sub> + H<sub>f</sub></div>
+            <small>Q_AP = Q_d / 24 (caudal medio, m³/h)</small>
+          </div>
+          <div class="var-list">
+            <span><b>H_D</b> altura depósito (m)</span><span><b>H_ST</b> nivel estático (m)</span>
+            <span><b>H_DT</b> nivel dinámico (m)</span><span><b>Q_T</b> caudal de prueba (m³/h)</span>
+            <span><b>H_f</b> pérdida por fricción (m)</span>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Energía eléctrica de la motobomba</h3>
+          <p>La constante 2,725 convierte volumen de agua (m³) y altura (m) directamente en energía hidráulica (Wh):</p>
+          <div class="formula-box">
+            <div class="f">E<sub>H</sub> = 2,725 &times; Q<sub>d</sub> &times; H<sub>TE</sub></div>
+            <div class="f" style="margin-top:6px;">E<sub>MB</sub> = E<sub>H</sub> / &eta;<sub>MB</sub></div>
+            <small>Q_d: volumen diario requerido (m³/día) · &eta;_MB: rendimiento motobomba (típico 0,4 para &gt;500W)</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Irradiación sobre el generador</h3>
+          <p>La irradiación horizontal se corrige por orientación, inclinación y sombras respecto al óptimo del período de diseño:</p>
+          <div class="formula-box">
+            <div class="f">G<sub>dm</sub>(&alpha;,&beta;) = G<sub>dm</sub>(0) &times; K &times; FI &times; FS</div>
+            <small>K según Tabla III (periodo de diseño) · FI: factor de irradiación · FS: factor de sombreado</small>
+          </div>
+          <div class="formula-box">
+            <div class="f" style="font-size:12.5px;">FI = 1 − [1,2&times;10<sup>−4</sup>(&beta;−&beta;<sub>opt</sub>)² + 3,5&times;10<sup>−5</sup>&alpha;²]　[&beta;&gt;15°]</div>
+            <small>Para &beta; &le; 15° se omite el término del azimut</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Potencia mínima del generador</h3>
+          <p>El generador se dimensiona para cubrir el consumo diario total con el rendimiento energético esperado de la instalación (PR):</p>
+          <div class="formula-box">
+            <div class="f">P<sub>mp,min</sub> = (E<sub>D</sub> &times; G<sub>CEM</sub>) / (G<sub>dm</sub>(&alpha;,&beta;) &times; PR)</div>
+            <small>G_CEM = 1 kW/m² · PR típico: 0,7 con inversor · 0,6 con inversor y batería</small>
+          </div>
+          <p>Límite: la potencia pico elegida no debe superar en más de un 20% este mínimo, salvo justificación expresa.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>5 · Autonomía del acumulador</h3>
+          <p>Días que el sistema puede alimentar el consumo previsto sin ninguna aportación solar, hasta la profundidad de descarga máxima permitida:</p>
+          <div class="formula-box">
+            <div class="f">A = (C &times; PD<sub>max</sub> &times; &eta;<sub>inv</sub> &times; &eta;<sub>rb</sub>) / L<sub>D</sub></div>
+            <small>L_D = E_D / V_NOM (consumo diario en Ah) · C: capacidad nominal del acumulador (Ah) · mínimo exigido: A &ge; 3 días</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>6 · Límites obligatorios de diseño (adaptados a litio)</h3>
+          <ul>
+            <li><b>Generador:</b> P<sub>mp</sub> &le; 1,2 &times; P<sub>mp,min</sub></li>
+            <li><b>Acumulador:</b> I<sub>sc</sub> generador &le; C-rate máx. de carga del BMS &times; C (corriente de carga dentro del límite que admite el BMS)</li>
+            <li><b>Autonomía:</b> mínimo 3 días con el acumulador elegido</li>
+            <li><b>Profundidad de descarga:</b> hasta 90-95% según fabricante (el litio LiFePO4 tolera bien la descarga profunda frecuente, a diferencia del plomo-ácido)</li>
+            <li><b>Fricción hidráulica:</b> H<sub>f</sub> &lt; 10% de H<sub>TE</sub></li>
+          </ul>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Objeto y definiciones</span></summary><div class="acc-cuerpo">
+<div id="objeto">
+      <h2>Un pliego de mínimos para cualquier instalación aislada.</h2>
+      <p class="lede">Fija las condiciones técnicas mínimas de las instalaciones fotovoltaicas aisladas de red: electrificación de viviendas, alumbrado público, aplicaciones agropecuarias, y bombeo y tratamiento de agua.</p>
+
+      <div class="grid4" style="margin-bottom:32px;">
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Ámbito</div><p style="font-size:13px; color:var(--text-dim);">Electrificación, alumbrado público, agropecuarias, bombeo, aplicaciones mixtas.</p></div>
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Aislamiento</div><p style="font-size:13px; color:var(--text-dim);">Mínimo clase I; se recomienda clase II sobre 50 V<sub>RMS</sub> o 120 V<sub>CC</sub>.</p></div>
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Grado IP</div><p style="font-size:13px; color:var(--text-dim);">IP65 mínimo a la intemperie, IP20 en interior.</p></div>
+        <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Garantía</div><p style="font-size:13px; color:var(--text-dim);">3 años instalación completa, 8 años los módulos fotovoltaicos.</p></div>
+      </div>
+
+      <div class="grid4">
+        <div class="def-card"><h4>Generador FV</h4><p>Asociación en paralelo de ramas fotovoltaicas, cada una con tensión igual a la nominal del generador.</p></div>
+        <div class="def-card"><h4>Acumulador</h4><p>Baterías de litio LiFePO4 (fosfato de hierro-litio), con BMS (sistema de gestión de batería) integrado obligatorio. Se descarta el plomo-ácido por su menor vida útil y peor tolerancia a la descarga profunda.</p></div>
+        <div class="def-card"><h4>Regulador de carga</h4><p>Protege la batería frente a sobrecargas y sobredescargas, cortando el suministro a las cargas si es necesario.</p></div>
+        <div class="def-card"><h4>Inversor</h4><p>Convierte CC en CA. Preferiblemente de onda senoidal pura; se admite onda no senoidal solo si P&lt;1kVA.</p></div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Orientación e inclinación</span></summary><div class="acc-cuerpo">
+<div id="diseno">
+      <h2>Cuánta radiación pierdes por no apuntar bien al sol.</h2>
+      <p class="lede">Las pérdidas por una orientación e inclinación distintas a las óptimas, y por sombreado, tienen topes máximos reglamentarios en el período de diseño elegido.</p>
+
+      <div class="card" style="padding:0; overflow-x:auto; margin-bottom:28px;">
+        <table class="data-table">
+          <thead><tr><th>Pérdida de radiación del generador</th><th>Valor máximo permitido</th></tr></thead>
+          <tbody>
+            <tr><td>Inclinación y orientación</td><td class="cellnum">20%</td></tr>
+            <tr><td>Sombras</td><td class="cellnum">10%</td></tr>
+            <tr><td>Combinación de ambas</td><td class="cellnum">20%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:14px;">Tabla III · Período de diseño e inclinación óptima</div>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Período de diseño</th><th>&beta;<sub>opt</sub></th><th>K</th><th>Cuándo se usa</th></tr></thead>
+          <tbody>
+            <tr><td>Diciembre</td><td class="cellnum">N + 10°</td><td class="cellnum">1,7</td><td>Consumo constante, mes de menor radiación</td></tr>
+            <tr><td>Julio</td><td class="cellnum">N − 20°</td><td class="cellnum">1,0</td><td>Bombeo con demanda estival, según localidad</td></tr>
+            <tr><td>Anual</td><td class="cellnum">N − 10°</td><td class="cellnum">1,15</td><td>Maximizar la producción anual</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">N = latitud del lugar, en grados. &beta;: inclinación elegida. &alpha;: azimut elegido (0° = sur).</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Componentes</span></summary><div class="acc-cuerpo">
+<div id="componentes">
+      <h2>Los mínimos de calidad, componente a componente.</h2>
+      <p class="lede">Cada elemento del sistema tiene requisitos propios de seguridad, protección y rendimiento.</p>
+
+      <div class="grid2" style="margin-bottom:16px;">
+        <div class="comp-card">
+          <h4>Generador fotovoltaico</h4>
+          <div class="result-row"><span class="lbl">Certificación</span><span class="val">UNE-EN 61215 / 61646</span></div>
+          <div class="result-row"><span class="lbl">Tolerancia potencia/Isc</span><span class="val">±10% s/catálogo</span></div>
+          <div class="result-row"><span class="lbl">Puesta a tierra</span><span class="val">Obligatoria si V&gt;48V</span></div>
+        </div>
+        <div class="comp-card">
+          <h4>Acumulador de litio (LiFePO4)</h4>
+          <div class="result-row"><span class="lbl">Corriente de carga máx.</span><span class="val">según C-rate del BMS (típ. 0,5-1C)</span></div>
+          <div class="result-row"><span class="lbl">Profundidad descarga máx.</span><span class="val">90-95% (según fabricante)</span></div>
+          <div class="result-row"><span class="lbl">Autodescarga a 20°C</span><span class="val">&le; 3%/mes</span></div>
+          <div class="result-row"><span class="lbl">Vida útil</span><span class="val">&gt;3000-6000 ciclos a 80% PD</span></div>
+          <div class="result-row"><span class="lbl">BMS integrado</span><span class="val">Obligatorio</span></div>
+        </div>
+        <div class="comp-card">
+          <h4>Regulador de carga</h4>
+          <div class="result-row"><span class="lbl">Sobrecarga admisible</span><span class="val">+25% Isc generador/consumo</span></div>
+          <div class="result-row"><span class="lbl">Caída de tensión interna</span><span class="val">&le;4% (&lt;1kW) / &le;2% (&gt;1kW)</span></div>
+          <div class="result-row"><span class="lbl">Autoconsumo diario</span><span class="val">&le;3% del consumo diario</span></div>
+        </div>
+        <div class="comp-card">
+          <h4>Inversor</h4>
+          <div class="result-row"><span class="lbl">Tensión / frecuencia salida</span><span class="val">±5% V<sub>NOM</sub> / 50Hz±2%</span></div>
+          <div class="result-row"><span class="lbl">Autoconsumo en vacío</span><span class="val">&le;2% potencia nominal</span></div>
+          <div class="result-row"><span class="lbl">Pérdidas diarias autoconsumo</span><span class="val">&le;5% consumo diario</span></div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:14px;">Tabla II · Rendimiento mínimo del inversor</div>
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Tipo de inversor</th><th>Rendimiento al 20% P<sub>nom</sub></th><th>Rendimiento a P<sub>nom</sub></th></tr></thead>
+          <tbody>
+            <tr><td>Onda senoidal, P&le;500 VA</td><td class="cellnum">&gt;80%</td><td class="cellnum">&gt;70%</td></tr>
+            <tr><td>Onda senoidal, P&gt;500 VA</td><td class="cellnum">&gt;85%</td><td class="cellnum">&gt;80%</td></tr>
+            <tr><td>Onda no senoidal (solo si P&lt;1kVA)</td><td class="cellnum">&gt;85%</td><td class="cellnum">&gt;80%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Cableado y protecciones</span></summary><div class="acc-cuerpo">
+<div id="cableado">
+      <h2>Cada tramo tiene su propio límite de caída de tensión.</h2>
+      <p class="lede">La sección de los conductores de la parte de corriente continua se elige para que la caída de tensión no supere estos límites, referidos a la tensión nominal continua del sistema.</p>
+
+      <div class="grid3" style="margin-bottom:16px;">
+        <div class="comp-card"><h4>Generador → regulador/inversor</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">3%</span></div></div>
+        <div class="comp-card"><h4>Regulador → batería</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
+        <div class="comp-card"><h4>Inversor → batería</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
+        <div class="comp-card"><h4>Regulador → inversor</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">1%</span></div></div>
+        <div class="comp-card"><h4>Inversor/regulador → cargas</h4><div class="result-row"><span class="lbl">Caída máx.</span><span class="val" style="font-size:18px; color:var(--amber);">3%</span></div></div>
+        <div class="comp-card"><h4>Puesta a tierra</h4><div class="result-row"><span class="lbl">Obligatoria si</span><span class="val" style="font-size:18px; color:var(--amber);">V&gt;48V</span></div></div>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dimmer);">La instalación estará protegida frente a cortocircuitos, sobrecargas y sobretensiones; especial atención a la protección de la batería mediante fusible o disyuntor magnetotérmico.</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Sistema de bombeo</span></summary><div class="acc-cuerpo">
+<div id="bombeo">
+      <h2>El esquema de la Fig. 3: del pozo al depósito.</h2>
+      <p class="lede">La energía necesaria para bombear no depende solo del volumen de agua, sino de una altura equivalente que resume el pozo, el depósito y las pérdidas por fricción.</p>
+
+      <div class="pump-diagram" style="margin-bottom:28px;">
+        <svg viewBox="0 0 640 340" id="pumpSvg"></svg>
+      </div>
+
+      <div class="grid3">
+        <div class="def-card"><h4>Nivel estático (H<sub>ST</sub>)</h4><p>Distancia entre el nivel del suelo y el nivel del agua antes de bombear.</p></div>
+        <div class="def-card"><h4>Nivel dinámico (H<sub>DT</sub>)</h4><p>Distancia entre el nivel del suelo y el nivel del agua tras la prueba de bombeo (el pozo baja al extraer agua).</p></div>
+        <div class="def-card"><h4>Caudal de prueba (Q<sub>T</sub>)</h4><p>Caudal extraído durante el ensayo que caracteriza el pozo, usado para estimar el descenso dinámico real.</p></div>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dimmer); margin-top:20px; max-width:680px;">Requisito obligatorio: el caudal bombeado no debe exceder el caudal máximo extraíble del pozo cuando el generador trabaja en Condiciones Estándar de Medida (CEM). Es responsabilidad del instalador solicitar al propietario un estudio de caracterización del pozo.</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Mantenimiento y garantías</span></summary><div class="acc-cuerpo">
+<div id="mantenimiento">
+      <h2>Tres años de contrato, revisión anual mínima.</h2>
+      <p class="lede">El contrato de mantenimiento preventivo y correctivo cubre, como mínimo, tres años, con una revisión anual completa.</p>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:12px;">Revisión anual mínima</div>
+          <div class="result-row"><span class="lbl">Cableado y conexiones</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Módulos: limpieza y daños</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Baterías de litio: BMS y balanceo</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Protecciones y tomas de tierra</span><span class="val">Incluido</span></div>
+          <div class="result-row"><span class="lbl">Sistemas con monitorización</span><span class="val">Revisión cada 6 meses</span></div>
+        </div>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:12px;">Garantías</div>
+          <div class="result-row"><span class="lbl">Instalación completa</span><span class="val">3 años</span></div>
+          <div class="result-row"><span class="lbl">Módulos fotovoltaicos</span><span class="val">8 años</span></div>
+          <div class="result-row"><span class="lbl">Aviso si no funciona</span><span class="val">Atención &le;48h</span></div>
+          <div class="result-row"><span class="lbl">Aviso si fallo no crítico</span><span class="val">Atención &le;1 semana</span></div>
+          <div class="result-row"><span class="lbl">Recepción provisional</span><span class="val">&ge;240h sin fallos</span></div>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:14px;">Datos del proyecto</div>
+        <div class="grid2">
+          <div class="field"><label>Cliente</label><input type="text" id="p_cliente" placeholder="Nombre del cliente"></div>
+          <div class="field"><label>Ubicación de la instalación</label><input type="text" id="p_direccion" placeholder="Finca, término municipal..."></div>
+          <div class="field"><label>Instalador / empresa instaladora</label><input type="text" id="p_instalador" placeholder="Nombre y empresa"></div>
+          <div class="field"><label>Referencia / expediente</label><input type="text" id="p_referencia" placeholder="Ref. interna (opcional)"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+      </div>
+      </div></details>
+      
+
+      
 
       <div class="eyebrow" style="margin-bottom:10px;">Sistemas del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún sistema. Rellena el formulario de arriba y pulsa "Añadir sistema al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún sistema. Rellena el formulario de la pestaña Simulación y pulsa "Añadir sistema al informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -595,6 +621,7 @@
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todos los sistemas</button>
       </div>
+    
     </section>
 
     <footer>
@@ -985,8 +1012,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1185,7 +1221,7 @@ function renderInstallationsPump(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(installationsPump.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún sistema. Rellena el formulario de arriba y pulsa "Añadir sistema al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún sistema. Rellena el formulario de la pestaña Simulación y pulsa "Añadir sistema al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';

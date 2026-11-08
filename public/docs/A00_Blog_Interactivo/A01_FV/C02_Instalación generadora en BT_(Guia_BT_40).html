@@ -353,6 +353,19 @@
 
   .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--amber); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -364,16 +377,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#objeto" data-sec="objeto"><span class="tag">01</span>Objeto y campo</a>
-    <a href="#clasificacion" data-sec="clasificacion"><span class="tag">02</span>Clasificación</a>
-    <a href="#esquemas" data-sec="esquemas"><span class="tag">03</span>Esquemas de conexión</a>
-    <a href="#potencia" data-sec="potencia"><span class="tag">04</span>Límites de potencia</a>
-    <a href="#sobretension" data-sec="sobretension"><span class="tag">05</span>Curvas de sobretensión</a>
-    <a href="#armonicos" data-sec="armonicos"><span class="tag">06</span>Calidad de onda</a>
-    <a href="#protecciones" data-sec="protecciones"><span class="tag">07</span>Protecciones mínimas</a>
-    <a href="#tierra" data-sec="tierra"><span class="tag">08</span>Puesta a tierra</a>
-    <a href="#informe" data-sec="informe"><span class="tag">09</span>Proyecto e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -404,7 +410,114 @@
 
     <!-- HERO -->
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="potencia" class="tab-bloque">
+      <div class="eyebrow kicker">Límites de potencia interconectada</div>
+      <h2>¿Tu generador cabe en la red?</h2>
+      <p class="lede">La suma de potencias nominales de los generadores no puede superar un tope fijo <em>ni</em> la mitad de la capacidad del centro de transformación al que se conectan. Introduce tus datos y comprueba si cumples.</p>
+
+      <div class="calc">
+        <div>
+          <div class="field">
+            <label>Tipo de red</label>
+            <select id="netType">
+              <option value="400">Trifásica 3×400/230 V (límite fijo: 100 kVA)</option>
+              <option value="220">Trifásica 3×220/127 V (límite fijo: 60 kVA)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Potencia nominal total del generador (kVA)</label>
+            <input type="number" id="genPower" value="45" min="0" step="0.1">
+          </div>
+          <div class="field">
+            <label>Capacidad de salida del centro de transformación (kVA)</label>
+            <input type="number" id="ctCapacity" value="160" min="0" step="1">
+          </div>
+          <div class="checkline">
+            <input type="checkbox" id="isWind">
+            <label for="isWind" style="margin:0; text-transform:none; font-family:var(--font-body);">Es un generador eólico (límite adicional: 5% de la potencia de cortocircuito)</label>
+          </div>
+          <div class="field" id="scField" style="display:none;">
+            <label>Potencia de cortocircuito en el punto de conexión (kVA)</label>
+            <input type="number" id="scPower" value="1200" min="0" step="10">
+          </div>
+        </div>
+
+        <div class="result-panel" id="calcResults"></div>
+      </div>
+    
+      </div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Proyecto e informe</div>
+      <h2>Verifica tu instalación y genera el informe para el cliente.</h2>
+      <p class="lede">Añade cada instalación generadora de tu proyecto, comprueba automáticamente el límite de potencia y el checklist de protecciones, y descarga un informe en PDF listo para presentar.</p>
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:14px;">Añadir instalación generadora</div>
+        <div class="field"><label>Nombre / ubicación</label><input type="text" id="i_nombre" placeholder="Ej: Planta FV cubierta nave 2"></div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Clasificación</label>
+            <select id="i_clasificacion">
+              <option value="aislada">Aislada</option>
+              <option value="asistida">Asistida</option>
+              <option value="c1" selected>Interconectada — C1 (BT)</option>
+              <option value="c2">Interconectada — C2 (vía AT)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Esquema de conexión</label>
+            <select id="i_esquema"></select>
+          </div>
+        </div>
+
+        <div class="grid3" id="i_potenciaFields">
+          <div class="field">
+            <label>Tipo de red</label>
+            <select id="i_netType">
+              <option value="400">3×400/230 V (límite fijo 100 kVA)</option>
+              <option value="220">3×220/127 V (límite fijo 60 kVA)</option>
+            </select>
+          </div>
+          <div class="field"><label>Potencia nominal generador (kVA)</label><input type="number" id="i_genPower" value="45" min="0" step="0.1"></div>
+          <div class="field"><label>Capacidad del CT (kVA)</label><input type="number" id="i_ctCapacity" value="160" min="0" step="1"></div>
+        </div>
+        <div class="checkline" id="i_windWrap">
+          <input type="checkbox" id="i_isWind">
+          <label for="i_isWind" style="margin:0; text-transform:none; font-family:var(--font-body);">Es un generador eólico (límite adicional: 5% de la potencia de cortocircuito)</label>
+        </div>
+        <div class="field" id="i_scField" style="display:none; max-width:300px;">
+          <label>Potencia de cortocircuito en el punto de conexión (kVA)</label>
+          <input type="number" id="i_scPower" value="1200" min="0" step="10">
+        </div>
+
+        <div class="eyebrow" style="margin:20px 0 10px;">Checklist de protecciones instaladas</div>
+        <div class="grid2">
+          <label class="radio-opt"><input type="checkbox" id="chk_umin" checked> Mínima tensión, &lt;85% Un, &lt;0,5s</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_umax" checked> Sobretensión, &gt;110% Un, &lt;0,5s</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_fmin" checked> Mínima frecuencia, &lt;49 Hz</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_fmax" checked> Máxima frecuencia, &gt;51 Hz</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_sync" checked> Ventana de sincronismo (&plusmn;8% / &plusmn;0,1Hz / &plusmn;10&deg;)</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_tierra" checked> Puesta a tierra según modo de funcionamiento</label>
+        </div>
+
+        <div class="field" style="margin-top:16px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Añadir instalación al informe</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
         <div class="hero-top">
           <div>
@@ -434,8 +547,6 @@
           <div class="stat"><div class="v">16</div><div class="l">esquemas de conexión normalizados</div></div>
         </div>
       </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
       <h2>Las fórmulas y criterios detrás de cada límite.</h2>
       <p class="lede">Resumen de los criterios técnicos de la GUÍA-BT-40 que se usan más abajo, tanto en las secciones de lectura como en la calculadora de proyecto. Para el desarrollo completo, consulta el documento oficial enlazado al pie de página.</p>
 
@@ -500,11 +611,11 @@
           </ul>
         </div>
       </div>
-    </section>
-
-    <!-- 01 OBJETO -->
-    <section id="objeto">
-      <div class="eyebrow kicker">01 · Objeto y campo de aplicación</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Objeto y campo</span></summary><div class="acc-cuerpo">
+<div id="objeto">
       <h2>Toda fuente que convierta energía en electricidad, si se conecta en baja tensión.</h2>
       <p class="lede">La instrucción aplica a cualquier <strong>instalación generadora</strong>: equipos que transforman energía no eléctrica en energía eléctrica, sea cual sea la tecnología. No importa si vendes energía, autoconsumes, o alimentas una instalación aislada de la red: si genera en BT, esta guía te aplica.</p>
 
@@ -523,11 +634,11 @@
         </div>
       </div>
       <p style="font-size:13px; color:var(--text-dimmer); max-width:680px;">Aunque la guía es general, dedica especial atención a la <strong style="color:var(--text-dim);">energía solar fotovoltaica</strong> por su fuerte penetración en redes de media y baja tensión.</p>
-    </section>
-
-    <!-- 02 CLASIFICACION -->
-    <section id="clasificacion">
-      <div class="eyebrow kicker">02 · Clasificación</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Clasificación</span></summary><div class="acc-cuerpo">
+<div id="clasificacion">
       <h2>Tres formas de relacionarse con la red pública.</h2>
       <p class="lede">La instalación generadora se clasifica según su funcionamiento respecto a la Red de Distribución Pública. Este único criterio determina qué esquema de conexión, qué protecciones y qué puesta a tierra necesitas.</p>
 
@@ -548,11 +659,11 @@
           <p>Trabaja normalmente <strong>en paralelo</strong> con la red pública. Se subdivide en C1 (conexión en red de BT) y C2 (conexión en red de AT vía transformador elevador, sin otras cargas de BT ajenas conectadas).</p>
         </div>
       </div>
-    </section>
-
-    <!-- 03 ESQUEMAS -->
-    <section id="esquemas">
-      <div class="eyebrow kicker">03 · Esquemas de conexión</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Esquemas de conexión</span></summary><div class="acc-cuerpo">
+<div id="esquemas">
       <h2>16 topologías normalizadas, según titular, ubicación y medida.</h2>
       <p class="lede">Cada esquema (Esq-1 a Esq-16) combina cinco variables: quién es el titular, dónde se conecta la generación, el modo de funcionamiento, la ubicación física y el tipo de contador. Filtra por categoría para encontrar el tuyo.</p>
 
@@ -566,48 +677,11 @@
       </div>
 
       <div class="scheme-grid" id="schemeGrid"></div>
-    </section>
-
-    <!-- 04 POTENCIA -->
-    <section id="potencia">
-      <div class="eyebrow kicker">04 · Límites de potencia interconectada</div>
-      <h2>¿Tu generador cabe en la red?</h2>
-      <p class="lede">La suma de potencias nominales de los generadores no puede superar un tope fijo <em>ni</em> la mitad de la capacidad del centro de transformación al que se conectan. Introduce tus datos y comprueba si cumples.</p>
-
-      <div class="calc">
-        <div>
-          <div class="field">
-            <label>Tipo de red</label>
-            <select id="netType">
-              <option value="400">Trifásica 3×400/230 V (límite fijo: 100 kVA)</option>
-              <option value="220">Trifásica 3×220/127 V (límite fijo: 60 kVA)</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Potencia nominal total del generador (kVA)</label>
-            <input type="number" id="genPower" value="45" min="0" step="0.1">
-          </div>
-          <div class="field">
-            <label>Capacidad de salida del centro de transformación (kVA)</label>
-            <input type="number" id="ctCapacity" value="160" min="0" step="1">
-          </div>
-          <div class="checkline">
-            <input type="checkbox" id="isWind">
-            <label for="isWind" style="margin:0; text-transform:none; font-family:var(--font-body);">Es un generador eólico (límite adicional: 5% de la potencia de cortocircuito)</label>
-          </div>
-          <div class="field" id="scField" style="display:none;">
-            <label>Potencia de cortocircuito en el punto de conexión (kVA)</label>
-            <input type="number" id="scPower" value="1200" min="0" step="10">
-          </div>
-        </div>
-
-        <div class="result-panel" id="calcResults"></div>
-      </div>
-    </section>
-
-    <!-- 05 SOBRETENSION -->
-    <section id="sobretension">
-      <div class="eyebrow kicker">05 · Curvas de sobretensión transitoria</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Curvas de sobretensión</span></summary><div class="acc-cuerpo">
+<div id="sobretension">
       <h2>Cuanto más breve el transitorio, mayor sobretensión se tolera.</h2>
       <p class="lede">Al desconectar el generador, no debe generar sobretensiones por encima de estos límites. Se definen dos grupos: <strong style="color:var(--cyan)">Grupo 1</strong> (instalaciones tipo C1, conectadas directamente en BT) y <strong style="color:var(--amber)">Grupo 2</strong> (instalaciones tipo C2, conectadas en AT vía transformador). Pasa el cursor sobre la curva para leer valores.</p>
 
@@ -620,11 +694,11 @@
         </div>
       </div>
       <p style="font-size:12.5px; color:var(--text-dimmer); margin-top:16px; max-width:680px;">Ensayo: se abre el interruptor de conexión con tensión de red al ±5% del valor nominal, a potencia &gt;50% de la asignada, y se registra la tensión en bornas con muestreo ≥10 kHz. Se repite 3 veces; la curva registrada debe quedar por debajo del límite en todos los puntos.</p>
-    </section>
-
-    <!-- 06 ARMONICOS -->
-    <section id="armonicos">
-      <div class="eyebrow kicker">06 · Calidad de onda — límites de armónicos</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Calidad de onda</span></summary><div class="acc-cuerpo">
+<div id="armonicos">
       <h2>La tensión generada debe ser prácticamente senoidal.</h2>
       <p class="lede">La tasa máxima de armónicos depende del orden <code class="inline">n</code>: los pares se limitan al <code class="inline">4/n</code>%, el 3er armónico al 5% fijo, y los impares ≥5 al <code class="inline">25/n</code>%. Explora los primeros 25 órdenes.</p>
 
@@ -636,11 +710,11 @@
           <div class="legend-item"><span class="legend-swatch" style="background:var(--amber)"></span>Armónico impar ≥5 — 25/n %</div>
         </div>
       </div>
-    </section>
-
-    <!-- 07 PROTECCIONES -->
-    <section id="protecciones">
-      <div class="eyebrow kicker">07 · Protecciones mínimas</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Protecciones mínimas</span></summary><div class="acc-cuerpo">
+<div id="protecciones">
       <h2>Cuatro disparos obligatorios en el punto de interconexión.</h2>
       <p class="lede">Además de la protección contra sobreintensidades y contactos indirectos, la instalación debe disparar automáticamente ante estas cuatro condiciones de red.</p>
 
@@ -686,11 +760,11 @@
           <div class="result-row"><span class="lbl">Reconexión tras pérdida de red</span><span class="val">red estable ≥ 3 min</span></div>
         </div>
       </div>
-    </section>
-
-    <!-- 08 TIERRA -->
-    <section id="tierra">
-      <div class="eyebrow kicker">08 · Instalaciones de puesta a tierra</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Puesta a tierra</span></summary><div class="acc-cuerpo">
+<div id="tierra">
       <h2>La tierra sigue al modo de funcionamiento.</h2>
       <p class="lede">El esquema de puesta a tierra no es fijo: cambia según si la instalación es aislada, asistida o interconectada, para evitar que un defecto se transfiera entre la generación y la Red de Distribución Pública.</p>
 
@@ -719,15 +793,17 @@
           </ul>
         </div>
       </div>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 09 PROYECTO E INFORME -->
+    <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">09 · Proyecto e informe</div>
-      <h2>Verifica tu instalación y genera el informe para el cliente.</h2>
-      <p class="lede">Añade cada instalación generadora de tu proyecto, comprueba automáticamente el límite de potencia y el checklist de protecciones, y descarga un informe en PDF listo para presentar.</p>
+      <div class="eyebrow kicker">02 · Informe</div>
 
-      <div class="card" style="margin-bottom:28px;">
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div class="card" style="margin-bottom:28px;">
         <div class="eyebrow" style="margin-bottom:14px;">Datos del proyecto</div>
         <div class="grid2">
           <div class="field"><label>Cliente</label><input type="text" id="p_cliente" placeholder="Nombre del cliente"></div>
@@ -737,67 +813,14 @@
           <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
         </div>
       </div>
+      </div></details>
+      
 
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:14px;">Añadir instalación generadora</div>
-        <div class="field"><label>Nombre / ubicación</label><input type="text" id="i_nombre" placeholder="Ej: Planta FV cubierta nave 2"></div>
-
-        <div class="grid2">
-          <div class="field">
-            <label>Clasificación</label>
-            <select id="i_clasificacion">
-              <option value="aislada">Aislada</option>
-              <option value="asistida">Asistida</option>
-              <option value="c1" selected>Interconectada — C1 (BT)</option>
-              <option value="c2">Interconectada — C2 (vía AT)</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Esquema de conexión</label>
-            <select id="i_esquema"></select>
-          </div>
-        </div>
-
-        <div class="grid3" id="i_potenciaFields">
-          <div class="field">
-            <label>Tipo de red</label>
-            <select id="i_netType">
-              <option value="400">3×400/230 V (límite fijo 100 kVA)</option>
-              <option value="220">3×220/127 V (límite fijo 60 kVA)</option>
-            </select>
-          </div>
-          <div class="field"><label>Potencia nominal generador (kVA)</label><input type="number" id="i_genPower" value="45" min="0" step="0.1"></div>
-          <div class="field"><label>Capacidad del CT (kVA)</label><input type="number" id="i_ctCapacity" value="160" min="0" step="1"></div>
-        </div>
-        <div class="checkline" id="i_windWrap">
-          <input type="checkbox" id="i_isWind">
-          <label for="i_isWind" style="margin:0; text-transform:none; font-family:var(--font-body);">Es un generador eólico (límite adicional: 5% de la potencia de cortocircuito)</label>
-        </div>
-        <div class="field" id="i_scField" style="display:none; max-width:300px;">
-          <label>Potencia de cortocircuito en el punto de conexión (kVA)</label>
-          <input type="number" id="i_scPower" value="1200" min="0" step="10">
-        </div>
-
-        <div class="eyebrow" style="margin:20px 0 10px;">Checklist de protecciones instaladas</div>
-        <div class="grid2">
-          <label class="radio-opt"><input type="checkbox" id="chk_umin" checked> Mínima tensión, &lt;85% Un, &lt;0,5s</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_umax" checked> Sobretensión, &gt;110% Un, &lt;0,5s</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_fmin" checked> Mínima frecuencia, &lt;49 Hz</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_fmax" checked> Máxima frecuencia, &gt;51 Hz</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_sync" checked> Ventana de sincronismo (&plusmn;8% / &plusmn;0,1Hz / &plusmn;10&deg;)</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_tierra" checked> Puesta a tierra según modo de funcionamiento</label>
-        </div>
-
-        <div class="field" style="margin-top:16px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
-
-        <div class="btn-row">
-          <button class="btn primary" id="btnAddInst">+ Añadir instalación al informe</button>
-        </div>
-      </div>
+      
 
       <div class="eyebrow" style="margin-bottom:10px;">Instalaciones del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has añadido ninguna instalación. Rellena el formulario de arriba y pulsa "Añadir instalación al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ninguna instalación. Rellena el formulario de la pestaña Simulación y pulsa "Añadir instalación al informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -807,6 +830,7 @@
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todas las instalaciones</button>
       </div>
+    
     </section>
 
     <footer>
@@ -1196,8 +1220,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1696,7 +1729,7 @@ function renderInstallations(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(installations.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has añadido ninguna instalación. Rellena el formulario de arriba y pulsa "Añadir instalación al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ninguna instalación. Rellena el formulario de la pestaña Simulación y pulsa "Añadir instalación al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';

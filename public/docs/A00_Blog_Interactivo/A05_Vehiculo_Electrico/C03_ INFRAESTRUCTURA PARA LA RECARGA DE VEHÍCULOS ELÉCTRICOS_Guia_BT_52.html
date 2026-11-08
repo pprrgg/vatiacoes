@@ -251,6 +251,19 @@
 
   .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel); border:1px solid var(--green); color:var(--text); padding:12px 22px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12.5px; opacity:0; transition:all .25s ease; z-index:50; pointer-events:none;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -263,16 +276,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#objeto" data-sec="objeto"><span class="tag">01</span>Objeto y ámbito</a>
-    <a href="#modos" data-sec="modos"><span class="tag">02</span>Modos de carga</a>
-    <a href="#esquemas" data-sec="esquemas"><span class="tag">03</span>Esquemas de instalación</a>
-    <a href="#potencias" data-sec="potencias"><span class="tag">04</span>Potencias normalizadas</a>
-    <a href="#cargas" data-sec="cargas"><span class="tag">05</span>Previsión de cargas</a>
-    <a href="#protecciones" data-sec="protecciones"><span class="tag">06</span>Protecciones</a>
-    <a href="#grados" data-sec="grados"><span class="tag">07</span>Grados IP / IK</a>
-    <a href="#tierra" data-sec="tierra"><span class="tag">08</span>Puesta a tierra exterior</a>
-    <a href="#informe" data-sec="informe"><span class="tag">09</span>Proyecto e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -300,7 +306,118 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="cargas" class="tab-bloque">
+      <div class="eyebrow kicker">Previsión de cargas</div>
+      <h2>¿Necesitas un SPL para no reforzar la acometida?</h2>
+      <p class="lede">En esquemas colectivos con contador principal común, instalar un Sistema de Protección de la LGA (SPL) permite bajar el factor de simultaneidad de la recarga del 1,0 al 0,3 — es decir, dimensionar la instalación para solo el 30% de la potencia total de los puntos de recarga.</p>
+
+      <div class="calc">
+        <div>
+          <div class="field">
+            <label>Número de estaciones de recarga (N)</label>
+            <input type="number" id="nStations" value="12" min="1" step="1">
+          </div>
+          <div class="field">
+            <label>Potencia por estación (W)</label>
+            <input type="number" id="powerPerStation" value="3680" min="0" step="10">
+          </div>
+          <div class="field">
+            <label>¿Se instala SPL (sistema de protección de la LGA)?</label>
+            <select id="hasSPL">
+              <option value="yes">Sí — factor de simultaneidad FS1 = 0,3</option>
+              <option value="no">No — factor de simultaneidad FS1 = 1,0</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Número de plazas de garaje totales (para P5 mínimo)</label>
+            <input type="number" id="totalPlazas" value="40" min="1" step="1">
+          </div>
+          <div class="field">
+            <label>Tipo de edificio</label>
+            <select id="buildingType">
+              <option value="res">Residencial (propiedad horizontal) — 10% de plazas</option>
+              <option value="nores">No residencial (oficinas/comercial) — 1 cada 40 plazas</option>
+            </select>
+          </div>
+        </div>
+        <div class="result-panel" id="cargaResults"></div>
+      </div>
+    
+      </div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Proyecto e informe</div>
+      <h2>Verifica tu instalación y genera el informe para el cliente.</h2>
+      <p class="lede">Añade cada punto o grupo de recarga de tu proyecto, comprueba automáticamente la previsión de carga y el checklist de protecciones, y descarga un informe en PDF listo para presentar.</p>
+<div class="card" style="margin-bottom:28px;">
+        <div class="eyebrow" style="margin-bottom:14px;">Añadir punto / grupo de recarga</div>
+        <div class="field"><label>Nombre / ubicación</label><input type="text" id="i_nombre" placeholder="Ej: Garaje comunitario, plantas -1/-2"></div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Esquema de instalación</label>
+            <select id="i_esquema"></select>
+          </div>
+          <div class="field">
+            <label>Modo de carga predominante</label>
+            <select id="i_modo">
+              <option value="1">Modo 1 — toma normalizada</option>
+              <option value="2">Modo 2 — con protección en cable</option>
+              <option value="3" selected>Modo 3 — SAVE conectado fijo</option>
+              <option value="4">Modo 4 — carga rápida en CC</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid3">
+          <div class="field"><label>Número de estaciones (N)</label><input type="number" id="i_nStations" value="12" min="1" step="1"></div>
+          <div class="field"><label>Potencia por estación (W)</label><input type="number" id="i_powerPerStation" value="3680" min="0" step="10"></div>
+          <div class="field">
+            <label>¿SPL instalado?</label>
+            <select id="i_hasSPL">
+              <option value="yes">Sí — FS1 = 0,3</option>
+              <option value="no">No — FS1 = 1,0</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Nº de plazas totales del aparcamiento</label><input type="number" id="i_totalPlazas" value="40" min="1" step="1"></div>
+          <div class="field">
+            <label>Tipo de edificio</label>
+            <select id="i_buildingType">
+              <option value="res">Residencial — 10% de plazas</option>
+              <option value="nores">No residencial — 1 cada 40 plazas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="eyebrow" style="margin:20px 0 10px;">Checklist de protecciones instaladas</div>
+        <div class="grid2">
+          <label class="radio-opt"><input type="checkbox" id="chk_dif" checked> Diferencial 30 mA tipo A (o B) por punto</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_sobreint" checked> Sobreintensidad curva C, corte omnipolar</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_sobretension" checked> Sobretensión permanente &le;440V + transitoria Tipo 1/2</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_dedicado" checked> Circuito dedicado y exclusivo por punto</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_ip" checked> Grado IP/IK adecuado a la ubicación</label>
+          <label class="radio-opt"><input type="checkbox" id="chk_tierra52" checked> Puesta a tierra &le;24V si es exterior</label>
+        </div>
+
+        <div class="field" style="margin-top:16px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="btnAddInst">+ Añadir punto de recarga al informe</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
       <header class="hero">
       <div class="hero-top">
         <div>
@@ -330,8 +447,6 @@
         <div class="stat"><div class="v">8</div><div class="l">esquemas de instalación normalizados</div></div>
       </div>
     </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
       <h2>Las fórmulas y criterios detrás de cada límite.</h2>
       <p class="lede">Resumen de los criterios técnicos de la GUÍA-BT-52 que se usan más abajo, tanto en las secciones de lectura como en la calculadora de proyecto. Para el desarrollo completo, consulta el documento oficial enlazado al pie de página.</p>
 
@@ -396,11 +511,11 @@
           </div>
         </div>
       </div>
-    </section>
-
-    <!-- 01 OBJETO -->
-    <section id="objeto">
-      <div class="eyebrow kicker">01 · Objeto y ámbito de aplicación</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Objeto y ámbito</span></summary><div class="acc-cuerpo">
+<div id="objeto">
       <h2>Toda instalación eléctrica fija que recargue un vehículo eléctrico.</h2>
       <p class="lede">La guía cubre las instalaciones necesarias para la recarga de vehículos eléctricos en lugares públicos o privados, sea cual sea el titular: particular, comunidad de propietarios o gestor de cargas. No aplica a la recarga por inducción ni a baterías que desprendan gases durante la recarga.</p>
 
@@ -411,11 +526,11 @@
         <div class="card"><div class="eyebrow" style="margin-bottom:8px; font-size:10px;">Ámbito d/e</div><p style="font-size:13px; color:var(--text-dim);">Aparcamientos públicos y vía pública</p></div>
       </div>
       <p style="font-size:13px; color:var(--text-dimmer); max-width:680px;">Dotación mínima reglamentaria fuera del ámbito del CTE: <strong style="color:var(--text-dim);">1 estación de recarga por cada 40 plazas</strong> o fracción, en aparcamientos de nueva construcción no adscritos a un edificio.</p>
-    </section>
-
-    <!-- 02 MODOS -->
-    <section id="modos">
-      <div class="eyebrow kicker">02 · Modos de carga</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Modos de carga</span></summary><div class="acc-cuerpo">
+<div id="modos">
       <h2>Cuatro formas de conectar el vehículo a la red.</h2>
       <p class="lede">El modo de carga define cómo se conecta el vehículo a la instalación fija: qué protecciones lleva integradas el cable, y si existe comunicación (función de control piloto) entre el vehículo y la instalación.</p>
 
@@ -445,11 +560,11 @@
           <div class="spec">Hasta 1000V CA / 1500V CC</div>
         </div>
       </div>
-    </section>
-
-    <!-- 03 ESQUEMAS -->
-    <section id="esquemas">
-      <div class="eyebrow kicker">03 · Esquemas de instalación</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Esquemas de instalación</span></summary><div class="acc-cuerpo">
+<div id="esquemas">
       <h2>8 topologías, según quién mide y quién paga la energía.</h2>
       <p class="lede">La elección de esquema determina si hay contador principal común o individual, si el circuito es colectivo o dedicado, y cómo se reparte la previsión de potencia entre viviendas y recarga.</p>
 
@@ -460,11 +575,11 @@
       </div>
 
       <div class="scheme-grid" id="schemeGrid"></div>
-    </section>
-
-    <!-- 04 POTENCIAS -->
-    <section id="potencias">
-      <div class="eyebrow kicker">04 · Potencias instaladas normalizadas</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Potencias normalizadas</span></summary><div class="acc-cuerpo">
+<div id="potencias">
       <h2>Los escalones de la tabla, de un vistazo.</h2>
       <p class="lede">La guía normaliza la potencia instalada según el interruptor automático de origen, tanto para viviendas unifamiliares (circuito C13) como para circuitos colectivos trifásicos.</p>
 
@@ -503,50 +618,11 @@
           </tbody>
         </table>
       </div>
-    </section>
-
-    <!-- 05 CARGAS -->
-    <section id="cargas">
-      <div class="eyebrow kicker">05 · Previsión de cargas</div>
-      <h2>¿Necesitas un SPL para no reforzar la acometida?</h2>
-      <p class="lede">En esquemas colectivos con contador principal común, instalar un Sistema de Protección de la LGA (SPL) permite bajar el factor de simultaneidad de la recarga del 1,0 al 0,3 — es decir, dimensionar la instalación para solo el 30% de la potencia total de los puntos de recarga.</p>
-
-      <div class="calc">
-        <div>
-          <div class="field">
-            <label>Número de estaciones de recarga (N)</label>
-            <input type="number" id="nStations" value="12" min="1" step="1">
-          </div>
-          <div class="field">
-            <label>Potencia por estación (W)</label>
-            <input type="number" id="powerPerStation" value="3680" min="0" step="10">
-          </div>
-          <div class="field">
-            <label>¿Se instala SPL (sistema de protección de la LGA)?</label>
-            <select id="hasSPL">
-              <option value="yes">Sí — factor de simultaneidad FS1 = 0,3</option>
-              <option value="no">No — factor de simultaneidad FS1 = 1,0</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Número de plazas de garaje totales (para P5 mínimo)</label>
-            <input type="number" id="totalPlazas" value="40" min="1" step="1">
-          </div>
-          <div class="field">
-            <label>Tipo de edificio</label>
-            <select id="buildingType">
-              <option value="res">Residencial (propiedad horizontal) — 10% de plazas</option>
-              <option value="nores">No residencial (oficinas/comercial) — 1 cada 40 plazas</option>
-            </select>
-          </div>
-        </div>
-        <div class="result-panel" id="cargaResults"></div>
-      </div>
-    </section>
-
-    <!-- 06 PROTECCIONES -->
-    <section id="protecciones">
-      <div class="eyebrow kicker">06 · Protección para garantizar la seguridad</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Protecciones</span></summary><div class="acc-cuerpo">
+<div id="protecciones">
       <h2>Cada punto de conexión, protegido de forma individual.</h2>
       <p class="lede">Con independencia del esquema elegido, la guía exige protección diferencial y contra sobreintensidades por cada punto de recarga, más protección de sobretensión en el origen de la instalación.</p>
 
@@ -587,11 +663,11 @@
           <div class="result-row"><span class="lbl">Caída de tensión máx.</span><span class="val">5% hasta el punto de recarga</span></div>
         </div>
       </div>
-    </section>
-
-    <!-- 07 GRADOS IP/IK -->
-    <section id="grados">
-      <div class="eyebrow kicker">07 · Grados de protección IP / IK</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Grados IP / IK</span></summary><div class="acc-cuerpo">
+<div id="grados">
       <h2>Interior, exterior, y golpes de coche.</h2>
       <p class="lede">Las estaciones de recarga deben soportar el ambiente de un garaje o una calle, y el riesgo de impacto de los propios vehículos maniobrando.</p>
 
@@ -602,11 +678,11 @@
         <div class="ip-card"><div class="code">IK10</div><div class="label">Impacto mecánico</div><div class="env">cuerpo de la estación, exterior</div></div>
       </div>
       <p style="font-size:12.5px; color:var(--text-dimmer); margin-top:20px; max-width:680px;">Las canalizaciones en zonas de circulación de vehículos requieren tubos con resistencia al impacto grado 4 (o grado 5 si hay riesgo de choque elevado) y resistencia a compresión grado 5. El grado de protección de la estación no aplica durante el proceso de recarga (el vehículo conectado puede reducirlo puntualmente).</p>
-    </section>
-
-    <!-- 08 TIERRA -->
-    <section id="tierra">
-      <div class="eyebrow kicker">08 · Red de tierra para plazas exteriores</div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Puesta a tierra exterior</span></summary><div class="acc-cuerpo">
+<div id="tierra">
       <h2>24 V es el límite, no una referencia.</h2>
       <p class="lede">En vía pública o aparcamientos exteriores, la puesta a tierra debe garantizar que ninguna parte metálica accesible supere una tensión de contacto de 24 V, en cualquier época del año.</p>
 
@@ -627,15 +703,17 @@
           <p style="font-size:12.5px; color:var(--text-dim); margin-top:8px;">Cable unipolar 450/750V, verde-amarillo, de cada punto al electrodo o red de tierra.</p>
         </div>
       </div>
+    
+</div>
+      </div></details>
     </section>
 
-    <!-- 09 PROYECTO E INFORME -->
+    <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">09 · Proyecto e informe</div>
-      <h2>Verifica tu instalación y genera el informe para el cliente.</h2>
-      <p class="lede">Añade cada punto o grupo de recarga de tu proyecto, comprueba automáticamente la previsión de carga y el checklist de protecciones, y descarga un informe en PDF listo para presentar.</p>
+      <div class="eyebrow kicker">02 · Informe</div>
 
-      <div class="card" style="margin-bottom:28px;">
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div class="card" style="margin-bottom:28px;">
         <div class="eyebrow" style="margin-bottom:14px;">Datos del proyecto</div>
         <div class="grid2">
           <div class="field"><label>Cliente</label><input type="text" id="p_cliente" placeholder="Nombre del cliente o comunidad"></div>
@@ -645,69 +723,14 @@
           <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
         </div>
       </div>
+      </div></details>
+      
 
-      <div class="card" style="margin-bottom:28px;">
-        <div class="eyebrow" style="margin-bottom:14px;">Añadir punto / grupo de recarga</div>
-        <div class="field"><label>Nombre / ubicación</label><input type="text" id="i_nombre" placeholder="Ej: Garaje comunitario, plantas -1/-2"></div>
-
-        <div class="grid2">
-          <div class="field">
-            <label>Esquema de instalación</label>
-            <select id="i_esquema"></select>
-          </div>
-          <div class="field">
-            <label>Modo de carga predominante</label>
-            <select id="i_modo">
-              <option value="1">Modo 1 — toma normalizada</option>
-              <option value="2">Modo 2 — con protección en cable</option>
-              <option value="3" selected>Modo 3 — SAVE conectado fijo</option>
-              <option value="4">Modo 4 — carga rápida en CC</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid3">
-          <div class="field"><label>Número de estaciones (N)</label><input type="number" id="i_nStations" value="12" min="1" step="1"></div>
-          <div class="field"><label>Potencia por estación (W)</label><input type="number" id="i_powerPerStation" value="3680" min="0" step="10"></div>
-          <div class="field">
-            <label>¿SPL instalado?</label>
-            <select id="i_hasSPL">
-              <option value="yes">Sí — FS1 = 0,3</option>
-              <option value="no">No — FS1 = 1,0</option>
-            </select>
-          </div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>Nº de plazas totales del aparcamiento</label><input type="number" id="i_totalPlazas" value="40" min="1" step="1"></div>
-          <div class="field">
-            <label>Tipo de edificio</label>
-            <select id="i_buildingType">
-              <option value="res">Residencial — 10% de plazas</option>
-              <option value="nores">No residencial — 1 cada 40 plazas</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="eyebrow" style="margin:20px 0 10px;">Checklist de protecciones instaladas</div>
-        <div class="grid2">
-          <label class="radio-opt"><input type="checkbox" id="chk_dif" checked> Diferencial 30 mA tipo A (o B) por punto</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_sobreint" checked> Sobreintensidad curva C, corte omnipolar</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_sobretension" checked> Sobretensión permanente &le;440V + transitoria Tipo 1/2</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_dedicado" checked> Circuito dedicado y exclusivo por punto</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_ip" checked> Grado IP/IK adecuado a la ubicación</label>
-          <label class="radio-opt"><input type="checkbox" id="chk_tierra52" checked> Puesta a tierra &le;24V si es exterior</label>
-        </div>
-
-        <div class="field" style="margin-top:16px;"><label>Notas</label><input type="text" id="i_notas" placeholder="Observaciones (opcional)"></div>
-
-        <div class="btn-row">
-          <button class="btn primary" id="btnAddInst">+ Añadir punto de recarga al informe</button>
-        </div>
-      </div>
+      
 
       <div class="eyebrow" style="margin-bottom:10px;">Puntos de recarga del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún punto de recarga. Rellena el formulario de arriba y pulsa "Añadir punto de recarga al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún punto de recarga. Rellena el formulario de la pestaña Simulación y pulsa "Añadir punto de recarga al informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -717,6 +740,7 @@
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todos los puntos</button>
       </div>
+    
     </section>
 
     <footer>
@@ -1107,8 +1131,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -1440,7 +1473,7 @@ function renderInstallations52(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(installations52.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún punto de recarga. Rellena el formulario de arriba y pulsa "Añadir punto de recarga al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún punto de recarga. Rellena el formulario de la pestaña Simulación y pulsa "Añadir punto de recarga al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';

@@ -184,6 +184,19 @@
     .hero-meta{text-align:left;}
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--cyan); font-size:0.92em;}
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -196,11 +209,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#teoria" data-sec="teoria"><span class="tag">00</span>Fundamento teórico</a>
-    <a href="#marco" data-sec="marco"><span class="tag">01</span>Marco normativo</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">02</span>Datos del proyecto</a>
-    <a href="#economicos" data-sec="economicos"><span class="tag">03</span>Parámetros económicos</a>
-    <a href="#informe" data-sec="informe"><span class="tag">04</span>Puntos e informe</a>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -228,136 +239,13 @@
   <main>
 
     <!-- 00 TEORIA -->
-    <section id="teoria">
-      <header class="hero">
-      <div class="hero-top">
-        <div>
-          <div class="eyebrow">Energía reactiva · Batería de condensadores</div>
-          <h1>Evitar la penalización<br>por reactiva sale <em>a cuenta</em>.</h1>
-          <p class="sub">Calculadora y generador de informes técnico-económicos para el dimensionado de baterías de condensadores. Calcula la potencia reactiva de compensación necesaria — a partir de datos teóricos o de las lecturas del contador —, construye el flujo de caja con financiación, y evalúa la rentabilidad (VAN, TIR, Payback, IR) de cada punto de suministro, con informe en PDF listo para presentar.</p>
-        </div>
-        <div class="hero-meta">
-          <span>Basado en</span>
-          <span style="color:var(--cyan)">Circular 3/2020 · CNMC</span>
-          <span>Apdo. 6.4 · Facturación por energía reactiva</span>
-        </div>
-      </div>
-
-      <div class="stat-row">
-        <div class="stat"><div class="v">Qc = P·(tanφ1−tanφ2)</div><div class="l">potencia reactiva de compensación (kVAr)</div></div>
-        <div class="stat"><div class="v">VAN · TIR · Payback</div><div class="l">rentabilidad con financiación e IPC</div></div>
-        <div class="stat"><div class="v">33% / 20% · cos φ</div><div class="l">umbrales de facturación de reactiva, apdo. 6.4</div></div>
-      </div>
-    </header>
-
-      <div class="eyebrow kicker">00 · Fundamento teórico</div>
-      <h2>Del triángulo de potencias a la rentabilidad de la batería.</h2>
-      <p class="lede">El informe técnico-económico de una batería de condensadores tiene dos mitades: cuánta potencia reactiva hay que compensar (evaluación técnica), y si compensa económicamente instalarla frente al coste actual de la penalización por reactiva (evaluación económica).</p>
-
-      <div class="theory-grid">
-        <div class="theory-card">
-          <h3>1 · Triángulo de potencias</h3>
-          <p>La potencia activa P, la reactiva Q y la aparente S se relacionan mediante el ángulo de desfase φ entre tensión y corriente:</p>
-          <div class="formula-box">
-            <div class="f">S² = P² + Q² &nbsp;·&nbsp; Q = P · tan φ &nbsp;·&nbsp; cos φ = P / S</div>
-            <small>P: potencia activa (kW) · Q: potencia reactiva (kVAr) · S: potencia aparente (kVA)</small>
-          </div>
-          <div class="scheme-svg-wrap" id="triSvgHolder"></div>
-        </div>
-
-        <div class="theory-card">
-          <h3>2 · Potencia reactiva de compensación</h3>
-          <p>La batería debe aportar la diferencia entre la reactiva actual y la reactiva admisible al factor de potencia objetivo:</p>
-          <div class="formula-box">
-            <div class="f">Qc = P · (tan φ₁ − tan φ₂)</div>
-            <small>φ₁: ángulo actual · φ₂: ángulo objetivo · Qc: potencia de la batería (kVAr)</small>
-          </div>
-          <p style="margin-top:8px;">A partir de lecturas del contador, P y φ₁ se obtienen de la energía activa y reactiva registradas por periodo horario.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>3 · Facturación por energía reactiva (apdo. 6.4)</h3>
-          <p>Se factura el exceso de reactiva inductiva sobre el 33% de la activa en los periodos 1 a 5, y el exceso de reactiva capacitiva por debajo de cos φ 0,98 (20%) en el periodo 6 (valle):</p>
-          <div class="formula-box">
-            <div class="f">F = (Er − Ea·límite) · precio</div>
-            <small>límite = 33% (periodos 1-5, inductiva) ó 20% (periodo 6, capacitiva) · precio según tramo de cos φ</small>
-          </div>
-        </div>
-
-        <div class="theory-card">
-          <h3>4 · Indicadores de rentabilidad</h3>
-          <p>El coste de la reactiva evitado cada año se compara con la inversión mediante los indicadores estándar de evaluación de proyectos:</p>
-          <div class="formula-box">
-            <div class="f">VAN = Σ Flujo_t /(1+r)^t &nbsp;·&nbsp; TIR: VAN=0 &nbsp;·&nbsp; IR = (VAN+Inversión)/Inversión·100</div>
-            <small>r: tasa de descuento · Payback: primer año con flujo acumulado ≥ 0</small>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 01 MARCO NORMATIVO -->
-    <section id="marco">
-      <div class="eyebrow kicker">01 · Marco normativo</div>
-      <h2>Circular 3/2020 de la CNMC, apartado 6.4.</h2>
-      <p class="lede">La metodología de facturación por energía reactiva se mantiene, con carácter general, según lo establecido en el artículo 9.3 del Real Decreto 1164/2001, con la salvedad de la disposición transitoria segunda relativa a la reactiva capacitiva en el periodo de valle.</p>
-      <div class="card">
-        <div class="fieldset-title">Condiciones de facturación</div>
-        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
-          <li>Se aplica a todos los consumidores conectados en baja tensión con potencia contratada superior a 15 kW y a los consumidores en alta tensión.</li>
-          <li>Se factura sobre todos los periodos horarios excepto el periodo 6, siempre que el consumo de reactiva exceda el 33% del consumo de activa. Únicamente afecta a ese exceso.</li>
-          <li>En el periodo de valle (6), todos los consumidores conectados en niveles de tensión superior a 1 kV deben mantener un factor de potencia superior a 0,98 capacitivo. Fuera de ese rango se aplica una penalización.</li>
-        </ul>
-        <div class="fieldset-title">Tramos de precio (Orden ITC/688/2011)</div>
-        <table class="data-table">
-          <thead><tr><th>Tramo de cos φ</th><th>Precio (€/kVArh)</th></tr></thead>
-          <tbody>
-            <tr><td>0,80 ≤ cos φ &lt; 0,95</td><td class="cellnum">0,041554</td></tr>
-            <tr><td>cos φ &lt; 0,80</td><td class="cellnum">0,062332</td></tr>
-            <tr><td>Capacitiva, periodo 6 (cos φ &lt; 0,98)</td><td class="cellnum">0,05 (transitoriamente 0 €/kVArh)</td></tr>
-          </tbody>
-        </table>
-        <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">Estos precios son editables en la sección de parámetros económicos, ya que se actualizan anualmente en la Resolución de precios de la CNMC.</p>
-      </div>
-    </section>
-
-    <!-- 02 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">02 · Datos del proyecto</div>
-      <h2>Identificación del proyecto, del autor y del destinatario del informe.</h2>
-      <p class="lede">Estos datos se usan únicamente para componer la portada y los encabezados del informe en PDF.</p>
-      <div class="card">
-        <div class="fieldset-title">Proyecto</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Compensación de energía reactiva mediante batería de condensadores"></div>
-          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
-        </div>
-        <div class="fieldset-title">Autor</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
-          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
-        </div>
-        <div class="fieldset-title">Organización</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
-          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
-          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
-        </div>
-        <div class="fieldset-title">Destinatario</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 03 PARAMETROS ECONOMICOS -->
-    <section id="economicos">
-      <div class="eyebrow kicker">03 · Parámetros económicos</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="economicos" class="tab-bloque">
+      <div class="eyebrow kicker">Parámetros económicos</div>
       <h2>Los supuestos financieros, compartidos por todos los puntos de compensación.</h2>
-      <p class="lede">Coste de la batería, financiación opcional y precios regulados de la reactiva. Se usan para calcular el flujo de caja de cada punto que añadas en la sección siguiente.</p>
+      <p class="lede">Coste de la batería, financiación opcional y precios regulados de la reactiva. Se usan para calcular el flujo de caja de cada punto que añadas más abajo.</p>
       <div class="card">
         <div class="fieldset-title">Inversión y financiación</div>
         <div class="grid3">
@@ -377,15 +265,13 @@
           <div class="field"><label>Precio capacitiva periodo 6 (€/kVArh)</label><input type="number" id="s_precio_cap" value="0.00" min="0" step="0.000001"></div>
         </div>
       </div>
-    </section>
-
-    <!-- 04 PUNTOS E INFORME -->
-    <section id="informe">
-      <div class="eyebrow kicker">04 · Puntos de compensación e informe</div>
+    
+      </div>
+      <div class="tab-bloque">
+      <div class="eyebrow kicker">Puntos de compensación e informe</div>
       <h2>Añade cada punto de suministro a compensar, y genera el informe.</h2>
-      <p class="lede">Cada punto calcula su propia potencia reactiva de compensación, flujo de caja e indicadores de rentabilidad, usando los parámetros económicos compartidos de la sección anterior.</p>
-
-      <div class="card" style="margin-bottom:28px;">
+      <p class="lede">Cada punto calcula su propia potencia reactiva de compensación, flujo de caja e indicadores de rentabilidad, usando los parámetros económicos compartidos indicados más arriba.</p>
+<div class="card" style="margin-bottom:28px;">
         <div class="eyebrow" style="margin-bottom:6px;">Añadir punto de compensación</div>
         <div class="field"><label>Nombre / ubicación</label><input type="text" id="i_nombre" placeholder="Ej: CT Nave 2 — cuadro general"></div>
 
@@ -432,10 +318,147 @@
           <button class="btn primary" id="btnAddInst">+ Calcular y añadir al informe</button>
         </div>
       </div>
+      </div>
+    </section>
+
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
+<div id="teoria">
+      <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Energía reactiva · Batería de condensadores</div>
+          <h1>Evitar la penalización<br>por reactiva sale <em>a cuenta</em>.</h1>
+          <p class="sub">Calculadora y generador de informes técnico-económicos para el dimensionado de baterías de condensadores. Calcula la potencia reactiva de compensación necesaria — a partir de datos teóricos o de las lecturas del contador —, construye el flujo de caja con financiación, y evalúa la rentabilidad (VAN, TIR, Payback, IR) de cada punto de suministro, con informe en PDF listo para presentar.</p>
+        </div>
+        <div class="hero-meta">
+          <span>Basado en</span>
+          <span style="color:var(--cyan)">Circular 3/2020 · CNMC</span>
+          <span>Apdo. 6.4 · Facturación por energía reactiva</span>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="v">Qc = P·(tanφ1−tanφ2)</div><div class="l">potencia reactiva de compensación (kVAr)</div></div>
+        <div class="stat"><div class="v">VAN · TIR · Payback</div><div class="l">rentabilidad con financiación e IPC</div></div>
+        <div class="stat"><div class="v">33% / 20% · cos φ</div><div class="l">umbrales de facturación de reactiva, apdo. 6.4</div></div>
+      </div>
+    </header>
+      <h2>Del triángulo de potencias a la rentabilidad de la batería.</h2>
+      <p class="lede">El informe técnico-económico de una batería de condensadores tiene dos mitades: cuánta potencia reactiva hay que compensar (evaluación técnica), y si compensa económicamente instalarla frente al coste actual de la penalización por reactiva (evaluación económica).</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Triángulo de potencias</h3>
+          <p>La potencia activa P, la reactiva Q y la aparente S se relacionan mediante el ángulo de desfase φ entre tensión y corriente:</p>
+          <div class="formula-box">
+            <div class="f">S² = P² + Q² &nbsp;·&nbsp; Q = P · tan φ &nbsp;·&nbsp; cos φ = P / S</div>
+            <small>P: potencia activa (kW) · Q: potencia reactiva (kVAr) · S: potencia aparente (kVA)</small>
+          </div>
+          <div class="scheme-svg-wrap" id="triSvgHolder"></div>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Potencia reactiva de compensación</h3>
+          <p>La batería debe aportar la diferencia entre la reactiva actual y la reactiva admisible al factor de potencia objetivo:</p>
+          <div class="formula-box">
+            <div class="f">Qc = P · (tan φ₁ − tan φ₂)</div>
+            <small>φ₁: ángulo actual · φ₂: ángulo objetivo · Qc: potencia de la batería (kVAr)</small>
+          </div>
+          <p style="margin-top:8px;">A partir de lecturas del contador, P y φ₁ se obtienen de la energía activa y reactiva registradas por periodo horario.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Facturación por energía reactiva (apdo. 6.4)</h3>
+          <p>Se factura el exceso de reactiva inductiva sobre el 33% de la activa en los periodos 1 a 5, y el exceso de reactiva capacitiva por debajo de cos φ 0,98 (20%) en el periodo 6 (valle):</p>
+          <div class="formula-box">
+            <div class="f">F = (Er − Ea·límite) · precio</div>
+            <small>límite = 33% (periodos 1-5, inductiva) ó 20% (periodo 6, capacitiva) · precio según tramo de cos φ</small>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Indicadores de rentabilidad</h3>
+          <p>El coste de la reactiva evitado cada año se compara con la inversión mediante los indicadores estándar de evaluación de proyectos:</p>
+          <div class="formula-box">
+            <div class="f">VAN = Σ Flujo_t /(1+r)^t &nbsp;·&nbsp; TIR: VAN=0 &nbsp;·&nbsp; IR = (VAN+Inversión)/Inversión·100</div>
+            <small>r: tasa de descuento · Payback: primer año con flujo acumulado ≥ 0</small>
+          </div>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco normativo</span></summary><div class="acc-cuerpo">
+<div id="marco">
+      <h2>Circular 3/2020 de la CNMC, apartado 6.4.</h2>
+      <p class="lede">La metodología de facturación por energía reactiva se mantiene, con carácter general, según lo establecido en el artículo 9.3 del Real Decreto 1164/2001, con la salvedad de la disposición transitoria segunda relativa a la reactiva capacitiva en el periodo de valle.</p>
+      <div class="card">
+        <div class="fieldset-title">Condiciones de facturación</div>
+        <ul style="padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.9;">
+          <li>Se aplica a todos los consumidores conectados en baja tensión con potencia contratada superior a 15 kW y a los consumidores en alta tensión.</li>
+          <li>Se factura sobre todos los periodos horarios excepto el periodo 6, siempre que el consumo de reactiva exceda el 33% del consumo de activa. Únicamente afecta a ese exceso.</li>
+          <li>En el periodo de valle (6), todos los consumidores conectados en niveles de tensión superior a 1 kV deben mantener un factor de potencia superior a 0,98 capacitivo. Fuera de ese rango se aplica una penalización.</li>
+        </ul>
+        <div class="fieldset-title">Tramos de precio (Orden ITC/688/2011)</div>
+        <table class="data-table">
+          <thead><tr><th>Tramo de cos φ</th><th>Precio (€/kVArh)</th></tr></thead>
+          <tbody>
+            <tr><td>0,80 ≤ cos φ &lt; 0,95</td><td class="cellnum">0,041554</td></tr>
+            <tr><td>cos φ &lt; 0,80</td><td class="cellnum">0,062332</td></tr>
+            <tr><td>Capacitiva, periodo 6 (cos φ &lt; 0,98)</td><td class="cellnum">0,05 (transitoriamente 0 €/kVArh)</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px; color:var(--text-dimmer); margin-top:14px;">Estos precios son editables en la sección de parámetros económicos, ya que se actualizan anualmente en la Resolución de precios de la CNMC.</p>
+      </div>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
+      <div class="card">
+        <div class="fieldset-title">Proyecto</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Compensación de energía reactiva mediante batería de condensadores"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+        <div class="fieldset-title">Autor</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+        </div>
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
+        </div>
+        <div class="fieldset-title">Destinatario</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+
+      
 
       <div class="eyebrow" style="margin-bottom:10px;">Puntos de compensación del proyecto</div>
       <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún punto de compensación. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div></div>
+      <div id="instContainer"><div class="empty-state">Todavía no has añadido ningún punto de compensación. Rellena el formulario de la pestaña Simulación y pulsa "Calcular y añadir al informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -445,6 +468,7 @@
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
         <button class="btn ghost" id="btnClearInst">Vaciar todos los puntos</button>
       </div>
+    
     </section>
 
     <footer>
@@ -461,8 +485,17 @@
 // ===================== NAV COMO TABS (secciones reales, sin scroll) =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'teoria';
+const SECCION_POR_DEFECTO = 'simulacion';
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
@@ -814,7 +847,7 @@ function renderInstallations(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(installations.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún punto de compensación. Rellena el formulario de arriba y pulsa "Calcular y añadir al informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has añadido ningún punto de compensación. Rellena el formulario de la pestaña Simulación y pulsa "Calcular y añadir al informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';

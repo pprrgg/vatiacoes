@@ -1176,7 +1176,20 @@
         flex-direction: column;
       }
     }
-  </style>
+  
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
+</style>
 </head>
 
 <body>
@@ -1193,10 +1206,9 @@
         </svg>
       </button>
       <nav class="tabbar" id="sidenav">
-        <a href="#comparativa" data-sec="comparativa"><span class="tag">00</span>Comparativa</a>
-        <a href="#ficha" data-sec="ficha"><span class="tag">01</span>Ficha técnica</a>
-        <a href="#ayudas" data-sec="ayudas"><span class="tag">02</span>Ayudas</a>
-      </nav>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+  </nav>
       <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button"
         aria-label="Desplazar pestañas a la derecha">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -1227,7 +1239,10 @@
     <main>
 
       <!-- 00 COMPARATIVA -->
-      <section id="comparativa">
+      <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="comparativa" class="tab-bloque">
         <header class="hero">
           <div class="hero-top">
             <div>
@@ -1241,7 +1256,7 @@
           <div class="stat-row" id="statRow"></div>
         </header>
 
-        <div class="eyebrow kicker">00 · Comparativa</div>
+        <div class="eyebrow kicker">Comparativa</div>
         <h2>Elige qué dos variables enfrentar.</h2>
         <p class="lede">Por defecto se compara la batería (kWh) frente al precio (€), coloreado por modelo. Cambia los
           ejes para explorar otras relaciones, como potencia frente a autonomía o precio frente a autonomía.</p>
@@ -1321,10 +1336,9 @@
               modelos visibles.</span>
           </div>
         </div>
-      </section>
-
-      <!-- 01 FICHA TECNICA -->
-      <section id="ficha">
+      
+      </div>
+      <div id="ficha" class="tab-bloque">
         <header class="hero">
           <div class="hero-top">
             <div>
@@ -1336,7 +1350,7 @@
           </div>
         </header>
 
-        <div class="eyebrow kicker">01 · Ficha técnica</div>
+        <div class="eyebrow kicker">Ficha técnica</div>
         <h2>Datos de partida.</h2>
         <p class="lede">Valores orientativos de versión base por modelo (potencia, batería neta, autonomía WLTP, precio
           aproximado al contado y garantía del fabricante sobre la batería), con enlace a la fuente consultada para cada
@@ -1402,10 +1416,16 @@
             <button class="btn ghost" id="btnAddRow" type="button">+ Añadir modelo</button>
           </div>
         </div>
-      </section>
+      
+      </div>
+    </section>
 
-      <!-- 02 AYUDAS -->
-      <section id="ayudas">
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Ayudas</span></summary><div class="acc-cuerpo">
+<div id="ayudas">
         <header class="hero">
           <div class="hero-top">
             <div>
@@ -1418,8 +1438,6 @@
             </div>
           </div>
         </header>
-
-        <div class="eyebrow kicker">02 · Ayudas</div>
         <h2>Programa Auto+: la ayuda estatal vigente en 2026.</h2>
         <p class="lede">Sustituye a los antiguos planes MOVES. Está gestionado directamente por el Ministerio de
           Industria y Turismo y estará vigente hasta el 31 de diciembre de 2030, con una convocatoria de presupuesto
@@ -1668,7 +1686,10 @@
             </div>
           </div>
         </div>
-      </section>
+      
+</div>
+      </div></details>
+    </section>
 
       <footer>
         Herramienta no oficial de comparación de vehículos eléctricos. Los valores de potencia, batería, autonomía y
@@ -4368,8 +4389,17 @@
     // ===================== NAV COMO TABS =====================
     const sections = document.querySelectorAll('section[id]');
     const navLinks = document.querySelectorAll('.tabbar a');
-    const SECCION_POR_DEFECTO = 'comparativa';
-    function activarSeccion(id) {
+    const SECCION_POR_DEFECTO = 'simulacion';
+    function pestanaDe(id){
+      const el = document.getElementById(id);
+      const sec = el && el.closest('section[id]');
+      if(!sec) return 'simulacion';
+      const det = el.closest('details.acc');
+      if(det && el!==sec) det.open = true;
+      return sec.id;
+    }
+    function activarSeccion(id){
+      id = pestanaDe(id);
       if (!document.getElementById(id)) id = SECCION_POR_DEFECTO;
       sections.forEach(s => s.classList.toggle('tab-active', s.id === id));
       navLinks.forEach(l => l.classList.toggle('active', l.dataset.sec === id));

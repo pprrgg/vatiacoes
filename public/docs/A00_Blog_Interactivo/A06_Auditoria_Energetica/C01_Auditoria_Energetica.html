@@ -172,6 +172,19 @@
   }
   code.inline{font-family:var(--font-mono); background:var(--panel2); padding:1px 6px; border-radius:3px; color:var(--amber); font-size:0.92em;}
 
+
+  /* Pestaña Ayuda e Informe: secciones en acordeon cerrado */
+  details.acc{background:var(--panel,#fff); border:1px solid var(--line,#dfe4eb); border-radius:var(--radius,10px); margin-bottom:12px;}
+  details.acc > summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:16px 44px 16px 20px; cursor:pointer; list-style:none; position:relative;}
+  details.acc > summary::-webkit-details-marker{display:none;}
+  details.acc > summary::after{content:"\25B8"; position:absolute; right:20px; top:15px; color:var(--cyan,#2457e6); transition:transform .15s;}
+  details.acc[open] > summary::after{transform:rotate(90deg);}
+  details.acc > summary:focus-visible{outline:2px solid var(--cyan,#2457e6); outline-offset:2px;}
+  .acc-titulo{font-size:16px; font-weight:600; color:var(--text,#1c2735);}
+  .acc-sub{font-size:13px; color:var(--text-dim,#4f5b6d);}
+  .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
+  .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
+  .tab-bloque{margin-bottom:48px;}
 </style>
 </head>
 <body>
@@ -184,15 +197,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
     <nav class="tabbar" id="sidenav">
-      <a href="#resumen" data-sec="resumen"><span class="tag">00</span>Resumen ejecutivo</a>
-      <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
-      <a href="#marco" data-sec="marco"><span class="tag">02</span>Marco ISO 50002 / VATIACOScreen</a>
-      <a href="#sectores" data-sec="sectores"><span class="tag">03</span>Consumo de referencia por sectores</a>
-      <a href="#datos" data-sec="datos"><span class="tag">04</span>Recogida de datos</a>
-      <a href="#diagnostico" data-sec="diagnostico"><span class="tag">05</span>Diagnóstico energético</a>
-      <a href="#medidas" data-sec="medidas"><span class="tag">06</span>Medidas de ahorro (ECM)</a>
-      <a href="#informe" data-sec="informe"><span class="tag">07</span>Informe final</a>
-    </nav>
+    <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
+  </nav>
     <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
@@ -219,155 +227,11 @@
   <main>
 
     <!-- SECCIÓN 00: RESUMEN -->
-    <section id="resumen">
-      <div class="eyebrow kicker">00 · Resumen ejecutivo</div>
-      <h2>Auditoría energética: de la norma ISO al informe final, con benchmarks sectoriales y análisis VATIACOScreen.</h2>
-      <p class="lede">Herramienta interactiva para planificar y ejecutar una auditoría energética siguiendo la estructura de la norma ISO 50002 (alineada con EN 16247), comparar el consumo real frente a valores de referencia por sector de actividad, evaluar medidas de ahorro con la metodología de caso base / caso propuesto de VATIACOScreen, y generar un informe final.</p>
-
-      <div class="hero">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
-          <div>
-            <h1>Del consumo <em>real</em> al ahorro <em>demostrable</em>.</h1>
-            <p class="sub">Introduce los datos de tu instalación una sola vez: el sector, la superficie y el consumo por vector energético alimentan automáticamente el diagnóstico, la comparativa sectorial, el análisis económico de medidas y el informe final descargable.</p>
-          </div>
-        </div>
-        <div class="stat-row">
-          <div class="stat"><div class="v">ISO 50002 · EN 16247</div><div class="l">estructura y fases de la auditoría</div></div>
-          <div class="stat"><div class="v">10 sectores</div><div class="l">de referencia con rangos bajo / medio / alto</div></div>
-          <div class="stat"><div class="v">Caso base / caso propuesto</div><div class="l">metodología VATIACOScreen (NRCan)</div></div>
-          <div class="stat"><div class="v">VAN · TIR · Payback</div><div class="l">análisis financiero de medidas de ahorro</div></div>
-        </div>
-      </div>
-
-      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
-      <h2 style="font-size:18px;">Un flujo de trabajo, siete pasos.</h2>
-      <div class="grid4">
-        <div class="comp-card"><h4>01 · Marco normativo</h4><p>Repasa las fases de una auditoría según ISO 50002 y los conceptos clave (EnB, EnPI, SEU).</p></div>
-        <div class="comp-card"><h4>02 · Referencias sectoriales</h4><p>Consulta los rangos de consumo (kWh/m²·año) orientativos de cada sector de actividad.</p></div>
-        <div class="comp-card"><h4>03 · Datos de la instalación</h4><p>Registra superficie, sector y consumo anual por vector energético (electricidad, gas, gasóleo, biomasa...).</p></div>
-        <div class="comp-card"><h4>04 · Diagnóstico</h4><p>Calcula el EnPI, compáralo con el benchmark del sector y estima el potencial de ahorro y las emisiones.</p></div>
-      </div>
-      <div class="grid3" style="margin-top:16px;">
-        <div class="comp-card"><h4>05 · Medidas de ahorro</h4><p>Evalúa cada medida (ECM) con inversión, ahorro, payback, VAN y TIR, y añádela al informe.</p></div>
-        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera automáticamente el informe con los datos, el diagnóstico y las medidas evaluadas, listo para imprimir.</p></div>
-        <div class="comp-card"><h4>07 · Seguimiento</h4><p>Recomendaciones para el seguimiento periódico del EnPI y la posible implantación de un SGEn ISO 50001.</p></div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 01: DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">01 · Datos del proyecto</div>
-      <h2>¿Para quién y por quién se realiza esta auditoría?</h2>
-      <p class="lede">Estos datos aparecen en la portada y en los encabezados del informe de auditoría en PDF (sección 07).</p>
-
-      <div class="card">
-        <div class="fieldset-title" style="margin-top:0;">Proyecto / instalación auditada</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del proyecto / instalación</label><input type="text" id="p_proyecto" value="Auditoría energética"></div>
-          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
-        </div>
-
-        <div class="fieldset-title">Auditor energético</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
-          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
-        </div>
-
-        <div class="fieldset-title">Organización auditora</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
-          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
-          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
-        </div>
-
-        <div class="fieldset-title">Titular / cliente de la instalación auditada</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
-          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección de la instalación auditada</label><input type="text" id="p_dest_dir" placeholder="Dirección donde se realiza la auditoría"></div>
-        </div>
-      </div>
-      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
-    </section>
-
-    <!-- SECCIÓN 02: MARCO ISO 50002 / VATIACOScreen -->
-    <section id="marco">
-      <div class="eyebrow kicker">02 · Marco ISO 50002 / VATIACOScreen</div>
-      <h2>Qué es una auditoría energética y cómo se estructura.</h2>
-      <p class="lede">La norma ISO 50002:2014 <em>"Energy audits — Requirements with guidance for use"</em> define los requisitos de un proceso de auditoría energética, en línea con la norma europea EN 16247 y con el sistema de gestión de la energía ISO 50001. El análisis energético y financiero de las medidas sigue la lógica de <b>caso base / caso propuesto</b> popularizada por VATIACOScreen (Natural Resources Canada).</p>
-
-      <div class="fieldset-title" style="margin-top:0;">Conceptos clave (terminología ISO 50001 / 50002)</div>
-      <div class="grid2">
-        <div class="theory-card">
-          <h3>Línea base energética (EnB)</h3>
-          <p>Referencia cuantitativa del consumo de energía de un periodo determinado, frente a la cual se comparan los resultados tras aplicar medidas de mejora.</p>
-        </div>
-        <div class="theory-card">
-          <h3>Indicador de desempeño energético (EnPI)</h3>
-          <p>Valor o medida cuantitativa del desempeño energético, definido por la organización. Ejemplos: kWh/m²·año, kWh/unidad producida, kWh/empleado.</p>
-        </div>
-        <div class="theory-card">
-          <h3>Usos significativos de la energía (SEU)</h3>
-          <p>Usos que representan un consumo sustancial de energía y/o que ofrecen un potencial considerable de mejora del desempeño energético.</p>
-        </div>
-        <div class="theory-card">
-          <h3>Oportunidad de mejora energética (ECM)</h3>
-          <p>Medida técnica u organizativa identificada durante la auditoría con potencial de reducir el consumo o el coste energético, evaluable técnica y económicamente.</p>
-        </div>
-      </div>
-
-      <div class="fieldset-title">Fases de la auditoría (ISO 50002 / EN 16247)</div>
-      <div class="grid3" id="fasesGrid"></div>
-
-      <div class="fieldset-title">Metodología VATIACOScreen: caso base vs. caso propuesto</div>
-      <div class="theory-card" style="background:linear-gradient(135deg, rgba(194,124,0,0.10) 0%, rgba(37,99,235,0.10) 100%);">
-        <h3 style="color:var(--amber);">La lógica central del análisis energético-financiero</h3>
-        <p style="margin:10px 0;">VATIACOScreen (software de Recursos Naturales de Canadá para el análisis de proyectos de eficiencia y energías limpias) compara dos escenarios de modelización energética:</p>
-        <div class="grid2" style="margin-top:14px;">
-          <div>
-            <p><b style="color:var(--text);">Caso base (Base Case)</b></p>
-            <ul style="padding-left:18px; font-size:12.5px; color:var(--text-dim);">
-              <li>Consumo energético real/actual de la instalación (la línea base, EnB)</li>
-              <li>Se obtiene de facturas, contadores y datos históricos recogidos in situ</li>
-            </ul>
-          </div>
-          <div>
-            <p><b style="color:var(--text);">Caso propuesto (Proposed Case)</b></p>
-            <ul style="padding-left:18px; font-size:12.5px; color:var(--text-dim);">
-              <li>Consumo estimado tras implantar una o varias medidas (ECM)</li>
-              <li>Se modeliza con los ahorros esperados de cada medida</li>
-            </ul>
-          </div>
-        </div>
-        <div class="formula-box" style="margin-top:16px;">
-          <div class="f">Ahorro energético = Consumo caso base − Consumo caso propuesto</div>
-        </div>
-        <p style="margin-top:10px;">A partir del ahorro anual se deriva el análisis financiero (VAN, TIR, periodo de retorno) y el análisis de emisiones de gases de efecto invernadero (GEI) evitadas, replicados en las secciones 04 y 05 de esta herramienta.</p>
-      </div>
-
-      <div class="fieldset-title">Niveles de profundidad habituales</div>
-      <p class="lede" style="margin-bottom:16px;">EN 16247/ISO 50002 no fijan niveles numerados de forma obligatoria, pero en la práctica del sector (con influencia de la clasificación ASHRAE) suele diferenciarse la profundidad del trabajo según el alcance y el presupuesto disponibles:</p>
-      <div class="grid3">
-        <div class="comp-card">
-          <h4>Nivel I · Análisis preliminar</h4>
-          <p>Revisión de facturas, visita breve, identificación de medidas de bajo coste y estimación de ahorros con datos existentes.</p>
-        </div>
-        <div class="comp-card">
-          <h4>Nivel II · Auditoría detallada</h4>
-          <p>Levantamiento de datos in situ, medición puntual, balance energético desglosado por usos y análisis económico de cada ECM.</p>
-        </div>
-        <div class="comp-card">
-          <h4>Nivel III · Análisis de inversión</h4>
-          <p>Monitorización de variables clave, simulación energética detallada y análisis financiero de grado inversión para medidas de alto coste de capital.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 02: CONSUMO DE REFERENCIA POR SECTORES -->
-    <section id="sectores">
-      <div class="eyebrow kicker">03 · Consumo de referencia por sectores</div>
+    <!-- 00 SIMULACION -->
+    <section id="simulacion">
+      <div class="eyebrow kicker">00 · Simulación</div>
+      <div id="sectores" class="tab-bloque">
+      <div class="eyebrow kicker">Consumo de referencia por sectores</div>
       <h2>Valores orientativos de consumo energético (kWh/m²·año) por sector de actividad.</h2>
       <p class="lede">Rangos de referencia elaborados a partir de fuentes públicas habituales en auditoría energética (IDAE, estudios sectoriales, benchmarks tipo ASHRAE/VATIACOScreen). Son valores <b>orientativos para una primera comparación</b>: el diagnóstico definitivo siempre debe basarse en la medición real de la instalación.</p>
 
@@ -408,13 +272,12 @@
         </table>
       </div>
       <p class="tooltip-text" style="margin-top:14px;">Unidad: kWh/m²·año de energía final (eléctrica + térmica). Fuentes de referencia: IDAE (informes de consumos del sector residencial y terciario en España), guías de auditoría tipo ASHRAE Level I-III y documentación de modelización VATIACOScreen. Úsense como primera aproximación, no como valor normativo vinculante.</p>
-    </section>
-
-    <!-- SECCIÓN 03: RECOGIDA DE DATOS -->
-    <section id="datos">
-      <div class="eyebrow kicker">04 · Recogida de datos</div>
+    
+      </div>
+      <div id="datos" class="tab-bloque">
+      <div class="eyebrow kicker">Recogida de datos</div>
       <h2>Datos generales y consumo energético de la instalación.</h2>
-      <p class="lede">Introduce aquí los datos de la instalación auditada, siguiendo el mismo esquema de recogida de datos que utiliza VATIACOScreen para construir el caso base (EnB). Estos campos alimentan automáticamente el diagnóstico (sección 04), el análisis de medidas (sección 05) y el informe final (sección 06).</p>
+      <p class="lede">Introduce aquí los datos de la instalación auditada, siguiendo el mismo esquema de recogida de datos que utiliza VATIACOScreen para construir el caso base (EnB). Estos campos alimentan automáticamente el diagnóstico (pestaña Simulación), el análisis de medidas (pestaña Simulación) y el informe final (pestaña Simulación).</p>
 
       <div class="card">
         <div class="fieldset-title" style="margin-top:0;">Datos generales</div>
@@ -492,15 +355,14 @@
         </div>
       </div>
       <p class="tooltip-text" style="margin-top:14px;">Estos datos quedan disponibles en el navegador (no se envían a ningún servidor) y se reutilizan directamente en las secciones "Diagnóstico energético", "Medidas de ahorro" e "Informe final".</p>
-    </section>
-
-    <!-- SECCIÓN 04: DIAGNÓSTICO ENERGÉTICO -->
-    <section id="diagnostico">
-      <div class="eyebrow kicker">05 · Diagnóstico energético</div>
+    
+      </div>
+      <div id="diagnostico" class="tab-bloque">
+      <div class="eyebrow kicker">Diagnóstico energético</div>
       <h2>Balance energético, EnPI y comparativa con el benchmark sectorial.</h2>
-      <p class="lede">A partir de los datos introducidos en la sección anterior, se calcula el consumo total en kWh, el indicador de desempeño energético (EnPI) y su posición respecto al rango de referencia del sector, además de las emisiones de GEI asociadas.</p>
+      <p class="lede">A partir de los datos introducidos más arriba, se calcula el consumo total en kWh, el indicador de desempeño energético (EnPI) y su posición respecto al rango de referencia del sector, además de las emisiones de GEI asociadas.</p>
 
-      <button class="btn primary" onclick="calcularDiagnostico()" style="margin-bottom:24px;">Calcular diagnóstico con los datos de la sección 04</button>
+      <button class="btn primary" onclick="calcularDiagnostico()" style="margin-bottom:24px;">Calcular diagnóstico con los datos de la pestaña Simulación</button>
 
       <div id="diag_aviso" class="tooltip-text" style="margin-bottom:16px;"></div>
 
@@ -534,11 +396,10 @@
           </div>
         </div>
       </div>
-    </section>
-
-    <!-- SECCIÓN 05: MEDIDAS DE AHORRO (ECM) -->
-    <section id="medidas">
-      <div class="eyebrow kicker">06 · Medidas de ahorro (ECM)</div>
+    
+      </div>
+      <div id="medidas" class="tab-bloque">
+      <div class="eyebrow kicker">Medidas de ahorro (ECM)</div>
       <h2>Catálogo de medidas típicas y análisis financiero VATIACOScreen (VAN · TIR · Payback).</h2>
       <p class="lede">Evalúa cada oportunidad de mejora energética (Energy Conservation Measure) con el mismo criterio financiero de VATIACOScreen: inversión, ahorro anual, vida útil y tasa de descuento, para obtener el periodo de retorno simple, el Valor Actual Neto (VAN) y la Tasa Interna de Retorno (TIR) aproximada.</p>
 
@@ -593,11 +454,164 @@
       <div class="fieldset-title">Medidas añadidas al informe</div>
       <div id="medidas_lista"><p class="tooltip-text">Todavía no se ha añadido ninguna medida.</p></div>
       <div class="grid3" id="medidas_totales" style="margin-top:16px; display:none;"></div>
+    
+      </div>
     </section>
 
-    <!-- SECCIÓN 07: INFORME FINAL -->
+    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <section id="ayuda">
+      <div class="eyebrow kicker">01 · Ayuda</div>
+      <h2>Fundamentos y aclaraciones.</h2>
+      <details class="acc"><summary><span class="acc-titulo">Resumen ejecutivo</span></summary><div class="acc-cuerpo">
+<div id="resumen">
+      <h2>Auditoría energética: de la norma ISO al informe final, con benchmarks sectoriales y análisis VATIACOScreen.</h2>
+      <p class="lede">Herramienta interactiva para planificar y ejecutar una auditoría energética siguiendo la estructura de la norma ISO 50002 (alineada con EN 16247), comparar el consumo real frente a valores de referencia por sector de actividad, evaluar medidas de ahorro con la metodología de caso base / caso propuesto de VATIACOScreen, y generar un informe final.</p>
+
+      <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;">
+          <div>
+            <h1>Del consumo <em>real</em> al ahorro <em>demostrable</em>.</h1>
+            <p class="sub">Introduce los datos de tu instalación una sola vez: el sector, la superficie y el consumo por vector energético alimentan automáticamente el diagnóstico, la comparativa sectorial, el análisis económico de medidas y el informe final descargable.</p>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v">ISO 50002 · EN 16247</div><div class="l">estructura y fases de la auditoría</div></div>
+          <div class="stat"><div class="v">10 sectores</div><div class="l">de referencia con rangos bajo / medio / alto</div></div>
+          <div class="stat"><div class="v">Caso base / caso propuesto</div><div class="l">metodología VATIACOScreen (NRCan)</div></div>
+          <div class="stat"><div class="v">VAN · TIR · Payback</div><div class="l">análisis financiero de medidas de ahorro</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow kicker" style="margin-top:40px;">Cómo se usa</div>
+      <h2 style="font-size:18px;">Un flujo de trabajo, siete pasos.</h2>
+      <div class="grid4">
+        <div class="comp-card"><h4>01 · Marco normativo</h4><p>Repasa las fases de una auditoría según ISO 50002 y los conceptos clave (EnB, EnPI, SEU).</p></div>
+        <div class="comp-card"><h4>02 · Referencias sectoriales</h4><p>Consulta los rangos de consumo (kWh/m²·año) orientativos de cada sector de actividad.</p></div>
+        <div class="comp-card"><h4>03 · Datos de la instalación</h4><p>Registra superficie, sector y consumo anual por vector energético (electricidad, gas, gasóleo, biomasa...).</p></div>
+        <div class="comp-card"><h4>04 · Diagnóstico</h4><p>Calcula el EnPI, compáralo con el benchmark del sector y estima el potencial de ahorro y las emisiones.</p></div>
+      </div>
+      <div class="grid3" style="margin-top:16px;">
+        <div class="comp-card"><h4>05 · Medidas de ahorro</h4><p>Evalúa cada medida (ECM) con inversión, ahorro, payback, VAN y TIR, y añádela al informe.</p></div>
+        <div class="comp-card"><h4>06 · Informe final</h4><p>Genera automáticamente el informe con los datos, el diagnóstico y las medidas evaluadas, listo para imprimir.</p></div>
+        <div class="comp-card"><h4>07 · Seguimiento</h4><p>Recomendaciones para el seguimiento periódico del EnPI y la posible implantación de un SGEn ISO 50001.</p></div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Marco ISO 50002 / VATIACOScreen</span></summary><div class="acc-cuerpo">
+<div id="marco">
+      <h2>Qué es una auditoría energética y cómo se estructura.</h2>
+      <p class="lede">La norma ISO 50002:2014 <em>"Energy audits — Requirements with guidance for use"</em> define los requisitos de un proceso de auditoría energética, en línea con la norma europea EN 16247 y con el sistema de gestión de la energía ISO 50001. El análisis energético y financiero de las medidas sigue la lógica de <b>caso base / caso propuesto</b> popularizada por VATIACOScreen (Natural Resources Canada).</p>
+
+      <div class="fieldset-title" style="margin-top:0;">Conceptos clave (terminología ISO 50001 / 50002)</div>
+      <div class="grid2">
+        <div class="theory-card">
+          <h3>Línea base energética (EnB)</h3>
+          <p>Referencia cuantitativa del consumo de energía de un periodo determinado, frente a la cual se comparan los resultados tras aplicar medidas de mejora.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Indicador de desempeño energético (EnPI)</h3>
+          <p>Valor o medida cuantitativa del desempeño energético, definido por la organización. Ejemplos: kWh/m²·año, kWh/unidad producida, kWh/empleado.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Usos significativos de la energía (SEU)</h3>
+          <p>Usos que representan un consumo sustancial de energía y/o que ofrecen un potencial considerable de mejora del desempeño energético.</p>
+        </div>
+        <div class="theory-card">
+          <h3>Oportunidad de mejora energética (ECM)</h3>
+          <p>Medida técnica u organizativa identificada durante la auditoría con potencial de reducir el consumo o el coste energético, evaluable técnica y económicamente.</p>
+        </div>
+      </div>
+
+      <div class="fieldset-title">Fases de la auditoría (ISO 50002 / EN 16247)</div>
+      <div class="grid3" id="fasesGrid"></div>
+
+      <div class="fieldset-title">Metodología VATIACOScreen: caso base vs. caso propuesto</div>
+      <div class="theory-card" style="background:linear-gradient(135deg, rgba(194,124,0,0.10) 0%, rgba(37,99,235,0.10) 100%);">
+        <h3 style="color:var(--amber);">La lógica central del análisis energético-financiero</h3>
+        <p style="margin:10px 0;">VATIACOScreen (software de Recursos Naturales de Canadá para el análisis de proyectos de eficiencia y energías limpias) compara dos escenarios de modelización energética:</p>
+        <div class="grid2" style="margin-top:14px;">
+          <div>
+            <p><b style="color:var(--text);">Caso base (Base Case)</b></p>
+            <ul style="padding-left:18px; font-size:12.5px; color:var(--text-dim);">
+              <li>Consumo energético real/actual de la instalación (la línea base, EnB)</li>
+              <li>Se obtiene de facturas, contadores y datos históricos recogidos in situ</li>
+            </ul>
+          </div>
+          <div>
+            <p><b style="color:var(--text);">Caso propuesto (Proposed Case)</b></p>
+            <ul style="padding-left:18px; font-size:12.5px; color:var(--text-dim);">
+              <li>Consumo estimado tras implantar una o varias medidas (ECM)</li>
+              <li>Se modeliza con los ahorros esperados de cada medida</li>
+            </ul>
+          </div>
+        </div>
+        <div class="formula-box" style="margin-top:16px;">
+          <div class="f">Ahorro energético = Consumo caso base − Consumo caso propuesto</div>
+        </div>
+        <p style="margin-top:10px;">A partir del ahorro anual se deriva el análisis financiero (VAN, TIR, periodo de retorno) y el análisis de emisiones de gases de efecto invernadero (GEI) evitadas, replicados en las secciones 04 y 05 de esta herramienta.</p>
+      </div>
+
+      <div class="fieldset-title">Niveles de profundidad habituales</div>
+      <p class="lede" style="margin-bottom:16px;">EN 16247/ISO 50002 no fijan niveles numerados de forma obligatoria, pero en la práctica del sector (con influencia de la clasificación ASHRAE) suele diferenciarse la profundidad del trabajo según el alcance y el presupuesto disponibles:</p>
+      <div class="grid3">
+        <div class="comp-card">
+          <h4>Nivel I · Análisis preliminar</h4>
+          <p>Revisión de facturas, visita breve, identificación de medidas de bajo coste y estimación de ahorros con datos existentes.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Nivel II · Auditoría detallada</h4>
+          <p>Levantamiento de datos in situ, medición puntual, balance energético desglosado por usos y análisis económico de cada ECM.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Nivel III · Análisis de inversión</h4>
+          <p>Monitorización de variables clave, simulación energética detallada y análisis financiero de grado inversión para medidas de alto coste de capital.</p>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+    </section>
+
+    <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">07 · Informe final</div>
+      <div class="eyebrow kicker">02 · Informe</div>
+      <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
+<div id="proyecto">
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Proyecto / instalación auditada</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto / instalación</label><input type="text" id="p_proyecto" value="Auditoría energética"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+
+        <div class="fieldset-title">Auditor energético</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_autor" value=""></div>
+          <div class="field"><label>Nº de registro / colegiado / certificación</label><input type="text" id="p_registro" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Organización auditora</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_org_nombre" value=""></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value=""></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_org_dir" value=""></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value=""></div>
+          <div class="field"><label>Correo</label><input type="email" id="p_org_correo" value=""></div>
+        </div>
+
+        <div class="fieldset-title">Titular / cliente de la instalación auditada</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre / razón social</label><input type="text" id="p_dest_nombre" placeholder="Nombre del titular o cliente"></div>
+          <div class="field"><label>CIF / NIF</label><input type="text" id="p_dest_cif" placeholder="CIF/NIF del titular"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección de la instalación auditada</label><input type="text" id="p_dest_dir" placeholder="Dirección donde se realiza la auditoría"></div>
+        </div>
+      </div>
+      <p class="tooltip-text" style="margin-top:14px;">Estos campos se guardan en el navegador y se comparten con el resto de herramientas de esta familia (localStorage), igual que en las demás calculadoras del blog.</p>
+    
+</div>
+      </div></details>
+
       <h2>Informe de auditoría energética, generado a partir de tus datos.</h2>
       <p class="lede">Estructura orientada a los requisitos de ISO 50002 / EN 16247: alcance y metodología, línea base energética, diagnóstico frente al sector, medidas evaluadas, conclusiones y próximos pasos. Rellena las secciones 01 (datos del proyecto), 04, 05 y 06 antes de generar el informe.</p>
 
@@ -609,6 +623,7 @@
       <div class="report-sheet" id="reportOutput">
         <p class="tooltip-text">Pulsa "Generar / actualizar vista previa" para componer el documento con los datos introducidos, y "Descargar informe en PDF" para obtener el informe formal descargable.</p>
       </div>
+    
     </section>
 
     <footer>
@@ -624,9 +639,18 @@
 // ===================== NAV COMO TABS =====================
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
-const SECCION_POR_DEFECTO = 'resumen';
+const SECCION_POR_DEFECTO = 'simulacion';
 
+function pestanaDe(id){
+  const el = document.getElementById(id);
+  const sec = el && el.closest('section[id]');
+  if(!sec) return 'simulacion';
+  const det = el.closest('details.acc');
+  if(det && el!==sec) det.open = true;
+  return sec.id;
+}
 function activarSeccion(id){
+  id = pestanaDe(id);
   if(!document.getElementById(id)) id = SECCION_POR_DEFECTO;
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
