@@ -165,43 +165,16 @@
   <div class="tabbar-wrap">
     <div class="tabbar-brand">COEFICIENTES DE REPARTO</div>
     <nav class="tabbar" id="sidenav">
-      <a href="#concepto" data-sec="concepto"><span class="tag">00</span>Concepto</a>
       <a href="#fijos" data-sec="fijos"><span class="tag">01</span>Coeficientes fijos</a>
       <a href="#dinamicos" data-sec="dinamicos"><span class="tag">02</span>Coeficientes dinámicos</a>
       <a href="#comparar" data-sec="comparar"><span class="tag">03</span>Fijos frente a dinámicos</a>
       <a href="#fichero" data-sec="fichero"><span class="tag">04</span>Fichero para la distribuidora</a>
       <a href="#faq" data-sec="faq"><span class="tag">05</span>Preguntas frecuentes</a>
+      <a href="#concepto" data-sec="concepto"><span class="tag">?</span>Ayuda: concepto</a>
     </nav>
   </div>
 
   <main>
-
-    <!-- 00 · CONCEPTO -->
-    <section id="concepto">
-      <div class="eyebrow kicker">00 · Concepto</div>
-      <h2>Cada socio recibe una parte de la energía que se genera: su coeficiente de reparto.</h2>
-      <p class="lede">Un consumidor participa en un <b>autoconsumo colectivo</b> cuando pertenece a un grupo de varios consumidores que se alimentan, de forma acordada, de la energía de instalaciones de producción <b>próximas</b> a las de consumo y asociadas a ellas. Cómo se reparte esa energía entre los socios lo fijan los <b>coeficientes de reparto</b>.</p>
-
-      <div class="formula">ENG<sub>h,i</sub> = <span class="b">β<sub>h,i</sub></span> · <span class="g">ENG<sub>h</sub></span></div>
-      <div class="leyenda">
-        <div><b>ENG<sub>h,i</sub></b><br>Energía que le corresponde al consumidor <i>i</i> en la hora <i>h</i>.</div>
-        <div><b style="color:var(--amber)">β<sub>h,i</sub></b><br>Coeficiente de reparto del consumidor <i>i</i> en la hora <i>h</i>. Los de todos los consumidores suman <b>1</b> (100 %) cada hora.</div>
-        <div><b style="color:var(--cyan)">ENG<sub>h</sub></b><br>Energía neta horaria total producida por el generador o los generadores.</div>
-      </div>
-
-      <div class="fieldset-title">Requisitos</div>
-      <div class="grid2">
-        <div class="comp-card"><h4>Misma modalidad</h4><p>Todos los consumidores deben pertenecer a la misma modalidad de autoconsumo (por ejemplo, con excedentes acogidos a compensación).</p></div>
-        <div class="comp-card"><h4>Acuerdo de reparto</h4><p>Se presenta a la distribuidora (normalmente a través de la comercializadora) un acuerdo firmado con los coeficientes, fijos o variables, cada año o antes de que empiecen a aplicarse.</p></div>
-      </div>
-
-      <div class="fieldset-title">Dos formas de repartir</div>
-      <div class="grid2">
-        <div class="comp-card"><h4>01 · Coeficientes fijos</h4><p>Un mismo porcentaje para cada socio en todas las horas del año. Sencillo de acordar, pero en las horas en que un socio no consume, su parte se vierte a la red como excedente.</p></div>
-        <div class="comp-card"><h4>02 · Coeficientes dinámicos (horarios)</h4><p>Un porcentaje distinto para cada socio en cada una de las 8760 horas del año. Permite dar la energía a quien la consume en cada momento y aprovecharla mejor.</p></div>
-      </div>
-      <p class="note">Marco normativo: Real Decreto 244/2019 (autoconsumo), cuyo anexo I recoge el reparto entre consumidores asociados; la Orden TED/1247/2021 permitió los coeficientes variables por hora. Esta guía es divulgativa: confirma los detalles con tu distribuidora.</p>
-    </section>
 
     <!-- 01 · FIJOS -->
     <section id="fijos">
@@ -379,6 +352,33 @@ ES0031405000000003EF1F;8760;0,400000</pre>
       <details class="detalle"><summary>¿Cómo lo calcula la plataforma VatiaCo?</summary><div class="d-body">En la pestaña <i>Socios</i>: <i>Proponer → Optimizado</i> busca los fijos que más autoconsumo dan con los consumos y la generación hora a hora de los últimos 12 meses, y <i>Optimizar reparto horario</i> calcula los dinámicos para el año siguiente, con su gráfico y el fichero .txt para la distribuidora.</div></details>
     </section>
 
+    <!-- AYUDA · CONCEPTO -->
+    <section id="concepto">
+      <div class="eyebrow kicker">Ayuda · Concepto</div>
+      <h2>Cada socio recibe una parte de la energía que se genera: su coeficiente de reparto.</h2>
+      <p class="lede">Un consumidor participa en un <b>autoconsumo colectivo</b> cuando pertenece a un grupo de varios consumidores que se alimentan, de forma acordada, de la energía de instalaciones de producción <b>próximas</b> a las de consumo y asociadas a ellas. Cómo se reparte esa energía entre los socios lo fijan los <b>coeficientes de reparto</b>.</p>
+
+      <div class="formula">ENG<sub>h,i</sub> = <span class="b">β<sub>h,i</sub></span> · <span class="g">ENG<sub>h</sub></span></div>
+      <div class="leyenda">
+        <div><b>ENG<sub>h,i</sub></b><br>Energía que le corresponde al consumidor <i>i</i> en la hora <i>h</i>.</div>
+        <div><b style="color:var(--amber)">β<sub>h,i</sub></b><br>Coeficiente de reparto del consumidor <i>i</i> en la hora <i>h</i>. Los de todos los consumidores suman <b>1</b> (100 %) cada hora.</div>
+        <div><b style="color:var(--cyan)">ENG<sub>h</sub></b><br>Energía neta horaria total producida por el generador o los generadores.</div>
+      </div>
+
+      <div class="fieldset-title">Requisitos</div>
+      <div class="grid2">
+        <div class="comp-card"><h4>Misma modalidad</h4><p>Todos los consumidores deben pertenecer a la misma modalidad de autoconsumo (por ejemplo, con excedentes acogidos a compensación).</p></div>
+        <div class="comp-card"><h4>Acuerdo de reparto</h4><p>Se presenta a la distribuidora (normalmente a través de la comercializadora) un acuerdo firmado con los coeficientes, fijos o variables, cada año o antes de que empiecen a aplicarse.</p></div>
+      </div>
+
+      <div class="fieldset-title">Dos formas de repartir</div>
+      <div class="grid2">
+        <div class="comp-card"><h4>01 · Coeficientes fijos</h4><p>Un mismo porcentaje para cada socio en todas las horas del año. Sencillo de acordar, pero en las horas en que un socio no consume, su parte se vierte a la red como excedente.</p></div>
+        <div class="comp-card"><h4>02 · Coeficientes dinámicos (horarios)</h4><p>Un porcentaje distinto para cada socio en cada una de las 8760 horas del año. Permite dar la energía a quien la consume en cada momento y aprovecharla mejor.</p></div>
+      </div>
+      <p class="note">Marco normativo: Real Decreto 244/2019 (autoconsumo), cuyo anexo I recoge el reparto entre consumidores asociados; la Orden TED/1247/2021 permitió los coeficientes variables por hora. Esta guía es divulgativa: confirma los detalles con tu distribuidora.</p>
+    </section>
+
     <footer>
       Coeficientes de reparto del autoconsumo colectivo: concepto, fijos, dinámicos y fichero para la distribuidora. Basado en la presentación de la Oficina Municipal de Transformación Comunitaria de Zaragoza.
     </footer>
@@ -392,7 +392,7 @@ ES0031405000000003EF1F;8760;0,400000</pre>
 const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
 function activarSeccion(id){
-  if(!document.getElementById(id)) id = 'concepto';
+  if(!document.getElementById(id)) id = 'fijos';
   sections.forEach(s=>s.classList.toggle('tab-active', s.id===id));
   navLinks.forEach(l=>l.classList.toggle('active', l.dataset.sec===id));
   window.scrollTo({top:0, left:0, behavior:'auto'});

@@ -70,22 +70,16 @@ const blog = raiz && raiz.type === 'folder'
   : [];
 const herramientas = blog.reduce((s, b) => s + b.n, 0);
 
-const accesos = [
-  { t: 'Comunidad de prueba', d: `Gratis durante ${PRUEBA_VIDA}`, ico: 'prueba', prueba: true },
-  { t: 'Alta de tu comunidad', d: 'De la lista del IDAE', ico: 'alta', alta: true },
-  { t: 'Mapa del IDAE', d: 'Comunidades de España', ico: 'mapa', href: '/comunidades/' },
-  { t: 'Documentos de la comunidad', d: 'Estatutos, actas y reparto', ico: 'docs', href: doc(CE + 'C01_Documentos_CEC.html') },
-  { t: 'Coeficientes de reparto', d: 'Calcula los β', ico: 'reparto', href: doc(CE + 'C04_Coeficientes_de_Reparto.html') },
-  { t: 'Blog interactivo', d: `${herramientas} herramientas`, ico: 'blog', href: '/blog/' },
+// Apps destacadas bajo los botones principales: para añadir una, otra entrada aqui y su
+// captura (1280x745) en public/img/apps/. Si se renombra un documento, deja de salir.
+const FV = '/docs/A00_Blog_Interactivo/A01_FV/';
+const APPS = [
+  { t: 'Diseña tu instalación fotovoltaica', d: 'Pinta los paneles sobre el mapa satélite de tu tejado.', url: FV + 'C01_Diseno_Sistemas_FV.html', img: '/img/apps/diseno-sistemas-fv.jpg' },
+  { t: 'Dimensiona tu batería', d: 'Simula hora a hora el flujo entre paneles, batería, red y consumo.', url: FV + 'C04_Dimensiona_la_bateria_FV.html', img: '/img/apps/dimensiona-bateria-fv.jpg' },
+  { t: 'Coeficientes de reparto', d: 'Reparte la energía entre los socios y genera el fichero para la distribuidora.', url: CE + 'C04_Coeficientes_de_Reparto.html', img: '/img/apps/coeficientes-reparto.jpg' },
 ];
-const ICONOS_ACCESO: Record<string, string> = {
-  prueba: '<path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>',
-  alta: '<path d="M12 5v14M5 12h14"/>',
-  mapa: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/>',
-  docs: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
-  reparto: '<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.4 6.4M12 12l-7.8 4.5"/>',
-  blog: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M8 7h8M8 11h6"/>',
-};
+const urlsBlog = new Set(raiz ? archivos(raiz).map((f) => f.url) : []);
+const apps = APPS.filter((a) => urlsBlog.has(a.url));
 
 const plataforma = [
   { t: 'Socios e instalaciones', d: 'Alta de cada socio con su usuario, sus puntos de medida e instalaciones (fotovoltaica, eólica, batería, recarga) en un mapa.' },
@@ -139,21 +133,21 @@ const plataforma = [
       .btn.amarillo { background: var(--sol); border-color: var(--sol); color: var(--white); }
       .btn.amarillo:hover { background: var(--sol-hover); border-color: var(--sol-hover); color: var(--white); }
 
-      /* accesos rapidos */
-      .accesos { padding: 0 0 1rem; margin-top: -1.5rem; position: relative; }
-      .accesos ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
-        background: #fff; border: 1px solid var(--gray-5); border-radius: 1.1rem; box-shadow: var(--sombra); overflow: hidden; }
-      @media (max-width: 1080px) { .accesos ul { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-      @media (max-width: 560px) { .accesos ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-      .accesos li { border-right: 1px solid var(--gray-5); border-bottom: 1px solid var(--gray-5); margin: 0 -1px -1px 0; }
-      .acceso-r { display: flex; flex-direction: column; gap: 0.6rem; height: 100%; padding: 1.25rem 1.2rem; text-decoration: none; transition: background 0.15s; }
-      .acceso-r:hover, .acceso-r:focus-visible { background: var(--gray-6); outline: none; }
-      .acceso-r .i { width: 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; background: var(--accent-low); color: var(--accent); }
-      .acceso-r.destacado .i { background: #fff6db; color: var(--bolt); }
-      .acceso-r.azul .i { background: var(--accent); color: #fff; }
-      .acceso-r b { color: var(--white); font-size: 0.93rem; line-height: 1.3; }
-      .acceso-r span { font-size: 0.82rem; color: var(--gray-3); line-height: 1.35; }
-      .acceso-r:hover b { color: var(--accent); }
+      /* apps destacadas: captura de cada herramienta del blog */
+      .apps { margin-top: -1.5rem; position: relative; }
+      .btn.relleno { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .btn.relleno:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+      .apps-tit { text-align: center; margin-bottom: 1.8rem; }
+      .apps-tit h2 { margin: 0.9rem auto 0; text-wrap: balance; }
+      .apps ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)); gap: 1.1rem; }
+      .app { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1px solid var(--gray-5); border-radius: 1rem;
+        overflow: hidden; box-shadow: var(--sombra); text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+      .app:hover, .app:focus-visible { border-color: var(--accent); transform: translateY(-2px); }
+      .app img { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 745; object-fit: cover; object-position: top; border-bottom: 1px solid var(--gray-5); }
+      .app div { padding: 1rem 1.2rem 1.15rem; }
+      .app b { display: block; color: var(--white); font-size: 1rem; line-height: 1.3; margin-bottom: 0.25rem; }
+      .app span { font-size: 0.86rem; color: var(--gray-3); line-height: 1.4; }
+      .app:hover b { color: var(--accent); }
 
       .cabecera { display: flex; justify-content: space-between; align-items: end; gap: 1rem 2rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
       .cabecera .intro { margin: 0; }
@@ -229,28 +223,24 @@ const plataforma = [
         </div>
       </div>
 
-      <nav class="accesos" aria-label="Accesos rápidos">
+      <section class="apps" style="padding: 0;">
         <div class="wrap">
+          <div class="apps-tit">
+            <a class="btn relleno" href="/blog/">Prueba nuestro blog interactivo →</a>
+            <h2>La energía se entiende mejor experimentando.</h2>
+          </div>
           <ul>
-            {accesos.map((a) => (
+            {apps.map((a) => (
               <li>
-                {a.prueba || a.alta ? (
-                  <a class:list={['acceso-r', a.prueba ? 'destacado' : 'azul']} href={PORTAL_URL + (a.prueba ? PRUEBA_RUTA : ALTA_RUTA)}
-                    data-plataforma={a.prueba ? 'Comunidad de prueba' : 'Alta de una comunidad energética'} data-plataforma-ruta={a.prueba ? PRUEBA_RUTA : ALTA_RUTA}>
-                    <div class="i"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICONOS_ACCESO[a.ico]} /></div>
-                    <b>{a.t}</b><span>{a.d}</span>
-                  </a>
-                ) : (
-                  <a class="acceso-r" href={a.href}>
-                    <div class="i"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICONOS_ACCESO[a.ico]} /></div>
-                    <b>{a.t}</b><span>{a.d}</span>
-                  </a>
-                )}
+                <a class="app" href={doc(a.url)}>
+                  <img src={a.img} alt={`Captura de la herramienta: ${a.t}`} width="1280" height="745" loading="lazy" decoding="async" />
+                  <div><b>{a.t}</b><span>{a.d}</span></div>
+                </a>
               </li>
             ))}
           </ul>
         </div>
-      </nav>
+      </section>
 
       <section id="plataforma">
         <div class="wrap">

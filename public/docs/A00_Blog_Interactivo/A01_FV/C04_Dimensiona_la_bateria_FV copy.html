@@ -280,10 +280,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">00</span>Datos del proyecto</a>
-    <a href="#teoria" data-sec="teoria"><span class="tag">01</span>Fundamento teórico</a>
-    <a href="#metodologia" data-sec="metodologia"><span class="tag">02</span>Metodología</a>
-    <a href="#curvas" data-sec="curvas"><span class="tag">03</span>Simulación del día tipo</a>
+    <a href="#curvas" data-sec="curvas"><span class="tag">00</span>Simulación del día tipo</a>
+    <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
+    <a href="#teoria" data-sec="teoria"><span class="tag">02</span>Fundamento teórico</a>
+    <a href="#metodologia" data-sec="metodologia"><span class="tag">03</span>Metodología</a>
     <a href="#informe" data-sec="informe"><span class="tag">04</span>Resultados e informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
@@ -311,177 +311,9 @@
 
   <main>
 
-    <!-- 00 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">00 · Datos del proyecto</div>
-      <h2>¿Para quién es este informe?</h2>
-      <p class="lede">Estos datos aparecerán en la portada del PDF.</p>
-      <div class="card">
-        <div class="fieldset-title">Proyecto</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Análisis de autoconsumo fotovoltaico"></div>
-          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
-        </div>
-        <div class="fieldset-title">Autor</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
-          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
-        </div>
-        <div class="fieldset-title">Organización</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
-          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
-          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
-        </div>
-        <div class="fieldset-title">Destinatario</div>
-        <div class="grid2">
-          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
-          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 01 TEORIA -->
-    <section id="teoria">
-      <header class="hero">
-        <div class="hero-top">
-          <div>
-            <div class="eyebrow">Autoconsumo fotovoltaico · Generación vs Consumo</div>
-            <h1>¿Cuánta de tu propia energía<br><em>consumes tú mismo</em>?</h1>
-            <p class="sub">Elige un día tipo (laborable o festivo) e introduce sus curvas horarias de generación y de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
-          </div>
-          <div class="hero-meta">
-            <span>Método</span>
-            <span style="color:var(--cyan)">Autoconsumo instantáneo, sin batería</span>
-            <span>1 día tipo a la vez, seleccionable</span>
-          </div>
-        </div>
-
-        <div class="stat-row">
-          <div class="stat"><div class="v">min(generación, consumo)</div><div class="l">energía autoconsumida cada hora</div></div>
-          <div class="stat"><div class="v">2 días tipo disponibles</div><div class="l">laborable o festivo</div></div>
-          <div class="stat"><div class="v">% del día estudiado</div><div class="l">resultado del día tipo seleccionado</div></div>
-        </div>
-      </header>
-
-      <div class="eyebrow kicker">01 · Fundamento teórico</div>
-      <h2>Autoconsumo: la parte de tu generación que no exportas.</h2>
-      <p class="lede">No toda la energía que genera un sistema fotovoltaico se consume en el momento; si generas más de lo que necesitas en una hora, ese excedente se exporta a la red (o se pierde, sin batería). El autoconsumo mide qué fracción de la energía generada usas tú directamente.</p>
-
-      <div class="theory-grid">
-        <div class="theory-card">
-          <h3>1 · Autoconsumo instantáneo (sin batería)</h3>
-          <p>Para cada hora, la energía que realmente aprovechas in situ es el mínimo entre lo que generas y lo que consumes en esa misma hora — el resto, o se exporta (si generas de más) o se importa de la red (si consumes de más):</p>
-          <div class="formula-box">
-            <div class="f">Autoconsumida(h) = mín( Generación(h), Consumo(h) )</div>
-          </div>
-        </div>
-
-        <div class="theory-card">
-          <h3>2 · Porcentaje de autoconsumo</h3>
-          <p>Del total generado en el periodo, qué fracción se ha aprovechado directamente:</p>
-          <div class="formula-box">
-            <div class="f">% Autoconsumo = Σ Autoconsumida(h) / Σ Generación(h) × 100</div>
-          </div>
-          <p>No confundir con la <b>autarquía</b> (tasa de autosuficiencia): del total consumido, qué fracción cubre la instalación (directamente o vía batería) en vez de importarse de la red — un indicador distinto, que esta herramienta también calcula (sección 04):</p>
-          <div class="formula-box">
-            <div class="f">Autarquía = (Σ Autoconsumida(h) + Σ Descargada batería(h)) / Σ Consumo(h) × 100</div>
-          </div>
-          <p>Una instalación pequeña puede tener un autoconsumo altísimo (aprovecha casi toda su poca generación) con una autarquía baja (cubre poco del consumo total); una instalación sobredimensionada puede ser al revés.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>3 · Por qué laborable y festivo</h3>
-          <p>El perfil de consumo cambia mucho según haya actividad laboral o no (una vivienda vacía de día entre semana consume distinto que un fin de semana con la familia en casa; un local comercial tiene el patrón inverso). Separar ambos tipos de jornada evita promediar patrones muy distintos entre sí.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>4 · Editor de curvas horarias</h3>
-          <p>Cada curva (generación o consumo) se introduce arrastrando directamente sobre el gráfico "Reparto horario del día tipo" de la sección 03 — su mitad superior edita la generación, la inferior el consumo — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El diagrama de flujo de nodos y el propio reparto horario se recalculan al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>5 · Batería: cargar en vez de "malvender"</h3>
-          <p>Cuando generas más de lo que consumes, ese excedente normalmente se exporta a la red a un precio bajo. Aquí, en su lugar, ese excedente carga primero una batería (hasta su capacidad y potencia máximas); solo si la batería ya está llena se exporta el resto. En las horas de déficit, la batería se descarga para cubrir consumo antes de tirar de red. El SOC inicial (configurable, 50% por defecto) es el estado de carga con el que arranca el día tipo seleccionado.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>6 · Batería: eficiencia de ida y vuelta</h3>
-          <p>La eficiencia se aplica al cargar: por cada kWh de excedente disponible, solo esa fracción queda realmente almacenada. El SOC inicial es el estado de carga con el que la batería empieza el día tipo seleccionado.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>7 · Precio de la energía: la curva PVPC en forma de "pato"</h3>
-          <p>Curva orientativa en forma de "curva de pato", calibrada sobre las curvas reales de precio de excedentes de REE: de madrugada y por la noche (00h-08h) el precio se queda alto y bastante plano, porque de noche no hay sol que lo hunda; entre 09h y 18h cae en picado (a menudo cerca de cero), porque la generación solar de todo el país satura la red; al ponerse el sol pero seguir alta la demanda, sube de golpe entre 19h y 22h de vuelta al nivel de la noche. Festivo con un hundimiento solar igual de profundo pero algo más ancho. Se escala al precio medio del día introducido en la sección 03 — al cambiar de jornada se recarga un precio medio orientativo. Se puede retocar arrastrando sobre el gráfico, igual que generación y consumo; no sustituye a los precios horarios reales de REE/OMIE.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>8 · Coste horario del consumo: cómo se valora</h3>
-          <p>Coste de cada kWh consumido esa hora: lo importado de red se paga al precio PVPC de esa hora; lo autoconsumido directo de la FV y lo aportado por la batería se valoran a su LCOE (coste nivelado de generar ese kWh, ver el punto 9 — calculado a partir de la inversión, no introducido a mano). La línea de puntos que muestra el gráfico de la sección 03 es lo que costaría el mismo consumo sin instalación, comprándolo todo a la red.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>9 · LCOE: cómo se calcula</h3>
-          <p>El LCOE convierte la inversión en un €/kWh: anualiza el coste del sistema con el interés y los años de vida introducidos (como la cuota constante de una hipoteca) y lo divide entre la energía que produce en un año. Mientras no se haya guardado ningún caso en la sección 04, esa energía anual se estima repitiendo el día tipo actual (sección 03) los 365 días; en cuanto se guarda uno o más casos, se usa la suma ponderada de todos ellos (generación y aporte de batería de cada caso × los días al año que se le haya asignado al guardarlo), una base más realista que un único día. La batería suele durar menos años que la instalación FV: si sus años de vida son menores, aquí se cuenta que hay que volver a comprarla varias veces a lo largo de esos mismos años (cada reposición traída a valor presente con el interés) antes de anualizar el conjunto. El día tipo simulado en la sección 03 representa una única jornada (laborable o festivo); las fracciones "días de la semana" y "meses del año" (ajustables por caso en la sección 04) dicen a cuántos días del año se le aplica ese mismo ahorro diario, para poder ir cubriendo el año completo combinando varios días tipo.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>10 · Flujo de caja, VAN, TIR y Payback</h3>
-          <p>Inversión inicial en el año 0 (FV + batería); cada año siguiente aporta el ahorro anual estimado, con una reposición adicional de la batería en los años en que toque. VAN con el interés introducido junto al LCOE (punto 9); TIR: tasa que hace VAN = 0; Payback: primer año con flujo acumulado ≥ 0. No sustituye a un análisis financiero completo (sin IPC, sin financiación, ahorro anual constante).</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>11 · Limitaciones de este método</h3>
-          <p>Es una estimación a partir de un único día representativo, no de un año horario completo — no captura la variabilidad día a día (nubosidad, estación del año, vacaciones, etc.) ni la de los otros días tipo disponibles. La batería empieza el día con el SOC inicial configurado, y no se ha modelado degradación de la batería con la temperatura ni con la profundidad de descarga.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>12 · Cómo dimensionar tu FV y tu batería con esta herramienta</h3>
-          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (sección 03). Después prueba distintas potencias FV (kWp) y compara, en la sección 04, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, más kWp exporta más sin mejorar mucho el autoconsumo. Por último activa la batería y varía su capacidad y potencia mirando el diagrama de flujos (también en la sección 03) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la sección 03 — la sección 04 y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>13 · Limitaciones para el dimensionado</h3>
-          <p>El tamaño que elijas aquí es orientativo, no un dimensionado técnico: se basa en un único día representativo, no en un año horario real medido, y no considera la potencia máxima de inyección permitida por la distribuidora, la orientación e inclinación real de los paneles ni las pérdidas por sombreado. Antes de comprar equipos, contrasta el resultado con un estudio de dimensionado normativo.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 02 METODOLOGIA -->
-    <section id="metodologia">
-      <div class="eyebrow kicker">02 · Metodología</div>
-      <h2>Cómo se simula un día tipo, hora a hora.</h2>
-      <p class="lede">La herramienta estudia un único día tipo cada vez — elegido con el selector de la sección 03 — cruzando su curva de generación con su curva de consumo hora a hora, y simulando la batería sobre ese mismo día.</p>
-
-      <div class="grid3">
-        <div class="comp-card">
-          <h4>Qué día estás estudiando</h4>
-          <p>Un único selector: jornada (laborable o festivo, con su propio patrón de consumo). Un único perfil de generación genérico sirve para todo el año, sin distinguir por mes. Cambiar de jornada carga valores por defecto para esa combinación, listos para retocar.</p>
-        </div>
-        <div class="comp-card">
-          <h4>Simulación de la batería, hora a hora</h4>
-          <p>Para cada hora: primero se calcula el autoconsumo directo (mín. de generación y consumo). Si sobra generación, ese excedente carga la batería (limitado por la potencia máxima y la capacidad libre); si sobra consumo, la batería se descarga para cubrirlo (limitado por la potencia máxima y lo que quede almacenado).</p>
-        </div>
-        <div class="comp-card">
-          <h4>Eficiencia de ida y vuelta</h4>
-          <p>No toda la energía que entra a la batería se recupera al descargarla — se pierde una fracción en la conversión. Esa pérdida se aplica al cargar: por cada kWh de excedente, solo una fracción (la eficiencia) queda realmente almacenada.</p>
-        </div>
-      </div>
-
-      <div class="grid3" style="margin-top:28px;">
-        <div class="comp-card">
-          <h4>Cómo dimensionar la instalación con esta herramienta</h4>
-          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas potencias FV (kWp) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se activa la batería y se varía su capacidad y potencia mirando el diagrama de flujos.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 03 CURVAS Y BATERIA -->
+    <!-- 00 CURVAS Y BATERIA -->
     <section id="curvas">
-      <div class="eyebrow kicker">03 · Simulación del día tipo</div>
+      <div class="eyebrow kicker">00 · Simulación del día tipo</div>
       <h2>Arrastra sobre cada gráfico y mira cómo cambia el flujo, arriba.</h2>
 
       <div class="flow-row">
@@ -624,6 +456,174 @@
         <div class="field"><label>Nombre del caso (opcional)</label><input type="text" id="caso_nombre" placeholder="Ej: Vivienda sin batería en invierno"></div>
         <div class="btn-row">
           <button class="btn primary" id="btnAddCaso">+ Guardar caso en el informe</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 01 DATOS DEL PROYECTO -->
+    <section id="proyecto">
+      <div class="eyebrow kicker">01 · Datos del proyecto</div>
+      <h2>¿Para quién es este informe?</h2>
+      <p class="lede">Estos datos aparecerán en la portada del PDF.</p>
+      <div class="card">
+        <div class="fieldset-title">Proyecto</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="p_proyecto" value="Análisis de autoconsumo fotovoltaico"></div>
+          <div class="field"><label>Fecha del informe</label><input type="date" id="p_fecha"></div>
+        </div>
+        <div class="fieldset-title">Autor</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
+        </div>
+        <div class="fieldset-title">Organización</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_org_nombre" value="Mi Proyecto Instalaciones"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_org_cif" value="B-12345678"></div>
+          <div class="field"><label>Dirección</label><input type="text" id="p_org_dir" value="Calle Mi Proyecto, 123; Mi Proyecto, 12345"></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="p_org_tel" value="912 34 56 78"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Correo</label><input type="email" id="p_org_correo" value="MiProyecto@MiProyecto.com"></div>
+        </div>
+        <div class="fieldset-title">Destinatario</div>
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input type="text" id="p_dest_nombre" placeholder="Nombre del destinatario"></div>
+          <div class="field"><label>CIF</label><input type="text" id="p_dest_cif" placeholder="CIF del destinatario"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 TEORIA -->
+    <section id="teoria">
+      <header class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow">Autoconsumo fotovoltaico · Generación vs Consumo</div>
+            <h1>¿Cuánta de tu propia energía<br><em>consumes tú mismo</em>?</h1>
+            <p class="sub">Elige un día tipo (laborable o festivo) e introduce sus curvas horarias de generación y de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
+          </div>
+          <div class="hero-meta">
+            <span>Método</span>
+            <span style="color:var(--cyan)">Autoconsumo instantáneo, sin batería</span>
+            <span>1 día tipo a la vez, seleccionable</span>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat"><div class="v">min(generación, consumo)</div><div class="l">energía autoconsumida cada hora</div></div>
+          <div class="stat"><div class="v">2 días tipo disponibles</div><div class="l">laborable o festivo</div></div>
+          <div class="stat"><div class="v">% del día estudiado</div><div class="l">resultado del día tipo seleccionado</div></div>
+        </div>
+      </header>
+
+      <div class="eyebrow kicker">02 · Fundamento teórico</div>
+      <h2>Autoconsumo: la parte de tu generación que no exportas.</h2>
+      <p class="lede">No toda la energía que genera un sistema fotovoltaico se consume en el momento; si generas más de lo que necesitas en una hora, ese excedente se exporta a la red (o se pierde, sin batería). El autoconsumo mide qué fracción de la energía generada usas tú directamente.</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Autoconsumo instantáneo (sin batería)</h3>
+          <p>Para cada hora, la energía que realmente aprovechas in situ es el mínimo entre lo que generas y lo que consumes en esa misma hora — el resto, o se exporta (si generas de más) o se importa de la red (si consumes de más):</p>
+          <div class="formula-box">
+            <div class="f">Autoconsumida(h) = mín( Generación(h), Consumo(h) )</div>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Porcentaje de autoconsumo</h3>
+          <p>Del total generado en el periodo, qué fracción se ha aprovechado directamente:</p>
+          <div class="formula-box">
+            <div class="f">% Autoconsumo = Σ Autoconsumida(h) / Σ Generación(h) × 100</div>
+          </div>
+          <p>No confundir con la <b>autarquía</b> (tasa de autosuficiencia): del total consumido, qué fracción cubre la instalación (directamente o vía batería) en vez de importarse de la red — un indicador distinto, que esta herramienta también calcula (sección 04):</p>
+          <div class="formula-box">
+            <div class="f">Autarquía = (Σ Autoconsumida(h) + Σ Descargada batería(h)) / Σ Consumo(h) × 100</div>
+          </div>
+          <p>Una instalación pequeña puede tener un autoconsumo altísimo (aprovecha casi toda su poca generación) con una autarquía baja (cubre poco del consumo total); una instalación sobredimensionada puede ser al revés.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Por qué laborable y festivo</h3>
+          <p>El perfil de consumo cambia mucho según haya actividad laboral o no (una vivienda vacía de día entre semana consume distinto que un fin de semana con la familia en casa; un local comercial tiene el patrón inverso). Separar ambos tipos de jornada evita promediar patrones muy distintos entre sí.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Editor de curvas horarias</h3>
+          <p>Cada curva (generación o consumo) se introduce arrastrando directamente sobre el gráfico "Reparto horario del día tipo" de la sección 00 — su mitad superior edita la generación, la inferior el consumo — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El diagrama de flujo de nodos y el propio reparto horario se recalculan al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>5 · Batería: cargar en vez de "malvender"</h3>
+          <p>Cuando generas más de lo que consumes, ese excedente normalmente se exporta a la red a un precio bajo. Aquí, en su lugar, ese excedente carga primero una batería (hasta su capacidad y potencia máximas); solo si la batería ya está llena se exporta el resto. En las horas de déficit, la batería se descarga para cubrir consumo antes de tirar de red. El SOC inicial (configurable, 50% por defecto) es el estado de carga con el que arranca el día tipo seleccionado.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>6 · Batería: eficiencia de ida y vuelta</h3>
+          <p>La eficiencia se aplica al cargar: por cada kWh de excedente disponible, solo esa fracción queda realmente almacenada. El SOC inicial es el estado de carga con el que la batería empieza el día tipo seleccionado.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>7 · Precio de la energía: la curva PVPC en forma de "pato"</h3>
+          <p>Curva orientativa en forma de "curva de pato", calibrada sobre las curvas reales de precio de excedentes de REE: de madrugada y por la noche (00h-08h) el precio se queda alto y bastante plano, porque de noche no hay sol que lo hunda; entre 09h y 18h cae en picado (a menudo cerca de cero), porque la generación solar de todo el país satura la red; al ponerse el sol pero seguir alta la demanda, sube de golpe entre 19h y 22h de vuelta al nivel de la noche. Festivo con un hundimiento solar igual de profundo pero algo más ancho. Se escala al precio medio del día introducido en la sección 00 — al cambiar de jornada se recarga un precio medio orientativo. Se puede retocar arrastrando sobre el gráfico, igual que generación y consumo; no sustituye a los precios horarios reales de REE/OMIE.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>8 · Coste horario del consumo: cómo se valora</h3>
+          <p>Coste de cada kWh consumido esa hora: lo importado de red se paga al precio PVPC de esa hora; lo autoconsumido directo de la FV y lo aportado por la batería se valoran a su LCOE (coste nivelado de generar ese kWh, ver el punto 9 — calculado a partir de la inversión, no introducido a mano). La línea de puntos que muestra el gráfico de la sección 00 es lo que costaría el mismo consumo sin instalación, comprándolo todo a la red.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>9 · LCOE: cómo se calcula</h3>
+          <p>El LCOE convierte la inversión en un €/kWh: anualiza el coste del sistema con el interés y los años de vida introducidos (como la cuota constante de una hipoteca) y lo divide entre la energía que produce en un año. Mientras no se haya guardado ningún caso en la sección 04, esa energía anual se estima repitiendo el día tipo actual (sección 00) los 365 días; en cuanto se guarda uno o más casos, se usa la suma ponderada de todos ellos (generación y aporte de batería de cada caso × los días al año que se le haya asignado al guardarlo), una base más realista que un único día. La batería suele durar menos años que la instalación FV: si sus años de vida son menores, aquí se cuenta que hay que volver a comprarla varias veces a lo largo de esos mismos años (cada reposición traída a valor presente con el interés) antes de anualizar el conjunto. El día tipo simulado en la sección 00 representa una única jornada (laborable o festivo); las fracciones "días de la semana" y "meses del año" (ajustables por caso en la sección 04) dicen a cuántos días del año se le aplica ese mismo ahorro diario, para poder ir cubriendo el año completo combinando varios días tipo.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>10 · Flujo de caja, VAN, TIR y Payback</h3>
+          <p>Inversión inicial en el año 0 (FV + batería); cada año siguiente aporta el ahorro anual estimado, con una reposición adicional de la batería en los años en que toque. VAN con el interés introducido junto al LCOE (punto 9); TIR: tasa que hace VAN = 0; Payback: primer año con flujo acumulado ≥ 0. No sustituye a un análisis financiero completo (sin IPC, sin financiación, ahorro anual constante).</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>11 · Limitaciones de este método</h3>
+          <p>Es una estimación a partir de un único día representativo, no de un año horario completo — no captura la variabilidad día a día (nubosidad, estación del año, vacaciones, etc.) ni la de los otros días tipo disponibles. La batería empieza el día con el SOC inicial configurado, y no se ha modelado degradación de la batería con la temperatura ni con la profundidad de descarga.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>12 · Cómo dimensionar tu FV y tu batería con esta herramienta</h3>
+          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (sección 00). Después prueba distintas potencias FV (kWp) y compara, en la sección 04, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, más kWp exporta más sin mejorar mucho el autoconsumo. Por último activa la batería y varía su capacidad y potencia mirando el diagrama de flujos (también en la sección 00) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la sección 00 — la sección 04 y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>13 · Limitaciones para el dimensionado</h3>
+          <p>El tamaño que elijas aquí es orientativo, no un dimensionado técnico: se basa en un único día representativo, no en un año horario real medido, y no considera la potencia máxima de inyección permitida por la distribuidora, la orientación e inclinación real de los paneles ni las pérdidas por sombreado. Antes de comprar equipos, contrasta el resultado con un estudio de dimensionado normativo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 METODOLOGIA -->
+    <section id="metodologia">
+      <div class="eyebrow kicker">03 · Metodología</div>
+      <h2>Cómo se simula un día tipo, hora a hora.</h2>
+      <p class="lede">La herramienta estudia un único día tipo cada vez — elegido con el selector de la sección 00 — cruzando su curva de generación con su curva de consumo hora a hora, y simulando la batería sobre ese mismo día.</p>
+
+      <div class="grid3">
+        <div class="comp-card">
+          <h4>Qué día estás estudiando</h4>
+          <p>Un único selector: jornada (laborable o festivo, con su propio patrón de consumo). Un único perfil de generación genérico sirve para todo el año, sin distinguir por mes. Cambiar de jornada carga valores por defecto para esa combinación, listos para retocar.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Simulación de la batería, hora a hora</h4>
+          <p>Para cada hora: primero se calcula el autoconsumo directo (mín. de generación y consumo). Si sobra generación, ese excedente carga la batería (limitado por la potencia máxima y la capacidad libre); si sobra consumo, la batería se descarga para cubrirlo (limitado por la potencia máxima y lo que quede almacenado).</p>
+        </div>
+        <div class="comp-card">
+          <h4>Eficiencia de ida y vuelta</h4>
+          <p>No toda la energía que entra a la batería se recupera al descargarla — se pierde una fracción en la conversión. Esa pérdida se aplica al cargar: por cada kWh de excedente, solo una fracción (la eficiencia) queda realmente almacenada.</p>
+        </div>
+      </div>
+
+      <div class="grid3" style="margin-top:28px;">
+        <div class="comp-card">
+          <h4>Cómo dimensionar la instalación con esta herramienta</h4>
+          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas potencias FV (kWp) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se activa la batería y se varía su capacidad y potencia mirando el diagrama de flujos.</p>
         </div>
       </div>
     </section>
@@ -1045,7 +1045,7 @@ function showSection(id, opts){
   }
 }
 window.addEventListener('hashchange', ()=> showSection(location.hash.slice(1)));
-showSection((location.hash||'#proyecto').slice(1), {scroll:false});
+showSection((location.hash||'#curvas').slice(1), {scroll:false});
 
 document.getElementById('p_fecha').valueAsDate = new Date();
 
@@ -1132,7 +1132,7 @@ let precioRestauradoDeVatiaco = false;
 let PRECIO_POTENCIA_HORARIO = new Array(24).fill(0.05);
 let precioPotenciaRestauradoDeVatiaco = false;
 // Casos guardados del informe (seccion 04): declarados aqui, no donde se usan mas abajo,
-// porque calcularProduccionAnualAgregada() y calcularFlujoCaja() (seccion 03) ya los leen
+// porque calcularProduccionAnualAgregada() y calcularFlujoCaja() (seccion 00) ya los leen
 // desde la primera llamada a renderResultados(), antes de llegar al bloque de "casos".
 let casos = [];
 let casoNextId = 1;
@@ -1167,7 +1167,7 @@ function guardarCurvasEnVatiaco(){
   vatiacoGuardar(v);
 }
 
-// ===================== EDITOR DE CURVA (arrastrar sobre el reparto horario, seccion 03) =====================
+// ===================== EDITOR DE CURVA (arrastrar sobre el reparto horario, seccion 00) =====================
 // Generacion y consumo ya no tienen graficos de barras propios -- se editan arrastrando
 // directamente sobre "Reparto horario del dia tipo" (ver repartoSetFromEvent, mas abajo).
 // renderTodosLosEditores() se queda solo con la persistencia en VatiaCo: la llaman todos
@@ -1649,7 +1649,7 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
 
-// ===================== PRECIO Y COSTE HORARIO (seccion 03, curvas y bateria) =====================
+// ===================== PRECIO Y COSTE HORARIO (seccion 00, curvas y bateria) =====================
 // Editor de la curva de precio (barras arrastrables, €/kWh) -- su propia funcion porque
 // PRECIO_HORARIO no vive en CURVAS: sus valores (decimas de euro) no comparten escala con
 // los kWh de generacion/consumo (que ahora se editan sobre el reparto horario, ver
@@ -1940,7 +1940,7 @@ function calcularLCOE(produccionAnualFv, produccionAnualBat){
 }
 
 // Coste horario de un dia (kWh de FV directa/bateria/red a lo largo de 24h, con su propio
-// precio y LCOE) -- funcion pura, reutilizada tanto para el dia tipo en vivo (seccion 03)
+// precio y LCOE) -- funcion pura, reutilizada tanto para el dia tipo en vivo (seccion 00)
 // como para cada caso guardado (seccion 04 y agregados de flujo de caja), cada uno con sus
 // propias curvas de generacion/consumo/bateria y su propio precio horario congelado.
 // potenciaContratada/precioPotenciaHoraria: el termino de potencia (fijo, no depende de
@@ -2030,7 +2030,7 @@ function renderPrecioYCoste(res){
   };
 }
 
-// ===================== FLUJO DE CAJA, VAN, TIR Y PAYBACK (seccion 03, curvas y bateria) ============
+// ===================== FLUJO DE CAJA, VAN, TIR Y PAYBACK (seccion 00, curvas y bateria) ============
 // VAN a un tipo de interes r, dada una serie de flujos anuales (flows[0] es el anio 0).
 function calcNPV(r, flows){
   return flows.reduce((acc,cf,i)=> acc + cf/Math.pow(1+r,i), 0);
@@ -2169,7 +2169,7 @@ function renderFlujoCaja(ahorroDiarioActual, lcoeFv, lcoeBat){
   return r;
 }
 
-// ===================== DIAGRAMA DE FLUJOS (seccion 03, curvas y bateria) =====================
+// ===================== DIAGRAMA DE FLUJOS (seccion 00, curvas y bateria) =====================
 // Diagrama de nodos (FV -> electricidad -> demanda, con electricidad conectada en
 // ambos sentidos a bateria y a red) anotado con el flujo total de cada sentido, en
 // kWh, para el dia tipo seleccionado.
@@ -2458,7 +2458,7 @@ renderResultados();
 });
 
 // ===================== CASOS: varios dias tipo en el mismo informe =====================
-// El "dia tipo actual" (jornada, FV, consumo y bateria de la seccion 03, editados en
+// El "dia tipo actual" (jornada, FV, consumo y bateria de la seccion 00, editados en
 // vivo) se puede guardar como un caso independiente del informe -- una foto fija de esos
 // inputs, sus curvas y su resultado en ese momento. Igual que las "actuaciones" de las
 // fichas CAE (A01_CAEs): se guardan tantos casos como se quiera, cada uno con sus propios
@@ -2483,7 +2483,7 @@ function snapshotCasoActual(nombre){
     kwhDia: parseFloat(document.getElementById('kwhdia_con').value)||0,
     curvas: { gen: CURVAS.gen.valores.slice(), con: CURVAS.con.valores.slice() },
     // Precio horario y precio de potencia, congelados en el momento de guardar el caso --
-    // asi cada caso lleva su propio precio, y tocar los campos de la seccion 03 despues de
+    // asi cada caso lleva su propio precio, y tocar los campos de la seccion 00 despues de
     // guardarlo no lo cambia retroactivamente (igual que kwp o kwhDia, ya congelados
     // arriba). La potencia contratada en si (res.potenciaContratada) ya viaja congelada
     // dentro de res, y con ella el limite de importacion/exportacion hora a hora (ver
@@ -2501,7 +2501,7 @@ document.getElementById('btnAddCaso').addEventListener('click', ()=>{
   const caso = snapshotCasoActual(nombreInput.value.trim());
   casos.push(caso);
   renderCasos();
-  renderResultados(); // el flujo de caja de la seccion 03 pasa a ponderar tambien este caso
+  renderResultados(); // el flujo de caja de la seccion 00 pasa a ponderar tambien este caso
   showToast('Caso guardado: '+caso.nombre);
   nombreInput.value = '';
 });
@@ -2610,7 +2610,7 @@ window.toggleCaso = function(id){ document.getElementById('cb-'+id).classList.to
 window.removeCaso = function(id){ casos = casos.filter(c=>c.id!==id); renderCasos(); renderResultados(); };
 // Ajusta el peso (dias/semana x meses/anio) de un caso ya guardado, aqui en la seccion 04
 // -- asi se pondera el flujo de caja conjunto de todos los casos sin tener que volver a la
-// seccion 03 (ver snapshotCasoActual, que guarda cada caso nuevo a 365 dias por defecto).
+// seccion 00 (ver snapshotCasoActual, que guarda cada caso nuevo a 365 dias por defecto).
 window.onCasoDiasChange = function(id, campo, valor){
   const caso = casos.find(c=>c.id===id);
   if(!caso) return;
@@ -2732,7 +2732,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       return yy+lines.length*4.5+3;
     }
     // Solo los flujos que realmente tienen flecha propia en el diagrama de nodos
-    // (seccion 03): generacion, descarga y importacion ENTRAN al nudo "Electricidad"
+    // (seccion 00): generacion, descarga y importacion ENTRAN al nudo "Electricidad"
     // (positivo); demanda, carga y exportacion SALEN (negativo). No se representa el
     // autoconsumo -- no tiene flecha propia, es una lectura derivada, no un flujo del
     // nudo. Cada pila (arriba las 3 entrantes, abajo las 3 salientes, en espejo) es
