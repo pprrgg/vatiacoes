@@ -24,7 +24,7 @@ const CE = '/docs/A00_Blog_Interactivo/A02_Comunidades Energéticas/';
 // con el numero de herramientas y las primeras; el texto y el icono de cada una van aqui
 const SECCIONES: Record<string, { t: string; d: string; ico: string; top: [string, string][] }> = {
   'A01_FV': { t: 'Fotovoltaica', ico: 'sol', d: 'Diseño, generación, baterías, tramitación y presupuesto de una instalación fotovoltaica.',
-    top: [['C02_Generación_Fotovoltaica.html', 'Generación horaria con PVGIS y LCOE'], ['C04_Autoconsumo_FV_con_bateria.html', 'Autoconsumo con batería'], ['C10_Presupuesto_fotovoltaico_detallado.html', 'Presupuesto detallado']] },
+    top: [['C02_Generación_Fotovoltaica.html', 'Generación horaria con PVGIS y LCOE'], ['C04_Autoconsumo_FV_con_bateria.html', 'Autoconsumo con batería'], ['C04_Presupuesto_fotovoltaico_detallado.html', 'Presupuesto detallado']] },
   'A02_Comunidades Energéticas': { t: 'Comunidades energéticas', ico: 'comunidad', d: 'Constitución, documentos, coeficientes de reparto y datos de Datadis.',
     top: [['C01_Comunidades_Energeticas.html', 'Cómo constituir la comunidad'], ['C01_Documentos_CEC.html', 'Generador de documentos'], ['C04_Coeficientes_de_Reparto.html', 'Coeficientes de reparto']] },
   'A02_Contrato_de_electricidad': { t: 'Contrato de electricidad', ico: 'factura', d: 'Factura eléctrica, peajes y optimización de la potencia contratada.',
@@ -75,7 +75,7 @@ const herramientas = blog.reduce((s, b) => s + b.n, 0);
 const FV = '/docs/A00_Blog_Interactivo/A01_FV/';
 const APPS = [
   { t: 'Diseña tu instalación fotovoltaica', d: 'Pinta los paneles sobre el mapa satélite de tu tejado.', url: FV + 'C01_Diseno_Sistemas_FV.html', img: '/img/apps/diseno-sistemas-fv.jpg' },
-  { t: 'Dimensiona tu batería', d: 'Simula hora a hora el flujo entre paneles, batería, red y consumo.', url: FV + 'C04_Dimensiona_la_bateria_FV.html', img: '/img/apps/dimensiona-bateria-fv.jpg' },
+  { t: 'Dimensiona tu batería', d: 'Simula hora a hora el flujo entre paneles, batería, red y consumo.', url: FV + 'C02_Dimensiona_la_bateria_FV.html', img: '/img/apps/dimensiona-bateria-fv.jpg' },
   { t: 'Coeficientes de reparto', d: 'Reparte la energía entre los socios y genera el fichero para la distribuidora.', url: CE + 'C04_Coeficientes_de_Reparto.html', img: '/img/apps/coeficientes-reparto.jpg' },
 ];
 const urlsBlog = new Set(raiz ? archivos(raiz).map((f) => f.url) : []);
