@@ -135,7 +135,9 @@ const plataforma = [
 
       /* apps destacadas: captura de cada herramienta del blog */
       .apps { margin-top: -1.5rem; position: relative; }
-      .btn.relleno { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .btn.relleno { display: inline-flex; align-items: center; gap: 0.55rem; background: var(--accent); border-color: var(--accent); color: #fff; }
+      .btn.relleno span { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
+      .btn.relleno small { font-size: 0.78rem; font-weight: 500; opacity: 0.85; }
       .btn.relleno:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
       .apps-tit { text-align: center; margin-bottom: 1.8rem; }
       .apps-tit h2 { margin: 0.9rem auto 0; text-wrap: balance; }
@@ -226,8 +228,8 @@ const plataforma = [
       <section class="apps" style="padding: 0;">
         <div class="wrap">
           <div class="apps-tit">
-            <a class="btn relleno" href="/blog/">Prueba nuestro blog interactivo →</a>
             <h2>La energía se entiende mejor experimentando.</h2>
+            <a class="btn relleno" href="/blog/"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M8 7h8M8 11h6"/></svg><span><b>Blog interactivo</b><small>Personalízalo y genera un PDF</small></span></a>
           </div>
           <ul>
             {apps.map((a) => (
