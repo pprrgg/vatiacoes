@@ -52,8 +52,9 @@
   section .kicker{margin-bottom:14px;}
   section h2{font-size:30px; margin-bottom:20px; max-width:780px;}
   section .lede{color:var(--text-dim); max-width:680px; font-size:15px; margin-bottom:36px;}
-  #teoria{padding-top:0;}
-  #teoria > .hero{margin:0 -56px 48px;}
+  #ayuda{padding-top:0;}
+  .ayuda-bloque{margin-top:56px; padding-top:48px; border-top:1px solid var(--line-soft);}
+  #ayuda > .hero{margin:0 -56px 48px;}
 
   .hero{padding:80px 56px 64px; border-bottom:1px solid var(--line-soft); position:relative; overflow:hidden;}
   .hero-top{display:flex; justify-content:space-between; align-items:flex-start; gap:40px; flex-wrap:wrap;}
@@ -177,70 +178,6 @@
   .flow-col .chart-svg-wrap{margin-top:0;}
   .flow-row .editor-card{margin-bottom:0;}
   .flow-col{min-width:0;}
-  /* Diagrama de flujo en arbol: se adapta al ancho de su columna, no al de la ventana. */
-  .flow-diagram-holder{container-type:inline-size;}
-  .flow-diagram-holder .chart-svg-wrap{padding:10px;}
-  .flow-tree{font-family:var(--font-mono); font-size:13px; color:var(--text);}
-  .ft-card{background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:9px 10px; min-width:0;}
-  .ft-head{display:flex; align-items:center; gap:8px; min-height:30px;}
-  .ft-icon{flex:none; width:30px; height:30px; border-radius:7px; display:grid; place-items:center; color:var(--c); background:color-mix(in srgb, var(--c) 14%, #fff);}
-  .ft-icon svg{width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;}
-  .ft-name{font-weight:700; font-size:14px;}
-  .ft-status{font-size:11px; color:var(--text-dimmer);}
-  .ft-balance{display:grid; gap:6px; margin-top:8px;}
-  .ft-bal-row{display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:7px; font-size:11px; color:var(--text-dim);}
-  .ft-bal-row b{color:var(--text); font-size:13px; font-variant-numeric:tabular-nums;}
-  .ft-stack{display:flex; height:14px; border-radius:3px; overflow:hidden; background:var(--line-soft);}
-  .ft-stack span{display:block; width:0; transition:width .25s;}
-  .ft-branches{list-style:none; margin:0; padding:0;}
-  .ft-node{position:relative; padding:8px 0 0 26px;}
-  .ft-node::before{content:""; position:absolute; left:10px; top:0; bottom:0; border-left:2px solid #b4bfcd;}
-  .ft-node:last-child::before{bottom:auto; height:33px;}
-  .ft-link{position:absolute; left:12px; top:31px; width:14px; height:3px; background:#b4bfcd;}
-  .ft-link[data-dir="in"],.ft-link[data-dir="out"]{background:linear-gradient(90deg,var(--c) 5px,transparent 5px) 0 0/8px 100%;}
-  .ft-link[data-dir="in"]{animation:ft-in .7s linear infinite;}
-  .ft-link[data-dir="out"]{animation:ft-out .7s linear infinite;}
-  @keyframes ft-in{to{background-position-x:-8px;}}
-  @keyframes ft-out{to{background-position-x:8px;}}
-  @media(prefers-reduced-motion:reduce){.ft-link{animation:none !important;}}
-  .ft-body{display:grid; gap:8px; margin-top:6px;}
-  .ft-flows{display:grid; gap:6px; align-content:start; min-width:0;}
-  .ft-flow-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px; color:var(--text-dim); font-size:12px; line-height:18px;}
-  .ft-flow i{font-style:normal; font-weight:700; margin-right:4px; color:var(--c);}
-  .ft-flow b{color:var(--text); font-size:15px; font-variant-numeric:tabular-nums; white-space:nowrap;}
-  .ft-bar{height:7px; margin-top:2px; border-radius:3px; background:var(--line-soft); overflow:hidden;}
-  .ft-bar span{display:block; height:100%; width:0; background:var(--c); transition:width .25s;}
-  .ft-node.is-off .ft-flows{opacity:.45;}
-  .ft-node.is-off .ft-icon{filter:grayscale(1);}
-  .ft-params{display:flex; flex-wrap:wrap; align-content:start; gap:6px 12px; min-width:0;}
-  .ft-param{display:inline-flex; align-items:center; gap:5px; max-width:100%; font-size:11px; color:var(--text-dim);}
-  .ft-param input,.ft-param select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:4px 6px; border-radius:6px; font-family:var(--font-mono); font-size:12px; min-width:0;}
-  .ft-param input{width:62px; flex:none;}
-  .ft-param select{max-width:130px;}
-  .ft-param input:focus,.ft-param select:focus{outline:none; border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan);}
-  @media(pointer:coarse){.ft-param input,.ft-param select{font-size:16px;} .ft-param input{width:74px;}}
-  .flow-hour-ticks{display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:2px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line-soft);}
-  .flow-hour-ticks button{background:none; border:none; border-radius:4px; padding:0; margin:0; min-height:32px; cursor:pointer; font-family:var(--font-mono); color:var(--text-dim);}
-  .flow-hour-ticks button .mark{display:none;}
-  .flow-hour-ticks button .num{font-size:11px; line-height:1;}
-  .flow-hour-ticks button:hover{background:var(--panel2);}
-  .flow-hour-ticks button.active{background:var(--cyan); color:#fff; font-weight:700;}
-  .flow-hour-ticks button:focus-visible{outline:2px solid var(--cyan); outline-offset:1px;}
-  @container (max-width:250px){
-    .ft-params{display:grid;}
-    .ft-param{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 5px;}
-    .ft-plabel{grid-column:1/-1;}
-    .ft-param input{width:100%;}
-    .ft-param select{grid-column:1/-1; width:100%; max-width:none;}
-  }
-  @container (min-width:380px){.flow-hour-ticks{grid-template-columns:repeat(13,minmax(0,1fr));}}
-  @container (min-width:460px){
-    .ft-body{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:20px;}
-    .flow-hour-ticks{grid-template-columns:repeat(25,minmax(0,1fr)); gap:1px;}
-    .flow-hour-ticks button{min-height:24px;}
-    .flow-hour-ticks button .num{font-size:9px;}
-  }
-
   .editor-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; margin-bottom:20px;}
   .editor-card .eh, .flujo-caja-chart-col .eh{display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px;}
   .editor-card .eh h4, .flujo-caja-chart-col .eh h4{font-size:14px; color:var(--text);}
@@ -251,7 +188,10 @@
   .chart-inline-fields{display:flex; gap:18px; flex-wrap:wrap; margin:10px 0 4px;}
   .chart-inline-fields label{display:flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap;}
   .chart-inline-fields input{width:76px; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:5px 7px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; text-align:right;}
-  .chart-inline-fields input:focus{outline:none; border-color:var(--cyan);}
+  .chart-inline-fields select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:5px 7px; border-radius:var(--radius); font-family:var(--font-mono); font-size:12px; max-width:100%;}
+  .chart-inline-fields input:focus, .chart-inline-fields select:focus{outline:none; border-color:var(--cyan);}
+  .reparto-legend{font-family:var(--font-mono); font-size:11px; line-height:18px; color:#4f5b6d; margin-top:8px;}
+  .reparto-legend i{font-style:normal;}
   .chart-inline-fields input[type=checkbox]{width:auto;}
   .chart-inline-fields input[readonly]{color:var(--amber); border-style:dashed; cursor:default;}
   .chart-inline-fields select{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:5px 7px; border-radius:var(--radius); font-family:var(--font-mono); font-size:11px; text-transform:none;}
@@ -277,7 +217,7 @@
     .tabbar a{padding:14px 14px;}
     section{padding:56px 24px;}
     .hero{padding:100px 24px 40px;}
-    #teoria > .hero{margin:0 -24px 32px;}
+    #ayuda > .hero{margin:0 -24px 32px;}
     .hero-top{flex-direction:column;}
     .hero-meta{text-align:left;}
   }
@@ -294,11 +234,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </button>
   <nav class="tabbar" id="sidenav">
-    <a href="#curvas" data-sec="curvas"><span class="tag">00</span>Simulación del día tipo</a>
-    <a href="#proyecto" data-sec="proyecto"><span class="tag">01</span>Datos del proyecto</a>
-    <a href="#teoria" data-sec="teoria"><span class="tag">02</span>Fundamento teórico</a>
-    <a href="#metodologia" data-sec="metodologia"><span class="tag">03</span>Metodología</a>
-    <a href="#informe" data-sec="informe"><span class="tag">04</span>Resultados e informe</a>
+    <a href="#curvas" data-sec="curvas"><span class="tag">00</span>Simulación</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -330,68 +268,46 @@
       <div class="eyebrow kicker">00 · Simulación del día tipo</div>
       <h2>Arrastra sobre cada gráfico y mira cómo cambia el flujo.</h2>
 
-      <div class="flow-row">
+      <div class="flow-row" style="margin-bottom:24px;">
         <div class="flow-col">
-          <div class="subsection-title" style="margin-top:0;">Reparto horario del día tipo (mismos totales que las flechas)</div>
-          <div class="chart-svg-wrap" id="flowCurveWrap"></div>
+          <div class="editor-card" style="margin-bottom:20px;">
+            <div class="eh">
+              <h4>Reparto horario del día tipo</h4>
+              <div class="chart-inline-fields" style="margin:0;">
+                <label title="Tipo de consumidor (perfil típico)">Perfil de carga<select id="tipoConsumidorGlobal"><option value="domestico">Doméstico</option><option value="comercial">Comercial</option><option value="industrial">Industrial</option><option value="constante">Constante (carga plana 24h)</option></select></label>
+                <label title="Laborable o festivo (forma horaria de la demanda)">Jornada<select id="jornadaSelector"><option value="laborable">Laborable</option><option value="festivo">Festivo</option></select></label>
+              </div>
+            </div>
+            <div class="reparto-legend" id="flowCurveLegend"></div>
+            <div class="chart-inline-fields">
+              <label title="Potencia FV instalada">FV · Potencia (kWp)<input type="number" id="gen_kwp" min="0" step="0.1" value="5"></label>
+              <label title="Capacidad de la batería">Batería · Capacidad (kWh)<input type="number" id="bat_capacidad" value="5" min="0" step="0.5"></label>
+              <label title="Potencia contratada: límite de importación y exportación con la red — 0 kW: sistema aislado, sin conexión a red">Red · Contratada (kW)<input type="number" id="pot_contratada" min="0" step="0.1" value="4.6"></label>
+              <label title="Consumo diario">Consumo (kWh/día)<input type="number" id="kwhdia_con" min="0" step="0.1" value="10"></label>
+            </div>
+            <div class="chart-svg-wrap" id="flowCurveWrap" style="margin:10px 0 0;"></div>
+          </div>
         </div>
         <div class="flow-col">
-          <div class="subsection-title" style="margin-top:0;">Flujo de energía (kWh) — <span id="flowHourLabel">total del día</span></div>
-          <div class="flow-diagram-holder">
-            <div class="chart-svg-wrap" id="flowDiagramWrap">
-              <div class="flow-tree">
-                <div class="ft-card ft-root" style="--c:#2457e6">
-                  <div class="ft-head"><span class="ft-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7z"/></svg></span><span class="ft-name">Electricidad</span></div>
-                  <div class="ft-balance">
-                    <div class="ft-bal-row"><span>Entra</span><div class="ft-stack"><span id="ftSegGen" style="background:#c27c00" title="generación FV"></span><span id="ftSegDesc" style="background:#A3E635" title="descarga batería"></span><span id="ftSegImp" style="background:#FF3B30" title="importación de red"></span></div><b id="ftEntra">—</b></div>
-                    <div class="ft-bal-row"><span>Sale</span><div class="ft-stack"><span id="ftSegCon" style="background:#2457e6" title="demanda"></span><span id="ftSegCarga" style="background:#6366F1" title="carga batería"></span><span id="ftSegExp" style="background:#22D46B" title="exportación a red"></span></div><b id="ftSale">—</b></div>
-                  </div>
-                </div>
-                <ul class="ft-branches">
-                  <li class="ft-node" id="ftPv" style="--c:#c27c00">
-                    <span class="ft-link" id="ftPvLink" style="--c:#c27c00"></span>
-                    <div class="ft-card">
-                      <div class="ft-head"><span class="ft-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></span><span class="ft-name">FV</span></div>
-                      <div class="ft-body">
-                        <div class="ft-flows"><div class="ft-flow" style="--c:#c27c00"><div class="ft-flow-top"><span><i aria-hidden="true">↑</i>generación</span><b id="ftGen">—</b></div><div class="ft-bar"><span id="ftGenBar"></span></div></div></div>
-                        <div class="ft-params"><label class="ft-param" title="Potencia FV instalada"><span class="ft-plabel">Potencia</span><input type="number" id="gen_kwp" min="0" step="0.1" value="5"><span>kWp</span></label></div>
-                      </div>
-                    </div>
-                  </li>
-                  <li class="ft-node" id="ftBat" style="--c:#6366F1">
-                    <span class="ft-link" id="ftBatLink" style="--c:#6366F1"></span>
-                    <div class="ft-card">
-                      <div class="ft-head"><span class="ft-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/></svg></span><span class="ft-name">Batería</span><span class="ft-status" id="ftBatEstado"></span></div>
-                      <div class="ft-body">
-                        <div class="ft-flows"><div class="ft-flow" style="--c:#6366F1"><div class="ft-flow-top"><span><i aria-hidden="true">↓</i>carga</span><b id="ftCarga">—</b></div><div class="ft-bar"><span id="ftCargaBar"></span></div></div><div class="ft-flow" style="--c:#A3E635"><div class="ft-flow-top"><span><i aria-hidden="true">↑</i>descarga</span><b id="ftDescarga">—</b></div><div class="ft-bar"><span id="ftDescargaBar"></span></div></div></div>
-                        <div class="ft-params"><label class="ft-param" title="Capacidad de la batería"><span class="ft-plabel">Capacidad</span><input type="number" id="bat_capacidad" value="5" min="0" step="0.5"><span>kWh</span></label><label class="ft-param" title="Potencia máxima de carga/descarga"><span class="ft-plabel">Potencia</span><input type="number" id="bat_potencia" value="3" min="0" step="0.1"><span>kW</span></label><label class="ft-param" title="SOC inicial"><span class="ft-plabel">SOC</span><input type="number" id="bat_soc_inicial" value="50" min="0" max="100" step="1"><span>%</span></label></div>
-                      </div>
-                    </div>
-                  </li>
-                  <li class="ft-node" id="ftRed" style="--c:#4f5b6d">
-                    <span class="ft-link" id="ftRedLink" style="--c:#4f5b6d"></span>
-                    <div class="ft-card">
-                      <div class="ft-head"><span class="ft-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 22 12 3l4 19M5 8h14M4 13h16M9.5 15l5 7M14.5 15l-5 7"/></svg></span><span class="ft-name">Red</span><span class="ft-status" id="ftRedEstado"></span></div>
-                      <div class="ft-body">
-                        <div class="ft-flows"><div class="ft-flow" style="--c:#22D46B"><div class="ft-flow-top"><span><i aria-hidden="true">↓</i>exportación</span><b id="ftExport">—</b></div><div class="ft-bar"><span id="ftExportBar"></span></div></div><div class="ft-flow" style="--c:#FF3B30"><div class="ft-flow-top"><span><i aria-hidden="true">↑</i>importación</span><b id="ftImport">—</b></div><div class="ft-bar"><span id="ftImportBar"></span></div></div></div>
-                        <div class="ft-params"><label class="ft-param" title="Potencia contratada (término de potencia del contrato de red) — 0 kW: sistema aislado, sin conexión a red"><span class="ft-plabel">Contratada</span><input type="number" id="pot_contratada" min="0" step="0.1" value="4.6"><span>kW</span></label></div>
-                      </div>
-                    </div>
-                  </li>
-                  <li class="ft-node" id="ftDem" style="--c:#2457e6">
-                    <span class="ft-link" id="ftDemLink" style="--c:#2457e6"></span>
-                    <div class="ft-card">
-                      <div class="ft-head"><span class="ft-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8M5 9.5V21h14V9.5M10 21v-6h4v6"/></svg></span><span class="ft-name">Demanda</span></div>
-                      <div class="ft-body">
-                        <div class="ft-flows"><div class="ft-flow" style="--c:#2457e6"><div class="ft-flow-top"><span><i aria-hidden="true">↓</i>consumo</span><b id="ftCon">—</b></div><div class="ft-bar"><span id="ftConBar"></span></div></div></div>
-                        <div class="ft-params"><label class="ft-param" title="Consumo diario"><span class="ft-plabel">Consumo</span><input type="number" id="kwhdia_con" min="0" step="0.1" value="10"><span>kWh/día</span></label><label class="ft-param" title="Tipo de consumidor (perfil típico)"><span class="ft-plabel">Perfil</span><select id="tipoConsumidorGlobal"><option value="domestico">Doméstico</option><option value="comercial">Comercial</option><option value="industrial">Industrial</option><option value="constante">Constante (carga plana 24h)</option></select></label><label class="ft-param" title="Laborable o festivo (forma horaria de la demanda)"><span class="ft-plabel">Jornada</span><select id="jornadaSelector"><option value="laborable">Laborable</option><option value="festivo">Festivo</option></select></label></div>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-              <div class="flow-hour-ticks" id="flowHourTicks"></div>
+          <div class="editor-card" style="margin-bottom:20px;">
+            <div class="eh">
+              <h4>Flujo de caja</h4>
+              <span class="total-group">
+                <span class="total" id="fc_van">VAN 0 €</span>
+                <span class="total" id="fc_tir">TIR —</span>
+                <span class="total" id="fc_payback">Payback —</span>
+                <span class="total" id="fc_inversion">Inversión 0 €</span>
+                <span class="total ahorro" id="fc_ahorro_anual">Ahorro 0 €/año</span>
+              </span>
             </div>
+            <div class="chart-inline-fields">
+              <label>Coste  FV (€/kWp)<input type="number" id="lcoe_fv_coste" value="900" min="0" step="10"></label>
+              <label>Coste  batería (€/kWh)<input type="number" id="lcoe_bat_coste" value="400" min="0" step="10"></label>
+              <label>Interés (%)<input type="number" id="lcoe_interes" value="5" min="0" step="0.1"></label>
+              <label>Años de vida útil FV<input type="number" id="lcoe_fv_anios" value="25" min="1" step="1"></label>
+              <label>Ciclos de vida útil batería<input type="number" id="lcoe_bat_ciclos" value="4000" min="1" step="50"></label>
+            </div>
+            <div class="chart-svg-wrap" id="flujoCajaWrap"></div>
           </div>
         </div>
       </div>
@@ -421,43 +337,10 @@
               </span>
             </div>
             <div class="chart-inline-fields">
-              <label>LCOE FV (€/kWh)<input type="text" id="lcoe_fv" value="0,000" readonly></label>
-              <label>LCOE batería (€/kWh)<input type="text" id="lcoe_bat" value="0,000" readonly></label>
+              <label title="Al editarlo se recalcula el coste  FV (€/kWp), y con él la inversión y el flujo de caja">LCOE FV (€/kWh)<input type="number" id="lcoe_fv" value="0" min="0" step="0.001"></label>
+              <label title="Al editarlo se recalcula el coste  de la batería (€/kWh), y con él la inversión y el flujo de caja">LCOE batería (€/kWh)<input type="number" id="lcoe_bat" value="0" min="0" step="0.001"></label>
             </div>
             <svg class="editor-chart readonly" id="chart-coste" viewBox="0 0 640 220"></svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="flow-row" style="margin-bottom:24px;">
-        <div class="flow-col">
-          <div class="editor-card" style="margin-bottom:20px;">
-            <div class="eh">
-              <h4>Curva de precio de potencia contratada (€/kW/día)</h4>
-            </div>
-            <svg class="editor-chart" id="chart-precio-potencia" viewBox="0 0 640 220"></svg>
-          </div>
-        </div>
-        <div class="flow-col">
-          <div class="editor-card" style="margin-bottom:20px;">
-            <div class="eh">
-              <h4>Flujo de caja</h4>
-              <span class="total-group">
-                <span class="total" id="fc_van">VAN 0 €</span>
-                <span class="total" id="fc_tir">TIR —</span>
-                <span class="total" id="fc_payback">Payback —</span>
-                <span class="total" id="fc_inversion">Inversión 0 €</span>
-                <span class="total ahorro" id="fc_ahorro_anual">Ahorro 0 €/año</span>
-              </span>
-            </div>
-            <div class="chart-inline-fields">
-              <label>Coste específico FV (€/kWp)<input type="number" id="lcoe_fv_coste" value="900" min="0" step="10"></label>
-              <label>Coste específico batería (€/kWh)<input type="number" id="lcoe_bat_coste" value="400" min="0" step="10"></label>
-              <label>Interés (%)<input type="number" id="lcoe_interes" value="5" min="0" step="0.1"></label>
-              <label>Años de vida útil FV<input type="number" id="lcoe_fv_anios" value="25" min="1" step="1"></label>
-              <label>Ciclos de vida útil batería<input type="number" id="lcoe_bat_ciclos" value="4000" min="1" step="50"></label>
-            </div>
-            <div class="chart-svg-wrap" id="flujoCajaWrap"></div>
           </div>
         </div>
       </div>
@@ -471,6 +354,8 @@
         <div class="grid3">
           <div class="field"><label>Eficiencia de ida y vuelta (%)</label><input type="number" id="bat_eficiencia" value="92" min="1" max="100" step="1"></div>
           <div class="field"><label>&nbsp;</label><label style="display:flex; align-items:center; gap:8px; font-family:var(--font-body); text-transform:none; font-size:13px; color:var(--text); margin-top:9px;"><input type="checkbox" id="bat_incluir" checked style="width:auto;"> Incluir batería en resultados</label></div>
+          <div class="field"><label>Potencia máx. carga/descarga (kW)</label><input type="number" id="bat_potencia" value="3" min="0" step="0.1"></div>
+          <div class="field"><label>SOC inicial (%)</label><input type="number" id="bat_soc_inicial" value="50" min="0" max="100" step="1"></div>
         </div>
       </div>
 
@@ -488,9 +373,143 @@
       </div>
     </section>
 
-    <!-- 01 DATOS DEL PROYECTO -->
-    <section id="proyecto">
-      <div class="eyebrow kicker">01 · Datos del proyecto</div>
+    <!-- 01 AYUDA: fundamento teorico y metodologia -->
+    <section id="ayuda">
+      <header class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow">Autoconsumo fotovoltaico · Generación vs Consumo</div>
+            <h1>¿Cuánta de tu propia energía<br><em>consumes tú mismo</em>?</h1>
+            <p class="sub">Elige un día tipo (laborable o festivo) e introduce sus curvas horarias de generación y de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
+          </div>
+          <div class="hero-meta">
+            <span>Método</span>
+            <span style="color:var(--cyan)">Autoconsumo instantáneo, sin batería</span>
+            <span>1 día tipo a la vez, seleccionable</span>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat"><div class="v">min(generación, consumo)</div><div class="l">energía autoconsumida cada hora</div></div>
+          <div class="stat"><div class="v">2 días tipo disponibles</div><div class="l">laborable o festivo</div></div>
+          <div class="stat"><div class="v">% del día estudiado</div><div class="l">resultado del día tipo seleccionado</div></div>
+        </div>
+      </header>
+
+      <div class="eyebrow kicker">01 · Ayuda · Fundamento teórico</div>
+      <h2>Autoconsumo: la parte de tu generación que no exportas.</h2>
+      <p class="lede">No toda la energía que genera un sistema fotovoltaico se consume en el momento; si generas más de lo que necesitas en una hora, ese excedente se exporta a la red (o se pierde, sin batería). El autoconsumo mide qué fracción de la energía generada usas tú directamente.</p>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Autoconsumo instantáneo (sin batería)</h3>
+          <p>Para cada hora, la energía que realmente aprovechas in situ es el mínimo entre lo que generas y lo que consumes en esa misma hora — el resto, o se exporta (si generas de más) o se importa de la red (si consumes de más):</p>
+          <div class="formula-box">
+            <div class="f">Autoconsumida(h) = mín( Generación(h), Consumo(h) )</div>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Porcentaje de autoconsumo</h3>
+          <p>Del total generado en el periodo, qué fracción se ha aprovechado directamente:</p>
+          <div class="formula-box">
+            <div class="f">% Autoconsumo = Σ Autoconsumida(h) / Σ Generación(h) × 100</div>
+          </div>
+          <p>No confundir con la <b>autarquía</b> (tasa de autosuficiencia): del total consumido, qué fracción cubre la instalación (directamente o vía batería) en vez de importarse de la red — un indicador distinto, que esta herramienta también calcula (pestaña Informe):</p>
+          <div class="formula-box">
+            <div class="f">Autarquía = (Σ Autoconsumida(h) + Σ Descargada batería(h)) / Σ Consumo(h) × 100</div>
+          </div>
+          <p>Una instalación pequeña puede tener un autoconsumo altísimo (aprovecha casi toda su poca generación) con una autarquía baja (cubre poco del consumo total); una instalación sobredimensionada puede ser al revés.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Por qué laborable y festivo</h3>
+          <p>El perfil de consumo cambia mucho según haya actividad laboral o no (una vivienda vacía de día entre semana consume distinto que un fin de semana con la familia en casa; un local comercial tiene el patrón inverso). Separar ambos tipos de jornada evita promediar patrones muy distintos entre sí.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Editor de curvas horarias</h3>
+          <p>Cada curva (generación o consumo) se introduce arrastrando directamente sobre el gráfico "Reparto horario del día tipo" de la pestaña Simulación — su mitad superior edita la generación, la inferior el consumo — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El reparto horario se recalcula al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>5 · Batería: cargar en vez de "malvender"</h3>
+          <p>Cuando generas más de lo que consumes, ese excedente normalmente se exporta a la red a un precio bajo. Aquí, en su lugar, ese excedente carga primero una batería (hasta su capacidad y potencia máximas); solo si la batería ya está llena se exporta el resto. En las horas de déficit, la batería se descarga para cubrir consumo antes de tirar de red. El SOC inicial (configurable, 50% por defecto) es el estado de carga con el que arranca el día tipo seleccionado.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>6 · Batería: eficiencia de ida y vuelta</h3>
+          <p>La eficiencia se aplica al cargar: por cada kWh de excedente disponible, solo esa fracción queda realmente almacenada. El SOC inicial es el estado de carga con el que la batería empieza el día tipo seleccionado.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>7 · Precio de la energía: la curva PVPC en forma de "pato"</h3>
+          <p>Curva orientativa en forma de "curva de pato", calibrada sobre las curvas reales de precio de excedentes de REE: de madrugada y por la noche (00h-08h) el precio se queda alto y bastante plano, porque de noche no hay sol que lo hunda; entre 09h y 18h cae en picado (a menudo cerca de cero), porque la generación solar de todo el país satura la red; al ponerse el sol pero seguir alta la demanda, sube de golpe entre 19h y 22h de vuelta al nivel de la noche. Festivo con un hundimiento solar igual de profundo pero algo más ancho. Se escala al precio medio del día introducido en la pestaña Simulación — al cambiar de jornada se recarga un precio medio orientativo. Se puede retocar arrastrando sobre el gráfico, igual que generación y consumo; no sustituye a los precios horarios reales de REE/OMIE.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>8 · Coste horario del consumo: cómo se valora</h3>
+          <p>Coste de cada kWh consumido esa hora: lo importado de red se paga al precio PVPC de esa hora; lo autoconsumido directo de la FV y lo aportado por la batería se valoran a su LCOE (coste nivelado de generar ese kWh, ver el punto 9 — calculado a partir de la inversión, no introducido a mano). La línea de puntos que muestra el gráfico de la pestaña Simulación es lo que costaría el mismo consumo sin instalación, comprándolo todo a la red.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>9 · LCOE: cómo se calcula</h3>
+          <p>El LCOE convierte la inversión en un €/kWh: anualiza el coste del sistema con el interés y los años de vida introducidos (como la cuota constante de una hipoteca) y lo divide entre la energía que produce en un año. Mientras no se haya guardado ningún caso en la pestaña Informe, esa energía anual se estima repitiendo el día tipo actual (pestaña Simulación) los 365 días; en cuanto se guarda uno o más casos, se usa la suma ponderada de todos ellos (generación y aporte de batería de cada caso × los días al año que se le haya asignado al guardarlo), una base más realista que un único día. La batería suele durar menos años que la instalación FV: si sus años de vida son menores, aquí se cuenta que hay que volver a comprarla varias veces a lo largo de esos mismos años (cada reposición traída a valor presente con el interés) antes de anualizar el conjunto. El día tipo simulado en la pestaña Simulación representa una única jornada (laborable o festivo); las fracciones "días de la semana" y "meses del año" (ajustables por caso en la pestaña Informe) dicen a cuántos días del año se le aplica ese mismo ahorro diario, para poder ir cubriendo el año completo combinando varios días tipo.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>10 · Flujo de caja, VAN, TIR y Payback</h3>
+          <p>Inversión inicial en el año 0 (FV + batería); cada año siguiente aporta el ahorro anual estimado, con una reposición adicional de la batería en los años en que toque. VAN con el interés introducido junto al LCOE (punto 9); TIR: tasa que hace VAN = 0; Payback: primer año con flujo acumulado ≥ 0. No sustituye a un análisis financiero completo (sin IPC, sin financiación, ahorro anual constante).</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>11 · Limitaciones de este método</h3>
+          <p>Es una estimación a partir de un único día representativo, no de un año horario completo — no captura la variabilidad día a día (nubosidad, estación del año, vacaciones, etc.) ni la de los otros días tipo disponibles. La batería empieza el día con el SOC inicial configurado, y no se ha modelado degradación de la batería con la temperatura ni con la profundidad de descarga.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>12 · Cómo dimensionar tu FV y tu batería con esta herramienta</h3>
+          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (pestaña Simulación). Después prueba distintas potencias FV (kWp) y compara, en la pestaña Informe, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, más kWp exporta más sin mejorar mucho el autoconsumo. Por último activa la batería y varía su capacidad y potencia mirando el gráfico de reparto horario (también en la pestaña Simulación) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la pestaña Simulación — la pestaña Informe y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>13 · Limitaciones para el dimensionado</h3>
+          <p>El tamaño que elijas aquí es orientativo, no un dimensionado técnico: se basa en un único día representativo, no en un año horario real medido, y no considera la potencia máxima de inyección permitida por la distribuidora, la orientación e inclinación real de los paneles ni las pérdidas por sombreado. Antes de comprar equipos, contrasta el resultado con un estudio de dimensionado normativo.</p>
+        </div>
+      </div>
+
+      <div id="metodologia" class="ayuda-bloque">
+      <div class="eyebrow kicker">01 · Ayuda · Metodología</div>
+      <h2>Cómo se simula un día tipo, hora a hora.</h2>
+      <p class="lede">La herramienta estudia un único día tipo cada vez — elegido con el selector de la pestaña Simulación — cruzando su curva de generación con su curva de consumo hora a hora, y simulando la batería sobre ese mismo día.</p>
+
+      <div class="grid3">
+        <div class="comp-card">
+          <h4>Qué día estás estudiando</h4>
+          <p>Un único selector: jornada (laborable o festivo, con su propio patrón de consumo). Un único perfil de generación genérico sirve para todo el año, sin distinguir por mes. Cambiar de jornada carga valores por defecto para esa combinación, listos para retocar.</p>
+        </div>
+        <div class="comp-card">
+          <h4>Simulación de la batería, hora a hora</h4>
+          <p>Para cada hora: primero se calcula el autoconsumo directo (mín. de generación y consumo). Si sobra generación, ese excedente carga la batería (limitado por la potencia máxima y la capacidad libre); si sobra consumo, la batería se descarga para cubrirlo (limitado por la potencia máxima y lo que quede almacenado).</p>
+        </div>
+        <div class="comp-card">
+          <h4>Eficiencia de ida y vuelta</h4>
+          <p>No toda la energía que entra a la batería se recupera al descargarla — se pierde una fracción en la conversión. Esa pérdida se aplica al cargar: por cada kWh de excedente, solo una fracción (la eficiencia) queda realmente almacenada.</p>
+        </div>
+      </div>
+
+      <div class="grid3" style="margin-top:28px;">
+        <div class="comp-card">
+          <h4>Cómo dimensionar la instalación con esta herramienta</h4>
+          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas potencias FV (kWp) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se activa la batería y se varía su capacidad y potencia mirando el gráfico de reparto horario.</p>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 02 INFORME: datos de portada, casos guardados y generacion del PDF -->
+    <section id="informe">
+      <div class="eyebrow kicker">02 · Informe</div>
       <h2>¿Para quién es este informe?</h2>
       <p class="lede">Estos datos aparecerán en la portada del PDF.</p>
       <div class="card">
@@ -519,147 +538,10 @@
           <div class="field" style="grid-column:1/-1;"><label>Dirección</label><input type="text" id="p_dest_dir" placeholder="Dirección del destinatario"></div>
         </div>
       </div>
-    </section>
 
-    <!-- 02 TEORIA -->
-    <section id="teoria">
-      <header class="hero">
-        <div class="hero-top">
-          <div>
-            <div class="eyebrow">Autoconsumo fotovoltaico · Generación vs Consumo</div>
-            <h1>¿Cuánta de tu propia energía<br><em>consumes tú mismo</em>?</h1>
-            <p class="sub">Elige un día tipo (laborable o festivo) e introduce sus curvas horarias de generación y de consumo arrastrando sobre el gráfico — igual que el editor de sombras del diseño de superficies. La herramienta cruza ambas curvas hora a hora para calcular el porcentaje de autoconsumo instantáneo de ese día.</p>
-          </div>
-          <div class="hero-meta">
-            <span>Método</span>
-            <span style="color:var(--cyan)">Autoconsumo instantáneo, sin batería</span>
-            <span>1 día tipo a la vez, seleccionable</span>
-          </div>
-        </div>
-
-        <div class="stat-row">
-          <div class="stat"><div class="v">min(generación, consumo)</div><div class="l">energía autoconsumida cada hora</div></div>
-          <div class="stat"><div class="v">2 días tipo disponibles</div><div class="l">laborable o festivo</div></div>
-          <div class="stat"><div class="v">% del día estudiado</div><div class="l">resultado del día tipo seleccionado</div></div>
-        </div>
-      </header>
-
-      <div class="eyebrow kicker">02 · Fundamento teórico</div>
-      <h2>Autoconsumo: la parte de tu generación que no exportas.</h2>
-      <p class="lede">No toda la energía que genera un sistema fotovoltaico se consume en el momento; si generas más de lo que necesitas en una hora, ese excedente se exporta a la red (o se pierde, sin batería). El autoconsumo mide qué fracción de la energía generada usas tú directamente.</p>
-
-      <div class="theory-grid">
-        <div class="theory-card">
-          <h3>1 · Autoconsumo instantáneo (sin batería)</h3>
-          <p>Para cada hora, la energía que realmente aprovechas in situ es el mínimo entre lo que generas y lo que consumes en esa misma hora — el resto, o se exporta (si generas de más) o se importa de la red (si consumes de más):</p>
-          <div class="formula-box">
-            <div class="f">Autoconsumida(h) = mín( Generación(h), Consumo(h) )</div>
-          </div>
-        </div>
-
-        <div class="theory-card">
-          <h3>2 · Porcentaje de autoconsumo</h3>
-          <p>Del total generado en el periodo, qué fracción se ha aprovechado directamente:</p>
-          <div class="formula-box">
-            <div class="f">% Autoconsumo = Σ Autoconsumida(h) / Σ Generación(h) × 100</div>
-          </div>
-          <p>No confundir con la <b>autarquía</b> (tasa de autosuficiencia): del total consumido, qué fracción cubre la instalación (directamente o vía batería) en vez de importarse de la red — un indicador distinto, que esta herramienta también calcula (sección 04):</p>
-          <div class="formula-box">
-            <div class="f">Autarquía = (Σ Autoconsumida(h) + Σ Descargada batería(h)) / Σ Consumo(h) × 100</div>
-          </div>
-          <p>Una instalación pequeña puede tener un autoconsumo altísimo (aprovecha casi toda su poca generación) con una autarquía baja (cubre poco del consumo total); una instalación sobredimensionada puede ser al revés.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>3 · Por qué laborable y festivo</h3>
-          <p>El perfil de consumo cambia mucho según haya actividad laboral o no (una vivienda vacía de día entre semana consume distinto que un fin de semana con la familia en casa; un local comercial tiene el patrón inverso). Separar ambos tipos de jornada evita promediar patrones muy distintos entre sí.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>4 · Editor de curvas horarias</h3>
-          <p>Cada curva (generación o consumo) se introduce arrastrando directamente sobre el gráfico "Reparto horario del día tipo" de la sección 00 — su mitad superior edita la generación, la inferior el consumo — el mismo sistema de edición que el perfil de sombras del horizonte en la app de diseño de superficies, adaptado aquí a energía por hora (kWh) en vez de grados. El diagrama de flujo de nodos y el propio reparto horario se recalculan al momento con cada cambio en las curvas o en la batería, sin cambiar de pantalla.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>5 · Batería: cargar en vez de "malvender"</h3>
-          <p>Cuando generas más de lo que consumes, ese excedente normalmente se exporta a la red a un precio bajo. Aquí, en su lugar, ese excedente carga primero una batería (hasta su capacidad y potencia máximas); solo si la batería ya está llena se exporta el resto. En las horas de déficit, la batería se descarga para cubrir consumo antes de tirar de red. El SOC inicial (configurable, 50% por defecto) es el estado de carga con el que arranca el día tipo seleccionado.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>6 · Batería: eficiencia de ida y vuelta</h3>
-          <p>La eficiencia se aplica al cargar: por cada kWh de excedente disponible, solo esa fracción queda realmente almacenada. El SOC inicial es el estado de carga con el que la batería empieza el día tipo seleccionado.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>7 · Precio de la energía: la curva PVPC en forma de "pato"</h3>
-          <p>Curva orientativa en forma de "curva de pato", calibrada sobre las curvas reales de precio de excedentes de REE: de madrugada y por la noche (00h-08h) el precio se queda alto y bastante plano, porque de noche no hay sol que lo hunda; entre 09h y 18h cae en picado (a menudo cerca de cero), porque la generación solar de todo el país satura la red; al ponerse el sol pero seguir alta la demanda, sube de golpe entre 19h y 22h de vuelta al nivel de la noche. Festivo con un hundimiento solar igual de profundo pero algo más ancho. Se escala al precio medio del día introducido en la sección 00 — al cambiar de jornada se recarga un precio medio orientativo. Se puede retocar arrastrando sobre el gráfico, igual que generación y consumo; no sustituye a los precios horarios reales de REE/OMIE.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>8 · Coste horario del consumo: cómo se valora</h3>
-          <p>Coste de cada kWh consumido esa hora: lo importado de red se paga al precio PVPC de esa hora; lo autoconsumido directo de la FV y lo aportado por la batería se valoran a su LCOE (coste nivelado de generar ese kWh, ver el punto 9 — calculado a partir de la inversión, no introducido a mano). La línea de puntos que muestra el gráfico de la sección 00 es lo que costaría el mismo consumo sin instalación, comprándolo todo a la red.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>9 · LCOE: cómo se calcula</h3>
-          <p>El LCOE convierte la inversión en un €/kWh: anualiza el coste del sistema con el interés y los años de vida introducidos (como la cuota constante de una hipoteca) y lo divide entre la energía que produce en un año. Mientras no se haya guardado ningún caso en la sección 04, esa energía anual se estima repitiendo el día tipo actual (sección 00) los 365 días; en cuanto se guarda uno o más casos, se usa la suma ponderada de todos ellos (generación y aporte de batería de cada caso × los días al año que se le haya asignado al guardarlo), una base más realista que un único día. La batería suele durar menos años que la instalación FV: si sus años de vida son menores, aquí se cuenta que hay que volver a comprarla varias veces a lo largo de esos mismos años (cada reposición traída a valor presente con el interés) antes de anualizar el conjunto. El día tipo simulado en la sección 00 representa una única jornada (laborable o festivo); las fracciones "días de la semana" y "meses del año" (ajustables por caso en la sección 04) dicen a cuántos días del año se le aplica ese mismo ahorro diario, para poder ir cubriendo el año completo combinando varios días tipo.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>10 · Flujo de caja, VAN, TIR y Payback</h3>
-          <p>Inversión inicial en el año 0 (FV + batería); cada año siguiente aporta el ahorro anual estimado, con una reposición adicional de la batería en los años en que toque. VAN con el interés introducido junto al LCOE (punto 9); TIR: tasa que hace VAN = 0; Payback: primer año con flujo acumulado ≥ 0. No sustituye a un análisis financiero completo (sin IPC, sin financiación, ahorro anual constante).</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>11 · Limitaciones de este método</h3>
-          <p>Es una estimación a partir de un único día representativo, no de un año horario completo — no captura la variabilidad día a día (nubosidad, estación del año, vacaciones, etc.) ni la de los otros días tipo disponibles. La batería empieza el día con el SOC inicial configurado, y no se ha modelado degradación de la batería con la temperatura ni con la profundidad de descarga.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>12 · Cómo dimensionar tu FV y tu batería con esta herramienta</h3>
-          <p>Esta herramienta no calcula un tamaño óptimo automáticamente — tú lo encuentras por iteración. Primero fija la curva de consumo lo más parecida a la real (sección 00). Después prueba distintas potencias FV (kWp) y compara, en la sección 04, cómo cambian el % de autoconsumo y el excedente exportado: a partir de cierto punto, más kWp exporta más sin mejorar mucho el autoconsumo. Por último activa la batería y varía su capacidad y potencia mirando el diagrama de flujos (también en la sección 00) — si queda poco excedente sin aprovechar y poco déficit sin cubrir, esa capacidad ya cumple su función para ese día tipo. Repite el ejercicio con la otra jornada del selector para contrastar el dimensionado. Para comparar varios supuestos de partida (otra potencia FV, otro consumo o batería), guarda cada uno como un caso desde la sección 00 — la sección 04 y el informe PDF final los incluyen todos. Los días al año a los que aplica cada caso (para ponderar el flujo de caja conjunto) se ajustan allí, junto a cada caso guardado.</p>
-        </div>
-
-        <div class="theory-card">
-          <h3>13 · Limitaciones para el dimensionado</h3>
-          <p>El tamaño que elijas aquí es orientativo, no un dimensionado técnico: se basa en un único día representativo, no en un año horario real medido, y no considera la potencia máxima de inyección permitida por la distribuidora, la orientación e inclinación real de los paneles ni las pérdidas por sombreado. Antes de comprar equipos, contrasta el resultado con un estudio de dimensionado normativo.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 03 METODOLOGIA -->
-    <section id="metodologia">
-      <div class="eyebrow kicker">03 · Metodología</div>
-      <h2>Cómo se simula un día tipo, hora a hora.</h2>
-      <p class="lede">La herramienta estudia un único día tipo cada vez — elegido con el selector de la sección 00 — cruzando su curva de generación con su curva de consumo hora a hora, y simulando la batería sobre ese mismo día.</p>
-
-      <div class="grid3">
-        <div class="comp-card">
-          <h4>Qué día estás estudiando</h4>
-          <p>Un único selector: jornada (laborable o festivo, con su propio patrón de consumo). Un único perfil de generación genérico sirve para todo el año, sin distinguir por mes. Cambiar de jornada carga valores por defecto para esa combinación, listos para retocar.</p>
-        </div>
-        <div class="comp-card">
-          <h4>Simulación de la batería, hora a hora</h4>
-          <p>Para cada hora: primero se calcula el autoconsumo directo (mín. de generación y consumo). Si sobra generación, ese excedente carga la batería (limitado por la potencia máxima y la capacidad libre); si sobra consumo, la batería se descarga para cubrirlo (limitado por la potencia máxima y lo que quede almacenado).</p>
-        </div>
-        <div class="comp-card">
-          <h4>Eficiencia de ida y vuelta</h4>
-          <p>No toda la energía que entra a la batería se recupera al descargarla — se pierde una fracción en la conversión. Esa pérdida se aplica al cargar: por cada kWh de excedente, solo una fracción (la eficiencia) queda realmente almacenada.</p>
-        </div>
-      </div>
-
-      <div class="grid3" style="margin-top:28px;">
-        <div class="comp-card">
-          <h4>Cómo dimensionar la instalación con esta herramienta</h4>
-          <p>La herramienta no calcula un tamaño óptimo de forma automática — se encuentra por iteración. Primero se fija la curva de consumo lo más parecida posible a la real para el día tipo elegido. Después se prueban distintas potencias FV (kWp) y se compara cómo cambian el % de autoconsumo y el excedente exportado. Por último se activa la batería y se varía su capacidad y potencia mirando el diagrama de flujos.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="informe">
-      <div class="eyebrow" style="margin-bottom:10px;">Casos guardados en el informe</div>
+      <div class="eyebrow" style="margin:32px 0 10px;">Casos guardados en el informe</div>
       <div id="casosStatsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="casosContainer"><div class="empty-state">Todavía no has guardado ningún caso. Ajusta el día tipo, la FV, el consumo o la batería en la sección anterior y pulsa "Guardar caso en el informe".</div></div>
+      <div id="casosContainer"><div class="empty-state">Todavía no has guardado ningún caso. Ajusta el día tipo, la FV, el consumo o la batería en la pestaña Simulación y pulsa "Guardar caso en el informe".</div></div>
 
       <div class="card" style="padding:0; overflow-x:auto; margin:24px 0; display:none;" id="summaryTableWrap">
         <table class="summary" id="summaryTable"></table>
@@ -1060,8 +942,10 @@ const sections = document.querySelectorAll('section[id]');
 const navLinks = document.querySelectorAll('.tabbar a');
 const sectionIds = Array.from(sections).map(s=>s.id);
 
+const TABS_ANTIGUAS = {teoria:'ayuda', metodologia:'ayuda', proyecto:'informe'};
 function showSection(id, opts){
   opts = opts || {};
+  id = TABS_ANTIGUAS[id] || id;
   if(!sectionIds.includes(id)) return;
   sections.forEach(s=> s.classList.toggle('active', s.id===id));
   navLinks.forEach(l=> l.classList.toggle('active', l.dataset.sec===id));
@@ -1153,14 +1037,8 @@ let curvasRestauradasDeVatiaco = false;
 // VatiaCo.fv_autoconsumo_fv_bateria.inputs.curvas, como una clave "precio" mas.
 let PRECIO_HORARIO = new Array(24).fill(0);
 let precioRestauradoDeVatiaco = false;
-// Curva de precio de potencia contratada (€/kW/dia), editable arrastrando igual que
-// PRECIO_HORARIO pero con su propia escala -- reemplaza al antiguo sistema de tarifas
-// (2.0TD/3.0TD, P1..P6 segun mes/jornada): ahora es una curva libre, sin depender del dia
-// tipo seleccionado.
-let PRECIO_POTENCIA_HORARIO = new Array(24).fill(0.05);
-let precioPotenciaRestauradoDeVatiaco = false;
-// Casos guardados del informe (seccion 04): declarados aqui, no donde se usan mas abajo,
-// porque calcularProduccionAnualAgregada() y calcularFlujoCaja() (seccion 00) ya los leen
+// Casos guardados del informe (pestaña Informe): declarados aqui, no donde se usan mas abajo,
+// porque calcularProduccionAnualAgregada() y calcularFlujoCaja() (pestaña Simulacion) ya los leen
 // desde la primera llamada a renderResultados(), antes de llegar al bloque de "casos".
 let casos = [];
 let casoNextId = 1;
@@ -1173,16 +1051,6 @@ let casoNextId = 1;
     precioRestauradoDeVatiaco = true;
   }
 })();
-(function restaurarPrecioPotenciaDesdeVatiaco(){
-  const guardado = vatiacoLeer();
-  const curvasGuardadas = guardado[DOC_KEY_C04] && guardado[DOC_KEY_C04].inputs && guardado[DOC_KEY_C04].inputs.curvas;
-  const arr = curvasGuardadas && curvasGuardadas.precioPotencia;
-  if(Array.isArray(arr) && arr.length === 24 && arr.every(v => typeof v === 'number' && isFinite(v))){
-    PRECIO_POTENCIA_HORARIO = arr.slice();
-    precioPotenciaRestauradoDeVatiaco = true;
-  }
-})();
-
 function guardarCurvasEnVatiaco(){
   const v = vatiacoLeer();
   v[DOC_KEY_C04] = v[DOC_KEY_C04] || {};
@@ -1190,12 +1058,11 @@ function guardarCurvasEnVatiaco(){
   const curvas = {};
   Object.keys(CURVAS).forEach(clave => { curvas[clave] = CURVAS[clave].valores.slice(); });
   curvas.precio = PRECIO_HORARIO.slice();
-  curvas.precioPotencia = PRECIO_POTENCIA_HORARIO.slice();
   v[DOC_KEY_C04].inputs.curvas = curvas;
   vatiacoGuardar(v);
 }
 
-// ===================== EDITOR DE CURVA (arrastrar sobre el reparto horario, seccion 00) =====================
+// ===================== EDITOR DE CURVA (arrastrar sobre el reparto horario, pestaña Simulacion) =====================
 // Generacion y consumo ya no tienen graficos de barras propios -- se editan arrastrando
 // directamente sobre "Reparto horario del dia tipo" (ver repartoSetFromEvent, mas abajo).
 // renderTodosLosEditores() se queda solo con la persistencia en VatiaCo: la llaman todos
@@ -1222,7 +1089,7 @@ function repartoSetFromEvent(evt){
   const cargaH = bateria ? bateria.cargaHoraria : CURVAS.gen.valores.map(()=>0);
   const descargaH = bateria ? bateria.descargaHoraria : CURVAS.gen.valores.map(()=>0);
   const potenciaContratada = ultimoResultadoDiaTipo ? (ultimoResultadoDiaTipo.potenciaContratada||0) : 0;
-  const layout = calcularLayoutReparto(CURVAS.gen.valores, CURVAS.con.valores, cargaH, descargaH, !!bateria, potenciaContratada);
+  const layout = calcularLayoutReparto(CURVAS.gen.valores, CURVAS.con.valores, cargaH, descargaH, !!bateria, potenciaContratada, true);
   const scaleX = layout.W/rect.width, scaleY = layout.H/rect.height;
   const x = (clientX-rect.left)*scaleX;
   const y = (clientY-rect.top)*scaleY;
@@ -1552,7 +1419,7 @@ function calcularFlujosHorarios(genValores, conValores, cargaH, descargaH){
 // Geometria y escala del grafico "Reparto horario del dia tipo" (buildComparativoChartSVG)
 // factorizada aparte para poder invertir la misma escala al arrastrar sobre el propio
 // grafico (ver repartoSetFromEvent) sin duplicar la formula ni desincronizarla.
-function calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, potenciaContratada){
+function calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, potenciaContratada, leyendaExterna){
   const { exportHoraria, importHoraria } = calcularFlujosHorarios(genValores, conValores, cargaH, descargaH);
   const nivelDescarga = genValores.map((v,i)=>(v||0)+descargaH[i]);
   const nivelImport = nivelDescarga.map((v,i)=>v+importHoraria[i]);
@@ -1563,7 +1430,7 @@ function calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBat
   // contratada -- no solo cuando ese limite es 0 (aislado por completo).
   const hayRecorte = exportHoraria.some(v=>v>limite+0.0001) || importHoraria.some(v=>v>limite+0.0001);
   const extraLegendRows = (conBateria?1:0) + (hayRecorte?1:0);
-  const W=640, H=442, padL=76, padR=conBateria?58:16, padT=28+extraLegendRows*24, padB=38;
+  const W=640, H=442, padL=76, padR=conBateria?58:16, padT=leyendaExterna ? 14 : 28+extraLegendRows*24, padB=38;
   const chartW = W-padL-padR, chartH = H-padT-padB;
   const step = chartW/24;
   const maxPos = Math.max(...nivelImport, 0.1);
@@ -1575,15 +1442,22 @@ function calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBat
     exportHoraria, importHoraria, nivelDescarga, nivelImport, nivelCarga, nivelExport, potenciaContratada: limite, hayRecorte };
 }
 
-function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descargaHoraria, socHoraria, capacidadKwh, potenciaMaxKw, potenciaContratada){
+// Leyenda en HTML del grafico en vivo: va fuera del <svg> para poder colocar debajo los
+// campos editables, que no pueden estar dentro porque el <svg> se recrea en cada render.
+function leyendaRepartoHTML(conBateria, hayRecorte){
+  const m = (c,t)=>'<i style="color:'+c+'">'+t+'</i>';
+  let h = '<div>'+m('#c27c00','■')+' generación &nbsp; '+m('#A3E635','■')+' descarga batería &nbsp; '+m('#FF3B30','■')+' importación &nbsp; entran (arriba)</div>'+
+    '<div>'+m('#2457e6','■')+' demanda &nbsp; '+m('#6366F1','■')+' carga batería &nbsp; '+m('#22D46B','■')+' exportación &nbsp; salen (abajo)</div>';
+  if(conBateria) h += '<div>'+m('#FF6AC2','┅')+' SOC, % de la capacidad (nivel, no acumulado)</div>';
+  if(hayRecorte) h += '<div>'+m('#FF3B30','▨')+' recorte por límite de potencia contratada (esa parte no se aprovecha/cubre)</div>';
+  return h;
+}
+
+function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descargaHoraria, socHoraria, capacidadKwh, potenciaMaxKw, potenciaContratada, leyendaExterna){
   const conBateria = !!(cargaHoraria && descargaHoraria);
   const cargaH = cargaHoraria || genValores.map(()=>0);
   const descargaH = descargaHoraria || genValores.map(()=>0);
-  // Mismo alto visual que el diagrama de flujo (viewBox 780x538, misma columna de ancho):
-  // igualamos la relacion ancho/alto para que, a igual anchura renderizada, ambos graficos
-  // queden a la misma altura. H fijo (no depende de si hay bateria) para que la altura
-  // coincida siempre con la del diagrama de flujo de al lado, tenga o no bateria activada.
-  const layout = calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, potenciaContratada);
+  const layout = calcularLayoutReparto(genValores, conValores, cargaH, descargaH, conBateria, potenciaContratada, leyendaExterna);
   const { W, H, padL, padR, padT, padB, chartW, chartH, step, maxPos, maxNeg, y, hayRecorte,
     exportHoraria, importHoraria, nivelDescarga, nivelImport, nivelCarga, nivelExport } = layout;
   const limite = layout.potenciaContratada;
@@ -1599,7 +1473,9 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   const socPct = socHoraria ? socHoraria.map(v=> capacidadKwh ? 100*(v||0)/capacidadKwh : 0) : null;
   const ySoc = v => padT + chartH - (v/100)*chartH;
 
-  let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
+  let s = '';
+  if(!leyendaExterna){
+  s += '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
     '<tspan fill="#c27c00">■</tspan> generación &nbsp; <tspan fill="#A3E635">■</tspan> descarga batería &nbsp; <tspan fill="#FF3B30">■</tspan> importación &nbsp; entran (arriba)</text>';
   s += '<text x="'+padL+'" y="30" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
     '<tspan fill="#2457e6">■</tspan> demanda &nbsp; <tspan fill="#6366F1">■</tspan> carga batería &nbsp; <tspan fill="#22D46B">■</tspan> exportación &nbsp; salen (abajo)</text>';
@@ -1611,6 +1487,7 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   if(hayRecorte){
     s += '<text x="'+padL+'" y="'+legendY+'" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d"><tspan fill="#FF3B30">▨</tspan> recorte por límite de potencia contratada (esa parte no se aprovecha/cubre)</text>';
     legendY += 16;
+  }
   }
   const niveles = [maxPos, maxPos/2, 0, -maxNeg/2, -maxNeg];
   niveles.forEach(gv=>{
@@ -1677,7 +1554,7 @@ function buildComparativoChartSVG(genValores, conValores, cargaHoraria, descarga
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:640px;">'+s+'</svg>';
 }
 
-// ===================== PRECIO Y COSTE HORARIO (seccion 00, curvas y bateria) =====================
+// ===================== PRECIO Y COSTE HORARIO (pestaña Simulacion, curvas y bateria) =====================
 // Editor de la curva de precio (barras arrastrables, €/kWh) -- su propia funcion porque
 // PRECIO_HORARIO no vive en CURVAS: sus valores (decimas de euro) no comparten escala con
 // los kWh de generacion/consumo (que ahora se editan sobre el reparto horario, ver
@@ -1746,91 +1623,22 @@ window.addEventListener('mousemove', (e)=>{ if(arrastrandoPrecio) precioSetFromE
 window.addEventListener('mouseup', ()=>{ arrastrandoPrecio=false; });
 window.addEventListener('touchend', ()=>{ arrastrandoPrecio=false; });
 
-// Curva de precio de potencia contratada (€/kW/dia), editable arrastrando -- misma
-// mecanica que renderChartPrecio/precioSetFromEvent (arriba) pero sobre PRECIO_POTENCIA_HORARIO,
-// con su propia escala vertical.
-function calcularEscalaMaxPrecioPotencia(){
-  const max = Math.max.apply(null, PRECIO_POTENCIA_HORARIO.concat([0]));
-  if(max<=0) return 0.05;
-  const conMargen = max*1.15;
-  let paso;
-  if(conMargen<=0.1) paso=0.01;
-  else if(conMargen<=0.3) paso=0.02;
-  else if(conMargen<=0.6) paso=0.05;
-  else paso=0.1;
-  return Math.ceil(conMargen/paso)*paso;
-}
-function renderChartPrecioPotencia(){
-  const svg = document.getElementById('chart-precio-potencia');
-  const W=640, H=220, padL=64, padR=10, padT=10, padB=32;
-  const chartW = W-padL-padR, chartH = H-padT-padB, step = chartW/24, barW = step;
-  const max = calcularEscalaMaxPrecioPotencia();
-  let s = '';
-  for(let g=0; g<=4; g++){
-    const gv = max*g/4, gy = padT+chartH-(gv/max)*chartH;
-    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
-    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+fmtNum(gv,3)+'</text>';
-  }
-  PRECIO_POTENCIA_HORARIO.forEach((v,i)=>{
-    const x = padL+step*i;
-    const bh = Math.min(v,max)/max*chartH;
-    const y = padT+chartH-bh;
-    s += '<rect class="barra" data-idx="'+i+'" x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(bh,1)+'" fill="#8B5CF6" opacity="0.85" rx="1"/>';
-    const lx = x+barW/2, ly = Math.max(y-5, padT+30);
-    s += '<text x="'+lx+'" y="'+ly+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')" font-family="IBM Plex Mono" font-size="10" fill="#1c2735">'+fmtNum(v,3)+'</text>';
-    if(i%3===0){ s += '<text x="'+(x+barW/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
-  });
-  svg.innerHTML = s;
-  guardarCurvasEnVatiaco();
-}
-function precioPotenciaSetFromEvent(evt){
-  const svg = document.getElementById('chart-precio-potencia');
-  const rect = svg.getBoundingClientRect();
-  const W=640, H=220, padL=64, padR=10, padT=10, padB=32;
-  const chartW = W-padL-padR, chartH = H-padT-padB, step = chartW/24;
-  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
-  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-  const scaleX = W/rect.width, scaleY = H/rect.height;
-  const x = (clientX-rect.left)*scaleX;
-  const y = (clientY-rect.top)*scaleY;
-  let idx = Math.floor((x-padL)/step);
-  idx = Math.max(0, Math.min(23, idx));
-  const maxActual = calcularEscalaMaxPrecioPotencia();
-  let val = ((padT+chartH-y)/chartH)*maxActual;
-  val = Math.max(0, Math.round(val*200)/200); // redondeo a 0,005 €/kW/dia, sin limite superior
-  PRECIO_POTENCIA_HORARIO[idx] = val;
-  renderChartPrecioPotencia();
-  renderResultados();
-}
-let arrastrandoPrecioPotencia = false;
-(function(){
-  const svg = document.getElementById('chart-precio-potencia');
-  svg.addEventListener('mousedown', (e)=>{ arrastrandoPrecioPotencia=true; precioPotenciaSetFromEvent(e); });
-  svg.addEventListener('touchstart', (e)=>{ arrastrandoPrecioPotencia=true; precioPotenciaSetFromEvent(e); e.preventDefault(); }, {passive:false});
-  svg.addEventListener('touchmove', (e)=>{ if(arrastrandoPrecioPotencia){ precioPotenciaSetFromEvent(e); e.preventDefault(); } }, {passive:false});
-})();
-window.addEventListener('mousemove', (e)=>{ if(arrastrandoPrecioPotencia) precioPotenciaSetFromEvent(e); });
-window.addEventListener('mouseup', ()=>{ arrastrandoPrecioPotencia=false; });
-window.addEventListener('touchend', ()=>{ arrastrandoPrecioPotencia=false; });
-
 // Coste horario del consumo, en euros: barras apiladas con el origen de cada kWh
 // consumido esa hora (autoconsumo FV directo a su LCOE, aporte de bateria a su LCOE,
 // importacion de red al precio PVPC de esa hora) mas una linea de puntos con lo que
 // costaria el mismo consumo sin instalacion (todo importado de red).
-function buildCosteChartSVG(costeFv, costeBat, costeRed, costePotencia, costeSinInstalacionEnergia, costeSinInstalacionPotencia, costeSinInstalacion){
+function buildCosteChartSVG(costeFv, costeBat, costeRed, costeSinInstalacion){
   const W=640, H=220, padL=64, padR=10, padT=46, padB=32;
   const chartW = W-padL-padR, chartH = H-padT-padB, step = chartW/24, barW = step;
   const nivel1 = costeFv;
   const nivel2 = nivel1.map((v,i)=>v+costeBat[i]);
   const nivel3 = nivel2.map((v,i)=>v+costeRed[i]);
-  const nivel4 = nivel3.map((v,i)=>v+(costePotencia?costePotencia[i]:0));
-  const maxV = Math.max(Math.max.apply(null, nivel4), Math.max.apply(null, costeSinInstalacion), 0.01)*1.15;
+  const maxV = Math.max(Math.max.apply(null, nivel3), Math.max.apply(null, costeSinInstalacion), 0.01)*1.15;
   const y = v => padT+chartH-(v/maxV)*chartH;
   let s = '<text x="'+padL+'" y="14" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
-    '<tspan fill="#c27c00">■</tspan> FV directa &nbsp; <tspan fill="#A3E635">■</tspan> batería &nbsp; <tspan fill="#FF3B30">■</tspan> red &nbsp; '+
-    '<tspan fill="#8B5CF6">■</tspan> potencia contratada</text>';
+    '<tspan fill="#c27c00">■</tspan> FV directa &nbsp; <tspan fill="#A3E635">■</tspan> batería &nbsp; <tspan fill="#FF3B30">■</tspan> red</text>';
   s += '<text x="'+padL+'" y="30" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+
-    '<tspan fill="#4f5b6d">┅</tspan> sin instalación (total) &nbsp; <tspan fill="#7b8696">┄</tspan> — solo energía &nbsp; <tspan fill="#8B5CF6">┄</tspan> — solo potencia</text>';
+    '<tspan fill="#4f5b6d">┅</tspan> sin instalación</text>';
   for(let g=0; g<=4; g++){
     const gv = maxV*g/4, gy = y(gv);
     s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eceff4" stroke-width="1"/>';
@@ -1845,7 +1653,6 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costePotencia, costeSin
     seg(0, nivel1[i], '#c27c00', i);
     seg(nivel1[i], nivel2[i], '#A3E635', i);
     seg(nivel2[i], nivel3[i], '#FF3B30', i);
-    seg(nivel3[i], nivel4[i], '#8B5CF6', i);
   }
   function linea(arr, color, width, dash){
     const pts = [];
@@ -1856,8 +1663,6 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costePotencia, costeSin
     s += '<polyline points="'+pts.map(p=>p.join(',')).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="'+width+'" stroke-dasharray="'+dash+'"/>';
   }
   linea(costeSinInstalacion, '#4f5b6d', 1.8, '4 2');
-  linea(costeSinInstalacionEnergia, '#7b8696', 1.3, '2 2');
-  linea(costeSinInstalacionPotencia, '#8B5CF6', 1.3, '2 2');
   for(let i=0;i<24;i++){
     if(i%3===0){ s += '<text x="'+(padL+step*i+step/2)+'" y="'+(H-padB+20)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="12.5" fill="#7b8696">'+i+'h</text>'; }
   }
@@ -1870,7 +1675,7 @@ function buildCosteChartSVG(costeFv, costeBat, costeRed, costePotencia, costeSin
 // mes elegido. Por defecto 7/7 y 12/12 -- el 100% de los 365 dias del anio; reduciendo
 // cualquiera de las dos fracciones se usan menos dias, sin intentar simular los dias/meses
 // restantes (quedan fuera del calculo, no se les asigna otro perfil). Se ajusta por caso,
-// ya guardado, en la seccion 04 (ver renderCasos/onCasoDiasChange), para ponderar el flujo
+// ya guardado, en la pestaña Informe (ver renderCasos/onCasoDiasChange), para ponderar el flujo
 // de caja conjunto de todos los casos.
 function diasAnualesDesdeFraccion(dias){
   const fraccionDias = Math.max(0, Math.min(1, dias.diasNum/dias.diasDen));
@@ -1968,50 +1773,35 @@ function calcularLCOE(produccionAnualFv, produccionAnualBat){
 }
 
 // Coste horario de un dia (kWh de FV directa/bateria/red a lo largo de 24h, con su propio
-// precio y LCOE) -- funcion pura, reutilizada tanto para el dia tipo en vivo (seccion 00)
-// como para cada caso guardado (seccion 04 y agregados de flujo de caja), cada uno con sus
+// precio y LCOE) -- funcion pura, reutilizada tanto para el dia tipo en vivo (pestaña Simulacion)
+// como para cada caso guardado (pestaña Informe y agregados de flujo de caja), cada uno con sus
 // propias curvas de generacion/consumo/bateria y su propio precio horario congelado.
-// potenciaContratada/precioPotenciaHoraria: el termino de potencia (fijo, no depende de
-// cuanto se consuma) siempre se suma a costeSinInstalacionPotencia -- comprar todo a la
-// red implica pagarlo, con o sin FV -- y tambien al lado "con instalacion" (costePotencia,
-// como un cuarto origen ademas de FV/bateria/red), proporcional a la potencia contratada:
-// con 0 kW (sin contrato de red) sale 0 de forma natural, sin necesidad de un caso aparte.
-// La diferencia entre ambos lados es, precisamente, el ahorro por no tener contrato (o por
-// tener uno mas pequeño). La importacion horaria tambien se limita a esa misma potencia
-// contratada -- lo que exceda ese limite no puede importarse, igual que en el diagrama de
-// flujo (ver limitarPorPotenciaContratada).
-function calcularCosteDia(genV, conV, bateria, precioHoraria, lcoeFv, lcoeBat, potenciaContratada, precioPotenciaHoraria){
+// potenciaContratada: limita la importacion horaria -- lo que exceda ese limite no puede
+// importarse, igual que en el diagrama de flujo (ver limitarPorPotenciaContratada).
+function calcularCosteDia(genV, conV, bateria, precioHoraria, lcoeFv, lcoeBat, potenciaContratada){
   const descargaH = bateria ? bateria.descargaHoraria : genV.map(()=>0);
-  const costeFv=[], costeBat=[], costeRed=[], costePotencia=[];
-  const costeSinInstalacionEnergia=[], costeSinInstalacionPotencia=[], costeSinInstalacion=[];
+  const costeFv=[], costeBat=[], costeRed=[], costeSinInstalacion=[];
   let totalConInstalacion=0, totalSinInstalacion=0;
-  const preciosHora = precioPotenciaHoraria||[];
   for(let h=0; h<24; h++){
     const g = genV[h]||0, c = conV[h]||0;
     const directa = Math.min(g,c);
     const descarga = descargaH[h]||0;
     const importeCruda = Math.max(0, limpiarFP(c-directa-descarga));
     const importe = Math.min(importeCruda, Math.max(0, potenciaContratada||0));
-    const costePotenciaHora = (potenciaContratada||0)*(preciosHora[h]||0);
     const cFv = directa*lcoeFv, cBat = descarga*lcoeBat, cRed = importe*(precioHoraria[h]||0);
-    const cPot = costePotenciaHora;
-    costeFv.push(cFv); costeBat.push(cBat); costeRed.push(cRed); costePotencia.push(cPot);
-    const cSinEnergia = c*(precioHoraria[h]||0);
-    costeSinInstalacionEnergia.push(cSinEnergia);
-    costeSinInstalacionPotencia.push(costePotenciaHora);
-    const cSin = cSinEnergia + costePotenciaHora;
+    costeFv.push(cFv); costeBat.push(cBat); costeRed.push(cRed);
+    const cSin = c*(precioHoraria[h]||0);
     costeSinInstalacion.push(cSin);
-    totalConInstalacion += cFv+cBat+cRed+cPot;
+    totalConInstalacion += cFv+cBat+cRed;
     totalSinInstalacion += cSin;
   }
   const ahorro = totalSinInstalacion-totalConInstalacion;
   const pctAhorro = totalSinInstalacion>0 ? (ahorro/totalSinInstalacion*100) : 0;
-  const costePotenciaDiarioTeorico = costeSinInstalacionPotencia.reduce((a,v)=>a+v,0);
-  return { costeFv, costeBat, costeRed, costePotencia, costeSinInstalacionEnergia, costeSinInstalacionPotencia, costeSinInstalacion, totalConInstalacion, totalSinInstalacion, ahorro, pctAhorro, costePotenciaDiarioTeorico };
+  return { costeFv, costeBat, costeRed, costeSinInstalacion, totalConInstalacion, totalSinInstalacion, ahorro, pctAhorro };
 }
 
 // Produccion anual (kWh/anio) usada como base del LCOE: si todavia no se ha guardado
-// ningun caso en el informe (seccion 04), se estima repitiendo el dia tipo en vivo los 365
+// ningun caso en el informe (pestaña Informe), se estima repitiendo el dia tipo en vivo los 365
 // dias del anio (punto de partida razonable antes de tener casos). En cuanto hay uno o mas
 // casos guardados, se usa la suma ponderada de todos ellos (generacion/aporte de bateria de
 // cada caso x sus propios dias al anio, congelados al guardarlo) -- una base bastante mas
@@ -2042,23 +1832,26 @@ function renderPrecioYCoste(res){
   const genV = CURVAS.gen.valores, conV = CURVAS.con.valores;
   const { produccionAnualFv, produccionAnualBat } = calcularProduccionAnualAgregada(res, genV);
   const { lcoeFv, lcoeBat } = calcularLCOE(produccionAnualFv, produccionAnualBat);
-  document.getElementById('lcoe_fv').value = fmtNum(lcoeFv,3);
-  document.getElementById('lcoe_bat').value = fmtNum(lcoeBat,3);
+  // El campo que se esta escribiendo no se reformatea, para no mover el cursor.
+  [['lcoe_fv',lcoeFv],['lcoe_bat',lcoeBat]].forEach(([id,valor])=>{
+    const el = document.getElementById(id);
+    if(document.activeElement!==el) el.value = valor.toFixed(3);
+  });
 
   const potenciaContratada = parseFloat(document.getElementById('pot_contratada').value)||0;
-  const c = calcularCosteDia(genV, conV, res.bateria, precioHoraria, lcoeFv, lcoeBat, potenciaContratada, PRECIO_POTENCIA_HORARIO);
-  document.getElementById('chart-coste').innerHTML = buildCosteChartSVG(c.costeFv, c.costeBat, c.costeRed, c.costePotencia, c.costeSinInstalacionEnergia, c.costeSinInstalacionPotencia, c.costeSinInstalacion);
+  const c = calcularCosteDia(genV, conV, res.bateria, precioHoraria, lcoeFv, lcoeBat, potenciaContratada);
+  document.getElementById('chart-coste').innerHTML = buildCosteChartSVG(c.costeFv, c.costeBat, c.costeRed, c.costeSinInstalacion);
   document.getElementById('total-coste').textContent = 'con FV '+fmtNum(c.totalConInstalacion,2)+' €';
   document.getElementById('total-coste-sin').textContent = 'sin FV '+fmtNum(c.totalSinInstalacion,2)+' €';
   document.getElementById('total-ahorro').textContent = 'ahorro '+fmtNum(c.ahorro,2)+' € ('+fmtNum(c.pctAhorro,1)+'%)';
   return {
     precioHoraria, lcoeFv, lcoeBat,
     totalConInstalacion: c.totalConInstalacion, totalSinInstalacion: c.totalSinInstalacion,
-    ahorro: c.ahorro, pctAhorro: c.pctAhorro, costePotenciaDiarioTeorico: c.costePotenciaDiarioTeorico,
+    ahorro: c.ahorro, pctAhorro: c.pctAhorro,
   };
 }
 
-// ===================== FLUJO DE CAJA, VAN, TIR Y PAYBACK (seccion 00, curvas y bateria) ============
+// ===================== FLUJO DE CAJA, VAN, TIR Y PAYBACK (pestaña Simulacion, curvas y bateria) ============
 // VAN a un tipo de interes r, dada una serie de flujos anuales (flows[0] es el anio 0).
 function calcNPV(r, flows){
   return flows.reduce((acc,cf,i)=> acc + cf/Math.pow(1+r,i), 0);
@@ -2094,7 +1887,7 @@ function calcIRR(flows){
 // tipo en vivo (su ahorro diario, ya calculado en renderPrecioYCoste con el LCOE actual)
 // repetido los 365 dias del anio, como estimacion provisional. En cuanto hay uno o mas
 // casos guardados, ignora el dia en vivo (no guardado, fuera del informe) y suma el ahorro
-// de cada caso x sus propios dias al anio (ajustables por caso en la seccion 04, ver
+// de cada caso x sus propios dias al anio (ajustables por caso en la pestaña Informe, ver
 // renderCasos/onCasoDiasChange) -- el flujo de caja "ir agregando casos" que pondera cada
 // uno por los dias que representa, con el mismo LCOE compartido (calculado ya con la
 // produccion agregada de todos los casos, ver calcularProduccionAnualAgregada).
@@ -2104,7 +1897,7 @@ function calcularAhorroAnualAgregado(ahorroDiarioActual, lcoeFv, lcoeBat){
   }
   let ahorroAnual=0, diasAnuales=0;
   casos.forEach(c=>{
-    const cc = calcularCosteDia(c.curvas.gen, c.curvas.con, c.res.bateria, c.precioHoraria, lcoeFv, lcoeBat, c.potenciaContratada, c.precioPotenciaHoraria);
+    const cc = calcularCosteDia(c.curvas.gen, c.curvas.con, c.res.bateria, c.precioHoraria, lcoeFv, lcoeBat, c.potenciaContratada);
     ahorroAnual += cc.ahorro*c.diasAnuales;
     diasAnuales += c.diasAnuales;
   });
@@ -2197,7 +1990,7 @@ function renderFlujoCaja(ahorroDiarioActual, lcoeFv, lcoeBat){
   return r;
 }
 
-// ===================== DIAGRAMA DE FLUJOS (seccion 00, curvas y bateria) =====================
+// ===================== DIAGRAMA DE FLUJOS (pestaña Simulacion, curvas y bateria) =====================
 // Diagrama de nodos (FV -> electricidad -> demanda, con electricidad conectada en
 // ambos sentidos a bateria y a red) anotado con el flujo total de cada sentido, en
 // kWh, para el dia tipo seleccionado.
@@ -2309,7 +2102,7 @@ function buildFlowDiagramSVG(f){
 // recortar, para poder mostrar ambos a la vez -- el "antes/despues" -- en el diagrama y en
 // las curvas. "aislado" en el resultado ahora significa "hay recorte" (algo se ha
 // limitado hoy), no "potencia contratada = 0" -- ese caso concreto se comprueba aparte,
-// con res.potenciaContratada<=0, donde haga falta (p.ej. el termino de potencia del coste).
+// con res.potenciaContratada<=0, donde haga falta.
 function limitarPorPotenciaContratada(genDiariaCruda, conDiariaCruda, autocDiaria, cargaDiaria, descargaDiaria, exportHoraria, importHoraria, potenciaContratada, conBateria){
   const limite = Math.max(0, potenciaContratada||0);
   let exportDiaria=0, importDiaria=0, exportRecortada=0, importRecortada=0;
@@ -2327,29 +2120,9 @@ function limitarPorPotenciaContratada(genDiariaCruda, conDiariaCruda, autocDiari
   };
 }
 
-// hourIndex=null -> totales del dia completo (delega en calcularFlujosDiagramaTotal, con
-// las curvas en vivo); hourIndex=0..23 -> valores instantaneos de esa hora (mismo criterio
-// que calcularAutoconsumo/simularBateria y que las pilas hora a hora de
-// buildComparativoChartSVG), limitados igual que el total pero con el limite aplicado a
-// esa unica hora.
-function calcularFlujosDiagrama(res, hourIndex){
-  if(hourIndex==null) return calcularFlujosDiagramaTotal(res, CURVAS.gen.valores, CURVAS.con.valores);
-  const h = hourIndex;
-  const genDiariaCruda = CURVAS.gen.valores[h]||0, conDiariaCruda = CURVAS.con.valores[h]||0;
-  const autocDiaria = Math.min(genDiariaCruda, conDiariaCruda);
-  let cargaDiaria=0, descargaDiaria=0;
-  if(res.bateria){
-    cargaDiaria = res.bateria.cargaHoraria[h]||0;
-    descargaDiaria = res.bateria.descargaHoraria[h]||0;
-  }
-  const importHora = limpiarFP(Math.max(0, conDiariaCruda-genDiariaCruda-descargaDiaria));
-  const exportHora = limpiarFP(Math.max(0, genDiariaCruda-conDiariaCruda-cargaDiaria));
-  return limitarPorPotenciaContratada(genDiariaCruda, conDiariaCruda, autocDiaria, cargaDiaria, descargaDiaria, [exportHora], [importHora], res.potenciaContratada, !!res.bateria);
-}
-
-// Version de calcularFlujosDiagrama(res, null) que recibe las curvas explicitas en vez de
+// Totales del dia de los flujos, a partir de las curvas explicitas en vez de
 // leer la CURVAS global -- para poder recalcular los totales del dia de un caso guardado
-// (seccion 04), cuyas curvas ya no son las que hay actualmente en el editor.
+// (pestaña Informe), cuyas curvas ya no son las que hay actualmente en el editor.
 function calcularFlujosDiagramaTotal(res, genValores, conValores){
   const genDiariaCruda = res.gen, autocDiaria = res.autoc, conDiariaCruda = res.con;
   let cargaDiaria=0, descargaDiaria=0;
@@ -2363,81 +2136,14 @@ function calcularFlujosDiagramaTotal(res, genValores, conValores){
   return limitarPorPotenciaContratada(genDiariaCruda, conDiariaCruda, autocDiaria, cargaDiaria, descargaDiaria, exportHoraria, importHoraria, res.potenciaContratada, !!res.bateria);
 }
 
-// ===================== RENDER RESULTADOS (seccion 04, con graficos en la 03) =====================
+// ===================== RENDER RESULTADOS (pestaña Informe) =====================
 
-// Ultimo resultado calculado por renderResultados(), reutilizado por renderFlowDiagram()
-// para no repetir el calculo de autoconsumo/bateria solo por tocar una marca de hora.
+// Ultimo resultado calculado por renderResultados(), reutilizado por el arrastre sobre el
+// grafico de reparto horario para leer la bateria y la potencia contratada vigentes.
 let ultimoResultadoDiaTipo = null;
 
-// Marcas de hora dentro del propio diagrama de flujo (sustituyen al slider de debajo):
-// "Σ" = total del dia, 0..23 = esa hora. Se construyen una vez; renderFlowDiagram() solo
-// alterna la clase .active al tocar una marca.
-let flowHourPaso = 0;
-(function construirMarcasHora(){
-  const cont = document.getElementById('flowHourTicks');
-  let html = '';
-  for(let paso=0; paso<=24; paso++){
-    html += '<button type="button" class="'+(paso===0?'active ':'')+'" data-paso="'+paso+'" title="'+(paso===0?'Total del día':(String(paso-1).padStart(2,'0')+':00h'))+'">'+
-      '<span class="mark"></span><span class="num">'+(paso===0?'Σ':(paso-1))+'</span></button>';
-  }
-  cont.innerHTML = html;
-  cont.addEventListener('click', (e)=>{
-    const btn = e.target.closest('button[data-paso]');
-    if(!btn) return;
-    flowHourPaso = parseInt(btn.dataset.paso, 10);
-    renderFlowDiagram();
-  });
-})();
-
-// Rellena el arbol del diagrama de flujo. Solo escribe valores: los campos editables del
-// arbol son fijos, asi que no pierden el foco mientras se escribe en ellos.
-function pintarArbolFlujos(f){
-  const el = id=>document.getElementById(id);
-  const dimBat = !f.conBateria, dimRed = (f.potenciaContratada||0)<=0;
-  const v = {gen:f.genDiaria, con:f.conDiaria, carga:dimBat?0:f.cargaDiaria, desc:dimBat?0:f.descargaDiaria, exp:dimRed?0:f.exportDiaria, imp:dimRed?0:f.importDiaria};
-  const entra = v.gen+v.desc+v.imp, sale = v.con+v.carga+v.exp;
-  const escala = Math.max(entra, sale, 0.001);
-  const pct = n=>Math.max(0, n/escala*100)+'%';
-  const fila = (id,txt,n)=>{ el(id).textContent = txt; el(id+'Bar').style.width = pct(n); };
-  fila('ftGen', f.aislado ? fmtNum(f.genDiariaConRed,1)+' → '+fmtNum(f.genDiaria,1) : fmtNum(f.genDiaria,1), v.gen);
-  fila('ftCon', f.aislado ? fmtNum(f.conDiariaConRed,1)+' → '+fmtNum(f.conDiaria,1) : fmtNum(f.conDiaria,1), v.con);
-  fila('ftCarga', dimBat?'—':fmtNum(v.carga,1), v.carga);
-  fila('ftDescarga', dimBat?'—':fmtNum(v.desc,1), v.desc);
-  fila('ftExport', dimRed?'—':fmtNum(v.exp,1), v.exp);
-  fila('ftImport', dimRed?'—':fmtNum(v.imp,1), v.imp);
-  el('ftEntra').textContent = fmtNum(entra,1);
-  el('ftSale').textContent = fmtNum(sale,1);
-  [['ftSegGen',v.gen],['ftSegDesc',v.desc],['ftSegImp',v.imp],['ftSegCon',v.con],['ftSegCarga',v.carga],['ftSegExp',v.exp]].forEach(([id,n])=>{ el(id).style.width = pct(n); });
-  el('ftBatEstado').textContent = dimBat ? '(desactivada)' : '';
-  el('ftRedEstado').textContent = dimRed ? '(aislada, sin red)' : '';
-  el('ftBat').classList.toggle('is-off', dimBat);
-  el('ftRed').classList.toggle('is-off', dimRed);
-  // Conector animado: sentido del flujo neto de cada rama respecto al nudo.
-  const enlace = (id,neto,cEntra,cSale)=>{
-    const l = el(id);
-    l.dataset.dir = neto>0.005 ? 'in' : neto<-0.005 ? 'out' : 'none';
-    if(neto>0.005) l.style.setProperty('--c',cEntra); else if(neto<-0.005) l.style.setProperty('--c',cSale);
-  };
-  enlace('ftPvLink', v.gen, '#c27c00', '#c27c00');
-  enlace('ftBatLink', v.desc-v.carga, '#A3E635', '#6366F1');
-  enlace('ftRedLink', v.imp-v.exp, '#FF3B30', '#22D46B');
-  enlace('ftDemLink', -v.con, '#2457e6', '#2457e6');
-}
-
-function renderFlowDiagram(){
-  if(!ultimoResultadoDiaTipo) return;
-  const hourIndex = flowHourPaso===0 ? null : (flowHourPaso-1);
-  const flujos = calcularFlujosDiagrama(ultimoResultadoDiaTipo, hourIndex);
-  pintarArbolFlujos(flujos);
-  const texto = hourIndex==null ? 'total del día' : (String(hourIndex).padStart(2,'0')+':00 – '+String(hourIndex).padStart(2,'0')+':59');
-  const label1 = document.getElementById('flowHourLabel');
-  if(label1) label1.textContent = texto;
-  document.querySelectorAll('#flowHourTicks button').forEach(btn=>{
-    btn.classList.toggle('active', parseInt(btn.dataset.paso,10)===flowHourPaso);
-  });
-}
-
 function renderResultados(){
+  actualizarCasoAutomatico();
   const res = calcularResultadoDiaTipo();
 
   const statsRow = document.getElementById('statsRow');
@@ -2456,7 +2162,6 @@ function renderResultados(){
   statsRow.innerHTML = statsHtml;
 
   ultimoResultadoDiaTipo = res;
-  renderFlowDiagram();
 
   const chart = buildComparativoChartSVG(
     CURVAS.gen.valores, CURVAS.con.valores,
@@ -2465,9 +2170,15 @@ function renderResultados(){
     res.bateria ? res.bateria.socHoraria : null,
     res.bateria ? res.bat.capacidad : null,
     res.bateria ? res.bat.potencia : null,
-    res.potenciaContratada
+    res.potenciaContratada,
+    true
   );
   document.getElementById('flowCurveWrap').innerHTML = chart;
+  const layoutReparto = calcularLayoutReparto(CURVAS.gen.valores, CURVAS.con.valores,
+    res.bateria ? res.bateria.cargaHoraria : CURVAS.gen.valores.map(()=>0),
+    res.bateria ? res.bateria.descargaHoraria : CURVAS.gen.valores.map(()=>0),
+    !!res.bateria, res.potenciaContratada, true);
+  document.getElementById('flowCurveLegend').innerHTML = leyendaRepartoHTML(!!res.bateria, layoutReparto.hayRecorte);
 
   const coste = renderPrecioYCoste(res);
   const flujo = renderFlujoCaja(coste.ahorro, coste.lcoeFv, coste.lcoeBat);
@@ -2487,7 +2198,6 @@ function renderResultados(){
   const filasCoste =
     '<tr><td>Coste del día con FV'+(res.bateria?' y batería':'')+(sinContrato?' (sistema aislado)':'')+'</td><td>'+fmtNum(coste.totalConInstalacion,2)+' €</td></tr>'+
     '<tr><td>Coste del día solo con red (sin FV)</td><td>'+fmtNum(coste.totalSinInstalacion,2)+' €</td></tr>'+
-    (sinContrato ? '<tr><td>Ahorro diario por no contrato (aislado)</td><td>'+fmtNum(coste.costePotenciaDiarioTeorico||0,2)+' €</td></tr>' : '')+
     '<tr><td>Ahorro ese día</td><td>'+fmtNum(coste.ahorro,2)+' € ('+fmtNum(coste.pctAhorro,1)+'%)</td></tr>';
   const filasFlujo =
     '<tr><td>Inversión inicial (FV + batería)</td><td>'+fmtNum(flujo.inversionInicial,0)+' €</td></tr>'+
@@ -2520,8 +2230,28 @@ renderResultados();
   document.getElementById(id).addEventListener('input', renderResultados);
 });
 
+// LCOE editable: escribir un €/kWh recalcula el coste especifico equivalente, que sigue
+// siendo el unico dato de entrada -- asi coste horario, inversion y flujo de caja no se
+// contradicen. El LCOE es proporcional al coste especifico, de modo que basta medir el LCOE
+// que sale con 1 €. Sin produccion (p.ej. sin bateria) no hay equivalencia y no se toca nada.
+[['lcoe_fv','lcoe_fv_coste','lcoeFv'],['lcoe_bat','lcoe_bat_coste','lcoeBat']].forEach(([idLcoe,idCoste,clave])=>{
+  const campo = document.getElementById(idLcoe);
+  const coste = document.getElementById(idCoste);
+  campo.addEventListener('input', ()=>{
+    const objetivo = parseFloat(campo.value);
+    if(!isFinite(objetivo) || objetivo<0 || !ultimoResultadoDiaTipo) return;
+    const { produccionAnualFv, produccionAnualBat } = calcularProduccionAnualAgregada(ultimoResultadoDiaTipo, CURVAS.gen.valores);
+    const previo = coste.value;
+    coste.value = 1;
+    const lcoePorEuro = calcularLCOE(produccionAnualFv, produccionAnualBat)[clave];
+    coste.value = lcoePorEuro>0 ? Math.round(objetivo/lcoePorEuro*100)/100 : previo;
+    coste.dispatchEvent(new Event('input', {bubbles:true}));
+  });
+  campo.addEventListener('blur', renderResultados);
+});
+
 // ===================== CASOS: varios dias tipo en el mismo informe =====================
-// El "dia tipo actual" (jornada, FV, consumo y bateria de la seccion 00, editados en
+// El "dia tipo actual" (jornada, FV, consumo y bateria de la pestaña Simulacion, editados en
 // vivo) se puede guardar como un caso independiente del informe -- una foto fija de esos
 // inputs, sus curvas y su resultado en ese momento. Igual que las "actuaciones" de las
 // fichas CAE (A01_CAEs): se guardan tantos casos como se quiera, cada uno con sus propios
@@ -2535,7 +2265,7 @@ function snapshotCasoActual(nombre){
   const tipoConsumidorEl = document.getElementById('tipoConsumidorGlobal');
   // Por defecto el caso nuevo se guarda a 7/7 dias de la semana x 12/12 meses del anio (los
   // 365 dias completos); el peso real de cada caso en el flujo de caja conjunto se ajusta
-  // despues, en la seccion 04, entre los casos ya guardados (ver renderCasos/onCasoDiasChange).
+  // despues, en la pestaña Informe, entre los casos ya guardados (ver renderCasos/onCasoDiasChange).
   const dias = { diasNum:7, diasDen:7, mesesNum:12, mesesDen:12 };
   return {
     id: casoNextId++,
@@ -2545,26 +2275,46 @@ function snapshotCasoActual(nombre){
     tipoConsumidor: tipoConsumidorEl.options[tipoConsumidorEl.selectedIndex].text,
     kwhDia: parseFloat(document.getElementById('kwhdia_con').value)||0,
     curvas: { gen: CURVAS.gen.valores.slice(), con: CURVAS.con.valores.slice() },
-    // Precio horario y precio de potencia, congelados en el momento de guardar el caso --
-    // asi cada caso lleva su propio precio, y tocar los campos de la seccion 00 despues de
+    // Precio horario, congelado en el momento de guardar el caso --
+    // asi cada caso lleva su propio precio, y tocar los campos de la pestaña Simulacion despues de
     // guardarlo no lo cambia retroactivamente (igual que kwp o kwhDia, ya congelados
     // arriba). La potencia contratada en si (res.potenciaContratada) ya viaja congelada
     // dentro de res, y con ella el limite de importacion/exportacion hora a hora (ver
     // limitarPorPotenciaContratada).
     precioHoraria: PRECIO_HORARIO.slice(),
-    precioPotenciaHoraria: PRECIO_POTENCIA_HORARIO.slice(),
     potenciaContratada: parseFloat(document.getElementById('pot_contratada').value)||0,
     dias, diasAnuales: diasAnualesDesdeFraccion(dias),
     res,
   };
 }
 
+// El primer caso se crea solo al abrir la pagina, para que el informe nunca empiece vacio.
+// Mientras sea automatico (auto:true) se rehace en cada render con el dia tipo en vivo: si
+// quedara congelado, el LCOE y el flujo de caja de la simulacion dejarian de reaccionar a
+// los cambios (ver calcularProduccionAnualAgregada). Se conservan su id y sus dias al anio.
+function actualizarCasoAutomatico(){
+  const i = casos.findIndex(c=>c.auto);
+  if(i<0) return;
+  const previo = casos[i];
+  casos[i] = Object.assign(snapshotCasoActual(''), {id:previo.id, auto:true, dias:previo.dias, diasAnuales:previo.diasAnuales});
+  renderCasos();
+}
+
 document.getElementById('btnAddCaso').addEventListener('click', ()=>{
   const nombreInput = document.getElementById('caso_nombre');
   const caso = snapshotCasoActual(nombreInput.value.trim());
-  casos.push(caso);
+  // El primer guardado manual congela el caso automatico en vez de duplicarlo.
+  const iAuto = casos.findIndex(c=>c.auto);
+  if(iAuto>=0){
+    caso.id = casos[iAuto].id;
+    caso.dias = casos[iAuto].dias;
+    caso.diasAnuales = casos[iAuto].diasAnuales;
+    casos[iAuto] = caso;
+  } else {
+    casos.push(caso);
+  }
   renderCasos();
-  renderResultados(); // el flujo de caja de la seccion 00 pasa a ponderar tambien este caso
+  renderResultados(); // el flujo de caja de la pestaña Simulacion pasa a ponderar tambien este caso
   showToast('Caso guardado: '+caso.nombre);
   nombreInput.value = '';
 });
@@ -2581,7 +2331,7 @@ function renderCasos(){
   const summaryWrap = document.getElementById('summaryTableWrap');
 
   if(casos.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has guardado ningún caso. Ajusta el día tipo, la FV, el consumo o la batería en la sección anterior y pulsa "Guardar caso en el informe".</div>';
+    container.innerHTML = '<div class="empty-state">Todavía no has guardado ningún caso. Ajusta el día tipo, la FV, el consumo o la batería en la pestaña Simulación y pulsa "Guardar caso en el informe".</div>';
     statsRow.style.display='none';
     btnPdf.disabled = true;
     summaryWrap.style.display='none';
@@ -2647,6 +2397,7 @@ function renderCasos(){
         '<div class="lh-right"><span class="badge">'+fmtNum(pct,1)+'% autoconsumo</span>'+
         '<span class="badge">'+fmtNum(autarquia,1)+'% autarquía</span>'+
         (r.bateria?'<span class="badge">con batería</span>':'')+
+        (caso.auto?'<span class="badge" title="Este caso sigue los cambios de la pestaña Simulación hasta que pulses Guardar caso en el informe">automático</span>':'')+
         '<button class="remove-btn" onclick="event.stopPropagation(); removeCaso('+caso.id+')">eliminar</button></div>'+
       '</div>'+
       '<div class="line-body" id="cb-'+caso.id+'"><div class="calc-steps">'+stepsHtml+'</div>'+
@@ -2671,9 +2422,9 @@ function renderCasos(){
 
 window.toggleCaso = function(id){ document.getElementById('cb-'+id).classList.toggle('open'); };
 window.removeCaso = function(id){ casos = casos.filter(c=>c.id!==id); renderCasos(); renderResultados(); };
-// Ajusta el peso (dias/semana x meses/anio) de un caso ya guardado, aqui en la seccion 04
+// Ajusta el peso (dias/semana x meses/anio) de un caso ya guardado, aqui en la pestaña Informe
 // -- asi se pondera el flujo de caja conjunto de todos los casos sin tener que volver a la
-// seccion 00 (ver snapshotCasoActual, que guarda cada caso nuevo a 365 dias por defecto).
+// pestaña Simulacion (ver snapshotCasoActual, que guarda cada caso nuevo a 365 dias por defecto).
 window.onCasoDiasChange = function(id, campo, valor){
   const caso = casos.find(c=>c.id===id);
   if(!caso) return;
@@ -2795,7 +2546,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       return yy+lines.length*4.5+3;
     }
     // Solo los flujos que realmente tienen flecha propia en el diagrama de nodos
-    // (seccion 00): generacion, descarga y importacion ENTRAN al nudo "Electricidad"
+    // (pestaña Simulacion): generacion, descarga y importacion ENTRAN al nudo "Electricidad"
     // (positivo); demanda, carga y exportacion SALEN (negativo). No se representa el
     // autoconsumo -- no tiene flecha propia, es una lectura derivada, no un flujo del
     // nudo. Cada pila (arriba las 3 entrantes, abajo las 3 salientes, en espejo) es
@@ -3086,18 +2837,17 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     // Coste horario del consumo (€), barras apiladas por origen (FV directa/bateria/red a
     // su LCOE o precio) mas la linea de puntos de lo que costaria sin instalacion --
     // version vectorial de buildCosteChartSVG.
-    function drawCosteChartPdf(yy, costeFv, costeBat, costeRed, costePotencia, costeSinInstalacionEnergia, costeSinInstalacionPotencia, costeSinInstalacion){
+    function drawCosteChartPdf(yy, costeFv, costeBat, costeRed, costeSinInstalacion){
       const nivel1 = costeFv;
       const nivel2 = nivel1.map((v,i)=>v+costeBat[i]);
       const nivel3 = nivel2.map((v,i)=>v+costeRed[i]);
-      const nivel4 = nivel3.map((v,i)=>v+(costePotencia?costePotencia[i]:0));
       const chartH=40, chartW=pageW-2*marginX;
       yy = checkPage(yy, chartH+20);
       const x0=marginX, y0=yy+12;
       doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,chartW,chartH);
       const padL=16, padR=4, padT=4, padB=8;
       const step=(chartW-padL-padR)/24;
-      const maxV = Math.max(Math.max.apply(null, nivel4), Math.max.apply(null, costeSinInstalacion), 0.01)*1.15;
+      const maxV = Math.max(Math.max.apply(null, nivel3), Math.max.apply(null, costeSinInstalacion), 0.01)*1.15;
       const y = v => y0+padT+(chartH-padT-padB)*(1-v/maxV);
       doc.setDrawColor(225,225,230); doc.setLineWidth(0.12);
       [0, maxV/2, maxV].forEach(gv=>{
@@ -3116,7 +2866,6 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         seg(0, nivel1[i], [255,176,32], i);
         seg(nivel1[i], nivel2[i], [132,204,22], i);
         seg(nivel2[i], nivel3[i], [230,30,20], i);
-        seg(nivel3[i], nivel4[i], [139,92,246], i);
       }
       function linea(arr, colorRgb, ancho, dash){
         doc.setDrawColor(...colorRgb); doc.setLineWidth(ancho);
@@ -3129,47 +2878,13 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
         doc.setLineDashPattern([], 0);
       }
       linea(costeSinInstalacion, [140,150,165], 0.4, [0.8,0.6]);
-      linea(costeSinInstalacionEnergia, [91,112,134], 0.3, [0.5,0.5]);
-      linea(costeSinInstalacionPotencia, [139,92,246], 0.3, [0.5,0.5]);
       doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,155,163);
       [0,6,12,18,23].forEach(i=>{ doc.text(i+'h', x0+padL+step*i+step/2, y0+chartH-1, {align:'center'}); });
       doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
       doc.setTextColor(255,176,32); doc.text('- FV directa', x0+padL, y0-8);
       doc.setTextColor(132,204,22); doc.text('- bateria', x0+padL+22, y0-8);
       doc.setTextColor(230,30,20); doc.text('- red', x0+padL+36, y0-8);
-      doc.setTextColor(139,92,246); doc.text('- potencia contratada', x0+padL+50, y0-8);
-      doc.setTextColor(120,128,140); doc.text('- - sin instalacion (total)', x0+padL, y0-2);
-      doc.setTextColor(91,112,134); doc.text('- - solo energia', x0+padL+42, y0-2);
-      doc.setTextColor(139,92,246); doc.text('- - solo potencia', x0+padL+68, y0-2);
-      return y0+chartH+6;
-    }
-    // Precio de potencia por hora (€/kW/dia, para 1 kW contratado) -- version vectorial de
-    // buildPrecioPotenciaChartSVG.
-    function drawPrecioPotenciaChartPdf(yy, valores){
-      const chartH=40, chartW=pageW-2*marginX;
-      yy = checkPage(yy, chartH+14);
-      const x0=marginX, y0=yy+6;
-      doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,chartW,chartH);
-      const padL=16, padR=4, padT=4, padB=8;
-      const step=(chartW-padL-padR)/24;
-      const maxV = Math.max(Math.max.apply(null, valores), 0.01)*1.15;
-      const y = v => y0+padT+(chartH-padT-padB)*(1-v/maxV);
-      doc.setDrawColor(225,225,230); doc.setLineWidth(0.12);
-      [0, maxV/2, maxV].forEach(gv=>{
-        doc.line(x0+padL, y(gv), x0+chartW-padR, y(gv));
-        doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(150,155,163);
-        doc.text(fmtNum(gv,3), x0+padL-1.5, y(gv)+1, {align:'right'});
-      });
-      doc.setDrawColor(139,92,246); doc.setLineWidth(0.5);
-      for(let i=0;i<24;i++){
-        const bx0=x0+padL+step*i, bx1=x0+padL+step*(i+1), by=y(valores[i]||0);
-        doc.line(bx0,by,bx1,by);
-        if(i<23){ const byNext=y(valores[i+1]||0); doc.line(bx1,by,bx1,byNext); }
-      }
-      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,155,163);
-      [0,6,12,18,23].forEach(i=>{ doc.text(i+'h', x0+padL+step*i+step/2, y0+chartH-1, {align:'center'}); });
-      doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(139,92,246);
-      doc.text('- precio de potencia contratada (€/kW/dia)', x0+padL, y0-2);
+      doc.setTextColor(120,128,140); doc.text('- - sin instalacion', x0+padL, y0-2);
       return y0+chartH+6;
     }
     // Flujo de caja anual (barras verde/rojo) + acumulado (linea azul) -- version vectorial
@@ -3219,7 +2934,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       doc.setTextColor(55,207,255); doc.text('- acumulado', x0+padL+52, y0-2);
       return y0+chartH+6;
     }
-    return {checkPage, sectionTitle, subTitle, kv, paragraph, formulaBlock, tableCaption, figureCaption, simpleTable, drawComparativoChartPdf, drawFlowDiagramPdf, drawPrecioChartPdf, drawCosteChartPdf, drawPrecioPotenciaChartPdf, drawCashFlowChartPdf};
+    return {checkPage, sectionTitle, subTitle, kv, paragraph, formulaBlock, tableCaption, figureCaption, simpleTable, drawComparativoChartPdf, drawFlowDiagramPdf, drawPrecioChartPdf, drawCosteChartPdf, drawCashFlowChartPdf};
   }
 
   function renderBody(doc, collect){
@@ -3323,7 +3038,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       );
       y = H.figureCaption(y, FIG(), 'Generacion, consumo'+(conBateria?' y bateria (carga/descarga/SOC)':'')+' horario - '+caso.nombre, collect);
 
-      const costeCaso = calcularCosteDia(caso.curvas.gen, caso.curvas.con, r.bateria, caso.precioHoraria, lcoeFv, lcoeBat, caso.potenciaContratada, caso.precioPotenciaHoraria);
+      const costeCaso = calcularCosteDia(caso.curvas.gen, caso.curvas.con, r.bateria, caso.precioHoraria, lcoeFv, lcoeBat, caso.potenciaContratada);
       y = H.kv(y, 'Dias al anio asignados a este caso', fmtNum(caso.diasAnuales,0)+' ('+caso.dias.diasNum+'/'+caso.dias.diasDen+' dias semana x '+caso.dias.mesesNum+'/'+caso.dias.mesesDen+' meses)');
       y = H.kv(y, 'Coste del dia con FV'+(conBateria?' y bateria':''), fmtNum(costeCaso.totalConInstalacion,2)+' EUR');
       y = H.kv(y, 'Coste del dia solo con red (sin FV)', fmtNum(costeCaso.totalSinInstalacion,2)+' EUR');
@@ -3334,12 +3049,9 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       y = H.figureCaption(y, FIG(), 'Curva de precio PVPC - '+caso.nombre, collect);
 
       y = H.paragraph(y, 'Coste horario del consumo, valorando lo autoconsumido (FV/bateria) al LCOE de la seccion 7 y lo importado de red al precio de arriba:');
-      y = H.drawCosteChartPdf(y, costeCaso.costeFv, costeCaso.costeBat, costeCaso.costeRed, costeCaso.costePotencia, costeCaso.costeSinInstalacionEnergia, costeCaso.costeSinInstalacionPotencia, costeCaso.costeSinInstalacion);
+      y = H.drawCosteChartPdf(y, costeCaso.costeFv, costeCaso.costeBat, costeCaso.costeRed, costeCaso.costeSinInstalacion);
       y = H.figureCaption(y, FIG(), 'Coste horario del consumo (EUR) - '+caso.nombre, collect);
 
-      y = H.paragraph(y, 'Precio de potencia contratada, usado para el termino fijo de este caso:');
-      y = H.drawPrecioPotenciaChartPdf(y, caso.precioPotenciaHoraria);
-      y = H.figureCaption(y, FIG(), 'Curva de precio de potencia contratada - '+caso.nombre, collect);
       y += 4;
     });
 
@@ -3616,12 +3328,9 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     inputPrecio.value = DEFAULT_PRECIO_GENERICO;
     PRECIO_HORARIO = generarPerfilPrecioTipico(diaTipoActual().jornada, parseFloat(inputPrecio.value)||0);
   }
-  if(!precioPotenciaRestauradoDeVatiaco){
-    PRECIO_POTENCIA_HORARIO = new Array(24).fill(0.05);
-  }
   renderChartPrecio();
-  renderChartPrecioPotencia();
   renderTodosLosEditores();
+  casos.push(Object.assign(snapshotCasoActual(''), {auto:true}));
   renderResultados();
 })();
 </script>
