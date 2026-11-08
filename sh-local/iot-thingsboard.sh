@@ -73,14 +73,18 @@ ACME_EMAIL=""           # con un email, Caddy usa tambien ZeroSSL si Let's Encry
 
 # Credenciales de los servicios. Las CONTRASEÑAS NO van aqui (este script se publica en GitHub):
 # IOT_PASSWORD (sysadmin de ThingsBoard, administradores api@<id>... de cada comunidad y
-# PostgreSQL) y SUPER_PASSWORD se leen de .env.secretos (mas abajo); si faltan, se generan al
+# PostgreSQL) se lee de .env.secretos (mas abajo); si falta, se genera al
 # azar y se guardan alli. Minimo 10 caracteres.
 IOT_USER="pk"
 
 # Superusuario de la plataforma: el unico usuario que crea el script (tenant "Plataforma",
 # solo ve su panel). Crea comunidades y gestores, asigna las cuentas de Datadis y hace
-# copias de PostgreSQL. Su contraseña (SUPER_PASSWORD), en .env.secretos.
-SUPER_EMAIL="kgnete@gmail.com"
+# copias de PostgreSQL. Su contraseña inicial es SMTP_PASS (.env.secretos) y no se muestra en ningun sitio.
+SUPER_EMAIL="info@vatiaco.es"
+# IoT domestico: tenant "Hogar" aparte, con su camara e interruptor (firmware en
+# firmware/hogar_esp32cam). Sin contraseña predefinida: la primera vez entra con "¿Olvidaste tu
+# contraseña?", que aprueba el superusuario. El token de la placa, en .env.secretos.
+HOGAR_EMAIL="kgnete@gmail.com"
 
 # Alta online de comunidades, gratuita: el modal «Alta de una comunidad energética» del inicio de
 # sesion de la plataforma (la web lo abre con login?alta=comunidad o login?alta=prueba) llama a la
@@ -133,7 +137,7 @@ SMTP_PASS="${SMTP_PASS:-}"                         # contraseña (sin comillas s
 # Contraseñas del sistema: de .env.secretos; las que falten se generan al azar (24 caracteres) y
 # se guardan alli (chmod 600), para que la siguiente instalacion use las mismas.
 genera_clave_() { openssl rand -base64 36 2>/dev/null | tr -dc 'A-Za-z0-9' | cut -c1-24; }
-for v_ in IOT_PASSWORD SUPER_PASSWORD; do
+for v_ in IOT_PASSWORD HOGAR_TOKEN; do
   if [ -z "${!v_:-}" ]; then
     printf -v "$v_" '%s' "$(genera_clave_)"
     [ -n "${!v_}" ] || { echo "ERROR: no se pudo generar $v_ (falta openssl)" >&2; exit 1; }
@@ -146,6 +150,11 @@ for v_ in IOT_PASSWORD SUPER_PASSWORD; do
   fi
   case "${!v_}" in *"'"*|*'"'*|*' '*|*$'\n'*) echo "ERROR: $v_ no puede llevar comillas, espacios ni saltos de línea" >&2; exit 1 ;; esac
 done
+# Contraseña inicial del superusuario: la de su correo (SMTP_PASS, en .env.secretos)
+SUPER_PASSWORD="$SMTP_PASS"
+if [ "$(printf %s "$SUPER_PASSWORD" | wc -c)" -lt 8 ]; then
+  echo "ERROR: SMTP_PASS (en $SECRETOS) es la contraseña inicial de $SUPER_EMAIL y debe tener al menos 8 caracteres." >&2; exit 1
+fi
 TB_SYSADMIN_PASSWORD="$IOT_PASSWORD"   # sysadmin@thingsboard.org
 TB_TENANT_PASSWORD="$IOT_PASSWORD"     # administradores (api@<id>...) del tenant de cada comunidad, los usa la API
 PG_USER="$IOT_USER"
@@ -10317,6 +10326,8 @@ def _quien(u, coms):
     com = c["nombre"] if c else u["tenant"] or "?"
     if u["email"] == (E.get("SUPER_EMAIL") or "").lower():
         return "Superusuario"
+    if not c and u["authority"] == "TENANT_ADMIN":      # (fuera de las comunidades: el tenant Hogar)
+        return "Usuario de " + com
     return ("Gestor de " if u["authority"] == "TENANT_ADMIN" else "Socio de ") + com
 
 
@@ -13312,7 +13323,7 @@ cat > config/homepage/services.yaml <<EOF
 - Plataforma de comunidades:
     - Superusuario:
         href: https://$IP
-        description: "$SUPER_EMAIL / $SUPER_PASSWORD · crea comunidades y gestores, cuentas de Datadis y copias de PostgreSQL"
+        description: "$SUPER_EMAIL · crea comunidades y gestores, cuentas de Datadis y copias de PostgreSQL"
         icon: thingsboard
         server: my-docker
         container: iot-thingsboard
@@ -21192,8 +21203,117 @@ def plataforma_super():
         print(f"    {email}: solo el panel Plataforma, sin menu lateral")
 
 
+# ---- Hogar: tenant de IoT domestico con una camara y un interruptor (ejecucion base) ----
+# Una placa ESP32-CAM por WiFi y MQTT (firmware/hogar_esp32cam): la foto llega como atributo de
+# cliente "foto" (solo la ultima: sin historico que llene la base) y el panel cambia el atributo
+# compartido "rele"; la placa confirma con "rele_estado".
+HOGAR_CSS = """
+.ho { height: 100%; display: grid; grid-template-columns: minmax(0, 2fr) minmax(200px, 1fr); gap: 14px; font: 14px Roboto, Arial, sans-serif; color: #333; }
+.ho section { border: 1px solid #eee; border-radius: 8px; padding: 12px; min-width: 0; }
+.ho h3 { margin: 0 0 10px; font-size: 15px; color: #7b2fa8; }
+.ho-img { width: 100%; max-height: 70vh; object-fit: contain; background: #222; border-radius: 4px; display: block; min-height: 200px; }
+.ho-sw { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.ho-btn { width: 130px; height: 130px; border-radius: 50%; border: 0; font: 700 22px Roboto, Arial, sans-serif; color: #fff; background: #9e9e9e; cursor: pointer; }
+.ho-btn.on { background: #2e7d32; } .ho-btn:disabled { opacity: .6; cursor: default; }
+.ho small { color: #666; }
+@media (max-width: 700px) { .ho { grid-template-columns: minmax(0, 1fr); height: auto; } }
+"""
+HOGAR_HTML = """<div class="ho"><section><h3>Cámara</h3><img class="ho-img" alt="Última foto de la cámara"><small class="ho-t">Esperando la primera foto…</small></section>
+<section class="ho-sw"><h3>Interruptor</h3><button type="button" class="ho-btn">–</button><small class="ho-e"></small></section></div>"""
+HOGAR_JS = r"""
+var H = { pedido: null, on: null, t: null };
+function hq(s) { return self.ctx.$container[0].querySelector(s); }
+function hapi(m, r, b) {
+  var h = { 'X-Authorization': 'Bearer ' + (localStorage.getItem('jwt_token') || '') };
+  if (b) h['Content-Type'] = 'application/json';
+  return fetch('/api/plugins/telemetry/DEVICE/' + self.ctx.settings.deviceId + r, { method: m, headers: h, body: b ? JSON.stringify(b) : undefined })
+    .then(function (x) { if (!x.ok) throw new Error('HTTP ' + x.status); return x.status === 200 ? x.text() : ''; });
+}
+function hpinta() {
+  var b = hq('.ho-btn'), e = hq('.ho-e'), esp = H.pedido !== null;
+  b.textContent = H.on === null ? '–' : H.on ? 'ON' : 'OFF';
+  b.classList.toggle('on', H.on === true);
+  b.disabled = esp;
+  e.textContent = esp ? 'Enviando a la placa…' : H.on === null ? 'La placa aún no ha informado' : H.on ? 'Encendido' : 'Apagado';
+}
+function hleer() {
+  hapi('GET', '/values/attributes?keys=foto,rele_estado').then(function (t) {
+    var a = {}; JSON.parse(t || '[]').forEach(function (x) { a[x.key] = x; });
+    if (a.foto) {
+      hq('.ho-img').src = 'data:image/jpeg;base64,' + a.foto.value;
+      var s = Math.round((Date.now() - a.foto.lastUpdateTs) / 1000);
+      hq('.ho-t').textContent = s > 30 ? 'Sin conexión con la cámara: última foto hace ' + s + ' s' : 'Hace ' + s + ' s';
+    }
+    if (a.rele_estado) {
+      H.on = a.rele_estado.value === true || a.rele_estado.value === 'true';
+      if (H.pedido === H.on || (H.desde && Date.now() - H.desde > 15000)) { H.pedido = null; H.desde = 0; }
+    }
+    hpinta();
+  }).catch(function (e) { hq('.ho-t').textContent = 'No se pudo leer: ' + e.message; });
+}
+self.onInit = function () {
+  hq('.ho-btn').onclick = function () {
+    var v = !H.on; H.pedido = v; H.desde = Date.now(); hpinta();
+    hapi('POST', '/SHARED_SCOPE', { rele: v }).catch(function (e) { H.pedido = null; hpinta(); hq('.ho-e').textContent = 'No se pudo enviar: ' + e.message; });
+  };
+  hleer(); H.t = setInterval(hleer, 3000);
+};
+self.onDestroy = function () { clearInterval(H.t); };
+"""
+
+
+def hogar():
+    """Tenant "Hogar" (HOGAR_EMAIL, su administrador) con el dispositivo de la placa y su panel."""
+    global tb
+    import secrets
+    email = E["HOGAR_EMAIL"]
+    ten = find(sa.get(page("/api/tenants"))["data"], "title", "Hogar") or sa.post("/api/tenant", {"title": "Hogar"})
+    u = find(sa.get(page(f"/api/tenant/{ten['id']['id']}/users"))["data"], "email", email)
+    if not u:
+        u = sa.post("/api/user?sendActivationMail=false", {
+            "email": email, "authority": "TENANT_ADMIN", "firstName": "Hogar",
+            "tenantId": {"id": ten["id"]["id"], "entityType": "TENANT"}, "additionalInfo": {"lang": E["TB_LANG"]}})
+        # Activo, con una clave al azar que no se guarda: nadie la conoce (como una contraseña olvidada)
+        activar(sa, u, secrets.token_urlsafe(32))
+        print(f"    usuario '{email}' creado (tenant Hogar), sin contraseña conocida")
+    tb = TBClient(sa.get(f"/api/user/{u['id']['id']}/token")["token"])     # (el panel lo crea el sysadmin en su nombre)
+    d = device("Cámara e interruptor", "hogar")
+    did = d["id"]["id"]
+    cr = tb.get(f"/api/device/{did}/credentials")
+    if cr.get("credentialsId") != E["HOGAR_TOKEN"]:       # (el de .env.secretos: la placa sigue valiendo al reinstalar)
+        cr["credentialsId"] = E["HOGAR_TOKEN"]
+        tb.post("/api/device/credentials", cr)
+    cec_widget("VatiaCo.hogar", "Cámara e interruptor", HOGAR_HTML, HOGAR_JS, 14, HOGAR_CSS, tipo="static", recursos=[])
+    cfg = {"datasources": [], "showTitle": False, "title": "Cámara e interruptor", "settings": {"deviceId": did},
+           "backgroundColor": "#fff", "color": "rgba(0,0,0,0.87)", "padding": "8px", "dropShadow": True,
+           "enableFullscreen": False, "mobileHeight": 20}
+    wid, wdef, l = _w("tenant.VatiaCo.hogar", cfg, "static", 0, 0, 24, 14)
+    conf = {"description": "Cámara e interruptor de casa", "widgets": {wid: wdef},
+            "states": {"default": {"name": "Hogar", "root": True, "layouts": {"main": {"widgets": {wid: l},
+                       "gridSettings": {"columns": 24, "margin": 10, "outerMargin": True, "backgroundColor": "#eeeeee"}}}}},
+            "entityAliases": {}, "filters": {}, "timewindow": {"selectedTab": 0, "realtime": {"realtimeType": 0, "timewindowMs": 86400000}},
+            "settings": {"stateControllerId": "entity", "showTitle": False, "showDashboardsSelect": False,
+                         "showEntitiesSelect": False, "showDashboardTimewindow": False, "showDashboardExport": False,
+                         "toolbarAlwaysOpen": True}}
+    x = find(tb.get(page("/api/tenant/dashboards"))["data"], "title", "Hogar")
+    if x:
+        full = tb.get(f"/api/dashboard/{x['id']['id']}")
+        full["configuration"] = conf
+    else:
+        full = {"title": "Hogar", "configuration": conf}
+        print("    panel 'Hogar' creado")
+    x = tb.post("/api/dashboard", full)
+    me = tb.get("/api/auth/user")
+    info = me.get("additionalInfo") or {}
+    info.update(defaultDashboardId=x["id"]["id"], defaultDashboardFullscreen=True, lang=E["TB_LANG"])
+    me["additionalInfo"] = info
+    sa.post("/api/user?sendActivationMail=false", me)
+
+
 if E.get("SUPER_EMAIL"):
     plataforma_super()
+if E.get("HOGAR_EMAIL"):
+    hogar()
 if not CEC:   # ejecucion base (iot-thingsboard.sh): las comunidades las crea el superusuario
     print("  - ThingsBoard OK")
     raise SystemExit(0)
@@ -21322,6 +21442,7 @@ echo "==> Configurando ThingsBoard..."
 TB_URL="https://localhost" \
 TB_SYSADMIN_PASSWORD="$TB_SYSADMIN_PASSWORD" TB_TENANT_PASSWORD="$TB_TENANT_PASSWORD" TB_LANG="$TB_LANG" \
 SUPER_EMAIL="$SUPER_EMAIL" SUPER_PASSWORD="$SUPER_PASSWORD" CEC_NOMBRE="" SOCIOS="" TZ="$TZ" \
+HOGAR_EMAIL="$HOGAR_EMAIL" HOGAR_TOKEN="$HOGAR_TOKEN" \
 ALTA_URL_PUBLICA="https://${TB_DOMAIN:-$SERVE_IP}" SMTP_HOST="$SMTP_HOST" SMTP_PORT="$SMTP_PORT" \
 SMTP_SEGURIDAD="$SMTP_SEGURIDAD" SMTP_USER="$SMTP_USER" SMTP_PASS="$SMTP_PASS" SMTP_FROM="$SMTP_FROM" \
 python3 config/tb-config.py
@@ -21363,7 +21484,7 @@ cero** (sin preguntar); solo se conserva \`backups/postgres\`.
 
 | Servicio | Acceso | Credenciales |
 |---|---|---|
-| Superusuario (panel *Plataforma*) | https://$IP | $SUPER_EMAIL / $SUPER_PASSWORD |
+| Superusuario (panel *Plataforma*) | https://$IP | $SUPER_EMAIL (contraseña inicial: SMTP_PASS de .env.secretos) |
 $( [ -n "$TB_DOMAIN" ] && echo "| ThingsBoard (Internet) | https://$TB_DOMAIN | (las mismas) |" )
 | Sysadmin de ThingsBoard | https://$IP | sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD |
 | Administrador del tenant de cada comunidad (lo usa la API) | https://$IP | api@<id>.$HOSTNAME_LAN.local / $TB_TENANT_PASSWORD |
@@ -21490,10 +21611,11 @@ echo
 echo "============================================"
 echo " Plataforma lista (instalacion nueva, vacia)"
 echo "============================================"
-echo " Superusuario      : $SUPER_EMAIL / $SUPER_PASSWORD"
+echo " Superusuario      : $SUPER_EMAIL (contraseña inicial: SMTP_PASS de .env.secretos)"
 echo "   https://$SERVE_IP  o  https://$IP   (certificado interno: acepta el aviso)"
 [ -n "$TB_DOMAIN" ] && echo "   https://$TB_DOMAIN   (router: 80 y 443 TCP -> $SERVE_IP)"
 echo "   crea comunidades y gestores, asigna sus cuentas de Datadis y hace o restaura copias"
+echo " Hogar (IoT)       : $HOGAR_EMAIL (sin contraseña: la primera vez, «¿Olvidaste tu contraseña?»; token de la placa: HOGAR_TOKEN de .env.secretos)"
 echo " Sysadmin TB       : sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD"
 if [ "$ALTA_ONLINE" != no ]; then
   echo " Alta online       : https://${TB_DOMAIN:-$SERVE_IP}/login?alta=comunidad  (gratuita$( [ "$ALTA_APROBACION" != no ] && echo ", la apruebas en tu panel"))"
