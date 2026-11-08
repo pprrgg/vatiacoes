@@ -1790,13 +1790,14 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   function instalarBotonesExportarImportar(){
     var barra = document.createElement('div');
     barra.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:99999; display:flex; gap:8px; font-family:"IBM Plex Mono",monospace;';
-    function crearBoton(texto){
+    function crearBoton(icono, titulo){
       var b = document.createElement('button');
-      b.type = 'button'; b.textContent = texto;
+      b.type = 'button'; b.title = titulo; b.setAttribute('aria-label', titulo);
+      b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block">'+icono+'</svg>';
       b.style.cssText = 'font-family:inherit; font-size:11px; padding:8px 12px; border-radius:4px; border:1px solid #2457e6; background:#ffffff; color:#2457e6; cursor:pointer; box-shadow:0 2px 8px rgba(11,31,58,0.12);';
       return b;
     }
-    var btnExp = crearBoton('⬇');
+    var btnExp = crearBoton('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', 'Descargar datos (archivo JSON)');
     btnExp.addEventListener('click', function(){
       var blob = new Blob([JSON.stringify(leerVatiaco(), null, 2)], {type:'application/json'});
       var url = URL.createObjectURL(blob);
@@ -1806,7 +1807,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
       URL.revokeObjectURL(url);
     });
 
-    var btnImp = crearBoton('⬆');
+    var btnImp = crearBoton('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>', 'Subir datos (archivo JSON)');
     var inputFile = document.createElement('input');
     inputFile.type = 'file'; inputFile.accept = '.json,application/json'; inputFile.style.display = 'none';
     inputFile.addEventListener('change', function(e){
