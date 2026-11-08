@@ -72,7 +72,7 @@ DUCKDNS_TOKEN=""        # si se rellena, se arranca un actualizador de DuckDNS
 ACME_EMAIL=""           # con un email, Caddy usa tambien ZeroSSL si Let's Encrypt no da el certificado
 
 # Credenciales de los servicios. Las CONTRASEÑAS NO van aqui (este script se publica en GitHub):
-# IOT_PASSWORD (sysadmin de ThingsBoard, administradores api@<id>... de cada comunidad y
+# TB_SYSADMIN_PASSWORD (sysadmin de ThingsBoard; obligatoria) e IOT_PASSWORD (administradores api@<id>... de cada comunidad y
 # PostgreSQL) se lee de .env.secretos (mas abajo); si falta, se genera al
 # azar y se guardan alli. Minimo 10 caracteres.
 IOT_USER="pk"
@@ -137,7 +137,11 @@ SMTP_PASS="${SMTP_PASS:-}"                         # contraseña (sin comillas s
 # Contraseñas del sistema: de .env.secretos; las que falten se generan al azar (24 caracteres) y
 # se guardan alli (chmod 600), para que la siguiente instalacion use las mismas.
 genera_clave_() { openssl rand -base64 36 2>/dev/null | tr -dc 'A-Za-z0-9' | cut -c1-24; }
-for v_ in IOT_PASSWORD HOGAR_TOKEN; do
+# La del sysadmin no se genera: la eliges tu en .env.secretos
+if [ -z "${TB_SYSADMIN_PASSWORD:-}" ]; then
+  echo "ERROR: falta TB_SYSADMIN_PASSWORD en $SECRETOS (contraseña de sysadmin@thingsboard.org; al menos 10 caracteres, sin espacios ni comillas)." >&2; exit 1
+fi
+for v_ in TB_SYSADMIN_PASSWORD IOT_PASSWORD HOGAR_TOKEN; do
   if [ -z "${!v_:-}" ]; then
     printf -v "$v_" '%s' "$(genera_clave_)"
     [ -n "${!v_}" ] || { echo "ERROR: no se pudo generar $v_ (falta openssl)" >&2; exit 1; }
@@ -155,7 +159,6 @@ SUPER_PASSWORD="$SMTP_PASS"
 if [ "$(printf %s "$SUPER_PASSWORD" | wc -c)" -lt 8 ]; then
   echo "ERROR: SMTP_PASS (en $SECRETOS) es la contraseña inicial de $SUPER_EMAIL y debe tener al menos 8 caracteres." >&2; exit 1
 fi
-TB_SYSADMIN_PASSWORD="$IOT_PASSWORD"   # sysadmin@thingsboard.org
 TB_TENANT_PASSWORD="$IOT_PASSWORD"     # administradores (api@<id>...) del tenant de cada comunidad, los usa la API
 PG_USER="$IOT_USER"
 PG_PASSWORD="$IOT_PASSWORD"
@@ -13336,7 +13339,7 @@ EOT
 )
     - Sysadmin de ThingsBoard:
         href: https://$IP/login
-        description: "sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD · administrador del tenant de cada comunidad: api@<id>.$HOSTNAME_LAN.local / $TB_TENANT_PASSWORD"
+        description: "sysadmin@thingsboard.org (contraseña: TB_SYSADMIN_PASSWORD de .env.secretos) · administrador del tenant de cada comunidad: api@<id>.$HOSTNAME_LAN.local / $TB_TENANT_PASSWORD"
         icon: thingsboard
         server: my-docker
         container: iot-thingsboard
@@ -21486,7 +21489,7 @@ cero** (sin preguntar); solo se conserva \`backups/postgres\`.
 |---|---|---|
 | Superusuario (panel *Plataforma*) | https://$IP | $SUPER_EMAIL (contraseña inicial: SMTP_PASS de .env.secretos) |
 $( [ -n "$TB_DOMAIN" ] && echo "| ThingsBoard (Internet) | https://$TB_DOMAIN | (las mismas) |" )
-| Sysadmin de ThingsBoard | https://$IP | sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD |
+| Sysadmin de ThingsBoard | https://$IP | sysadmin@thingsboard.org (contraseña: TB_SYSADMIN_PASSWORD de .env.secretos) |
 | Administrador del tenant de cada comunidad (lo usa la API) | https://$IP | api@<id>.$HOSTNAME_LAN.local / $TB_TENANT_PASSWORD |
 | MQTT de ThingsBoard (TLS) | mqtts://${TB_DOMAIN:-$IP}:$MQTTS_PORT | usuario = token del dispositivo, sin contraseña |
 | API (FastAPI) | https://$IP/cec-api/docs | token de ThingsBoard del gestor (su comunidad) o del superusuario (/plataforma), o cabecera \`X-Api-Key\` (FASTAPI_API_KEY de .env) con \`X-Comunidad: <id>\` |
@@ -21616,7 +21619,7 @@ echo "   https://$SERVE_IP  o  https://$IP   (certificado interno: acepta el avi
 [ -n "$TB_DOMAIN" ] && echo "   https://$TB_DOMAIN   (router: 80 y 443 TCP -> $SERVE_IP)"
 echo "   crea comunidades y gestores, asigna sus cuentas de Datadis y hace o restaura copias"
 echo " Hogar (IoT)       : $HOGAR_EMAIL (sin contraseña: la primera vez, «¿Olvidaste tu contraseña?»; token de la placa: HOGAR_TOKEN de .env.secretos)"
-echo " Sysadmin TB       : sysadmin@thingsboard.org / $TB_SYSADMIN_PASSWORD"
+echo " Sysadmin TB       : sysadmin@thingsboard.org (contraseña: TB_SYSADMIN_PASSWORD de .env.secretos)"
 if [ "$ALTA_ONLINE" != no ]; then
   echo " Alta online       : https://${TB_DOMAIN:-$SERVE_IP}/login?alta=comunidad  (gratuita$( [ "$ALTA_APROBACION" != no ] && echo ", la apruebas en tu panel"))"
   echo " Avisos por correo : $( [ -n "$SMTP_HOST" ] && echo "$AVISOS_EMAIL (altas y restablecer contraseña, por $SMTP_HOST)" || echo "desactivados (pon SMTP_HOST)")"
