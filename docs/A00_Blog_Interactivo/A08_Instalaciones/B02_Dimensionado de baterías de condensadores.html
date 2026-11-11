@@ -6,7 +6,6 @@
 <title>Compensación de energía reactiva · Batería de condensadores</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
@@ -217,6 +216,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
   </button>
 </div>
+<script src="/js/vatiaco-informe.js"></script>
 <script>
 (function(){
   var wrap = document.getElementById('tabbarWrap');
@@ -945,7 +945,6 @@ function showToast(msg){
 // ===================== GENERAR PDF (mismo estilo: portada, TOC, glosario, memoria) =====================
 document.getElementById('btnPdf').addEventListener('click', ()=>{
   if(installations.length===0) return;
-  const { jsPDF } = window.jspdf;
   const pageW = 210, marginX = 22, topY = 30, bottomY = 275;
 
   const proyecto = document.getElementById('p_proyecto').value || 'Compensacion de energia reactiva mediante bateria de condensadores';
@@ -1132,7 +1131,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   }
 
   function renderBody(doc, collect){
-    const H = makeHelpers(doc);
+    const H = VatiacoInforme.compat(doc, makeHelpers(doc));
     let y = topY;
     let figN = 0, tabN = 1;
     const FIG = ()=>{ figN++; return 'Figura '+figN; };
@@ -1268,116 +1267,14 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     refs.forEach((r,i)=>{ y = H.paragraph(y, (i+1)+'. '+r); });
   }
 
-  // ===================== PASE 1: MEDICION =====================
-  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
-  const collectMeasure = {toc:[], tables:[], figures:[]};
-  renderBody(measureDoc, collectMeasure);
-
-  // ===================== PORTADA Y PRELIMINARES (fijas: 5 paginas) =====================
-  const doc = new jsPDF({unit:'mm', format:'a4'});
-  const FRONT_PAGES = 5;
-
-  function drawIndexPage(title, entries){
-    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
-    doc.text(title, marginX, 32);
-    doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
-    let y=50;
-    doc.setFontSize(10);
-    entries.forEach(e=>{
-      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
-      const label = e.num+'  '+e.text;
-      const pageStr = String(e.page);
-      const pageX = pageW-marginX;
-      const labelLines = doc.splitTextToSize(label, 140);
-      doc.text(labelLines[0], marginX, y);
-      doc.text(pageStr, pageX, y, {align:'right'});
-      const labelW = doc.getTextWidth(labelLines[0]);
-      const pageStrW = doc.getTextWidth(pageStr);
-      const dotsStartX = marginX+labelW+2;
-      const dotsEndX = pageX-pageStrW-2;
-      if(dotsEndX>dotsStartX){
-        doc.setTextColor(190,192,198);
-        const dotW = doc.getTextWidth('.');
-        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
-        doc.text('.'.repeat(n), dotsStartX, y);
-      }
-      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
-    });
-    if(entries.length===0){
-      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
-      doc.text('Sin elementos.', marginX, y);
-    }
-  }
-
-  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
-  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
-  let cy = 92;
-  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
-  doc.setDrawColor(55,207,255); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
-  cy+=16;
-  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
-  doc.text('Informe tecnico-economico - Compensacion de energia reactiva', marginX, cy); cy+=16;
-  doc.setFontSize(10.5);
-  [['Organizacion', orgNombre],['CIF', orgCif],['Destinatario', destNombre],['Autor', autor],['Fecha', fecha]].forEach(([k,v])=>{
-    doc.setFont('times','italic'); doc.setTextColor(130,136,146); doc.text(k+':', marginX, cy);
-    doc.setFont('times','normal'); doc.setTextColor(40,46,56); doc.text(String(v), marginX+40, cy);
-    cy+=7.5;
+  // Informe en Typst con la estructura de UNE 50135 / ISO 5966, compilado en el servidor de
+  // VatiaCo (public/js/vatiaco-informe.js): renderBody escribe el contenido.
+  VatiacoInforme.generar({
+    cuerpo: renderBody, glosario: GLOSARIO, titulo: proyecto, acento: [55,207,255],
+    tipo: 'Informe técnico', codigo: 'IT-REACTIVA', archivo: 'informe-reactiva-',
+    subtitulo: 'Informe tecnico-economico - Compensacion de energia reactiva',
+    pie: 'Circular 3/2020 CNMC - Apartado 6.4, facturacion por energia reactiva',
   });
-  doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(150,155,163);
-  doc.text('Circular 3/2020 CNMC - Apartado 6.4, facturacion por energia reactiva', marginX, 274);
-
-  doc.addPage();
-  drawIndexPage('Indice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
-
-  doc.addPage();
-  drawIndexPage('Indice de figuras', collectMeasure.figures.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
-
-  doc.addPage();
-  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y terminos', page:5}]
-    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
-  drawIndexPage('Indice de tablas', tablesForList);
-
-  doc.addPage();
-  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
-  doc.text('Glosario de siglas y terminos', marginX, 32);
-  doc.setDrawColor(55,207,255); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
-  let gy=48;
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
-  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+32, gy); doc.text('Unidad', marginX+152, gy);
-  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
-  GLOSARIO.forEach(row=>{
-    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(20,140,180);
-    doc.text(row[0], marginX, gy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
-    const dLines = doc.splitTextToSize(row[1], 116);
-    doc.text(dLines[0], marginX+32, gy);
-    doc.setTextColor(100,108,120);
-    doc.text(row[2], marginX+152, gy);
-    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
-  });
-  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
-  doc.text('Tabla 1: Glosario de siglas y terminos', marginX, gy+6);
-
-  doc.addPage();
-  const collectReal = {toc:[], tables:[], figures:[]};
-  renderBody(doc, collectReal);
-
-  const totalPages = doc.internal.getNumberOfPages();
-  for(let p=2;p<=totalPages;p++){
-    doc.setPage(p);
-    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
-    doc.line(marginX, 14, pageW-marginX, 14);
-    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text(docTitleShort, marginX, 11);
-    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
-    doc.line(marginX, 281, pageW-marginX, 281);
-    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text('Página '+p, pageW/2, 287, {align:'center'});
-  }
-
-  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-  doc.save('informe-reactiva-'+safeName+'.pdf');
-  showToast('PDF generado y descargado.');
 });
 </script>
 </body>

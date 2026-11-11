@@ -6,7 +6,6 @@
 <title>Simulador de Rehabilitación Energética de Edificios · España</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
@@ -202,7 +201,8 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
   </div>
-  <script>
+  <script src="/js/vatiaco-informe.js"></script>
+<script>
   (function(){
     var wrap = document.getElementById('tabbarWrap');
     var bar = document.getElementById('sidenav');
@@ -1109,7 +1109,6 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   if(!sim) calcularSimulacion();
   if(!sim){ showToast('Completa primero la sección "Datos del edificio" (superficie útil).'); return; }
 
-  const { jsPDF } = window.jspdf;
   const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
 
   const proyecto = document.getElementById('p_proyecto').value || 'Simulacion de rehabilitacion energetica';
@@ -1234,7 +1233,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   }
 
   function renderBody(doc, collect){
-    const H = makeHelpers(doc);
+    const H = VatiacoInforme.compat(doc, makeHelpers(doc));
     let y = topY;
     let figN = 0, tabN = 1;
     const FIG = ()=>{ figN++; return 'Figura '+figN; };
@@ -1333,147 +1332,13 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     doc.text('Fecha:', pageW-marginX-70, y+34);
   }
 
-  // ===================== PASE 1: MEDICIÓN =====================
-  const measureDoc = new jsPDF({unit:'mm', format:'a4'});
-  const collectMeasure = {toc:[], tables:[], figures:[]};
-  renderBody(measureDoc, collectMeasure);
-
-  // ===================== PORTADA Y PRELIMINARES (fijas: 5 páginas) =====================
-  const doc = new jsPDF({unit:'mm', format:'a4'});
-  const FRONT_PAGES = 5;
-
-  function drawIndexPage(title, entries){
-    doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
-    doc.text(title, marginX, 32);
-    doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
-    let y=50;
-    doc.setFontSize(10);
-    entries.forEach(e=>{
-      doc.setFont('times','normal'); doc.setTextColor(40,46,56);
-      const label = e.num+'  '+e.text;
-      const pageStr = String(e.page);
-      const pageX = pageW-marginX;
-      const labelLines = doc.splitTextToSize(label, 140);
-      doc.text(labelLines[0], marginX, y);
-      doc.text(pageStr, pageX, y, {align:'right'});
-      const labelW = doc.getTextWidth(labelLines[0]);
-      const pageStrW = doc.getTextWidth(pageStr);
-      const dotsStartX = marginX+labelW+2;
-      const dotsEndX = pageX-pageStrW-2;
-      if(dotsEndX>dotsStartX){
-        doc.setTextColor(190,192,198);
-        const dotW = doc.getTextWidth('.');
-        const n = Math.max(0,Math.floor((dotsEndX-dotsStartX)/dotW));
-        doc.text('.'.repeat(n), dotsStartX, y);
-      }
-      y+= labelLines.length>1 ? 8+(labelLines.length-1)*5 : 8;
-    });
-    if(entries.length===0){
-      doc.setFont('times','italic'); doc.setFontSize(9.5); doc.setTextColor(140,146,155);
-      doc.text('Sin elementos.', marginX, y);
-    }
-  }
-
-  // ---- Página 1: portada ----
-  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(230,150,20);
-  doc.text('INFORME DE SIMULACIÓN DE REHABILITACIÓN ENERGÉTICA', marginX, 42);
-  doc.setDrawColor(230,150,20); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
-
-  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
-  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
-  let cy = 66;
-  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
-  cy += 4;
-  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
-  doc.text('Zona climática CTE DB-HE: '+sim.zona.id+' — '+sim.tipo.label, marginX, cy); cy+=14;
-
-  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 68, 1.5, 1.5, 'S');
-  let by = cy+9;
-  doc.setFontSize(9.5);
-  [['Titular / cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],
-   ['Dirección del edificio', destDir],
-   ['Superficie útil', fmtNum(sim.area,0)+' m²'],
-   ['Técnico', autor+' ('+registro+')'],
-   ['Organización', orgNombre+' — '+orgCif],
-   ['Contacto', orgTel+' / '+orgCorreo],
-   ['Periodo de construcción', sim.periodo.label],
-   ['Fecha del informe', fecha]]
-   .forEach(([k,v])=>{
-    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
-    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
-    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-66);
-    doc.text(vLines[0], marginX+58, by);
-    by += 7.3;
+  // Informe en Typst con la estructura de UNE 50135 / ISO 5966, compilado en el servidor de
+  // VatiaCo (public/js/vatiaco-informe.js): renderBody escribe el contenido.
+  VatiacoInforme.generar({
+    cuerpo: renderBody, glosario: GLOSARIO, titulo: proyecto, acento: [230,150,20],
+    tipo: 'Informe técnico', codigo: 'IT-REHABILITACION-ENERGETICA', archivo: 'informe-rehabilitacion-energetica-',
+    pie: 'Índice, índice de figuras, índice de tablas y glosario: ver páginas siguientes',
   });
-
-  cy += 80;
-  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 24, 1.5, 1.5, 'F');
-  doc.setFont('times','bold'); doc.setFontSize(10); doc.setTextColor(10,18,28);
-  doc.text('CALIFICACIÓN ESTIMADA — ACTUAL '+sim.actual.calif.letra+'  →  REHABILITADO '+sim.reforma.calif.letra, marginX+8, cy+9);
-  doc.setFontSize(13);
-  doc.text('Ahorro energético: '+fmtNum((1-sim.reforma.demanda.totalM2/Math.max(sim.actual.demanda.totalM2,0.001))*100,0)+'%   ·   Ahorro económico: '+eur(sim.ahorroEur)+'/año', marginX+8, cy+18);
-
-  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
-  doc.text('Índice, índice de figuras, índice de tablas y glosario: ver páginas siguientes', marginX, 274);
-
-  // ---- Página 2: índice ----
-  doc.addPage();
-  drawIndexPage('Índice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
-
-  // ---- Página 3: índice de figuras ----
-  doc.addPage();
-  drawIndexPage('Índice de figuras', collectMeasure.figures.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
-
-  // ---- Página 4: índice de tablas ----
-  doc.addPage();
-  const tablesForList = [{num:'Tabla 1', text:'Glosario de siglas y términos', page:5}]
-    .concat(collectMeasure.tables.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
-  drawIndexPage('Índice de tablas', tablesForList);
-
-  // ---- Página 5: glosario ----
-  doc.addPage();
-  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(20,24,32);
-  doc.text('Glosario de siglas y términos', marginX, 32);
-  doc.setDrawColor(255,176,32); doc.setLineWidth(0.6); doc.line(marginX,35,marginX+32,35);
-  let gy=48;
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
-  doc.text('Sigla', marginX, gy); doc.text('Significado', marginX+48, gy); doc.text('Unidad', marginX+150, gy);
-  gy+=2.5; doc.setDrawColor(205,205,212); doc.setLineWidth(0.2); doc.line(marginX,gy,pageW-marginX,gy); gy+=6;
-  GLOSARIO.forEach(row=>{
-    doc.setFont('courier','bold'); doc.setFontSize(8); doc.setTextColor(180,120,10);
-    doc.text(row[0], marginX, gy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,56,66);
-    const dLines = doc.splitTextToSize(row[1], 98);
-    doc.text(dLines[0], marginX+48, gy);
-    doc.setTextColor(100,108,120);
-    doc.text(row[2], marginX+150, gy);
-    gy+= dLines.length>1 ? 6.2+(dLines.length-1)*4.2 : 6.2;
-  });
-  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
-  doc.text('Tabla 1: Glosario de siglas y términos', marginX, gy+6);
-
-  // ---- Página 6 en adelante: cuerpo del informe ----
-  doc.addPage();
-  const collectReal = {toc:[], tables:[], figures:[]};
-  renderBody(doc, collectReal);
-
-  // ===================== CABECERA / PIE =====================
-  const totalPages = doc.internal.getNumberOfPages();
-  for(let p=2;p<=totalPages;p++){
-    doc.setPage(p);
-    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
-    doc.line(marginX, 14, pageW-marginX, 14);
-    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text(docTitleShort, marginX, 11);
-    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
-    doc.line(marginX, 281, pageW-marginX, 281);
-    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text('Página '+p, pageW/2, 287, {align:'center'});
-  }
-
-  const safeName = (proyecto!=='-'?proyecto:'rehabilitacion').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-  doc.save('informe-rehabilitacion-energetica-'+safeName+'.pdf');
-  showToast('Informe en PDF generado y descargado.');
 });
 </script>
 
