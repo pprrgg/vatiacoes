@@ -6,7 +6,7 @@
 <title>Dimensionado Eléctrico FV · CC y CA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/js/vatiaco-informe.js"></script>
 <style>
   :root{
     --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
@@ -1409,228 +1409,76 @@ function registrarSalidaPdf(){
   vatiacoGuardar(v);
 }
 
+// Informe en Typst con la estructura de UNE 50135 / ISO 5966, compilado en el servidor de
+// VatiaCo (public/js/vatiaco-informe.js): aqui solo se escribe el contenido.
 document.getElementById('btnPdf').addEventListener('click', ()=>{
   const r = recalcularTodo();
-  const { jsPDF } = window.jspdf;
-  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
-
+  const V = VatiacoInforme, C = new V.Contenido();
   const proyecto = val('p_proyecto') || 'Dimensionado eléctrico de sistema fotovoltaico';
-  const autor = val('p_autor') || '-';
-  const registro = val('p_registro') || '-';
-  const orgNombre = val('p_org_nombre') || '-';
-  const orgCif = val('p_org_cif') || '-';
-  const orgDir = val('p_org_dir') || '-';
-  const orgTel = val('p_org_tel') || '-';
-  const orgCorreo = val('p_org_correo') || '-';
-  const destNombre = val('p_dest_nombre') || '-';
-  const destCif = val('p_dest_cif') || '-';
-  const destDir = val('p_dest_dir') || '-';
-  const fechaVal = val('p_fecha');
-  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
-
   const panel = r.panel, inv = r.inv, ctx = r.ctx, cadena = r.cadena, paralelo = r.paralelo, distribucion = r.distribucion, ccr = r.ccr, car = r.car;
+  const ESTADO = { ok:'Cumple', fail:'No cumple' };
+  // Comprobaciones {desc, sub, valor, estado, texto} -> tabla
+  const comprobaciones = (items, titulo)=>C.tabla(['Comprobación','Valor','Resultado'],
+    items.map(it=>[it.desc+(it.sub ? ' ('+it.sub+')' : ''), it.valor, it.texto || ESTADO[it.estado] || 'Revisar']), titulo);
 
-  const doc = new jsPDF({unit:'mm', format:'a4'});
+  C.seccion('Introducción');
+  C.p('Informe técnico de predimensionado eléctrico de la instalación fotovoltaica "'+proyecto+'", con una potencia pico de '+fmtNum(distribucion.kwpReal,2)+' kWp repartida en '+distribucion.totalStrings+' cadena(s) y '+distribucion.nInversores+' inversor(es) modelo '+inv.modelo+'.');
+  C.p('Incluye la configuración de las cadenas de corriente continua, su distribución entre las entradas MPPT de cada inversor, y el calibrado de las protecciones de corriente continua (CC) y corriente alterna (CA).');
+  if(!cadena.compatible) C.p('ATENCIÓN: la configuración actual de panel e inversor no es compatible en tensión; revísala antes de ejecutar la instalación.', true);
 
-  function checkPage(yy, needed=12){
-    if(yy > bottomY-needed){ doc.addPage(); return topY; }
-    return yy;
-  }
-  function sectionTitle(yy, numText, text){
-    yy = checkPage(yy, 18);
-    doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
-    doc.text(numText+'  '+pdfSafe(text), marginX, yy);
-    doc.setDrawColor(255,176,32); doc.setLineWidth(0.6);
-    doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
-    doc.setLineWidth(0.2);
-    return yy+11;
-  }
-  function kv(yy, k, v, indent=0){
-    yy = checkPage(yy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
-    doc.text(pdfSafe(k), marginX+indent, yy);
-    doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
-    const vLines = doc.splitTextToSize(pdfSafe(v), pageW-marginX-(marginX+indent+75));
-    doc.text(vLines[0], marginX+indent+75, yy);
-    let extra = 0;
-    for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+75, yy+extra); }
-    return yy+5.6+extra;
-  }
-  function paragraph(yy, text, opts={}){
-    const size = opts.size || 9;
-    const width = opts.width || (pageW-2*marginX);
-    doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
-    const linesArr = doc.splitTextToSize(pdfSafe(text), width);
-    linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
-    return yy+3;
-  }
-  function estadoColor(estado){
-    return estado==='ok' ? [22,163,74] : (estado==='fail' ? [220,38,38] : [200,130,10]);
-  }
-  function checksTable(yy, items){
-    items.forEach(it=>{
-      yy = checkPage(yy, 13);
-      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,35,45);
-      const descLines = doc.splitTextToSize(pdfSafe(it.desc), pageW-2*marginX-55);
-      doc.text(descLines[0], marginX, yy);
-      const col = estadoColor(it.estado);
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.6); doc.setTextColor(col[0],col[1],col[2]);
-      doc.text(pdfSafe(it.texto), pageW-marginX, yy, {align:'right'});
-      yy += 4.6;
-      for(let i=1;i<descLines.length;i++){ yy=checkPage(yy,6); doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,35,45); doc.text(descLines[i], marginX, yy); yy+=4.4; }
-      if(it.sub){
-        doc.setFont('helvetica','normal'); doc.setFontSize(7.4); doc.setTextColor(120,126,136);
-        const subLines = doc.splitTextToSize(pdfSafe(it.sub), pageW-2*marginX-55);
-        doc.text(subLines[0], marginX, yy);
-        doc.setTextColor(90,96,106);
-        doc.text(pdfSafe(it.valor), pageW-marginX, yy, {align:'right'});
-        yy += 4.4;
-        for(let i=1;i<subLines.length;i++){ yy=checkPage(yy,6); doc.text(subLines[i], marginX, yy); yy+=4.2; }
-      } else {
-        doc.setFont('helvetica','normal'); doc.setFontSize(7.4); doc.setTextColor(90,96,106);
-        doc.text(pdfSafe(it.valor), pageW-marginX, yy, {align:'right'});
-        yy += 4.4;
-      }
-      doc.setDrawColor(230,232,236); doc.setLineWidth(0.15); doc.line(marginX, yy-1.3, pageW-marginX, yy-1.3);
-      yy += 3;
-    });
-    return yy+2;
-  }
-  function tablaDistribucion(yy, distribucion){
-    const colX = [marginX, marginX+55, marginX+95, marginX+130];
-    const kwpX = pageW-marginX;
-    distribucion.inversores.forEach(iv=>{
-      yy = checkPage(yy, 18+iv.mppts.length*5.2);
-      doc.setFillColor(245,245,247);
-      doc.rect(marginX, yy-4.5, pageW-2*marginX, 6.5, 'F');
-      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,66,76);
-      doc.text('INVERSOR '+iv.idx+' — '+fmtNum(iv.kwp,2)+' kWp · '+iv.strings+' cadenas · ratio DC/AC '+fmtNum(iv.ratioDCAC,2), marginX+2, yy);
-      yy += 7;
-      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(100,108,120);
-      doc.text('Entrada MPPT', colX[0], yy); doc.text('Cadenas', colX[1], yy); doc.text('Paneles', colX[2], yy); doc.text('kWp', kwpX, yy, {align:'right'});
-      yy+=2; doc.setDrawColor(210,210,215); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5;
-      doc.setFont('helvetica','normal');
-      iv.mppts.forEach(m=>{
-        yy = checkPage(yy,6);
-        doc.setFontSize(7.6); doc.setTextColor(30,35,45);
-        doc.text('MPPT '+m.idx, colX[0], yy);
-        doc.text(String(m.strings), colX[1], yy);
-        doc.text(String(m.paneles), colX[2], yy);
-        doc.text(fmtNum(m.kwp,2), kwpX, yy, {align:'right'});
-        yy += 5.2;
-      });
-      yy += 5;
-    });
-    return yy;
-  }
+  C.seccion('Datos de partida');
+  C.kv('Panel', panel.modelo+' — '+fmtNum(panel.wp,0)+' Wp');
+  C.kv('Datos eléctricos del panel', 'Voc '+fmtNum(panel.vOc,1)+' V · Vmp '+fmtNum(panel.vMp,1)+' V · Isc '+fmtNum(panel.iSc,2)+' A · Imp '+fmtNum(panel.iMp,2)+' A');
+  C.kv('Modelo de inversor', inv.modelo);
+  C.kv('Temperaturas de diseño', 'mín. '+ctx.tmin+' °C · máx. célula '+ctx.tmax+' °C · margen '+ctx.margen+' %');
 
-  // ===================== PORTADA =====================
-  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(255,176,32);
-  doc.text('INFORME TÉCNICO DE PREDIMENSIONADO', marginX, 42);
-  doc.setDrawColor(255,176,32); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
+  C.seccion('Generador fotovoltaico y cadenas');
+  C.kv('Paneles en serie por cadena', String(cadena.nUsado));
+  C.kv('Cadenas en paralelo por entrada MPPT', String(paralelo.nUsado));
+  C.kv('Total de cadenas', String(distribucion.totalStrings));
+  C.kv('Total de paneles instalados', distribucion.totalPanelesReal+' (objetivo: '+distribucion.panelesObjetivo+')');
+  C.kv('Potencia pico CC instalada', fmtNum(distribucion.kwpReal,2)+' kWp');
 
-  doc.setFont('times','bold'); doc.setFontSize(20); doc.setTextColor(20,24,32);
-  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
-  let cy = 64;
-  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=9; });
-  cy += 4;
-  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
-  doc.text('Instalación eléctrica CC y CA — '+fmtNum(distribucion.kwpReal,2)+' kWp, '+distribucion.nInversores+' inversor(es)', marginX, cy); cy+=14;
+  C.seccion('Comprobaciones de compatibilidad panel / inversor');
+  comprobaciones(checksCadena(panel, inv, ctx, cadena).concat(checksParalelo(panel, inv, paralelo)), 'Comprobaciones de compatibilidad panel / inversor');
 
-  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 62, 1.5, 1.5, 'S');
-  let by = cy+9;
-  doc.setFontSize(9.5);
-  [['Instalador', orgNombre+' — '+orgCif],['Dirección', orgDir],['Contacto', orgTel+' / '+orgCorreo],
-   ['Cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],['Dirección de instalación', destDir],
-   ['Autor del informe', autor+' ('+registro+')'],['Fecha', fecha],['Panel / Inversor', panel.modelo+' · '+inv.modelo]]
-   .forEach(([k,v])=>{
-    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
-    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
-    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-60);
-    doc.text(vLines[0], marginX+58, by);
-    by += 6.6;
+  C.seccion('Inversores y distribución por entrada MPPT');
+  C.kv('Nº de inversores necesarios', String(distribucion.nInversores));
+  C.kv('Potencia CA total instalada', fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW ('+(car.trifasico?'trifásica 400 V':'monofásica 230 V')+')');
+  distribucion.inversores.forEach(iv=>{
+    C.tabla(['Entrada MPPT','Cadenas','Paneles','kWp'], iv.mppts.map(m=>['MPPT '+m.idx, String(m.strings), String(m.paneles), fmtNum(m.kwp,2)]),
+      'Inversor '+iv.idx+': '+fmtNum(iv.kwp,2)+' kWp, '+iv.strings+' cadenas, ratio CC/CA '+fmtNum(iv.ratioDCAC,2));
   });
 
-  cy += 74;
-  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 24, 1.5, 1.5, 'F');
-  doc.setFont('times','bold'); doc.setFontSize(9.5); doc.setTextColor(10,18,28);
-  doc.text('GENERADOR FOTOVOLTAICO', marginX+8, cy+8);
-  doc.setFontSize(12.5);
-  doc.text(fmtNum(distribucion.kwpReal,2)+' kWp CC  ·  '+distribucion.totalStrings+' cadenas de '+cadena.nUsado+' paneles  ·  '+distribucion.nInversores+' inversor(es), '+fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW CA', marginX+8, cy+17);
+  C.seccion('Diagrama unifilar');
+  C.p('Se dibuja una sola cadena representativa, con el resto de cadenas e inversores indicados mediante las etiquetas "×N".');
+  const L = new V.Lienzo();
+  dibujarUnifilarPDF(L, nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car), 20, 30, 170, yy=>yy);
+  const g = L.cortar();
+  if(g){ C.dibujo(g.svg, g.ancho, g.alto); C.leyendaFigura('Diagrama unifilar de la instalación (una cadena representativa)'); }
 
-  if(!cadena.compatible){
-    doc.setFont('times','bold'); doc.setFontSize(9); doc.setTextColor(200,40,30);
-    const avisoLines = doc.splitTextToSize('ATENCIÓN: la configuración actual de panel e inversor no es compatible en tensión — revisar antes de ejecutar.', pageW-2*marginX);
-    let ay = cy+34;
-    avisoLines.forEach(l=>{ doc.text(l, marginX, ay); ay+=5; });
-  }
+  C.seccion('Protecciones CC');
+  comprobaciones(itemsProteccionesCC(panel, inv, paralelo, ccr), 'Protecciones de corriente continua');
 
-  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
-  doc.text('Generador, comprobaciones de compatibilidad, distribución por inversor y protecciones CC/CA — ver páginas siguientes', marginX, 274);
+  C.seccion('Protecciones CA');
+  comprobaciones(itemsProteccionesCA(panel, inv, distribucion, car), 'Protecciones de corriente alterna');
 
-  // ===================== CUERPO =====================
-  doc.addPage();
-  let y = topY;
+  C.seccion('Conclusiones');
+  C.p('Generador de '+fmtNum(distribucion.kwpReal,2)+' kWp en corriente continua con '+distribucion.totalStrings+' cadenas de '+cadena.nUsado+' paneles y '+distribucion.nInversores+' inversor(es) ('+fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW CA)'+(cadena.compatible ? '.' : '. La configuración de panel e inversor no es compatible en tensión y debe revisarse.'));
+  C.p('Este informe es una ayuda de predimensionado con criterios habituales de diseño (IEC 62548, buenas prácticas de instalación FV). No sustituye el cálculo justificativo del proyecto ni el criterio del instalador autorizado: verifica siempre los resultados frente a la normativa vigente (REBT y sus ITC, UNE-HD 60364) y las hojas de datos reales de los equipos antes de ejecutar la instalación.');
 
-  y = sectionTitle(y, '1.', 'Presentación');
-  y = paragraph(y, 'Informe técnico de predimensionado eléctrico de la instalación fotovoltaica "'+proyecto+'", con una potencia pico de '+fmtNum(distribucion.kwpReal,2)+' kWp repartida en '+distribucion.totalStrings+' cadena(s) y '+distribucion.nInversores+' inversor(es) modelo '+inv.modelo+'.');
-  y = paragraph(y, 'Incluye la configuración de las cadenas de corriente continua, su distribución entre las entradas MPPT de cada inversor, y el calibrado de las protecciones de corriente continua (CC) y corriente alterna (CA).');
-
-  y = sectionTitle(y, '2.', 'Generador fotovoltaico y cadenas');
-  y = kv(y, 'Panel', panel.modelo+' — '+fmtNum(panel.wp,0)+' Wp');
-  y = kv(y, 'Datos eléctricos del panel', 'Voc '+fmtNum(panel.vOc,1)+' V · Vmp '+fmtNum(panel.vMp,1)+' V · Isc '+fmtNum(panel.iSc,2)+' A · Imp '+fmtNum(panel.iMp,2)+' A');
-  y = kv(y, 'Paneles en serie por cadena', String(cadena.nUsado));
-  y = kv(y, 'Cadenas en paralelo por entrada MPPT', String(paralelo.nUsado));
-  y = kv(y, 'Total de cadenas', String(distribucion.totalStrings));
-  y = kv(y, 'Total de paneles instalados', distribucion.totalPanelesReal+' (objetivo: '+distribucion.panelesObjetivo+')');
-  y = kv(y, 'Potencia pico CC instalada', fmtNum(distribucion.kwpReal,2)+' kWp');
-  y = kv(y, 'Temperaturas de diseño', 'mín. '+ctx.tmin+'°C · máx. célula '+ctx.tmax+'°C · margen '+ctx.margen+'%');
-
-  y = sectionTitle(y, '3.', 'Comprobaciones de compatibilidad panel / inversor');
-  y = checksTable(y, checksCadena(panel, inv, ctx, cadena).concat(checksParalelo(panel, inv, paralelo)));
-
-  y = sectionTitle(y, '4.', 'Inversores y distribución por entrada MPPT');
-  y = kv(y, 'Modelo de inversor', inv.modelo);
-  y = kv(y, 'Nº de inversores necesarios', String(distribucion.nInversores));
-  y = kv(y, 'Potencia CA total instalada', fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW ('+(car.trifasico?'trifásica 400 V':'monofásica 230 V')+')');
-  y += 2;
-  y = tablaDistribucion(y, distribucion);
-
-  y = sectionTitle(y, '5.', 'Diagrama unifilar');
-  y = paragraph(y, 'Se dibuja una sola cadena representativa, con el resto de cadenas e inversores indicados mediante las etiquetas "×N".', {size:8.5});
-  y = dibujarUnifilarPDF(doc, nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car), marginX, y, pageW-2*marginX, checkPage);
-
-  y = sectionTitle(y, '6.', 'Protecciones CC');
-  y = checksTable(y, itemsProteccionesCC(panel, inv, paralelo, ccr));
-
-  y = sectionTitle(y, '7.', 'Protecciones CA');
-  y = checksTable(y, itemsProteccionesCA(panel, inv, distribucion, car));
-
-  y = sectionTitle(y, '8.', 'Advertencia');
-  y = paragraph(y, 'Este informe es una ayuda de predimensionado con criterios habituales de diseño (IEC 62548, buenas prácticas de instalación FV). No sustituye el cálculo justificativo del proyecto ni el criterio del instalador autorizado: verifica siempre los resultados frente a la normativa vigente (REBT y sus ITC, UNE-HD 60364) y las hojas de datos reales de los equipos antes de ejecutar la instalación.', {size:8.5});
-
-  // ===================== CABECERA / PIE =====================
-  // Usa el ancho/alto propios de cada pagina (doc.internal.pageSize) en vez de las
-  // constantes pageW/bottomY de portada, porque la pagina del diagrama unifilar es
-  // apaisada (297x210) y el resto son verticales (210x297).
-  const totalPages = doc.internal.getNumberOfPages();
-  for(let p=2;p<=totalPages;p++){
-    doc.setPage(p);
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
-    doc.line(marginX, 14, pw-marginX, 14);
-    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text(proyecto, marginX, 11);
-    doc.text(autor, pw-marginX, 11, {align:'right'});
-    doc.line(marginX, ph-16, pw-marginX, ph-16);
-    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text('Página '+p, pw/2, ph-10, {align:'center'});
-  }
-
-  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-  doc.save('dimensionado-electrico-fv-'+safeName+'.pdf');
-  registrarSalidaPdf();
-  showToast('Informe en PDF generado y descargado.');
+  V.generar({
+    contenido: C, titulo: proyecto, tipo: 'Informe técnico de predimensionado', codigo: 'IT-FV-CCCA',
+    subtitulo: 'Instalación eléctrica CC y CA — '+fmtNum(distribucion.kwpReal,2)+' kWp, '+distribucion.nInversores+' inversor(es)',
+    archivo: 'dimensionado-electrico-fv-', acento: [255,176,32],
+    cifras: [[fmtNum(distribucion.kwpReal,2), 'kWp', 'Potencia CC'], [String(distribucion.totalStrings), '', 'Cadenas'],
+             [String(distribucion.nInversores), '', 'Inversores'], [fmtNum(distribucion.nInversores*inv.potNomCA,2), 'kW', 'Potencia CA']],
+    datosPortada: [['Panel / inversor', panel.modelo+' · '+inv.modelo]],
+    palabrasClave: ['fotovoltaica', 'cadenas', 'MPPT', 'inversor', 'protecciones', 'diagrama unifilar'],
+    normativa: ['IEC 62548. Sistemas fotovoltaicos. Requisitos de diseño.',
+                'Real Decreto 842/2002. Reglamento electrotécnico para baja tensión (REBT) y sus ITC; ITC-BT-40, instalaciones generadoras de baja tensión.',
+                'UNE-HD 60364 (serie). Instalaciones eléctricas de baja tensión.'],
+  }).then(()=>registrarSalidaPdf());
 });
 
 // ===================== VATIACO: memoria compartida del navegador =====================

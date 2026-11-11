@@ -6,7 +6,7 @@
 <title>Presupuesto Detallado · Instalaciones Fotovoltaicas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/js/vatiaco-informe.js"></script>
 <style>
   :root{
     --bg:#ffffff; --bg2:#f4f6f9; --panel:#ffffff; --panel2:#f6f8fb;
@@ -1009,238 +1009,80 @@ function showToast(msg){
 }
 
 // ===================== GENERAR OFERTA PDF =====================
+// Oferta en Typst con la estructura de UNE 50135 / ISO 5966, compilada en el servidor de
+// VatiaCo (public/js/vatiaco-informe.js): aqui solo se escribe el contenido.
 document.getElementById('btnPdf').addEventListener('click', ()=>{
   if(lineItems.length===0) return;
-  const { jsPDF } = window.jspdf;
-  const pageW = 210, marginX = 20, topY = 30, bottomY = 275;
-
-  const proyecto = document.getElementById('p_proyecto').value || 'Instalacion fotovoltaica de autoconsumo';
-  const autor = document.getElementById('p_autor').value || '-';
-  const registro = document.getElementById('p_registro').value || '-';
-  const orgNombre = document.getElementById('p_org_nombre').value || '-';
-  const orgCif = document.getElementById('p_org_cif').value || '-';
-  const orgDir = document.getElementById('p_org_dir').value || '-';
-  const orgTel = document.getElementById('p_org_tel').value || '-';
-  const orgCorreo = document.getElementById('p_org_correo').value || '-';
-  const destNombre = document.getElementById('p_dest_nombre').value || '-';
-  const destCif = document.getElementById('p_dest_cif').value || '-';
-  const destDir = document.getElementById('p_dest_dir').value || '-';
-  const fechaVal = document.getElementById('p_fecha').value;
-  const fecha = fechaVal ? new Date(fechaVal+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '-';
-  const docTitleShort = proyecto;
-  const authorShort = autor;
+  const V = VatiacoInforme, C = new V.Contenido();
+  const proyecto = document.getElementById('p_proyecto').value || 'Instalación fotovoltaica de autoconsumo';
+  const destNombre = document.getElementById('p_dest_nombre').value || '';
+  const orgNombre = document.getElementById('p_org_nombre').value || '';
   const t = getTotals();
   const cfg = t.cfg, prec = t.prec;
-
   const TIPO_LABEL = {sin_excedentes:'Autoconsumo sin excedentes', con_excedentes:'Autoconsumo con excedentes (con compensación)', con_excedentes_sin_comp:'Autoconsumo con excedentes (sin compensación)', colectivo:'Autoconsumo colectivo'};
 
-  const doc = new jsPDF({unit:'mm', format:'a4'});
+  C.seccion('Introducción');
+  C.p('Estimado/a '+(destNombre && destNombre!=='-' ? destNombre : 'cliente')+', le presentamos la oferta comercial para la instalación fotovoltaica de autoconsumo de '+fmtNum(cfg.kwp,2)+' kWp de potencia pico'+(cfg.ubicacion?' en '+cfg.ubicacion:'')+', bajo la modalidad de '+TIPO_LABEL[cfg.tipo].toLowerCase()+'.');
+  C.p('El presupuesto incluye el suministro de materiales, la mano de obra de instalación, la redacción del proyecto técnico y la tramitación administrativa necesaria para la legalización y puesta en marcha de la instalación.');
 
-  function checkPage(yy, needed=12){
-    if(yy > bottomY-needed){ doc.addPage(); return topY; }
-    return yy;
-  }
-  function sectionTitle(yy, numText, text){
-    yy = checkPage(yy, 18);
-    doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
-    doc.text(numText+'  '+text, marginX, yy);
-    doc.setDrawColor(230,150,20); doc.setLineWidth(0.6);
-    doc.line(marginX, yy+2.4, pageW-marginX, yy+2.4);
-    doc.setLineWidth(0.2);
-    return yy+11;
-  }
-  function kv(yy, k, v, indent=0){
-    yy = checkPage(yy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,108,120);
-    doc.text(k, marginX+indent, yy);
-    doc.setTextColor(25,30,40); doc.setFont('helvetica','bold');
-    const vLines = doc.splitTextToSize(String(v), pageW-marginX-(marginX+indent+70));
-    doc.text(vLines[0], marginX+indent+70, yy);
-    let extra = 0;
-    for(let i=1;i<vLines.length;i++){ extra+=5; doc.text(vLines[i], marginX+indent+70, yy+extra); }
-    return yy+5.6+extra;
-  }
-  function paragraph(yy, text, opts={}){
-    const size = opts.size || 9;
-    const width = opts.width || (pageW-2*marginX);
-    doc.setFont('times', opts.bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(50,58,70);
-    const linesArr = doc.splitTextToSize(text, width);
-    linesArr.forEach(ln=>{ yy = checkPage(yy,6); doc.text(ln, marginX, yy); yy += size*0.5; });
-    return yy+3;
-  }
-  function chapterTable(yy, capitulo, items){
-    const colX = [marginX, marginX+90, marginX+108];
-    const precioX = pageW-marginX-20;
-    const importeX = pageW-marginX;
-    yy = checkPage(yy, 16);
-    doc.setFillColor(245,245,247);
-    doc.rect(marginX, yy-4.5, pageW-2*marginX, 6.5, 'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(60,66,76);
-    doc.text(CAP_LABEL[capitulo].toUpperCase(), marginX+2, yy);
-    yy += 7;
-    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(100,108,120);
-    doc.text('Descripción', colX[0], yy);
-    doc.text('Cantidad', colX[1], yy);
-    doc.text('Base', colX[2], yy);
-    doc.text('Precio ud.', precioX, yy, {align:'right'});
-    doc.text('Importe', importeX, yy, {align:'right'});
-    yy+=2; doc.setDrawColor(210,210,215); doc.setLineWidth(0.2); doc.line(marginX,yy,pageW-marginX,yy); yy+=5;
-    let subtotal = 0;
-    doc.setFont('helvetica','normal');
-    items.forEach(it=>{
-      yy = checkPage(yy,6);
-      const importe = it.precioUnitario*it.cantidad;
-      subtotal += importe;
-      doc.setFontSize(7.6); doc.setTextColor(30,35,45);
-      const descLines = doc.splitTextToSize(it.descripcion, 86);
-      doc.text(descLines[0], colX[0], yy);
-      doc.text(fmtNum(it.cantidad,2), colX[1], yy);
-      doc.setTextColor(100,108,120);
-      doc.text(BASE_LABEL[it.base], colX[2], yy);
-      doc.setTextColor(30,35,45);
-      doc.text(fmtEur(it.precioUnitario,2), precioX, yy, {align:'right'});
-      doc.setFont('helvetica','bold');
-      doc.text(fmtEur(importe,2), importeX, yy, {align:'right'});
-      doc.setFont('helvetica','normal');
-      yy += 6;
-      if(descLines.length>1){ doc.setFontSize(7); doc.setTextColor(120,126,136); doc.text(descLines.slice(1).join(' '), colX[0], yy-1.5); }
-    });
-    yy = checkPage(yy, 8);
-    doc.setDrawColor(210,210,215); doc.line(marginX,yy-3,pageW-marginX,yy-3);
-    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(20,24,32);
-    doc.text('Subtotal '+CAP_LABEL[capitulo], colX[2], yy);
-    doc.text(fmtEur(subtotal,2), importeX, yy, {align:'right'});
-    doc.setFont('helvetica','normal');
-    return yy+9;
-  }
-
-  // ===================== PORTADA =====================
-  doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(230,150,20);
-  doc.text('OFERTA COMERCIAL', marginX, 42);
-  doc.setDrawColor(230,150,20); doc.setLineWidth(0.8); doc.line(marginX, 45, marginX+40, 45);
-
-  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(20,24,32);
-  const titleLines = doc.splitTextToSize(proyecto.toUpperCase(), 155);
-  let cy = 66;
-  titleLines.forEach(l=>{ doc.text(l, marginX, cy); cy+=10; });
-  cy += 4;
-  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
-  doc.text('Instalación fotovoltaica de '+fmtNum(cfg.kwp,2)+' kWp — '+TIPO_LABEL[cfg.tipo], marginX, cy); cy+=14;
-
-  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(marginX, cy, pageW-2*marginX, 62, 1.5, 1.5, 'S');
-  let by = cy+9;
-  doc.setFontSize(9.5);
-  [['Instalador', orgNombre+' — '+orgCif],['Dirección', orgDir],['Contacto', orgTel+' / '+orgCorreo],
-   ['Cliente', destNombre+(destCif&&destCif!=='-'?' — '+destCif:'')],['Dirección de instalación', destDir],
-   ['Autor de la oferta', autor+' ('+registro+')'],['Fecha', fecha],['Validez de la oferta', prec.validez+' días naturales desde la fecha indicada']]
-   .forEach(([k,v])=>{
-    doc.setFont('helvetica','normal'); doc.setTextColor(120,126,136); doc.text(k+':', marginX+6, by);
-    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
-    const vLines = doc.splitTextToSize(String(v), pageW-2*marginX-60);
-    doc.text(vLines[0], marginX+58, by);
-    by += 6.6;
-  });
-
-  cy += 74;
-  doc.setFillColor(255,176,32); doc.roundedRect(marginX, cy, pageW-2*marginX, 22, 1.5, 1.5, 'F');
-  doc.setFont('times','bold'); doc.setFontSize(10); doc.setTextColor(10,18,28);
-  doc.text('IMPORTE TOTAL DE LA OFERTA (IVA incluido)', marginX+8, cy+9);
-  doc.setFontSize(16);
-  doc.text(fmtEur(t.total,2), marginX+8, cy+17.5);
-
-  doc.setFont('times','italic'); doc.setFontSize(8); doc.setTextColor(150,155,163);
-  doc.text('Presupuesto detallado por capítulos: proyecto, materiales, mano de obra y tramitación — ver páginas siguientes', marginX, 274);
-
-  // ===================== CUERPO =====================
-  doc.addPage();
-  let y = topY;
-
-  y = sectionTitle(y, '1.', 'Presentación');
-  y = paragraph(y, 'Estimado/a '+(destNombre&&destNombre!=='-'?destNombre:'cliente')+', le presentamos la oferta comercial para la instalación fotovoltaica de autoconsumo de '+fmtNum(cfg.kwp,2)+' kWp de potencia pico'+(cfg.ubicacion?' en '+cfg.ubicacion:'')+', bajo la modalidad de '+TIPO_LABEL[cfg.tipo].toLowerCase()+'.');
-  y = paragraph(y, 'El presupuesto incluye el suministro de materiales, la mano de obra de instalación, la redacción del proyecto técnico y la tramitación administrativa necesaria para la legalización y puesta en marcha de la instalación.');
-
-  y = sectionTitle(y, '2.', 'Descripción técnica de la instalación');
-  y = kv(y, 'Potencia pico del generador', fmtNum(cfg.kwp,2)+' kWp');
-  y = kv(y, 'Número de paneles', Math.ceil(cfg.kwp*1000/cfg.wpPanel)+' de '+cfg.wpPanel+' Wp');
-  y = kv(y, 'Potencia del inversor', fmtNum(cfg.kwInversor,2)+' kW');
-  y = kv(y, 'Modalidad de autoconsumo', TIPO_LABEL[cfg.tipo]);
-  if(cfg.bateria) y = kv(y, 'Batería de almacenamiento', fmtNum(cfg.kwhBateria,2)+' kWh');
-  if(cfg.ubicacion) y = kv(y, 'Ubicación', cfg.ubicacion);
-
-  y = sectionTitle(y, '3.', 'Presupuesto detallado');
-  y = paragraph(y, 'Desglose de las partidas del presupuesto por capítulo. Los importes no incluyen IVA; el resumen económico con impuestos se muestra en el apartado siguiente.');
+  C.seccion('Datos de partida');
+  C.kv('Potencia pico del generador', fmtNum(cfg.kwp,2)+' kWp');
+  C.kv('Número de paneles', Math.ceil(cfg.kwp*1000/cfg.wpPanel)+' de '+cfg.wpPanel+' Wp');
+  C.kv('Potencia del inversor', fmtNum(cfg.kwInversor,2)+' kW');
+  C.kv('Modalidad de autoconsumo', TIPO_LABEL[cfg.tipo]);
+  if(cfg.bateria) C.kv('Batería de almacenamiento', fmtNum(cfg.kwhBateria,2)+' kWh');
+  if(cfg.ubicacion) C.kv('Ubicación', cfg.ubicacion);
+  C.seccion('Presupuesto detallado');
+  C.p('Desglose de las partidas del presupuesto por capítulo. Los importes no incluyen IVA; el resumen económico con impuestos se muestra en el apartado siguiente.');
   CAP_ORDER.forEach(cap=>{
     const items = lineItems.filter(it=>it.capitulo===cap);
     if(items.length===0) return;
-    y = checkPage(y, 20);
-    y = chapterTable(y, cap, items);
+    const subtotal = items.reduce((a,it)=>a+it.precioUnitario*it.cantidad,0);
+    C.tabla(['Descripción','Cantidad','Base','Precio ud.','Importe'],
+      items.map(it=>[it.descripcion, fmtNum(it.cantidad,2), BASE_LABEL[it.base], fmtEur(it.precioUnitario,2), fmtEur(it.precioUnitario*it.cantidad,2)])
+        .concat([['Subtotal '+CAP_LABEL[cap], '', '', '', fmtEur(subtotal,2)]]),
+      'Capítulo '+CAP_LABEL[cap]);
   });
 
-  y = sectionTitle(y, '4.', 'Resumen económico');
-  y = checkPage(y, 46);
-  const boxW = pageW-2*marginX, boxX = marginX;
-  doc.setDrawColor(220,222,226); doc.setLineWidth(0.3); doc.roundedRect(boxX, y, boxW, 48, 1.5, 1.5, 'S');
-  let ry = y+9;
-  const rows = [
-    ['Subtotal', fmtEur(t.subtotal,2), false],
-    ['Descuento ('+fmtNum(prec.descuento,1)+'%)', '-'+fmtEur(t.descuentoImporte,2), false],
-    ['Base imponible', fmtEur(t.baseImponible,2), false],
-    ['IVA ('+fmtNum(prec.iva,1)+'%)', fmtEur(t.ivaImporte,2), false],
-  ];
-  rows.forEach(([k,v])=>{
-    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90,96,106);
-    doc.text(k, boxX+8, ry);
-    doc.setFont('helvetica','bold'); doc.setTextColor(30,35,45);
-    doc.text(v, boxX+boxW-8, ry, {align:'right'});
-    ry += 7;
+  C.seccion('Resumen económico');
+  C.tabla(['Concepto','Importe'], [
+    ['Subtotal', fmtEur(t.subtotal,2)],
+    ['Descuento ('+fmtNum(prec.descuento,1)+' %)', '−'+fmtEur(t.descuentoImporte,2)],
+    ['Base imponible', fmtEur(t.baseImponible,2)],
+    ['IVA ('+fmtNum(prec.iva,1)+' %)', fmtEur(t.ivaImporte,2)],
+    ['TOTAL (IVA incluido)', fmtEur(t.total,2)],
+  ], 'Resumen económico de la oferta');
+  C.p('Ratio de la oferta: '+fmtEur(t.eurPorKwp,0)+' / kWp instalado (IVA incluido).');
+
+  C.seccion('Condiciones de la oferta y garantías');
+  C.kv('Validez de la oferta', prec.validez+' días naturales desde la fecha de emisión');
+  C.kv('Forma de pago', prec.formaPago||'A convenir');
+  C.kv('Plazo de ejecución estimado', prec.plazo||'A convenir');
+  C.kv('Garantía de los paneles', prec.garantiaPaneles+' años');
+  C.kv('Garantía del inversor', prec.garantiaInversor+' años');
+  C.kv('Garantía de la instalación (mano de obra)', prec.garantiaInstalacion+' años');
+  C.p('Esta oferta no incluye: refuerzos estructurales no previstos, ampliación de cuadros eléctricos existentes por causas ajenas al diseño inicial, ni tasas municipales o autonómicas no contempladas explícitamente en las partidas de tramitación. Cualquier trabajo adicional se presupuestará por separado antes de su ejecución.');
+
+  C.seccion('Conclusiones');
+  C.p('El importe total de la oferta para la instalación de '+fmtNum(cfg.kwp,2)+' kWp asciende a '+fmtEur(t.total,2)+' (IVA incluido), equivalente a '+fmtEur(t.eurPorKwp,0)+' por kWp instalado, con una validez de '+prec.validez+' días naturales.');
+
+  C.seccion('Aceptación de la oferta');
+  C.p('La firma de esta oferta implica la aceptación de las condiciones económicas y técnicas descritas en este documento.');
+  C.typst('#v(8pt)\n#grid(columns: (1fr, 1fr), gutter: 30pt,\n  block(height: 2.4cm, width: 100%, stroke: (bottom: 0.4pt + luma(150)))[#text(8.5pt, fill: gris)[Por el instalador — '+V.tm(orgNombre)+']],\n  block(height: 2.4cm, width: 100%, stroke: (bottom: 0.4pt + luma(150)))[#text(8.5pt, fill: gris)[Por el cliente — '+V.tm(destNombre)+']])\n#text(8pt, fill: gris)[Fecha: #h(5cm) Fecha:]');
+
+  V.generar({
+    contenido: C, titulo: proyecto, tipo: 'Oferta técnico-económica', codigo: 'OF-FV',
+    subtitulo: 'Instalación fotovoltaica de '+fmtNum(cfg.kwp,2)+' kWp — '+TIPO_LABEL[cfg.tipo],
+    archivo: 'oferta-fotovoltaica-', acento: [230,150,20],
+    cifras: [[fmtNum(cfg.kwp,2), 'kWp', 'Potencia pico'], [fmtEur(t.total,0), '', 'Total IVA incluido'],
+             [fmtEur(t.eurPorKwp,0), '/kWp', 'Ratio'], [String(prec.validez), 'días', 'Validez']],
+    datosPortada: [['Validez de la oferta', prec.validez+' días naturales desde la fecha indicada']],
+    palabrasClave: ['oferta', 'presupuesto', 'instalación fotovoltaica', 'autoconsumo'],
+    objeto: 'El objeto de este documento es presentar la oferta técnico-económica para el suministro, la instalación, el proyecto y la tramitación de la instalación fotovoltaica de autoconsumo descrita.',
+    alcance: 'La oferta comprende las partidas detalladas en el presupuesto. Quedan excluidos los trabajos y conceptos indicados en las condiciones de la oferta.',
+    normativa: ['Real Decreto 244/2019. Condiciones administrativas, técnicas y económicas del autoconsumo de energía eléctrica.',
+                'Real Decreto 842/2002. Reglamento electrotécnico para baja tensión (REBT); ITC-BT-40, instalaciones generadoras de baja tensión.'],
   });
-  doc.setDrawColor(230,150,20); doc.setLineWidth(0.4); doc.line(boxX+8, ry-2, boxX+boxW-8, ry-2);
-  doc.setFont('times','bold'); doc.setFontSize(13); doc.setTextColor(20,24,32);
-  doc.text('TOTAL (IVA incluido)', boxX+8, ry+6);
-  doc.setFontSize(15); doc.setTextColor(200,130,10);
-  doc.text(fmtEur(t.total,2), boxX+boxW-8, ry+6, {align:'right'});
-  y = y+48+10;
-  y = paragraph(y, 'Ratio de la oferta: '+fmtEur(t.eurPorKwp,0)+' / kWp instalado (IVA incluido).', {size:8.5});
-
-  y = sectionTitle(y, '5.', 'Condiciones de la oferta y garantías');
-  y = kv(y, 'Validez de la oferta', prec.validez+' días naturales desde la fecha de emisión');
-  y = kv(y, 'Forma de pago', prec.formaPago||'A convenir');
-  y = kv(y, 'Plazo de ejecución estimado', prec.plazo||'A convenir');
-  y = kv(y, 'Garantía de los paneles', prec.garantiaPaneles+' años');
-  y = kv(y, 'Garantía del inversor', prec.garantiaInversor+' años');
-  y = kv(y, 'Garantía de la instalación (mano de obra)', prec.garantiaInstalacion+' años');
-  y = paragraph(y, 'Esta oferta no incluye: refuerzos estructurales no previstos, ampliación de cuadros eléctricos existentes por causas ajenas al diseño inicial, ni tasas municipales o autonómicas no contempladas explícitamente en las partidas de tramitación. Cualquier trabajo adicional se presupuestará por separado antes de su ejecución.', {size:8});
-
-  y = sectionTitle(y, '6.', 'Aceptación de la oferta');
-  y = paragraph(y, 'La firma de esta oferta implica la aceptación de las condiciones económicas y técnicas descritas en este documento.');
-  y = checkPage(y, 40);
-  y += 10;
-  doc.setDrawColor(180,185,192); doc.setLineWidth(0.3);
-  doc.line(marginX, y+20, marginX+70, y+20);
-  doc.line(pageW-marginX-70, y+20, pageW-marginX, y+20);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(100,108,120);
-  doc.text('Por el instalador — '+orgNombre, marginX, y+25);
-  doc.text('Por el cliente — '+(destNombre&&destNombre!=='-'?destNombre:''), pageW-marginX-70, y+25);
-  doc.text('Fecha:', marginX, y+34);
-  doc.text('Fecha:', pageW-marginX-70, y+34);
-
-  // ===================== CABECERA / PIE =====================
-  const totalPages = doc.internal.getNumberOfPages();
-  for(let p=2;p<=totalPages;p++){
-    doc.setPage(p);
-    doc.setDrawColor(195,195,201); doc.setLineWidth(0.2);
-    doc.line(marginX, 14, pageW-marginX, 14);
-    doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text(docTitleShort, marginX, 11);
-    doc.text(authorShort, pageW-marginX, 11, {align:'right'});
-    doc.line(marginX, 281, pageW-marginX, 281);
-    doc.setFont('times','normal'); doc.setFontSize(8.5); doc.setTextColor(100,105,115);
-    doc.text('Página '+p, pageW/2, 287, {align:'center'});
-  }
-
-  const safeName = (orgNombre!=='-'?orgNombre:'proyecto').toString().replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-  doc.save('oferta-fotovoltaica-'+safeName+'.pdf');
-  showToast('Oferta en PDF generada y descargada.');
 });
 </script>
 

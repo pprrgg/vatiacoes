@@ -181,6 +181,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
   </button>
 </div>
+<script src="/js/vatiaco-informe.js"></script>
 <script>
 (function(){
   var wrap = document.getElementById('tabbarWrap');
@@ -1106,36 +1107,9 @@ window.usarJsonPegadoPorId = function(id){
 };
 window.exportarCsvHorarioPorId = function(id){ const s = installations.find(i=>i.id===id); if(s) exportarCsvHorario(s); };
 
-// ===================== GENERAR PDF (Typst) =====================
-// El informe se compila en el navegador con Typst.ts (WebAssembly). El compilador se descarga la
-// primera vez que se pulsa el boton. La plantilla esta en <script id="plantillaTypst"> y recibe
-// los datos como JSON: los textos del formulario nunca se interpretan como codigo Typst.
-const TYPST_TS = 'https://cdn.jsdelivr.net/npm/@myriaddreamin/';
-const TYPST_TS_VERSION = '0.7.0';
-let typstCargado = null;
-
-function cargarTypst(){
-  if(typstCargado) return typstCargado;
-  typstCargado = new Promise((resolve, reject)=>{
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = TYPST_TS+'typst-all-in-one.ts@'+TYPST_TS_VERSION+'/dist/esm/index.js';
-    script.onload = ()=>{
-      window.$typst.setCompilerInitOptions({
-        getModule: ()=>TYPST_TS+'typst-ts-web-compiler@'+TYPST_TS_VERSION+'/pkg/typst_ts_web_compiler_bg.wasm'
-      });
-      resolve(window.$typst);
-    };
-    script.onerror = ()=>{
-      typstCargado = null; // permite reintentar al volver a pulsar
-      script.remove();
-      reject(new Error('No se ha podido descargar el compilador Typst.'));
-    };
-    document.head.appendChild(script);
-  });
-  return typstCargado;
-}
-
+// ===================== GENERAR PDF (Typst en el servidor) =====================
+// El informe se escribe aqui con la libreria comun de informes (/js/vatiaco-informe.js), con la
+// estructura de UNE 50135 / ISO 5966, y se compila a PDF en el servidor de VatiaCo (FastAPI).
 function datosGrafico(tipo, valores, color, titulo, unidad, ejeX, etiquetas){
   const limpios = valores.map(v=>Number.isFinite(v) ? v : 0);
   const max = Math.max(...limpios, 1);
@@ -1206,43 +1180,98 @@ function datosInforme(conDatos){
   };
 }
 
-function fuenteTypst(datos){
-  // JSON dentro de una cadena Typst: solo hay que escapar \ y "
-  const json = JSON.stringify(datos).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
-  return '#let d = json(bytes("'+json+'"))\n'+document.getElementById('plantillaTypst').textContent;
-}
-
-function descargarPdf(bytes, nombre){
-  const url = URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
-  const enlace = document.createElement('a');
-  enlace.href = url; enlace.download = nombre;
-  document.body.appendChild(enlace); enlace.click(); enlace.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 10000);
-}
-
 document.getElementById('btnPdf').addEventListener('click', async ()=>{
   const conDatos = installations.filter(s=>s.estado==='ok');
   if(conDatos.length===0) return;
-  const btn = document.getElementById('btnPdf');
-  const textoBoton = btn.innerHTML;
-  btn.disabled = true;
-  btn.textContent = 'Generando informe…';
-  try{
-    const datos = datosInforme(conDatos);
-    const typst = await cargarTypst();
-    const pdf = await typst.pdf({mainContent: fuenteTypst(datos)});
-    if(!pdf) throw new Error('El compilador Typst no ha devuelto ningún PDF.');
-    const nombre = (datos.orgNombre!=='-' ? datos.orgNombre : 'proyecto').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-    descargarPdf(new Uint8Array(pdf), 'informe-pvgis-horario-lcoe-'+nombre+'.pdf');
-    document.dispatchEvent(new CustomEvent('informe-generado'));
-    showToast('PDF generado y descargado.');
-  }catch(e){
-    console.error('Error generando el informe con Typst:', e);
-    showToast('No se ha podido generar el PDF. Revisa la conexión e inténtalo de nuevo.');
-  }finally{
-    btn.innerHTML = textoBoton;
-    btn.disabled = installations.filter(s=>s.estado==='ok').length===0;
-  }
+  const d = datosInforme(conDatos);
+  const V = VatiacoInforme, C = new V.Contenido();
+  const figura = (g, alto, pie)=>{ const r = V.grafico(g, alto); C.dibujo(r.svg, r.ancho, r.alto); C.leyendaFigura(pie); };
+
+  C.seccion('Resumen ejecutivo');
+  C.p('Este informe recoge la generación fotovoltaica horaria y el LCOE de '+d.textoSuperficies+' del proyecto "'+d.proyecto+'", calculados llamando a la API seriescalc de PVGIS (Comisión Europea) para obtener la potencia generada en cada una de las 8.760 horas del año de referencia.');
+  C.p('El conjunto suma '+d.totalKwp+' kWp de potencia pico y '+d.totalEnergia+' kWh de energía anual generada (año 1). El LCOE ponderado del conjunto es de '+d.lcoePonderado+' EUR/kWh.');
+
+  C.seccion('Introducción');
+  C.p('PVGIS (Photovoltaic Geographical Information System) es la herramienta gratuita de la Comisión Europea (Joint Research Centre) para estimar la producción de energía solar en cualquier punto de Europa, África y buena parte de Asia y América. Su endpoint seriescalc, con el parámetro pvcalculation activado, devuelve la potencia de salida del sistema fotovoltaico para cada hora de un año, aplicando el mismo modelo de pérdidas (temperatura, ángulo de incidencia, efectos espectrales) que usa la ficha mensual habitual de PVGIS.');
+
+  C.seccion('Método de cálculo');
+  C.sub('Potencia horaria');
+  C.typst('Para cada una de las 8.760 horas del año se obtiene la potencia de salida $P(t)$ en vatios; la energía de esa hora, en kWh, coincide numéricamente con $P(t) slash 1000$ al tratarse de un paso horario.\n');
+  C.sub('Coste nivelado de la energía (LCOE)');
+  C.typst('#block(width: 100%, fill: rgb("#fafafb"), stroke: 0.5pt + luma(210), radius: 2pt, inset: 8pt, breakable: false)[\n  $ "LCOE" = ("CAPEX" + sum_(t=1)^n "OPEX"_t / (1+r)^t) / (sum_(t=1)^n E_t / (1+r)^t) $\n  #align(center, text(7.5pt, fill: gris)[CAPEX: inversión inicial. OPEX#sub[t]: coste de operación del año t. E#sub[t]: energía generada el año t. r: tasa de descuento. n: vida útil.])]');
+  C.sub('Degradación anual');
+  C.typst('#block(width: 100%, fill: rgb("#fafafb"), stroke: 0.5pt + luma(210), radius: 2pt, inset: 8pt, breakable: false)[\n  $ E_t = E_1 dot (1 - d)^(t-1) $\n  #align(center, text(7.5pt, fill: gris)[E#sub[1]: energía generada el primer año (obtenida de PVGIS). d: tasa de degradación anual.])]');
+  C.sub('LCOE ponderado del conjunto');
+  C.p('No es la media de los LCOE individuales: se suman los costes descontados y la energía descontada de todas las superficies, y se divide una única vez.');
+  C.typst('#block(width: 100%, fill: rgb("#fafafb"), stroke: 0.5pt + luma(210), radius: 2pt, inset: 8pt, breakable: false)[\n  $ "LCOE"_"conjunto" = (sum "costes descontados") / (sum "energía descontada") $]');
+
+  C.seccion('Datos de partida del proyecto');
+  C.kv('Tasa de descuento / Vida útil / Degradación', d.finanzas);
+  C.kv('Número de superficies con datos PVGIS', d.numSuperficies);
+
+  C.seccion('Resultados: resumen de superficies');
+  C.tabla(['Superficie','kWp','E anual (kWh)','LCOE (EUR/kWh)','Año'], d.superficies.map(x=>[x.nombre, x.kwp, x.energia, x.lcoe, x.anio]), 'Resumen de superficies');
+  C.p('LCOE ponderado del conjunto: '+d.lcoePonderado+' EUR/kWh.', true);
+
+  C.seccion('Memoria por superficie');
+  d.superficies.forEach(x=>{
+    C.sub(x.nombre);
+    C.kv('Latitud / Longitud', x.coordenadas);
+    C.kv('Potencia pico', x.kwp+' kWp');
+    C.kv('Orientación (acimut, Sur = 0) / Inclinación', x.orientacion);
+    C.kv('Pérdidas del sistema', x.perdidas);
+    C.kv('Tecnología / Montaje', x.tecnologia);
+    C.kv('Base de datos / Año de la serie', x.baseDatos);
+    C.kv('CAPEX / OPEX anual', x.costes);
+    C.kv('PVGIS pvprice: systemcost / interest', x.pvprice);
+    C.kv('Energía anual generada (año 1)', x.energiaDetalle+' kWh');
+    C.kv('LCOE de esta superficie', x.lcoe+' EUR/kWh');
+    if(x.notas) C.kv('Notas', x.notas);
+    C.typst('#text(9pt)[#strong[Enlaces a la API de PVGIS (JSON):] #link('+V.tq(x.urlPvcalc)+')[informe con LCOE (PVcalc + pvprice)] · #link('+V.tq(x.urlSeries)+')[serie horaria completa (seriescalc)]]\n');
+    C.p('Curva diaria de generación (suma de energía horaria por día, kWh/día):');
+    figura(x.graficoDiario, 50, 'Curva diaria de generación — '+x.nombre);
+    C.p('Día representativo de invierno y de verano, extraídos de la serie horaria (seriescalc):');
+    figura(x.graficoDiciembre, 42, 'Día representativo de diciembre, potencia horaria (W) — '+x.nombre);
+    figura(x.graficoJunio, 42, 'Día representativo de junio, potencia horaria (W) — '+x.nombre);
+    C.p('Curva mensual de energía generada, obtenida de PVcalc (E_m):');
+    figura(x.graficoMensual, 50, 'Curva mensual de energía (PVcalc, kWh/mes) — '+x.nombre);
+    C.tabla(['Mes','E_m (kWh)','H(i)_m (kWh/m²)'], x.mensual, 'Generación y radiación mensual — '+x.nombre);
+  });
+
+  C.seccion('Conclusiones y próximos pasos');
+  C.p('Se ha obtenido la curva horaria de generación (8.760 valores/año) y el LCOE de '+d.textoSuperficies+', con un LCOE ponderado del conjunto de '+d.lcoePonderado+' EUR/kWh, a partir de los parámetros técnicos de cada superficie y los parámetros financieros (tasa de descuento, vida útil y degradación) introducidos.');
+  C.p('El siguiente paso, fuera del alcance de este documento, es cruzar la curva horaria de generación de cada superficie con la curva horaria de consumo del proyecto y con el dimensionado de un sistema de almacenamiento, para obtener los indicadores de rentabilidad de la inversión (autoconsumo, ahorro, payback, VAN, TIR) del sistema completo.');
+
+  C.seccion('Referencias');
+  C.p('1. PVGIS (Photovoltaic Geographical Information System). Comisión Europea, Joint Research Centre.');
+  C.p('2. API no interactiva de PVGIS: documentación del endpoint seriescalc.');
+
+  const nombre = (d.orgNombre!=='-' ? d.orgNombre : 'proyecto').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  await V.generar({
+    contenido: C, titulo: d.proyecto, tipo: 'Informe técnico', codigo: 'IT-FV-LCOE', acento: [55,207,255],
+    subtitulo: 'Generación fotovoltaica horaria y LCOE — datos de la API de PVGIS',
+    pie: 'Fuente: API seriescalc de PVGIS (Comisión Europea, Joint Research Centre).',
+    archivo: 'informe-pvgis-horario-lcoe-'+nombre,
+    cifras: [[d.totalKwp, 'kWp', 'Potencia pico'], [d.totalEnergia, 'kWh/año', 'Energía año 1'], [d.lcoePonderado, '€/kWh', 'LCOE ponderado'], [d.numSuperficies, '', 'Superficies']],
+    palabrasClave: ['fotovoltaica', 'PVGIS', 'seriescalc', 'generación horaria', 'LCOE'],
+    glosario: [
+      ['PVGIS', 'Photovoltaic Geographical Information System (Comisión Europea)', '-'],
+      ['seriescalc', 'Endpoint de la API de PVGIS que devuelve series horarias', '-'],
+      ['PVcalc', 'Endpoint de la API de PVGIS que devuelve el informe mensual/anual', '-'],
+      ['pvprice', 'Parámetro de PVcalc que activa el cálculo de LCOE propio de PVGIS', '-'],
+      ['systemcost', 'Coste total del sistema, usado por PVGIS para su LCOE', 'EUR'],
+      ['interest', 'Tasa de interés, usada por PVGIS para su LCOE', '%'],
+      ['P(t)', 'Potencia de salida del sistema en la hora t', 'W'],
+      ['G(i)', 'Irradiancia en el plano del generador en la hora t', 'W/m²'],
+      ['E_m', 'Energía media mensual generada', 'kWh'],
+      ['H(i)_m', 'Suma media mensual de irradiación en el plano', 'kWh/m²'],
+      ['LCOE', 'Coste nivelado de la energía (Levelized Cost of Energy)', 'EUR/kWh'],
+      ['CAPEX', 'Inversión inicial de la superficie', 'EUR'],
+      ['OPEX', 'Coste anual de operación y mantenimiento', 'EUR/año'],
+      ['kWp', 'Potencia pico instalada', 'kW'],
+    ],
+  });
+  document.dispatchEvent(new CustomEvent('informe-generado'));
 });
 
 // Comunicacion bidireccional con VatiaCo.<DOC_KEY_C02>.outputs.installations: restaura la
@@ -1261,335 +1290,6 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
 })();
 </script>
 
-<!-- Plantilla Typst del informe: recibe los datos en la variable d (ver fuenteTypst) -->
-<script type="text/plain" id="plantillaTypst">
-#let acento = rgb(37, 180, 220)
-#let tinta = rgb(20, 24, 32)
-#let cuerpo = rgb(50, 58, 70)
-#let gris = rgb(100, 108, 120)
-#let claro = rgb(150, 155, 163)
-#let filete = rgb(205, 205, 212)
-
-#set document(title: d.proyecto, author: d.autor)
-#set text(lang: "es", size: 10pt, fill: cuerpo)
-#set par(justify: true, leading: 0.6em, spacing: 0.9em)
-#set page(
-  paper: "a4",
-  margin: (x: 20mm, top: 26mm, bottom: 24mm),
-  header: context if here().page() > 1 {
-    set text(8.5pt, fill: gris, style: "italic")
-    grid(columns: (1fr, auto), column-gutter: 8mm, d.proyecto, d.autor)
-    v(-1.5mm)
-    line(length: 100%, stroke: 0.2mm + filete)
-  },
-  footer: context if here().page() > 1 {
-    set text(8.5pt, fill: gris)
-    line(length: 100%, stroke: 0.2mm + filete)
-    v(-1mm)
-    align(center)[Página #here().page()]
-  },
-)
-
-#show heading: set text(fill: tinta, weight: "bold")
-#show heading.where(level: 1): it => block(
-  width: 100%,
-  above: 1.6em,
-  below: 1em,
-  stroke: (bottom: 0.6mm + acento),
-  inset: (bottom: 1.4mm),
-  text(13pt, it),
-)
-#show heading.where(level: 2): it => block(above: 1.3em, below: 0.8em, text(10.5pt, it))
-#show raw: set text(font: "DejaVu Sans Mono", size: 8pt, fill: rgb(15, 140, 170))
-#show link: set text(fill: rgb(20, 110, 190), weight: "bold")
-#show figure: set block(breakable: false, above: 1.2em, below: 1.2em)
-#show figure.caption: set text(8.5pt, style: "italic", weight: "bold", fill: rgb(65, 72, 84))
-#show figure.where(kind: table): set figure.caption(position: top)
-#show figure.where(kind: table): set block(breakable: true)
-#show math.equation.where(block: true): set text(fill: rgb(15, 140, 170))
-
-#let titulo-preliminar(t) = {
-  text(16pt, weight: "bold", fill: tinta, t)
-  v(-2mm)
-  line(length: 32mm, stroke: 0.6mm + acento)
-  v(5mm)
-}
-
-#let datos-clave(filas) = {
-  set par(justify: false)
-  set text(9pt)
-  grid(
-    columns: (72mm, 1fr),
-    row-gutter: 2.4mm,
-    ..filas.map(((k, v)) => (text(fill: gris, k), text(weight: "bold", fill: tinta, v))).flatten(),
-  )
-  v(3mm)
-}
-
-#let tabla(columnas, cabecera, filas) = {
-  set par(justify: false)
-  set text(8.5pt, fill: tinta)
-  table(
-    columns: columnas,
-    align: left,
-    stroke: none,
-    inset: (x: 0pt, y: 1.4mm),
-    table.header(..cabecera.map(c => text(weight: "bold", fill: gris, c))),
-    table.hline(stroke: 0.2mm + filete),
-    ..filas.flatten(),
-  )
-}
-
-#let formula(ecuacion, nota: none) = block(
-  width: 100%,
-  breakable: false,
-  fill: rgb(250, 250, 251),
-  stroke: 0.25mm + filete,
-  radius: 1mm,
-  inset: 3mm,
-  {
-    ecuacion
-    if nota != none {
-      set par(justify: false)
-      align(center, text(8pt, fill: rgb(125, 132, 142), nota))
-    }
-  },
-)
-
-#let grafico(g, alto) = {
-  let ancho = 170mm
-  let (izq, der, sup, inf) = (17mm, 4mm, 4mm, 8mm)
-  let n = g.valores.len()
-  let util = alto - sup - inf
-  let es-linea = g.tipo == "linea"
-  let paso = (ancho - izq - der) / if es-linea { calc.max(n - 1, 1) } else { calc.max(n, 1) }
-  let centro = if es-linea { 0mm } else { paso / 2 }
-  let base = alto - inf
-  let color = rgb(..g.color)
-  let y(v) = base - util * (v / g.max)
-
-  set par(justify: false)
-  text(8pt, weight: "bold", fill: rgb(80, 86, 96), g.titulo)
-  v(-1mm)
-  box(width: ancho, height: alto, stroke: 0.2mm + rgb(215, 215, 220), {
-    for tick in g.ticks {
-      place(dx: izq, dy: y(tick.v), line(length: ancho - izq - der, stroke: 0.12mm + rgb(225, 225, 230)))
-      place(dx: 0mm, dy: y(tick.v) - 1mm, box(width: izq - 2mm, align(right, text(6pt, fill: claro, tick.t))))
-    }
-    if es-linea {
-      let puntos = g.valores.enumerate().map(((i, v)) => (izq + paso * i, y(v)))
-      let trazo = puntos.enumerate().map(((i, p)) => if i == 0 { curve.move(p) } else { curve.line(p) })
-      place(curve(stroke: 0.3mm + color, ..trazo))
-    } else {
-      let ancho-barra = paso * 0.6
-      for (i, v) in g.valores.enumerate() {
-        let x = izq + paso * i + (paso - ancho-barra) / 2
-        place(dx: x, dy: y(v), rect(width: ancho-barra, height: base - y(v), fill: color, stroke: none))
-        if g.etiquetas.len() > i {
-          place(
-            dx: x + ancho-barra / 2 - 8mm,
-            dy: y(v) - 3mm,
-            box(width: 16mm, align(center, text(6pt, fill: rgb(90, 96, 106), g.etiquetas.at(i)))),
-          )
-        }
-      }
-    }
-    for marca in g.ejeX {
-      place(
-        dx: izq + paso * marca.i + centro - 8mm,
-        dy: alto - 5mm,
-        box(width: 16mm, align(center, text(6.5pt, fill: claro, marca.t))),
-      )
-    }
-  })
-}
-
-#let figura(g, alto, pie) = figure(grafico(g, alto), kind: image, supplement: [Figura], caption: pie)
-
-// ---------- Portada ----------
-#v(60mm)
-#block(text(22pt, weight: "bold", fill: tinta, upper(d.proyecto)))
-#line(length: 60mm, stroke: 0.8mm + acento)
-#v(6mm)
-#text(12pt, style: "italic", fill: rgb(75, 82, 94))[Generación fotovoltaica horaria y LCOE - datos de la API de PVGIS]
-#v(8mm)
-#{
-  set par(justify: false)
-  set text(10.5pt)
-  grid(
-    columns: (40mm, 1fr),
-    row-gutter: 3mm,
-    ..(
-      ("Organización", d.orgNombre),
-      ("CIF", d.orgCif),
-      ("Destinatario", d.destNombre),
-      ("Autor", d.autor),
-      ("Fecha", d.fecha),
-    ).map(((k, v)) => (text(style: "italic", fill: rgb(130, 136, 146), k + ":"), text(fill: rgb(40, 46, 56), v))).flatten(),
-  )
-}
-#v(1fr)
-#text(8.5pt, style: "italic", fill: claro)[Fuente: API seriescalc de PVGIS (Comisión Europea, Joint Research Centre)]
-
-// ---------- Preliminares ----------
-#pagebreak()
-#titulo-preliminar[Índice]
-#outline(title: none, depth: 1)
-
-#pagebreak()
-#titulo-preliminar[Índice de figuras]
-#outline(title: none, target: figure.where(kind: image))
-
-#pagebreak()
-#titulo-preliminar[Índice de tablas]
-#outline(title: none, target: figure.where(kind: table))
-
-#pagebreak()
-#titulo-preliminar[Glosario de siglas y términos]
-#figure(
-  tabla(
-    (28mm, 1fr, 20mm),
-    ("Sigla", "Significado", "Unidad"),
-    (
-      ("PVGIS", "Photovoltaic Geographical Information System (Comisión Europea)", "-"),
-      ("seriescalc", "Endpoint de la API de PVGIS que devuelve series horarias", "-"),
-      ("PVcalc", "Endpoint de la API de PVGIS que devuelve el informe mensual/anual", "-"),
-      ("pvprice", "Parámetro de PVcalc que activa el cálculo de LCOE propio de PVGIS", "-"),
-      ("systemcost", "Coste total del sistema, usado por PVGIS para su LCOE", "EUR"),
-      ("interest", "Tasa de interés, usada por PVGIS para su LCOE", "%"),
-      ("P(t)", "Potencia de salida del sistema en la hora t", "W"),
-      ("G(i)", "Irradiancia en el plano del generador en la hora t", "W/m²"),
-      ("E_m", "Energía media mensual generada", "kWh"),
-      ("H(i)_m", "Suma media mensual de irradiación en el plano", "kWh/m²"),
-      ("LCOE", "Coste nivelado de la energía (Levelized Cost of Energy)", "EUR/kWh"),
-      ("CAPEX", "Inversión inicial de la superficie", "EUR"),
-      ("OPEX", "Coste anual de operación y mantenimiento", "EUR/año"),
-      ("kWp", "Potencia pico instalada", "kW"),
-    ).map(((s, t, u)) => (raw(s), t, u)),
-  ),
-  caption: [Glosario de siglas y términos],
-)
-
-// ---------- Cuerpo ----------
-#pagebreak()
-#set heading(numbering: (..n) => if n.pos().len() == 1 { str(n.pos().first()) + "." } else { n.pos().map(str).join(".") })
-
-= Resumen ejecutivo
-Este informe recoge la generación fotovoltaica horaria y el LCOE de #d.textoSuperficies del proyecto "#d.proyecto", calculados llamando a la API seriescalc de PVGIS (Comisión Europea) para obtener la potencia generada en cada una de las 8.760 horas del año de referencia.
-
-El conjunto suma #d.totalKwp kWp de potencia pico y #d.totalEnergia kWh de energía anual generada (año 1). El LCOE ponderado del conjunto es de #d.lcoePonderado EUR/kWh.
-
-Este documento no incluye el cruce con el consumo ni el dimensionado de almacenamiento: la curva horaria de cada superficie queda preparada para ese análisis en una fase posterior.
-
-= Introducción
-PVGIS (Photovoltaic Geographical Information System) es la herramienta gratuita de la Comisión Europea (Joint Research Centre) para estimar la producción de energía solar en cualquier punto de Europa, África y buena parte de Asia y América. Su endpoint seriescalc, con el parámetro pvcalculation activado, devuelve la potencia de salida del sistema fotovoltaico para cada hora de un año, aplicando el mismo modelo de pérdidas (temperatura, ángulo de incidencia, efectos espectrales) que usa la ficha mensual habitual de PVGIS.
-
-= Método de cálculo
-== Potencia horaria
-Para cada una de las 8.760 horas del año se obtiene la potencia de salida $P(t)$ en vatios; la energía de esa hora, en kWh, coincide numéricamente con $P(t) slash 1000$ al tratarse de un paso horario.
-
-== Coste nivelado de la energía (LCOE)
-#formula(
-  $ "LCOE" = ("CAPEX" + sum_(t=1)^n "OPEX"_t / (1+r)^t) / (sum_(t=1)^n E_t / (1+r)^t) $,
-  nota: [CAPEX: inversión inicial. OPEX#sub[t]: coste de operación del año t. E#sub[t]: energía generada el año t. r: tasa de descuento. n: vida útil.],
-)
-
-== Degradación anual
-#formula(
-  $ E_t = E_1 dot (1 - d)^(t-1) $,
-  nota: [E#sub[1]: energía generada el primer año (obtenida de PVGIS). d: tasa de degradación anual.],
-)
-
-== LCOE ponderado del conjunto
-No es la media de los LCOE individuales: se suman los costes descontados y la energía descontada de todas las superficies, y se divide una única vez.
-
-#formula($ "LCOE"_"conjunto" = (sum "costes descontados") / (sum "energía descontada") $)
-
-= Datos de partida del proyecto
-#datos-clave((
-  ("Proyecto", d.proyecto),
-  ("Autor", d.autor + " (" + d.registro + ")"),
-  ("Organización", d.orgNombre + " - " + d.orgCif),
-  ("Dirección organización", d.orgDir),
-  ("Contacto", d.orgTel + " / " + d.orgCorreo),
-  ("Destinatario", d.destNombre + " - " + d.destCif),
-  ("Dirección destinatario", d.destDir),
-  ("Fecha del informe", d.fecha),
-  ("Tasa de descuento / Vida útil / Degradación", d.finanzas),
-  ("Número de superficies con datos PVGIS", d.numSuperficies),
-))
-
-= Resultados - resumen de superficies
-#figure(
-  tabla(
-    (1fr, 22mm, 32mm, 32mm, 16mm),
-    ("Superficie", "kWp", "E anual (kWh)", "LCOE (EUR/kWh)", "Año"),
-    d.superficies.map(s => (s.nombre, s.kwp, s.energia, strong(s.lcoe), s.anio)),
-  ),
-  caption: [Resumen de superficies],
-)
-
-*LCOE ponderado del conjunto: #d.lcoePonderado EUR/kWh.*
-
-= Memoria por superficie
-#for s in d.superficies [
-  #heading(level: 2, s.nombre)
-  #datos-clave(
-    (
-      ("Latitud / Longitud", s.coordenadas),
-      ("Potencia pico", s.kwp + " kWp"),
-      ("Orientación (acimut, Sur=0) / Inclinación", s.orientacion),
-      ("Pérdidas del sistema", s.perdidas),
-      ("Tecnología / Montaje", s.tecnologia),
-      ("Base de datos / Año de la serie", s.baseDatos),
-      ("CAPEX / OPEX anual", s.costes),
-      ("PVGIS pvprice: systemcost / interest", s.pvprice),
-      ("Energía anual generada (año 1)", s.energiaDetalle + " kWh"),
-      ("LCOE de esta superficie", s.lcoe + " EUR/kWh"),
-    )
-      + if s.notas != "" { (("Notas", s.notas),) } else { () },
-  )
-
-  *Enlaces a la API de PVGIS (JSON):*
-
-  #{
-    set text(9pt)
-    grid(
-      columns: (72mm, 1fr),
-      row-gutter: 2.4mm,
-      text(fill: gris)[Informe con LCOE (PVcalc + pvprice)], link(s.urlPvcalc)[Abrir / descargar JSON],
-      text(fill: gris)[Serie horaria completa (seriescalc)], link(s.urlSeries)[Abrir / descargar JSON],
-    )
-  }
-
-  Curva diaria de generación (suma de energía horaria por día, kWh/día):
-
-  #figura(s.graficoDiario, 50mm)[Curva diaria de generación - #s.nombre]
-
-  Día representativo de invierno y de verano, extraídos de la serie horaria (seriescalc):
-
-  #figura(s.graficoDiciembre, 42mm)[Día representativo de diciembre - #s.nombre]
-  #figura(s.graficoJunio, 42mm)[Día representativo de junio - #s.nombre]
-
-  Curva mensual de energía generada, obtenida de PVcalc ($E_m$):
-
-  #figura(s.graficoMensual, 50mm)[Curva mensual de energía (PVcalc) - #s.nombre]
-
-  #figure(
-    tabla((60mm, 50mm, 1fr), ("Mes", "E_m (kWh)", "H(i)_m (kWh/m²)"), s.mensual),
-    caption: [Generación y radiación mensual ($E_m$, $H(i)_m$) - #s.nombre],
-  )
-]
-
-= Conclusiones y próximos pasos
-Se ha obtenido la curva horaria de generación (8.760 valores/año) y el LCOE de #d.textoSuperficies, con un LCOE ponderado del conjunto de #d.lcoePonderado EUR/kWh, a partir de los parámetros técnicos de cada superficie y los parámetros financieros (tasa de descuento, vida útil y degradación) introducidos.
-
-El siguiente paso, fuera del alcance de este documento, es cruzar la curva horaria de generación de cada superficie con la curva horaria de consumo del proyecto y con el dimensionado de un sistema de almacenamiento, para obtener los indicadores de rentabilidad de la inversión (autoconsumo, ahorro, payback, VAN, TIR) del sistema completo.
-
-= Referencias
-+ PVGIS (Photovoltaic Geographical Information System). Comisión Europea, Joint Research Centre.
-+ API no interactiva de PVGIS - documentación del endpoint seriescalc.
-</script>
 
 <!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
 <!-- "Datos del proyecto" (campos con id que empieza por "p_") se sincroniza de forma
