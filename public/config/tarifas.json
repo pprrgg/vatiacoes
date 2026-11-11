@@ -1,0 +1,44 @@
+{
+  "descripcion": "Precios orientativos de la energía para el estudio económico de autoconsumo FV. Precios finales por kWh (término de energía con impuestos incluidos). Ajustar a la factura real del cliente.",
+  "actualizado": "2026-11",
+  "moneda": "EUR",
+  "por_defecto": "pvpc_2.0td",
+  "tarifas": [
+    {
+      "id": "pvpc_2.0td",
+      "nombre": "PVPC 2.0TD (regulada)",
+      "periodos": { "P1": 0.19, "P2": 0.13, "P3": 0.09 },
+      "reparto_solar": { "P1": 0.40, "P2": 0.45, "P3": 0.15 },
+      "precio_excedentes_eur_kwh": 0.05,
+      "notas": "Precio efectivo = media de los periodos ponderada por el reparto de la producción solar entre ellos."
+    },
+    {
+      "id": "libre_fijo",
+      "nombre": "Mercado libre - precio fijo 24 h",
+      "precio_energia_eur_kwh": 0.15,
+      "precio_excedentes_eur_kwh": 0.06
+    },
+    {
+      "id": "libre_3p",
+      "nombre": "Mercado libre - 3 periodos",
+      "periodos": { "P1": 0.21, "P2": 0.15, "P3": 0.10 },
+      "reparto_solar": { "P1": 0.40, "P2": 0.45, "P3": 0.15 },
+      "precio_excedentes_eur_kwh": 0.06
+    },
+    {
+      "id": "3.0td",
+      "nombre": "3.0TD (empresas, > 15 kW)",
+      "precio_energia_eur_kwh": 0.13,
+      "precio_excedentes_eur_kwh": 0.05
+    }
+  ],
+  "parametros_economicos": {
+    "autoconsumo_pct": 60,
+    "coste_instalacion_eur_wp": 1.2,
+    "subvencion_eur": 0,
+    "mantenimiento_eur_kwp_anio": 12,
+    "degradacion_pct_anio": 0.5,
+    "inflacion_energia_pct_anio": 2,
+    "vida_util_anios": 25
+  }
+}

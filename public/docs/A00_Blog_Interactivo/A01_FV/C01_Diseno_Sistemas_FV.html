@@ -249,6 +249,27 @@
   .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
   .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
   .tab-bloque{margin-bottom:48px;}
+
+  /* Pestaña Produccion y ahorro */
+  .pv-estado{font-family:var(--font-mono); font-size:12px; color:var(--text-dim); margin-top:12px; min-height:18px; word-break:break-word;}
+  .pv-estado.error{color:var(--red);}
+  .kpi-grid{display:flex; gap:12px; flex-wrap:wrap; margin:24px 0 8px;}
+  .kpi-grid .stat-chip .v{font-size:18px;}
+  .pv-legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--text-dim); margin:8px 0 0;}
+  .pv-sw{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px;}
+  .pv-tip{position:fixed; z-index:60; pointer-events:none; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-family:var(--font-mono); font-size:11.5px; color:var(--text); box-shadow:0 6px 20px rgba(11,31,58,.14); display:none; min-width:160px;}
+  .pv-tip .t{color:var(--text-dimmer); margin-bottom:4px;}
+  .pv-tip .r{display:flex; justify-content:space-between; gap:14px;}
+  .pv-tip .r b{color:var(--text);}
+  .pv-chart svg{width:100%; height:auto; max-width:900px;}
+  .pv-tabla-wrap{overflow-x:auto;}
+  table.data-table td.num, table.data-table th.num{text-align:right; font-family:var(--font-mono);}
+  table.data-table tr.total td{font-weight:600; color:var(--text);}
+  .ok{color:var(--green);} .pend{color:var(--amber);}
+  .pv-manual{margin-top:14px; padding:12px 14px; border:1px dashed var(--line); border-radius:var(--radius); font-size:12.5px; color:var(--text-dim);}
+  .pv-manual ol{padding-left:18px; margin:6px 0 10px;}
+  .pv-manual li{margin-bottom:4px;}
+  .pv-manual a{color:var(--cyan);}
 </style>
 </head>
 <body>
@@ -262,8 +283,9 @@
   </button>
   <nav class="tabbar" id="sidenav">
     <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
-    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
-    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
+    <a href="#produccion" data-sec="produccion"><span class="tag">01</span>Producción y ahorro</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">02</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">03</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -393,9 +415,65 @@
       </div>
     </section>
 
-    <!-- 01 AYUDA: secciones en acordeon cerrado -->
+    <!-- 01 PRODUCCION (PVGIS) Y ESTUDIO ECONOMICO -->
+    <section id="produccion">
+      <div class="eyebrow kicker">01 · Producción y ahorro</div>
+      <h2>Producción mensual con PVGIS y estudio económico.</h2>
+      <p class="lede">Cada superficie pintada se envía a la API de PVGIS (servicio <code class="inline">PVcalc</code>) con su ubicación, potencia, acimut, inclinación, tipo de montaje y perfil de sombras. Con la producción resultante y los precios de <code class="inline">config/tarifas.json</code> se calcula el ahorro anual y el tiempo de amortización.</p>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="fieldset-title">Parámetros de PVGIS</div>
+          <div class="grid2">
+            <div class="field"><label>Pérdidas del sistema (%)</label><input type="number" id="pv_perdidas" min="0" max="50" step="0.5" value="14"><div class="hint">Cableado, inversor, suciedad… (PVGIS sugiere 14 %).</div></div>
+            <div class="field"><label>Tecnología del módulo</label>
+              <select id="pv_tecnologia"><option value="crystSi">Silicio cristalino</option><option value="CIS">CIS</option><option value="CdTe">CdTe</option></select></div>
+            <div class="field" style="grid-column:1/-1;"><label>Base de datos de radiación</label>
+              <select id="pv_basedatos"><option value="PVGIS-SARAH3">PVGIS-SARAH3 (Europa, África, Asia)</option><option value="PVGIS-ERA5">PVGIS-ERA5 (global)</option></select></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="btnCalcularPvgis" type="button">☀ Calcular producción con PVGIS</button>
+            <button class="btn ghost" id="btnRecalcularPvgis" type="button" title="Ignora los resultados guardados y vuelve a consultar PVGIS">Forzar recálculo</button>
+          </div>
+          <div class="pv-estado" id="pvEstado" role="status" aria-live="polite"></div>
+          <div id="pvManual" class="pv-manual" style="display:none;"></div>
+          <input type="file" id="pvJsonManual" accept=".json,application/json" multiple style="display:none;">
+        </div>
+
+        <div class="card">
+          <div class="fieldset-title">Estudio económico</div>
+          <div class="field"><label>Tarifa (config/tarifas.json)</label><select id="e_tarifa"></select><div class="hint" id="e_tarifaInfo">Cargando tarifas…</div></div>
+          <div class="grid2">
+            <div class="field"><label>Precio energía (€/kWh)</label><input type="number" id="e_precio" min="0" step="0.001" value="0.13"></div>
+            <div class="field"><label>Precio excedentes (€/kWh)</label><input type="number" id="e_excedentes" min="0" step="0.001" value="0.05"></div>
+            <div class="field"><label>Autoconsumo (% de la producción)</label><input type="number" id="e_autoconsumo" min="0" max="100" step="1" value="60"></div>
+            <div class="field"><label>Coste instalación (€/Wp)</label><input type="number" id="e_coste_wp" min="0" step="0.05" value="1.2"></div>
+            <div class="field"><label>Subvenciones / deducciones (€)</label><input type="number" id="e_subvencion" min="0" step="50" value="0"></div>
+            <div class="field"><label>Mantenimiento (€/kWp·año)</label><input type="number" id="e_om" min="0" step="1" value="12"></div>
+            <div class="field"><label>Degradación (%/año)</label><input type="number" id="e_degradacion" min="0" max="3" step="0.1" value="0.5"></div>
+            <div class="field"><label>Subida precio energía (%/año)</label><input type="number" id="e_inflacion" min="-5" max="15" step="0.1" value="2"></div>
+            <div class="field"><label>Vida útil (años)</label><input type="number" id="e_vida" min="1" max="40" step="1" value="25"></div>
+          </div>
+          <div class="btn-row"><button class="btn ghost" id="btnAplicarTarifa" type="button">Restablecer valores de la tarifa</button></div>
+        </div>
+      </div>
+
+      <div id="pvKpis" class="kpi-grid"></div>
+
+      <div class="subsection-title">Producción mensual estimada por superficie (kWh)</div>
+      <div id="pvLeyenda" class="pv-legend"></div>
+      <div class="chart-svg-wrap" id="pvChartMensual"><div class="empty-state">Pulsa «Calcular producción con PVGIS» para ver la producción mensual.</div></div>
+      <details class="acc"><summary><span class="acc-titulo">Tabla de producción</span><span class="acc-sub">Mensual por superficie y anual</span></summary><div class="acc-cuerpo" id="pvTablas"></div></details>
+
+      <div class="subsection-title" style="margin-top:28px;">Flujo de caja acumulado (€)</div>
+      <div class="chart-svg-wrap" id="ecoChart"><div class="empty-state">El estudio económico aparece cuando todas las superficies tienen producción calculada.</div></div>
+      <details class="acc"><summary><span class="acc-titulo">Tabla del estudio económico</span><span class="acc-sub">Año a año durante la vida útil</span></summary><div class="acc-cuerpo" id="ecoTabla"></div></details>
+      <p class="hint" style="font-size:11.5px; color:var(--text-dimmer); margin-top:10px;">Modelo simplificado: el autoconsumo evita comprar energía al precio de la tarifa; los excedentes se valoran al precio de excedentes (en compensación simplificada, la compensación no puede superar el término de energía de la factura). No incluye término de potencia, financiación ni sustitución del inversor.</p>
+    </section>
+
+    <!-- 02 AYUDA: secciones en acordeon cerrado -->
     <section id="ayuda">
-      <div class="eyebrow kicker">01 · Ayuda</div>
+      <div class="eyebrow kicker">02 · Ayuda</div>
       <h2>Fundamentos y aclaraciones.</h2>
       <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
 <div id="teoria">
@@ -460,7 +538,7 @@
 
         <div class="theory-card">
           <h3>6 · Qué falta para el cálculo completo</h3>
-          <p>Con estos cinco datos por superficie, el siguiente paso (fuera del alcance de este informe) es llamar a la API de PVGIS con cada conjunto de parámetros para obtener la energía generada anual y, combinándola con el coste de la instalación, el LCOE (coste nivelado de la energía).</p>
+          <p>Con estos cinco datos por superficie, la pestaña «Producción y ahorro» llama a la API de PVGIS para obtener la energía generada mes a mes y, combinándola con los precios de la tarifa y el coste de la instalación, calcula el ahorro anual, el tiempo de amortización y el LCOE (coste nivelado de la energía).</p>
         </div>
       </div>
     
@@ -474,7 +552,7 @@
       <div class="grid3">
         <div class="comp-card"><h4>Qué calcula PVGIS</h4><p>A partir de latitud, longitud, orientación, inclinación, potencia instalada y perfil de horizonte, estima la irradiación solar y la energía eléctrica generada mes a mes, usando bases de datos de radiación satelital de largo plazo.</p></div>
         <div class="comp-card"><h4>Qué necesita de este informe</h4><p>Exactamente los cinco parámetros por superficie que recoge esta herramienta: latitud, longitud, acimut (Sur=0°), inclinación y perfil de horizonte de 16 muestras — más la potencia pico instalada.</p></div>
-        <div class="comp-card"><h4>Qué vendrá después</h4><p>En una fase posterior, cada superficie de este informe se enviará a la API de PVGIS (endpoint <code class="inline">PVcalc</code>) para obtener la energía anual generada, y junto con el coste de la instalación se calculará el LCOE de cada superficie y del sistema completo.</p></div>
+        <div class="comp-card"><h4>Cómo se usa aquí</h4><p>Cada superficie se envía a la API de PVGIS (endpoint <code class="inline">PVcalc</code>, v5.3). El perfil de sombras de 16 muestras (−130° a 130° desde el Sur) se convierte al formato <code class="inline">userhorizon</code> de PVGIS: 36 valores cada 10°, empezando en el Norte y en sentido horario (0° fuera del rango definido). Si el navegador bloquea la llamada directa (CORS), se reintenta a través de un proxy público.</p></div>
       </div>
       <p style="font-size:12px; color:var(--text-dimmer); margin-top:20px;">Referencia: <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener" style="color:var(--amber);">PVGIS — Comisión Europea, Joint Research Centre</a>.</p>
     
@@ -484,7 +562,7 @@
 
     <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">02 · Informe</div>
+      <div class="eyebrow kicker">03 · Informe</div>
       <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
 <div id="proyecto">
       <div class="card">
@@ -531,7 +609,7 @@
     </section>
 
     <footer>
-      Herramienta no oficial de apoyo al diseño de sistemas fotovoltaicos, centrada en la fase de definición de superficies (ubicación, orientación, inclinación y sombras). No calcula energía generada ni LCOE — estos parámetros están preparados para introducirse en la <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">API de PVGIS</a> (Comisión Europea) en una fase posterior. El mapa interactivo permite elegir entre Google, Esri y OpenStreetMap; el mapa del informe PDF usa la misma capa que tengas seleccionada en pantalla.
+      Herramienta no oficial de apoyo al diseño de sistemas fotovoltaicos: definición de superficies (ubicación, orientación, inclinación y sombras), producción estimada con la <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">API de PVGIS</a> (Comisión Europea) y estudio económico orientativo con los precios de config/tarifas.json. El mapa interactivo permite elegir entre Google, Esri y OpenStreetMap; el mapa del informe PDF usa la misma capa que tengas seleccionada en pantalla.
     </footer>
 
   </main>
@@ -1828,6 +1906,7 @@ function renderInstallations(){
 
   const conPaneles = installations.filter(s=>s.paneles.length>0);
   guardarDisenoEnVatiaco(conPaneles);
+  if(typeof renderProduccion==='function') renderProduccion();
   if(conPaneles.length===0){
     container.innerHTML = '<div class="empty-state">Todavía no has pintado ninguna superficie. Ve a la pestaña Informe y pinta al menos un panel sobre el mapa.</div>';
     statsRow.style.display='none';
@@ -2069,6 +2148,15 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
   }catch(e){
     mapasInforme = { porSuperficie:{}, combinado:null };
   }
+  // Produccion (PVGIS) y estudio economico: si falta la produccion de alguna superficie
+  // (o esta desactualizada respecto al diseno), se consulta PVGIS antes de componer el PDF.
+  let pvEstadoPdf = estadoProduccion();
+  if(!pvEstadoPdf.completo){
+    btnPdf.textContent = 'Consultando PVGIS…';
+    try{ await calcularProduccion(); }catch(e){ /* el PDF lo indica */ }
+    pvEstadoPdf = estadoProduccion();
+  }
+  const ecoPdf = calcularEstudioEconomico(pvEstadoPdf);
   btnPdf.textContent = 'Generando PDF…';
   try{
 
@@ -2100,6 +2188,12 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
     ['kWp','Potencia pico instalada (paneles x potencia unitaria)','kW'],
     ['Wp','Potencia pico unitaria de un panel','W'],
     ['LCOE','Coste nivelado de la energia (Levelized Cost of Energy)','EUR/kWh'],
+    ['E_m / E_y','Energia generada mensual / anual estimada por PVGIS','kWh'],
+    ['kWh/kWp','Produccion especifica: energia anual por kWp instalado','kWh/kWp'],
+    ['Autoconsumo','Fraccion de la produccion consumida en el punto de suministro','%'],
+    ['Excedentes','Energia vertida a la red y compensada','kWh'],
+    ['O&M','Operacion y mantenimiento','EUR/kWp ano'],
+    ['Amortizacion','Anos hasta que el flujo de caja acumulado se hace positivo','anos'],
   ];
 
   function makeHelpers(doc){
@@ -2326,7 +2420,7 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
       return {
         id: s.id, nombre: c.nombreArea, lat: c.lat, lng: c.lng,
         npaneles, potenciaWp: c.potenciaW, potenciaKwp,
-        orientacion: Math.round(c.rotation), inclinacion: c.tilt,
+        orientacion: normalizarAcimut(c.rotation), inclinacion: c.tilt,
         tipoEstructura: c.tipoEstructura, modelo: c.modelo,
         sombras: c.sombras, notas: s.notas,
       };
@@ -2335,12 +2429,14 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
     const totalKwp = superficiesPdf.reduce((a,i)=>a+i.potenciaKwp,0);
 
     y = H.sectionTitle(y, '1.', 'Resumen ejecutivo', collect);
-    y = H.paragraph(y, 'Este informe recoge la definicion tecnica de '+(superficiesPdf.length>1?superficiesPdf.length+' superficies':'una superficie')+' del sistema fotovoltaico del proyecto "'+proyecto+'": ubicacion, cantidad de paneles, orientacion, inclinacion y perfil de sombras del horizonte, con vistas a su calculo posterior de energia generada y LCOE mediante la API de PVGIS.');
-    y = H.paragraph(y, 'El conjunto de superficies suma '+totalPaneles+' paneles y '+fmtNum(totalKwp,2)+' kWp de potencia pico instalada. Este documento no incluye calculo de energia generada, ahorro economico ni LCOE: unicamente define los parametros de entrada necesarios para ese calculo.');
+    y = H.paragraph(y, 'Este informe recoge la definicion tecnica de '+(superficiesPdf.length>1?superficiesPdf.length+' superficies':'una superficie')+' del sistema fotovoltaico del proyecto "'+proyecto+'" (ubicacion, cantidad de paneles, orientacion, inclinacion y perfil de sombras del horizonte), su produccion estimada mes a mes con la API de PVGIS y un estudio economico de ahorro y amortizacion.');
+    y = H.paragraph(y, 'El conjunto de superficies suma '+totalPaneles+' paneles y '+fmtNum(totalKwp,2)+' kWp de potencia pico instalada.'
+      + (pvEstadoPdf.completo ? ' La produccion anual estimada es de '+fmtNum(pvEstadoPdf.anual,0)+' kWh ('+fmtNum(pvEstadoPdf.anual/pvEstadoPdf.kwpTotal,0)+' kWh/kWp).' : ' No se pudo obtener la produccion de PVGIS al generar este informe.')
+      + (ecoPdf ? ' Con una inversion de '+fmtNum(ecoPdf.inversion,0)+' EUR, el ahorro neto del primer ano es de '+fmtNum(ecoPdf.netoAnual,0)+' EUR y la inversion se amortiza '+(ecoPdf.payback!==null ? 'en '+fmtNum(ecoPdf.payback,1)+' anos.' : 'despues de la vida util considerada ('+ecoPdf.P.vida+' anos).') : ''));
 
     y = H.sectionTitle(y, '2.', 'Introduccion', collect);
     y = H.paragraph(y, 'PVGIS (Photovoltaic Geographical Information System) es la herramienta gratuita de la Comision Europea (Joint Research Centre) para estimar la produccion de energia solar en cualquier punto de Europa, Africa y buena parte de Asia y America. A partir de latitud, longitud, orientacion, inclinacion, potencia instalada y perfil de horizonte, estima la irradiacion solar y la energia electrica generada mes a mes.');
-    y = H.paragraph(y, 'El objetivo de este documento es recoger, para cada superficie del sistema fotovoltaico, exactamente los parametros que necesitara esa herramienta en una fase posterior del proyecto.');
+    y = H.paragraph(y, 'El objetivo de este documento es recoger, para cada superficie del sistema fotovoltaico, los parametros de diseno que necesita esa herramienta, la produccion que esta estima con ellos y la rentabilidad economica resultante con los precios de la tarifa electrica seleccionada.');
 
     y = H.sectionTitle(y, '3.', 'Fundamento tecnico', collect);
     y = H.subTitle(y, '3.1', 'Orientacion (acimut)');
@@ -2402,6 +2498,10 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
       y = H.kv(y,'Potencia instalada (kWp)', fmtNum(s.potenciaKwp,2)+' kWp');
       y = H.kv(y,'Orientacion / acimut (Sur=0)', s.orientacion+' grados');
       y = H.kv(y,'Inclinacion', s.inclinacion+' grados');
+      const filaPv = pvEstadoPdf.filas.find(f=>f.s.id===s.id);
+      if(filaPv && filaPv.datos){
+        y = H.kv(y,'Produccion anual (PVGIS)', fmtNum(filaPv.datos.anual,0)+' kWh  ('+fmtNum(filaPv.p.kwp>0?filaPv.datos.anual/filaPv.p.kwp:0,0)+' kWh/kWp)');
+      }
       if(s.notas) y = H.kv(y,'Notas', s.notas);
 
       y = H.paragraph(y, 'Mapa con los paneles reales de esta superficie, generado a partir de las mismas coordenadas del diseno:');
@@ -2423,14 +2523,24 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
       ], [marginX, marginX+70]);
     });
 
-    y = H.sectionTitle(y, '7.', 'Conclusiones y proximos pasos', collect);
-    y = H.paragraph(y, 'Se han definido '+superficiesPdf.length+' superficie(s) con un total de '+totalPaneles+' paneles y '+fmtNum(totalKwp,2)+' kWp de potencia pico instalada, con todos los parametros de ubicacion, orientacion, inclinacion y sombras necesarios para el calculo de energia generada.');
-    y = H.paragraph(y, 'El siguiente paso, fuera del alcance de este documento, es enviar los parametros de la seccion 6 (tabla "Parametros listos para PVGIS") al endpoint PVcalc de la API de PVGIS para obtener la energia anual generada de cada superficie, y combinarla con el coste de la instalacion para calcular el LCOE del sistema completo.');
+    y = pdfProduccionYEconomia(doc, H, y, collect, { pageW, marginX, FIG, TAB, est: pvEstadoPdf, eco: ecoPdf });
 
-    y = H.sectionTitle(y, '8.', 'Referencias', collect);
+    y = H.sectionTitle(y, '9.', 'Conclusiones', collect);
+    y = H.paragraph(y, 'Se han definido '+superficiesPdf.length+' superficie(s) con un total de '+totalPaneles+' paneles y '+fmtNum(totalKwp,2)+' kWp de potencia pico instalada, con todos los parametros de ubicacion, orientacion, inclinacion y sombras necesarios para el calculo de energia generada.');
+    if(pvEstadoPdf.completo){
+      y = H.paragraph(y, 'Segun PVGIS, el sistema producira unos '+fmtNum(pvEstadoPdf.anual,0)+' kWh al ano, con un maximo en '+MESES_LARGOS[pvEstadoPdf.mensual.indexOf(Math.max(...pvEstadoPdf.mensual))].toLowerCase()+' y un minimo en '+MESES_LARGOS[pvEstadoPdf.mensual.indexOf(Math.min(...pvEstadoPdf.mensual))].toLowerCase()+'.');
+    }
+    if(ecoPdf){
+      y = H.paragraph(y, 'Con la tarifa "'+(ecoPdf.P.tarifa?ecoPdf.P.tarifa.nombre:'personalizada')+'" y un '+fmtNum(ecoPdf.P.autoconsumo*100,0)+' % de autoconsumo, el ahorro neto del primer ano es de '+fmtNum(ecoPdf.netoAnual,0)+' EUR; '
+        + (ecoPdf.payback!==null ? 'la inversion de '+fmtNum(ecoPdf.inversion,0)+' EUR se recupera en '+fmtNum(ecoPdf.payback,1)+' anos' : 'la inversion de '+fmtNum(ecoPdf.inversion,0)+' EUR no se recupera dentro de la vida util considerada')
+        + ' y el beneficio neto acumulado en '+ecoPdf.P.vida+' anos es de '+fmtNum(ecoPdf.beneficioNeto,0)+' EUR.');
+    }
+
+    y = H.sectionTitle(y, '10.', 'Referencias', collect);
     const refs = [
       'PVGIS (Photovoltaic Geographical Information System). Comision Europea, Joint Research Centre.',
-      'PVGIS API - documentacion de parametros de entrada (lat, lon, peakpower, aspect, angle, userhorizon).',
+      'PVGIS API v5.3 - servicio PVcalc (lat, lon, peakpower, loss, aspect, angle, mountingplace, userhorizon, raddatabase).',
+      'Precios de la energia: config/tarifas.json ('+tarifasOrigen+').',
     ];
     refs.forEach((r,i)=>{ y = H.paragraph(y, (i+1)+'. '+r); });
   }
@@ -2483,7 +2593,7 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
   doc.setDrawColor(255,176,32); doc.setLineWidth(0.8); doc.line(marginX, cy+2, marginX+60, cy+2);
   cy+=16;
   doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(75,82,94);
-  doc.text('Diseno de sistema fotovoltaico - superficies, orientacion y sombras', marginX, cy); cy+=16;
+  doc.text('Diseno, produccion (PVGIS) y estudio economico del sistema fotovoltaico', marginX, cy); cy+=16;
   doc.setFontSize(10.5);
   [['Organizacion', orgNombre],['CIF', orgCif],['Destinatario', destNombre],['Autor', autor],['Fecha', fecha]].forEach(([k,v])=>{
     doc.setFont('times','italic'); doc.setTextColor(130,136,146); doc.text(k+':', marginX, cy);
@@ -2491,7 +2601,7 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
     cy+=7.5;
   });
   doc.setFont('times','italic'); doc.setFontSize(8.5); doc.setTextColor(150,155,163);
-  doc.text('Preparado para el calculo de energia generada y LCOE con la API de PVGIS', marginX, 274);
+  doc.text('Produccion estimada con la API de PVGIS (Comision Europea, JRC)', marginX, 274);
 
   doc.addPage();
   drawIndexPage('Indice', collectMeasure.toc.map(e=>({num:e.num, text:e.text, page:e.page+FRONT_PAGES})));
@@ -2552,6 +2662,843 @@ document.getElementById('btnPdf').addEventListener('click', async ()=>{
     btnPdf.textContent = textoOriginalBtn;
   }
 });
+</script>
+
+<!-- ===================== PRODUCCION (PVGIS) Y ESTUDIO ECONOMICO ===================== -->
+<script>
+// Cada superficie con paneles se envia al servicio PVcalc de PVGIS 5.3. Los resultados se
+// guardan por URL de consulta (que incluye todos los parametros): si el diseno cambia, la URL
+// cambia y la superficie queda "pendiente" hasta recalcular. La cache se persiste en
+// VatiaCo.<DOC_KEY_C01>.outputs.produccionPvgis para no repetir consultas al recargar.
+const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_LARGOS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_MES = [31,28,31,30,31,30,31,31,30,31,30,31];
+// Paleta categorica validada (orden fijo, nunca ciclico); a partir de la 8a superficie se
+// agrupan en "Otras superficies".
+const PV_COLORES = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6'];
+const PV_COLOR_OTRAS = '#8a94a3';
+const ECO_COLOR_NEG = '#eb6834', ECO_COLOR_POS = '#2a78d6';
+
+const PVGIS_ENDPOINT = 'https://re.jrc.ec.europa.eu/api/v5_3/PVcalc';
+const PROXIES_CORS_PVGIS = [
+  { nombre:'allorigins', construirUrl: (u)=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u) },
+  { nombre:'codetabs', construirUrl: (u)=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u) },
+];
+
+// Ruta relativa a esta pagina (/docs/A00_Blog_Interactivo/A01_FV/) -> /config/tarifas.json
+const TARIFAS_URL = '../../../config/tarifas.json';
+// Copia de respaldo por si el JSON no se puede leer (p. ej. pagina abierta como file://).
+const TARIFAS_RESPALDO = {
+  por_defecto: 'pvpc_2.0td',
+  tarifas: [
+    { id:'pvpc_2.0td', nombre:'PVPC 2.0TD (regulada)', periodos:{P1:0.19,P2:0.13,P3:0.09}, reparto_solar:{P1:0.40,P2:0.45,P3:0.15}, precio_excedentes_eur_kwh:0.05 },
+    { id:'libre_fijo', nombre:'Mercado libre - precio fijo 24 h', precio_energia_eur_kwh:0.15, precio_excedentes_eur_kwh:0.06 },
+  ],
+  parametros_economicos: { autoconsumo_pct:60, coste_instalacion_eur_wp:1.2, subvencion_eur:0, mantenimiento_eur_kwp_anio:12, degradacion_pct_anio:0.5, inflacion_energia_pct_anio:2, vida_util_anios:25 },
+};
+let tarifasConfig = TARIFAS_RESPALDO;
+let tarifasOrigen = 'valores de respaldo internos';
+
+let produccionCache = (function(){
+  const g = vatiacoLeer()[DOC_KEY_C01];
+  const c = g && g.outputs && g.outputs.produccionPvgis;
+  return (c && typeof c==='object') ? c : {};
+})();
+
+function numInput(id, def){
+  const el = document.getElementById(id);
+  const v = el ? parseFloat(String(el.value).replace(',','.')) : NaN;
+  return isFinite(v) ? v : def;
+}
+function normalizarAcimut(a){
+  let x = (((Number(a)||0) % 360) + 360) % 360;
+  if(x > 180) x -= 360;
+  return Math.round(x);
+}
+
+// Perfil de 16 muestras (-130..130 desde el Sur) -> userhorizon de PVGIS: 36 alturas cada 10
+// grados, empezando en el Norte y en sentido horario. Fuera del rango definido, 0 grados.
+function horizontePvgis(sombras){
+  const out = [];
+  for(let rumbo=0; rumbo<360; rumbo+=10){
+    const az = rumbo-180;
+    let v = 0;
+    if(az>=ACIMUT_SOMBRAS[0] && az<=ACIMUT_SOMBRAS[15]){
+      for(let i=0;i<15;i++){
+        const a0 = ACIMUT_SOMBRAS[i], a1 = ACIMUT_SOMBRAS[i+1];
+        if(az>=a0 && az<=a1){
+          const t = (az-a0)/(a1-a0);
+          v = (Number(sombras[i])||0) + ((Number(sombras[i+1])||0)-(Number(sombras[i])||0))*t;
+          break;
+        }
+      }
+    }
+    out.push(Math.round(v*10)/10);
+  }
+  return out;
+}
+
+function paramsPvgisSuperficie(s){
+  const c = s.config;
+  const npaneles = s.paneles.length*(c.rows||1)*(c.cols||1);
+  const kwp = npaneles*(c.potenciaW||0)/1000;
+  return {
+    lat: +Number(c.lat).toFixed(5), lon: +Number(c.lng).toFixed(5),
+    peakpower: +kwp.toFixed(3), kwp, npaneles,
+    aspect: normalizarAcimut(c.rotation),
+    angle: Math.max(0, Math.min(90, Math.round(Number(c.tilt)||0))),
+    mountingplace: (c.tipoEstructura||'coplanar')==='coplanar' ? 'building' : 'free',
+    loss: Math.max(0, Math.min(50, numInput('pv_perdidas', 14))),
+    pvtechchoice: document.getElementById('pv_tecnologia').value || 'crystSi',
+    raddatabase: document.getElementById('pv_basedatos').value || 'PVGIS-SARAH3',
+    userhorizon: horizontePvgis(c.sombras||[]),
+  };
+}
+function urlPvcalc(p){
+  const q = new URLSearchParams({
+    lat:p.lat, lon:p.lon, peakpower:p.peakpower, loss:p.loss, pvtechchoice:p.pvtechchoice,
+    mountingplace:p.mountingplace, angle:p.angle, aspect:p.aspect, raddatabase:p.raddatabase,
+    usehorizon:1, userhorizon:p.userhorizon.join(','), outputformat:'json',
+  });
+  return PVGIS_ENDPOINT+'?'+q.toString();
+}
+
+// ---------- Llamada a PVGIS con fallback CORS (mismo patron que C01_Estudio_Recurso_Eolico) ----------
+function fetchPvConTimeout(url, ms){
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), ms);
+  return fetch(url, {signal: ctl.signal}).finally(()=>clearTimeout(t));
+}
+async function intentarPvgis(url, ms){
+  const resp = await fetchPvConTimeout(url, ms);
+  const texto = await resp.text();
+  let json = null;
+  try{ json = JSON.parse(texto); }catch(e){}
+  if(!resp.ok){
+    const err = new Error('HTTP '+resp.status+': '+((json && json.message) || texto.slice(0,150) || '(sin cuerpo)'));
+    // Un 400 con mensaje JSON es un error real de PVGIS (p. ej. punto sin datos): no tiene
+    // sentido reintentarlo a traves de un proxy.
+    if(resp.status===400 && json && json.message) err.definitivo = true;
+    throw err;
+  }
+  if(!json) throw new Error('Respuesta no valida: '+(texto.slice(0,150)||'(vacia)'));
+  return json;
+}
+async function llamarPvgisConFallback(url){
+  const errores = [];
+  try{ return { json: await intentarPvgis(url, 25000), viaProxy:null }; }
+  catch(e){ if(e.definitivo) throw e; errores.push('directo: '+(e.message||'fallo de red')); }
+  for(const px of PROXIES_CORS_PVGIS){
+    try{ return { json: await intentarPvgis(px.construirUrl(url), 25000), viaProxy: px.nombre }; }
+    catch(e){ if(e.definitivo) throw e; errores.push(px.nombre+': '+(e.message||'fallo de red')); }
+  }
+  throw new Error('Sin respuesta de PVGIS ('+errores.join(' · ')+')');
+}
+function parsearPvcalc(json){
+  const out = json && json.outputs;
+  const m = out && out.monthly && out.monthly.fixed;
+  if(!Array.isArray(m) || m.length!==12) throw new Error((json && json.message) || 'La respuesta de PVGIS no trae datos mensuales');
+  const mensual = new Array(12).fill(0), irradiacion = new Array(12).fill(0);
+  m.forEach(r=>{ const i=(Number(r.month)||1)-1; mensual[i]=Number(r.E_m)||0; irradiacion[i]=Number(r['H(i)_m'])||0; });
+  const t = out.totals && out.totals.fixed;
+  const suma = mensual.reduce((a,b)=>a+b,0);
+  return {
+    mensual, irradiacion,
+    anual: (t && isFinite(Number(t.E_y))) ? Number(t.E_y) : suma,
+    perdidasTotalesPct: (t && isFinite(Number(t.l_total))) ? Number(t.l_total) : null,
+    fecha: new Date().toISOString(),
+  };
+}
+
+// ---------- Estado de la produccion ----------
+function estadoProduccion(){
+  const filas = installations.filter(s=>s.paneles.length>0).map((s,idx)=>{
+    const p = paramsPvgisSuperficie(s);
+    const url = p.peakpower>0 ? urlPvcalc(p) : null;
+    return { s, idx, p, url, datos: url ? (produccionCache[url]||null) : null };
+  });
+  const calculables = filas.filter(f=>f.url);
+  const conDatos = calculables.filter(f=>f.datos);
+  const mensual = new Array(12).fill(0);
+  conDatos.forEach(f=>f.datos.mensual.forEach((v,i)=>{ mensual[i]+=v; }));
+  return {
+    filas, mensual,
+    anual: mensual.reduce((a,b)=>a+b,0),
+    kwpTotal: filas.reduce((a,f)=>a+f.p.kwp,0),
+    completo: calculables.length>0 && conDatos.length===calculables.length,
+    nPendientes: calculables.length-conDatos.length,
+  };
+}
+function seriesProduccion(est){
+  const conDatos = est.filas.filter(f=>f.datos);
+  const series = conDatos.slice(0, PV_COLORES.length).map((f,i)=>({ nombre:f.s.config.nombreArea, color:PV_COLORES[i], valores:f.datos.mensual.slice() }));
+  const resto = conDatos.slice(PV_COLORES.length);
+  if(resto.length){
+    const v = new Array(12).fill(0);
+    resto.forEach(f=>f.datos.mensual.forEach((x,i)=>{ v[i]+=x; }));
+    series.push({ nombre:'Otras superficies ('+resto.length+')', color:PV_COLOR_OTRAS, valores:v });
+  }
+  return series;
+}
+
+function setEstadoPv(texto, esError){
+  const el = document.getElementById('pvEstado');
+  el.textContent = texto;
+  el.classList.toggle('error', !!esError);
+}
+function guardarProduccionEnVatiaco(est, eco){
+  const v = vatiacoLeer();
+  v[DOC_KEY_C01] = v[DOC_KEY_C01] || {};
+  v[DOC_KEY_C01].outputs = v[DOC_KEY_C01].outputs || {};
+  // Solo se conservan los resultados de las consultas vigentes del diseno actual.
+  const vigentes = {};
+  est.filas.forEach(f=>{ if(f.url && produccionCache[f.url]) vigentes[f.url] = produccionCache[f.url]; });
+  v[DOC_KEY_C01].outputs.produccionPvgis = vigentes;
+  v[DOC_KEY_C01].outputs.produccion = est.completo ? { anual_kWh: est.anual, mensual_kWh: est.mensual, kwp: est.kwpTotal } : null;
+  v[DOC_KEY_C01].outputs.economico = eco ? {
+    inversion_eur: eco.inversion, ahorro_anual_eur: eco.ahorroAnual, neto_anual_eur: eco.netoAnual,
+    amortizacion_anios: eco.payback, beneficio_neto_eur: eco.beneficioNeto, lcoe_eur_kwh: eco.lcoe,
+    tarifa: eco.P.tarifa ? eco.P.tarifa.id : null,
+  } : null;
+  vatiacoGuardar(v);
+}
+
+let promesaCalculoPv = null;
+async function calcularProduccion(opts){
+  opts = opts || {};
+  if(promesaCalculoPv) return promesaCalculoPv;
+  promesaCalculoPv = (async()=>{
+    const btn1 = document.getElementById('btnCalcularPvgis'), btn2 = document.getElementById('btnRecalcularPvgis');
+    btn1.disabled = btn2.disabled = true;
+    const errores = [];
+    try{
+      const est = estadoProduccion();
+      if(est.filas.length===0){ setEstadoPv('No hay superficies con paneles pintados.', true); return errores; }
+      const pendientes = est.filas.filter(f=>f.url && (opts.forzar || !f.datos));
+      const sinPotencia = est.filas.filter(f=>!f.url);
+      for(let k=0;k<pendientes.length;k++){
+        const f = pendientes[k];
+        setEstadoPv('Consultando PVGIS: '+f.s.config.nombreArea+' ('+(k+1)+'/'+pendientes.length+')…');
+        try{
+          const r = await llamarPvgisConFallback(f.url);
+          const d = parsearPvcalc(r.json);
+          d.viaProxy = r.viaProxy;
+          produccionCache[f.url] = d;
+        }catch(e){
+          errores.push(f.s.config.nombreArea+': '+(e.message||e));
+        }
+      }
+      sinPotencia.forEach(f=>errores.push(f.s.config.nombreArea+': potencia 0 kWp (revisa la potencia del panel)'));
+      renderProduccion();
+      if(errores.length) setEstadoPv('Errores — '+errores.join(' · '), true);
+      else setEstadoPv(pendientes.length ? 'Producción actualizada desde PVGIS ('+new Date().toLocaleTimeString('es-ES')+').' : 'La producción ya estaba calculada para el diseño actual.');
+    }finally{
+      btn1.disabled = btn2.disabled = false;
+    }
+    return errores;
+  })();
+  try{ return await promesaCalculoPv; }
+  finally{ promesaCalculoPv = null; }
+}
+
+// ---------- Tarifas ----------
+function precioEnergiaDeTarifa(t){
+  if(t && t.periodos && t.reparto_solar){
+    let s=0, w=0;
+    Object.keys(t.periodos).forEach(k=>{ const r = Number(t.reparto_solar[k])||0; s += (Number(t.periodos[k])||0)*r; w += r; });
+    if(w>0) return s/w;
+  }
+  return Number(t && t.precio_energia_eur_kwh)||0;
+}
+function tarifaSeleccionada(){
+  const id = document.getElementById('e_tarifa').value;
+  return (tarifasConfig.tarifas||[]).find(t=>t.id===id) || null;
+}
+function fijarYGuardar(id, valor){
+  const el = document.getElementById(id);
+  if(!el || valor===undefined || valor===null || !isFinite(valor)) return;
+  el.value = String(Math.round(valor*10000)/10000);
+  el.dispatchEvent(new Event('input', {bubbles:true}));
+}
+function aplicarTarifa(t, incluirParametros){
+  if(!t) return;
+  fijarYGuardar('e_precio', precioEnergiaDeTarifa(t));
+  fijarYGuardar('e_excedentes', Number(t.precio_excedentes_eur_kwh)||0);
+  if(incluirParametros){
+    const pe = tarifasConfig.parametros_economicos || {};
+    fijarYGuardar('e_autoconsumo', pe.autoconsumo_pct);
+    fijarYGuardar('e_coste_wp', pe.coste_instalacion_eur_wp);
+    fijarYGuardar('e_subvencion', pe.subvencion_eur);
+    fijarYGuardar('e_om', pe.mantenimiento_eur_kwp_anio);
+    fijarYGuardar('e_degradacion', pe.degradacion_pct_anio);
+    fijarYGuardar('e_inflacion', pe.inflacion_energia_pct_anio);
+    fijarYGuardar('e_vida', pe.vida_util_anios);
+  }
+}
+function describirTarifa(t){
+  const info = document.getElementById('e_tarifaInfo');
+  if(!t){ info.textContent = 'Tarifa personalizada.'; return; }
+  let txt = '';
+  if(t.periodos){
+    txt = Object.keys(t.periodos).map(k=>k+' '+fmtNum(t.periodos[k],3)+' €/kWh'+(t.reparto_solar&&t.reparto_solar[k]!=null?' ('+Math.round(t.reparto_solar[k]*100)+' % solar)':'')).join(' · ')+' → precio efectivo '+fmtNum(precioEnergiaDeTarifa(t),3)+' €/kWh. ';
+  } else {
+    txt = 'Energía '+fmtNum(precioEnergiaDeTarifa(t),3)+' €/kWh. ';
+  }
+  txt += 'Excedentes '+fmtNum(Number(t.precio_excedentes_eur_kwh)||0,3)+' €/kWh. Fuente: '+tarifasOrigen+'.';
+  info.textContent = txt;
+}
+async function cargarTarifas(){
+  try{
+    const r = await fetch(TARIFAS_URL, {cache:'no-cache'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    if(!Array.isArray(j.tarifas) || j.tarifas.length===0) throw new Error('sin tarifas');
+    tarifasConfig = j;
+    tarifasOrigen = 'config/tarifas.json'+(j.actualizado?' ('+j.actualizado+')':'');
+  }catch(e){
+    tarifasConfig = TARIFAS_RESPALDO;
+    tarifasOrigen = 'valores de respaldo internos (no se pudo leer config/tarifas.json: '+(e.message||e)+')';
+  }
+  const sel = document.getElementById('e_tarifa');
+  sel.innerHTML = tarifasConfig.tarifas.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.nombre||t.id)+'</option>').join('');
+  const g = vatiacoLeer()[DOC_KEY_C01];
+  const guardada = g && g.inputs && g.inputs.e_tarifa;
+  if(guardada && tarifasConfig.tarifas.some(t=>t.id===guardada)){
+    sel.value = guardada;
+  } else {
+    // Primera visita (o tarifa guardada que ya no existe): tarifa y parametros por defecto del JSON.
+    sel.value = tarifasConfig.tarifas.some(t=>t.id===tarifasConfig.por_defecto) ? tarifasConfig.por_defecto : tarifasConfig.tarifas[0].id;
+    sel.dispatchEvent(new Event('change', {bubbles:true}));
+    aplicarTarifa(tarifaSeleccionada(), !guardada);
+  }
+  describirTarifa(tarifaSeleccionada());
+  renderProduccion();
+}
+
+// ---------- Estudio economico ----------
+function leerParamsEconomicos(){
+  return {
+    tarifa: tarifaSeleccionada(),
+    precio: Math.max(0, numInput('e_precio',0)),
+    excedentes: Math.max(0, numInput('e_excedentes',0)),
+    autoconsumo: Math.min(100, Math.max(0, numInput('e_autoconsumo',60)))/100,
+    costeWp: Math.max(0, numInput('e_coste_wp',0)),
+    subvencion: Math.max(0, numInput('e_subvencion',0)),
+    om: Math.max(0, numInput('e_om',0)),
+    degradacion: Math.min(0.2, Math.max(0, numInput('e_degradacion',0)/100)),
+    inflacion: numInput('e_inflacion',0)/100,
+    vida: Math.max(1, Math.min(40, Math.round(numInput('e_vida',25)))),
+  };
+}
+function calcularEstudioEconomico(est){
+  if(!est || !est.completo || !(est.anual>0)) return null;
+  const P = leerParamsEconomicos();
+  const inversionBruta = est.kwpTotal*1000*P.costeWp;
+  const inversion = Math.max(0, inversionBruta-P.subvencion);
+  const anios = [];
+  let acum = -inversion, payback = inversion===0 ? 0 : null, energiaTotal = 0, omTotal = 0;
+  for(let y=1; y<=P.vida; y++){
+    const E = est.anual*Math.pow(1-P.degradacion, y-1);
+    const fp = Math.pow(1+P.inflacion, y-1);
+    const eAuto = E*P.autoconsumo, eExc = E-eAuto;
+    const ahorro = (eAuto*P.precio + eExc*P.excedentes)*fp;
+    const om = P.om*est.kwpTotal*fp;
+    const neto = ahorro-om;
+    const previo = acum;
+    acum += neto;
+    if(payback===null && previo<0 && acum>=0 && neto>0) payback = (y-1) + (-previo)/neto;
+    energiaTotal += E; omTotal += om;
+    anios.push({ anio:y, energia:E, eAuto, eExc, ahorro, om, neto, acumulado:acum });
+  }
+  const a1 = anios[0];
+  return {
+    P, inversionBruta, inversion, anios, payback,
+    ahorroAnual: a1.ahorro, netoAnual: a1.neto,
+    ahorroAutoconsumo: a1.eAuto*P.precio, ingresoExcedentes: a1.eExc*P.excedentes,
+    beneficioNeto: acum,
+    lcoe: energiaTotal>0 ? (inversion+omTotal)/energiaTotal : null,
+    roiPct: inversion>0 ? acum/inversion*100 : null,
+  };
+}
+
+// ---------- Graficos SVG (pantalla) ----------
+function escalaBonita(v){
+  if(!(v>0)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for(const m of [1,1.2,1.5,2,2.5,3,4,5,6,8,10]) if(m*p>=v) return m*p;
+  return 10*p;
+}
+// Barra con extremo superior redondeado (4px) y base recta anclada al eje.
+function pathBarra(x, y, w, h, r, arriba){
+  r = Math.min(r, w/2, h);
+  if(h<=0) return '';
+  if(arriba) return 'M'+x+','+(y+h)+'V'+(y+r)+'Q'+x+','+y+' '+(x+r)+','+y+'H'+(x+w-r)+'Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+'V'+(y+h)+'Z';
+  return 'M'+x+','+y+'V'+(y+h-r)+'Q'+x+','+(y+h)+' '+(x+r)+','+(y+h)+'H'+(x+w-r)+'Q'+(x+w)+','+(y+h)+' '+(x+w)+','+(y+h-r)+'V'+y+'Z';
+}
+const pvTips = [];
+function registrarTip(html){ pvTips.push(html); return pvTips.length-1; }
+
+function svgProduccionMensual(est){
+  const series = seriesProduccion(est);
+  const W=820, H=320, padL=64, padR=14, padT=14, padB=36;
+  const cw=W-padL-padR, ch=H-padT-padB;
+  const totales = new Array(12).fill(0);
+  series.forEach(sr=>sr.valores.forEach((v,i)=>{ totales[i]+=v; }));
+  const max = escalaBonita(Math.max(...totales));
+  const yDe = v => padT+ch-(v/max)*ch;
+  let s = '';
+  for(let k=0;k<=4;k++){
+    const v = max*k/4, gy = yDe(v);
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="'+(k===0?'#c9d0da':'#e3e7ed')+'" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="11" fill="#7b8696">'+fmtNum(v,0)+'</text>';
+  }
+  s += '<text x="14" y="'+(padT+ch/2)+'" transform="rotate(-90 14 '+(padT+ch/2)+')" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#7b8696">kWh</text>';
+  const step = cw/12, bw = Math.min(40, step*0.6);
+  for(let i=0;i<12;i++){
+    const bx = padL+i*step+(step-bw)/2;
+    let base = 0;
+    const visibles = series.filter(sr=>sr.valores[i]>0);
+    visibles.forEach((sr, j)=>{
+      const v = sr.valores[i];
+      const y0 = yDe(base+v), h = yDe(base)-y0;
+      const arriba = j===visibles.length-1;
+      // 2px de separacion (color de fondo) entre segmentos apilados
+      const hDib = arriba ? h : Math.max(0, h-2);
+      const yDib = arriba ? y0 : y0+2;
+      if(arriba) s += '<path d="'+pathBarra(bx, yDib, bw, hDib, 4, true)+'" fill="'+sr.color+'"/>';
+      else s += '<rect x="'+bx+'" y="'+yDib+'" width="'+bw+'" height="'+hDib+'" fill="'+sr.color+'"/>';
+      base += v;
+    });
+    s += '<text x="'+(bx+bw/2)+'" y="'+(H-padB+18)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+MESES_CORTOS[i]+'</text>';
+    const filasTip = series.filter(sr=>sr.valores[i]>0).slice().reverse().map(sr=>'<div class="r"><span><span class="pv-sw" style="background:'+sr.color+'"></span>'+esc(trunc(sr.nombre,22))+'</span><b>'+fmtNum(sr.valores[i],0)+'</b></div>').join('');
+    const idx = registrarTip('<div class="t">'+MESES_LARGOS[i]+' · kWh</div>'+filasTip+(series.length>1?'<div class="r" style="border-top:1px solid #eceff4;margin-top:4px;padding-top:4px;"><span>Total</span><b>'+fmtNum(totales[i],0)+'</b></div>':''));
+    s += '<rect class="pv-hit" data-tip="'+idx+'" x="'+(padL+i*step)+'" y="'+padT+'" width="'+step+'" height="'+ch+'" fill="transparent"/>';
+  }
+  return { svg:'<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Producción mensual estimada por superficie">'+s+'</svg>', series };
+}
+
+function svgFlujoCaja(eco){
+  const W=820, H=300, padL=78, padR=14, padT=22, padB=36;
+  const cw=W-padL-padR, ch=H-padT-padB;
+  const vals = [-eco.inversion].concat(eco.anios.map(a=>a.acumulado));
+  let vMax = Math.max(0, ...vals), vMin = Math.min(0, ...vals);
+  const rango = escalaBonita(Math.max(vMax-vMin, 1));
+  // Ajusta los limites a multiplos de un paso "bonito"
+  const paso = escalaBonita(rango/5);
+  vMax = Math.ceil(vMax/paso)*paso; vMin = Math.floor(vMin/paso)*paso;
+  if(vMax===vMin) vMax = vMin+paso;
+  const yDe = v => padT+(vMax-v)/(vMax-vMin)*ch;
+  let s = '';
+  for(let v=vMin; v<=vMax+1e-9; v+=paso){
+    const gy = yDe(v);
+    s += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="'+(Math.abs(v)<1e-9?'#9aa3ae':'#e3e7ed')+'" stroke-width="1"/>';
+    s += '<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" font-family="IBM Plex Mono" font-size="11" fill="#7b8696">'+fmtNum(v,0)+'</text>';
+  }
+  const n = vals.length, step = cw/n, bw = Math.max(3, Math.min(22, step*0.62));
+  const y0 = yDe(0);
+  vals.forEach((v,i)=>{
+    const bx = padL+i*step+(step-bw)/2;
+    const yv = yDe(v);
+    const color = v<0 ? ECO_COLOR_NEG : ECO_COLOR_POS;
+    if(v>=0) s += '<path d="'+pathBarra(bx, yv, bw, y0-yv, 4, true)+'" fill="'+color+'"/>';
+    else s += '<path d="'+pathBarra(bx, y0, bw, yv-y0, 4, false)+'" fill="'+color+'"/>';
+    if(i===0 || i%5===0 || i===n-1) s += '<text x="'+(bx+bw/2)+'" y="'+(H-padB+18)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4f5b6d">'+i+'</text>';
+    const a = i>0 ? eco.anios[i-1] : null;
+    const idx = registrarTip(i===0
+      ? '<div class="t">Año 0 · inversión</div><div class="r"><span>Acumulado</span><b>'+fmtNum(v,0)+' €</b></div>'
+      : '<div class="t">Año '+i+'</div><div class="r"><span>Producción</span><b>'+fmtNum(a.energia,0)+' kWh</b></div><div class="r"><span>Ahorro</span><b>'+fmtNum(a.ahorro,0)+' €</b></div><div class="r"><span>Mantenimiento</span><b>−'+fmtNum(a.om,0)+' €</b></div><div class="r"><span>Acumulado</span><b>'+fmtNum(a.acumulado,0)+' €</b></div>');
+    s += '<rect class="pv-hit" data-tip="'+idx+'" x="'+(padL+i*step)+'" y="'+padT+'" width="'+step+'" height="'+ch+'" fill="transparent"/>';
+  });
+  s += '<text x="'+(padL+cw/2)+'" y="'+(H-4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#7b8696">año</text>';
+  if(eco.payback!==null && eco.payback>0){
+    const xp = padL+(eco.payback+0.5)*step;
+    s += '<line x1="'+xp+'" y1="'+padT+'" x2="'+xp+'" y2="'+(padT+ch)+'" stroke="#1c2735" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    const anchor = xp > W-160 ? 'end' : 'start';
+    s += '<text x="'+(xp+(anchor==='start'?6:-6))+'" y="'+(padT+2)+'" text-anchor="'+anchor+'" font-family="IBM Plex Mono" font-size="11.5" fill="#1c2735">amortización: '+fmtNum(eco.payback,1)+' años</text>';
+  }
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Flujo de caja acumulado">'+s+'</svg>';
+}
+
+// ---------- Render de la pestana ----------
+function renderProduccion(){
+  if(!document.getElementById('pvKpis')) return;
+  pvTips.length = 0;
+  const est = estadoProduccion();
+  const eco = calcularEstudioEconomico(est);
+  const kpis = document.getElementById('pvKpis');
+  const chip = (v,l)=>'<div class="stat-chip"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>';
+
+  if(est.filas.length===0){
+    kpis.innerHTML = '';
+    document.getElementById('pvLeyenda').innerHTML = '';
+    document.getElementById('pvChartMensual').innerHTML = '<div class="empty-state">Pinta al menos un panel en la pestaña Simulación.</div>';
+    document.getElementById('pvTablas').innerHTML = '';
+    document.getElementById('ecoChart').innerHTML = '<div class="empty-state">Sin superficies.</div>';
+    document.getElementById('ecoTabla').innerHTML = '';
+    guardarProduccionEnVatiaco(est, null);
+    return;
+  }
+
+  let k = chip(fmtNum(est.kwpTotal,2)+' kWp','potencia instalada');
+  if(est.completo){
+    k += chip(fmtNum(est.anual,0)+' kWh','producción anual (PVGIS)');
+    k += chip(fmtNum(est.anual/est.kwpTotal,0),'kWh/kWp · producción específica');
+  } else {
+    k += chip(est.nPendientes+' / '+est.filas.length,'superficies pendientes de calcular');
+  }
+  if(eco){
+    k += chip(fmtNum(eco.netoAnual,0)+' €','ahorro neto año 1');
+    k += chip(fmtNum(eco.inversion,0)+' €','inversión');
+    k += chip(eco.payback!==null ? fmtNum(eco.payback,1)+' años' : '> '+eco.P.vida+' años','amortización');
+    k += chip(fmtNum(eco.beneficioNeto,0)+' €','beneficio neto en '+eco.P.vida+' años');
+    if(eco.lcoe!==null) k += chip(fmtNum(eco.lcoe,3)+' €/kWh','LCOE');
+  }
+  kpis.innerHTML = k;
+
+  // Via manual: enlaces a la consulta de cada superficie pendiente + carga de los JSON
+  const manual = document.getElementById('pvManual');
+  const pendientes = est.filas.filter(f=>f.url && !f.datos);
+  if(pendientes.length){
+    manual.style.display = 'block';
+    manual.innerHTML = '<b>Vía manual</b> (si la llamada automática falla por CORS o por los proxies): para cada superficie, abre el enlace, copia todo el JSON (<b>Ctrl+A</b>, <b>Ctrl+C</b>), vuelve a esta pestaña y pulsa <b>Ctrl+V</b>. Se guarda en la memoria del navegador y se recalcula todo. En Firefox usa la vista «Datos sin procesar» › «Copiar».'+
+      '<ol>'+pendientes.map(f=>'<li>'+esc(f.s.config.nombreArea)+' — <a class="pv-enlace-manual" href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir consulta PVGIS ↗</a></li>').join('')+'</ol>'+
+      '<div class="btn-row"><button class="btn ghost" id="btnPegarJsonPvgis" type="button">📋 Pegar del portapapeles</button>'+
+      '<button class="btn ghost" id="btnCargarJsonPvgis" type="button">⬆ Cargar archivos .json</button></div>';
+  } else {
+    manual.style.display = 'none';
+    manual.innerHTML = '';
+  }
+
+  // Grafico mensual
+  const chartEl = document.getElementById('pvChartMensual');
+  const leyenda = document.getElementById('pvLeyenda');
+  if(est.filas.some(f=>f.datos)){
+    const g = svgProduccionMensual(est);
+    chartEl.innerHTML = '<div class="pv-chart">'+g.svg+'</div>'+(est.completo?'':'<p class="hint" style="margin-top:8px;color:var(--amber);">Faltan '+est.nPendientes+' superficie(s) por calcular o con datos desactualizados: el gráfico solo muestra las calculadas.</p>');
+    leyenda.innerHTML = g.series.length>1 ? g.series.map(sr=>'<span><span class="pv-sw" style="background:'+sr.color+'"></span>'+esc(sr.nombre)+'</span>').join('') : '';
+  } else {
+    chartEl.innerHTML = '<div class="empty-state">Pulsa «Calcular producción con PVGIS» para ver la producción mensual.</div>';
+    leyenda.innerHTML = '';
+  }
+
+  // Tablas de produccion
+  let t = '<div class="subsection-title">Por superficie</div><div class="pv-tabla-wrap"><table class="data-table"><thead><tr><th>Superficie</th><th class="num">kWp</th><th class="num">Acimut</th><th class="num">Inclin.</th><th>Montaje</th><th class="num">kWh/año</th><th class="num">kWh/kWp</th><th>Estado</th></tr></thead><tbody>';
+  est.filas.forEach(f=>{
+    t += '<tr><td>'+esc(f.s.config.nombreArea)+'</td><td class="num">'+fmtNum(f.p.kwp,2)+'</td><td class="num">'+f.p.aspect+'°</td><td class="num">'+f.p.angle+'°</td><td>'+(f.p.mountingplace==='building'?'integrado':'libre')+'</td>'+
+      '<td class="num">'+(f.datos?fmtNum(f.datos.anual,0):'—')+'</td><td class="num">'+(f.datos&&f.p.kwp>0?fmtNum(f.datos.anual/f.p.kwp,0):'—')+'</td>'+
+      '<td>'+(f.datos?'<span class="ok">✓ calculada</span>'+(f.datos.viaProxy?' <span class="badge" title="La llamada directa fue bloqueada por CORS">vía '+esc(f.datos.viaProxy)+'</span>':''):(f.url?'<span class="pend">● pendiente</span>':'<span class="pend">0 kWp</span>'))+'</td></tr>';
+  });
+  t += '</tbody></table></div>';
+  if(est.filas.some(f=>f.datos)){
+    const series = seriesProduccion(est);
+    t += '<div class="subsection-title">Mensual (kWh)</div><div class="pv-tabla-wrap"><table class="data-table"><thead><tr><th>Mes</th>'+series.map(sr=>'<th class="num">'+esc(trunc(sr.nombre,18))+'</th>').join('')+'<th class="num">Total</th></tr></thead><tbody>';
+    est.mensual.forEach((v,i)=>{ t += '<tr><td>'+MESES_LARGOS[i]+'</td>'+series.map(sr=>'<td class="num">'+fmtNum(sr.valores[i],0)+'</td>').join('')+'<td class="num">'+fmtNum(v,0)+'</td></tr>'; });
+    t += '<tr class="total"><td>Año</td>'+series.map(sr=>'<td class="num">'+fmtNum(sr.valores.reduce((a,b)=>a+b,0),0)+'</td>').join('')+'<td class="num">'+fmtNum(est.anual,0)+'</td></tr></tbody></table></div>';
+  }
+  document.getElementById('pvTablas').innerHTML = t;
+
+  // Estudio economico
+  const ecoChart = document.getElementById('ecoChart');
+  const ecoTabla = document.getElementById('ecoTabla');
+  if(eco){
+    ecoChart.innerHTML = '<div class="pv-chart">'+svgFlujoCaja(eco)+'</div><div class="pv-legend" style="margin-top:6px;"><span><span class="pv-sw" style="background:'+ECO_COLOR_NEG+'"></span>inversión no recuperada</span><span><span class="pv-sw" style="background:'+ECO_COLOR_POS+'"></span>beneficio acumulado</span></div>';
+    let et = '<table class="data-table" style="margin-bottom:12px;"><tbody>'+
+      '<tr><td>Inversión (bruta − subvenciones)</td><td class="num">'+fmtNum(eco.inversionBruta,0)+' − '+fmtNum(eco.P.subvencion,0)+' = '+fmtNum(eco.inversion,0)+' €</td></tr>'+
+      '<tr><td>Ahorro por autoconsumo (año 1)</td><td class="num">'+fmtNum(eco.ahorroAutoconsumo,0)+' €</td></tr>'+
+      '<tr><td>Compensación de excedentes (año 1)</td><td class="num">'+fmtNum(eco.ingresoExcedentes,0)+' €</td></tr>'+
+      '<tr><td>Mantenimiento (año 1)</td><td class="num">−'+fmtNum(eco.anios[0].om,0)+' €</td></tr>'+
+      '<tr class="total"><td>Ahorro neto año 1</td><td class="num">'+fmtNum(eco.netoAnual,0)+' €</td></tr>'+
+      '<tr><td>Rentabilidad sobre la inversión ('+eco.P.vida+' años)</td><td class="num">'+(eco.roiPct!==null?fmtNum(eco.roiPct,0)+' %':'—')+'</td></tr>'+
+      '</tbody></table>';
+    et += '<div class="pv-tabla-wrap"><table class="data-table"><thead><tr><th>Año</th><th class="num">Producción (kWh)</th><th class="num">Ahorro (€)</th><th class="num">Mant. (€)</th><th class="num">Neto (€)</th><th class="num">Acumulado (€)</th></tr></thead><tbody>';
+    eco.anios.forEach(a=>{ et += '<tr><td>'+a.anio+'</td><td class="num">'+fmtNum(a.energia,0)+'</td><td class="num">'+fmtNum(a.ahorro,0)+'</td><td class="num">'+fmtNum(a.om,0)+'</td><td class="num">'+fmtNum(a.neto,0)+'</td><td class="num">'+fmtNum(a.acumulado,0)+'</td></tr>'; });
+    et += '</tbody></table></div>';
+    ecoTabla.innerHTML = et;
+  } else {
+    ecoChart.innerHTML = '<div class="empty-state">El estudio económico aparece cuando todas las superficies tienen producción calculada.</div>';
+    ecoTabla.innerHTML = '';
+  }
+  guardarProduccionEnVatiaco(est, eco);
+}
+
+// ---------- Tooltip compartido ----------
+(function(){
+  const tip = document.createElement('div');
+  tip.className = 'pv-tip';
+  document.body.appendChild(tip);
+  const sec = document.getElementById('produccion');
+  sec.addEventListener('mousemove', (e)=>{
+    const hit = e.target.closest && e.target.closest('[data-tip]');
+    if(!hit){ tip.style.display='none'; return; }
+    const html = pvTips[Number(hit.getAttribute('data-tip'))];
+    if(html===undefined){ tip.style.display='none'; return; }
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX+14, y = e.clientY+14;
+    if(x+r.width > window.innerWidth-8) x = e.clientX-r.width-14;
+    if(y+r.height > window.innerHeight-8) y = e.clientY-r.height-14;
+    tip.style.left = Math.max(8,x)+'px'; tip.style.top = Math.max(8,y)+'px';
+  });
+  sec.addEventListener('mouseleave', ()=>{ tip.style.display='none'; });
+})();
+
+// ---------- Via manual: asigna cada JSON de PVGIS a la superficie pendiente cuyos parametros coinciden ----------
+function asignarJsonManual(json){
+  const inp = json && json.inputs;
+  if(!inp || !inp.location || !inp.mounting_system || !inp.mounting_system.fixed || !inp.pv_module) throw new Error('no parece una respuesta PVcalc de PVGIS');
+  const lat = Number(inp.location.latitude), lon = Number(inp.location.longitude);
+  const pk = Number(inp.pv_module.peak_power);
+  const slope = Number(inp.mounting_system.fixed.slope && inp.mounting_system.fixed.slope.value);
+  const azi = Number(inp.mounting_system.fixed.azimuth && inp.mounting_system.fixed.azimuth.value);
+  const est = estadoProduccion();
+  const f = est.filas.find(f=>f.url && !f.datos &&
+    Math.abs(f.p.lat-lat)<5e-4 && Math.abs(f.p.lon-lon)<5e-4 && Math.abs(f.p.peakpower-pk)<0.01 &&
+    Math.round(slope)===f.p.angle && normalizarAcimut(azi)===f.p.aspect);
+  if(!f) throw new Error('no coincide con ninguna superficie pendiente (lat '+lat+', lon '+lon+', '+pk+' kWp)');
+  const d = parsearPvcalc(json);
+  d.viaProxy = 'manual';
+  produccionCache[f.url] = d;
+  return f.s.config.nombreArea;
+}
+// Pegar el JSON copiado de la pestana de PVGIS: se asigna a su superficie, se guarda en
+// localStorage (via renderProduccion -> guardarProduccionEnVatiaco) y se recalcula todo.
+function procesarTextoPvgis(texto, silencioso){
+  texto = String(texto||'').trim();
+  if(!texto.startsWith('{') || texto.indexOf('"outputs"')<0){
+    if(!silencioso) setEstadoPv('El portapapeles no contiene una respuesta JSON de PVGIS. Copia todo el texto de la consulta (Ctrl+A, Ctrl+C).', true);
+    return false;
+  }
+  let nombre;
+  try{ nombre = asignarJsonManual(JSON.parse(texto)); }
+  catch(err){
+    if(!silencioso || !/coincide/.test(err.message||'')) setEstadoPv('No se pudo usar el JSON pegado: '+(err.message||err), true);
+    return false;
+  }
+  renderProduccion();
+  const est = estadoProduccion();
+  if(est.completo){ setEstadoPv('Producción de «'+nombre+'» guardada. Todas las superficies calculadas: producción y estudio económico actualizados.'); showToast('Producción completa y estudio económico recalculado.'); }
+  else { setEstadoPv('Producción de «'+nombre+'» guardada. Faltan '+est.nPendientes+' superficie(s).'); showToast('«'+nombre+'» guardada · faltan '+est.nPendientes); }
+  return true;
+}
+document.getElementById('pvManual').addEventListener('click', (e)=>{
+  const t = e.target;
+  if(!t) return;
+  if(t.id==='btnCargarJsonPvgis') document.getElementById('pvJsonManual').click();
+  else if(t.id==='btnPegarJsonPvgis'){
+    if(!navigator.clipboard || !navigator.clipboard.readText){ setEstadoPv('Este navegador no permite leer el portapapeles desde un botón: pulsa Ctrl+V en esta página.', true); return; }
+    navigator.clipboard.readText().then(tx=>procesarTextoPvgis(tx, false)).catch(()=>setEstadoPv('Sin permiso para leer el portapapeles: pulsa Ctrl+V en esta página.', true));
+  }
+  else if(t.classList && t.classList.contains('pv-enlace-manual')) esperandoPegadoPvgis = true;
+});
+// Ctrl+V en cualquier parte de la pestana (salvo dentro de un campo de texto)
+document.addEventListener('paste', (e)=>{
+  const sec = document.getElementById('produccion');
+  if(!sec.classList.contains('tab-active')) return;
+  const tg = e.target;
+  if(tg && (tg.tagName==='INPUT' || tg.tagName==='TEXTAREA' || tg.isContentEditable)) return;
+  const tx = e.clipboardData && e.clipboardData.getData('text');
+  if(!tx) return;
+  e.preventDefault();
+  procesarTextoPvgis(tx, false);
+});
+// Al volver a esta pestana tras abrir un enlace, se intenta leer el portapapeles (solo si el
+// navegador ya concedio el permiso; si no, no molesta y basta con Ctrl+V).
+let esperandoPegadoPvgis = false;
+window.addEventListener('focus', ()=>{
+  if(!esperandoPegadoPvgis || !navigator.clipboard || !navigator.clipboard.readText || !navigator.permissions) return;
+  navigator.permissions.query({name:'clipboard-read'}).then(st=>{
+    if(st.state!=='granted') return;
+    return navigator.clipboard.readText().then(tx=>{ if(procesarTextoPvgis(tx, true)) esperandoPegadoPvgis = estadoProduccion().nPendientes>0; });
+  }).catch(()=>{});
+});
+document.getElementById('pvJsonManual').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files||[]);
+  e.target.value = '';
+  const ok = [], errores = [];
+  for(const file of files){
+    try{ ok.push(asignarJsonManual(JSON.parse(await file.text()))); }
+    catch(err){ errores.push(file.name+': '+(err.message||err)); }
+  }
+  renderProduccion();
+  if(errores.length) setEstadoPv((ok.length?'Cargadas: '+ok.join(', ')+'. ':'')+'Errores — '+errores.join(' · '), true);
+  else setEstadoPv('Producción cargada manualmente: '+ok.join(', ')+'.');
+});
+
+// ---------- Eventos ----------
+document.getElementById('btnCalcularPvgis').addEventListener('click', ()=>calcularProduccion());
+document.getElementById('btnRecalcularPvgis').addEventListener('click', ()=>calcularProduccion({forzar:true}));
+document.getElementById('e_tarifa').addEventListener('change', ()=>{ aplicarTarifa(tarifaSeleccionada(), false); describirTarifa(tarifaSeleccionada()); renderProduccion(); });
+document.getElementById('btnAplicarTarifa').addEventListener('click', ()=>{ aplicarTarifa(tarifaSeleccionada(), true); renderProduccion(); showToast('Valores de la tarifa y parámetros por defecto restablecidos.'); });
+['pv_perdidas','pv_tecnologia','pv_basedatos','e_precio','e_excedentes','e_autoconsumo','e_coste_wp','e_subvencion','e_om','e_degradacion','e_inflacion','e_vida'].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener(el.tagName==='SELECT'?'change':'input', ()=>renderProduccion());
+});
+
+// ---------- Secciones del PDF (7: produccion, 8: estudio economico) ----------
+function hexRgb(h){ const n = parseInt(h.slice(1),16); return [(n>>16)&255, (n>>8)&255, n&255]; }
+
+function pdfBarrasMensuales(doc, H, y, est, ctx){
+  const w = ctx.pageW-2*ctx.marginX, h = 72;
+  y = H.checkPage(y, h+20);
+  const x0 = ctx.marginX, y0 = y, padL=16, padR=4, padT=6, padB=10;
+  const cw = w-padL-padR, ch = h-padT-padB;
+  const series = seriesProduccion(est);
+  const max = escalaBonita(Math.max(...est.mensual));
+  doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,w,h);
+  for(let k=0;k<=4;k++){
+    const v = max*k/4, gy = y0+padT+ch-ch*k/4;
+    doc.setDrawColor(230,232,236); doc.setLineWidth(0.12); doc.line(x0+padL,gy,x0+w-padR,gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(140,145,152);
+    doc.text(fmtNum(v,0), x0+padL-1.5, gy+1, {align:'right'});
+  }
+  const step = cw/12, bw = step*0.6;
+  for(let i=0;i<12;i++){
+    let base = y0+padT+ch;
+    const bx = x0+padL+i*step+(step-bw)/2;
+    series.forEach(sr=>{
+      const bh = sr.valores[i]/max*ch;
+      if(bh>0){ doc.setFillColor(...hexRgb(sr.color)); doc.rect(bx, base-bh+0.25, bw, Math.max(bh-0.5,0.1), 'F'); }
+      base -= bh;
+    });
+    doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(90,96,106);
+    doc.text(MESES_CORTOS[i], bx+bw/2, y0+h-4, {align:'center'});
+  }
+  doc.setFontSize(5.5); doc.setTextColor(140,145,152);
+  doc.text('kWh', x0+2, y0+padT-1.5);
+  let lx = x0, ly = y0+h+5;
+  doc.setFontSize(6.5);
+  series.forEach(sr=>{
+    const label = trunc(sr.nombre, 30);
+    const tw = doc.getTextWidth(label)+6;
+    if(lx+tw > x0+w){ lx = x0; ly += 4.5; }
+    doc.setFillColor(...hexRgb(sr.color)); doc.rect(lx, ly-2.5, 3, 3, 'F');
+    doc.setTextColor(60,66,76); doc.text(label, lx+4.2, ly);
+    lx += tw+5;
+  });
+  return ly+6;
+}
+
+function pdfFlujoCaja(doc, H, y, eco, ctx){
+  const w = ctx.pageW-2*ctx.marginX, h = 66;
+  y = H.checkPage(y, h+12);
+  const x0 = ctx.marginX, y0 = y, padL=20, padR=4, padT=6, padB=10;
+  const cw = w-padL-padR, ch = h-padT-padB;
+  const vals = [-eco.inversion].concat(eco.anios.map(a=>a.acumulado));
+  let vMax = Math.max(0, ...vals), vMin = Math.min(0, ...vals);
+  const paso = escalaBonita(Math.max(vMax-vMin,1)/5);
+  vMax = Math.ceil(vMax/paso)*paso; vMin = Math.floor(vMin/paso)*paso;
+  if(vMax===vMin) vMax = vMin+paso;
+  const yDe = v => y0+padT+(vMax-v)/(vMax-vMin)*ch;
+  doc.setDrawColor(215,215,220); doc.setLineWidth(0.2); doc.rect(x0,y0,w,h);
+  for(let v=vMin; v<=vMax+1e-9; v+=paso){
+    const gy = yDe(v);
+    if(Math.abs(v)<1e-9){ doc.setDrawColor(150,156,166); doc.setLineWidth(0.25); } else { doc.setDrawColor(230,232,236); doc.setLineWidth(0.12); }
+    doc.line(x0+padL, gy, x0+w-padR, gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(140,145,152);
+    doc.text(fmtNum(v,0), x0+padL-1.5, gy+1, {align:'right'});
+  }
+  const n = vals.length, step = cw/n, bw = step*0.6, yc = yDe(0);
+  vals.forEach((v,i)=>{
+    const bx = x0+padL+i*step+(step-bw)/2, yv = yDe(v);
+    doc.setFillColor(...hexRgb(v<0?ECO_COLOR_NEG:ECO_COLOR_POS));
+    doc.rect(bx, Math.min(yv,yc), bw, Math.max(Math.abs(yc-yv),0.2), 'F');
+    if(i===0 || i%5===0 || i===n-1){ doc.setFontSize(5.5); doc.setTextColor(90,96,106); doc.text(String(i), bx+bw/2, y0+h-4, {align:'center'}); }
+  });
+  if(eco.payback!==null && eco.payback>0){
+    const xp = x0+padL+(eco.payback+0.5)*step;
+    doc.setDrawColor(28,39,53); doc.setLineWidth(0.3); doc.setLineDashPattern([1.2,1], 0);
+    doc.line(xp, y0+padT, xp, y0+padT+ch);
+    doc.setLineDashPattern([], 0);
+    doc.setFontSize(6.5); doc.setTextColor(28,39,53);
+    const derecha = xp > x0+w-45;
+    doc.text('amortizacion: '+fmtNum(eco.payback,1)+' anos', derecha?xp-1.5:xp+1.5, y0+padT+2.5, {align: derecha?'right':'left'});
+  }
+  doc.setFontSize(5.5); doc.setTextColor(140,145,152);
+  doc.text('EUR', x0+2, y0+padT-1.5);
+  doc.text('ano', x0+padL+cw/2, y0+h-0.8, {align:'center'});
+  return y0+h+6;
+}
+
+function pdfProduccionYEconomia(doc, H, y, collect, ctx){
+  const est = ctx.est, eco = ctx.eco, marginX = ctx.marginX;
+  y = H.sectionTitle(y, '7.', 'Produccion estimada (PVGIS)', collect);
+  if(!est.completo){
+    y = H.paragraph(y, 'No se pudo obtener la produccion de todas las superficies desde la API de PVGIS al generar este informe (fallo de red, del servicio PVGIS o de los proxies CORS, o superficie sin datos de radiacion). Repite el calculo en la pestana "Produccion y ahorro" y vuelve a generar el informe.');
+    y = H.sectionTitle(y, '8.', 'Estudio economico', collect);
+    y = H.paragraph(y, 'El estudio economico necesita la produccion de todas las superficies, por lo que no se incluye en esta version del informe.');
+    return y;
+  }
+  const p0 = est.filas[0].p;
+  y = H.paragraph(y, 'La produccion se ha calculado con el servicio PVcalc de PVGIS 5.3 (Comision Europea, JRC) para cada superficie, con sus propios parametros de ubicacion, potencia pico, acimut, inclinacion, tipo de montaje y perfil de horizonte (convertido a 36 alturas cada 10 grados desde el Norte, formato userhorizon). Base de datos de radiacion: '+p0.raddatabase+'; tecnologia del modulo: '+p0.pvtechchoice+'; perdidas del sistema: '+fmtNum(p0.loss,1)+' %.');
+  y = H.kv(y, 'Produccion anual total', fmtNum(est.anual,0)+' kWh/ano');
+  y = H.kv(y, 'Produccion especifica', fmtNum(est.anual/est.kwpTotal,0)+' kWh/kWp');
+  y = H.kv(y, 'Media diaria', fmtNum(est.anual/365,1)+' kWh/dia');
+  y += 2;
+  y = H.tableCaption(y, ctx.TAB(), 'Produccion anual por superficie (PVGIS)', collect);
+  y = H.simpleTable(y, ['Superficie','kWp','Acimut','Inclin.','Montaje','kWh/ano','kWh/kWp'],
+    est.filas.map(f=>[trunc(f.s.config.nombreArea,24), fmtNum(f.p.kwp,2), f.p.aspect+'°', f.p.angle+'°', f.p.mountingplace==='building'?'integrado':'libre', fmtNum(f.datos.anual,0), fmtNum(f.p.kwp>0?f.datos.anual/f.p.kwp:0,0)]),
+    [marginX, marginX+52, marginX+70, marginX+88, marginX+106, marginX+128, marginX+152]);
+  y = pdfBarrasMensuales(doc, H, y, est, ctx);
+  y = H.figureCaption(y, ctx.FIG(), 'Produccion mensual estimada por superficie (kWh)', collect);
+  y = H.tableCaption(y, ctx.TAB(), 'Produccion mensual del sistema', collect);
+  y = H.simpleTable(y, ['Mes','Produccion (kWh)','% del total','Media diaria (kWh/dia)'],
+    est.mensual.map((v,i)=>[MESES_LARGOS[i], fmtNum(v,0), fmtNum(est.anual>0?v/est.anual*100:0,1)+' %', fmtNum(v/DIAS_MES[i],1)])
+      .concat([['Total anual', fmtNum(est.anual,0), '100 %', fmtNum(est.anual/365,1)]]),
+    [marginX, marginX+40, marginX+85, marginX+120]);
+
+  y = H.sectionTitle(y, '8.', 'Estudio economico', collect);
+  if(!eco){
+    y = H.paragraph(y, 'No se ha podido calcular el estudio economico.');
+    return y;
+  }
+  const P = eco.P;
+  y = H.paragraph(y, 'El ahorro se calcula separando la energia autoconsumida, que evita comprar energia de la red al precio de la tarifa, de los excedentes vertidos a la red, que se valoran al precio de compensacion. Ambos precios se actualizan cada ano con la subida prevista del precio de la energia, y la produccion se reduce con la degradacion anual de los modulos. Precios tomados de '+tarifasOrigen+'.');
+  y = H.formulaBlock(y, [
+    'E(n) = E_y x (1-d)^(n-1)',
+    'Ahorro(n) = E(n) x [f x p_ener + (1-f) x p_exc] x (1+i)^(n-1)',
+    'Neto(n) = Ahorro(n) - O&M x kWp x (1+i)^(n-1)',
+    'Amortizacion: -Inversion + suma Neto(n) >= 0',
+  ], 'E_y: produccion PVGIS; f: fraccion autoconsumida; i: subida anual del precio; d: degradacion anual.');
+  y = H.tableCaption(y, ctx.TAB(), 'Hipotesis del estudio economico', collect);
+  y = H.simpleTable(y, ['Parametro','Valor'], [
+    ['Tarifa', P.tarifa ? P.tarifa.nombre : 'personalizada'],
+    ['Precio de la energia evitada', fmtNum(P.precio,3)+' EUR/kWh'],
+    ['Precio de los excedentes', fmtNum(P.excedentes,3)+' EUR/kWh'],
+    ['Autoconsumo', fmtNum(P.autoconsumo*100,0)+' % de la produccion'],
+    ['Coste de la instalacion', fmtNum(P.costeWp,2)+' EUR/Wp  ->  '+fmtNum(eco.inversionBruta,0)+' EUR'],
+    ['Subvenciones / deducciones', fmtNum(P.subvencion,0)+' EUR'],
+    ['Mantenimiento', fmtNum(P.om,1)+' EUR/kWp ano'],
+    ['Degradacion de los modulos', fmtNum(P.degradacion*100,2)+' %/ano'],
+    ['Subida del precio de la energia', fmtNum(P.inflacion*100,1)+' %/ano'],
+    ['Vida util', P.vida+' anos'],
+  ], [marginX, marginX+70]);
+  y = H.tableCaption(y, ctx.TAB(), 'Resultados economicos', collect);
+  y = H.simpleTable(y, ['Resultado','Valor'], [
+    ['Inversion neta', fmtNum(eco.inversion,0)+' EUR'],
+    ['Ahorro por autoconsumo (ano 1)', fmtNum(eco.ahorroAutoconsumo,0)+' EUR'],
+    ['Compensacion de excedentes (ano 1)', fmtNum(eco.ingresoExcedentes,0)+' EUR'],
+    ['Mantenimiento (ano 1)', '-'+fmtNum(eco.anios[0].om,0)+' EUR'],
+    ['Ahorro neto (ano 1)', fmtNum(eco.netoAnual,0)+' EUR'],
+    ['Periodo de amortizacion', eco.payback!==null ? fmtNum(eco.payback,1)+' anos' : 'mas de '+P.vida+' anos'],
+    ['Beneficio neto acumulado ('+P.vida+' anos)', fmtNum(eco.beneficioNeto,0)+' EUR'],
+    ['Rentabilidad sobre la inversion', eco.roiPct!==null ? fmtNum(eco.roiPct,0)+' %' : '-'],
+    ['LCOE (sin descuento)', eco.lcoe!==null ? fmtNum(eco.lcoe,3)+' EUR/kWh' : '-'],
+  ], [marginX, marginX+70]);
+  y = pdfFlujoCaja(doc, H, y, eco, ctx);
+  y = H.figureCaption(y, ctx.FIG(), 'Flujo de caja acumulado (naranja: inversion no recuperada; azul: beneficio acumulado)', collect);
+  y = H.checkPage(y, 16+eco.anios.length*6.5);
+  y = H.tableCaption(y, ctx.TAB(), 'Flujo de caja anual', collect);
+  y = H.simpleTable(y, ['Ano','Produccion (kWh)','Ahorro (EUR)','O&M (EUR)','Neto (EUR)','Acumulado (EUR)'],
+    eco.anios.map(a=>[String(a.anio), fmtNum(a.energia,0), fmtNum(a.ahorro,0), fmtNum(a.om,0), fmtNum(a.neto,0), fmtNum(a.acumulado,0)]),
+    [marginX, marginX+18, marginX+50, marginX+78, marginX+104, marginX+132]);
+  y = H.paragraph(y, 'Modelo simplificado y orientativo: no incluye termino de potencia, financiacion, sustitucion del inversor ni valor residual. En compensacion simplificada, la compensacion de excedentes no puede superar el termino de energia de cada factura.', {size:8});
+  return y;
+}
+
+// ---------- Inicio ----------
+cargarTarifas();
+setTimeout(renderProduccion, 50);
 </script>
 
 <!-- ===================== VATIACO: memoria compartida del navegador ===================== -->
