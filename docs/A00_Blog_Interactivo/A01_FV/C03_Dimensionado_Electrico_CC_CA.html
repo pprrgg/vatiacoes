@@ -13,6 +13,7 @@
     --line:#dfe4eb; --line-soft:#eceff4;
     --text:#1c2735; --text-dim:#4f5b6d; --text-dimmer:#7b8696;
     --amber:#c27c00; --green:#16A34A; --red:#DC2626; --cyan:#2457e6;
+    --amber-dim:#ecd08f; --cyan-dim:#a9bdf3;
     --font-display:'Inter',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
     --radius:8px;
   }
@@ -218,6 +219,64 @@
   .acc-cuerpo{padding:8px 20px 20px; border-top:1px solid var(--line-soft,#eceff4);}
   .acc-cuerpo .hero{margin:0 0 24px !important; padding:16px 0 24px !important;}
   .tab-bloque{margin-bottom:48px;}
+
+  /* Conexion a red (GUIA-BT-40): clasificacion, esquemas, curvas y tarjetas de la ayuda */
+  .type-card{border:1px solid var(--line); background:var(--panel); padding:22px; border-radius:var(--radius); position:relative;}
+  .type-card .idx{font-family:var(--font-mono); font-size:11px; color:var(--text-dimmer); margin-bottom:10px;}
+  .type-card h3{font-size:18px; margin-bottom:8px; color:var(--text);}
+  .type-card p{font-size:13.5px; color:var(--text-dim);}
+  .type-card.aislada{border-top:2px solid var(--text-dimmer);}
+  .type-card.asistida{border-top:2px solid var(--cyan);}
+  .type-card.interconectada{border-top:2px solid var(--amber);}
+  .filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;}
+  .filter-btn{font-family:var(--font-mono); font-size:11.5px; padding:7px 13px; background:var(--panel2); border:1px solid var(--line); color:var(--text-dim); border-radius:20px; cursor:pointer; transition:all .15s ease;}
+  .filter-btn:hover{border-color:var(--cyan); color:var(--text);}
+  .filter-btn.active{background:var(--amber); border-color:var(--amber); color:#ffffff; font-weight:600;}
+  .scheme-id{font-family:var(--font-mono); color:var(--amber); font-weight:600;}
+  .scheme-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
+  @media(max-width:900px){.scheme-grid{grid-template-columns:1fr;}}
+  .scheme-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; transition:border-color .15s ease;}
+  .scheme-card.hidden{display:none;}
+  .scheme-card:hover{border-color:var(--cyan-dim);}
+  .scheme-card h4{font-size:15px; margin:6px 0 8px; color:var(--text);}
+  .scheme-card p{font-size:12.5px; color:var(--text-dim); margin-bottom:10px;}
+  .scheme-diagram{margin:12px 0; background:var(--panel2); border:1px solid var(--line-soft); border-radius:var(--radius); padding:8px 6px;}
+  .scheme-diagram svg{display:block; width:100%; height:auto;}
+  .scheme-card .tags{display:flex; gap:6px; flex-wrap:wrap;}
+  .badge.c1{border-color:var(--cyan-dim); color:var(--cyan);}
+  .badge.c2{border-color:var(--amber-dim); color:var(--amber);}
+  .esquema-vista{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:20px; align-items:start;}
+  @media(max-width:900px){.esquema-vista{grid-template-columns:1fr;}}
+  .esquema-vista .scheme-diagram{margin:0;}
+  .esquema-vista h4{font-size:15px; margin:4px 0 8px; color:var(--text);}
+  .esquema-vista p{font-size:12.5px; color:var(--text-dim); margin-bottom:10px;}
+  .radio-opt{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--text-dim); cursor:pointer;}
+  .radio-opt input{accent-color:var(--amber);}
+  .result-row{display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px;}
+  .result-row:last-child{border-bottom:none;}
+  .result-row .lbl{color:var(--text-dim);}
+  .result-row .val{font-family:var(--font-mono); color:var(--text);}
+  .chart-wrap{background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius); padding:20px; position:relative;}
+  .chart-wrap svg{display:block; width:100%; height:auto; overflow:visible;}
+  .axis-label{font-family:var(--font-mono); font-size:10px; fill:var(--text-dimmer);}
+  .legend{display:flex; gap:22px; margin-top:14px; flex-wrap:wrap;}
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim); font-family:var(--font-mono);}
+  .legend-swatch{width:14px; height:3px; border-radius:2px;}
+  .tooltip-box{position:absolute; background:#ffffff; border:1px solid var(--cyan); border-radius:var(--radius); padding:8px 11px; font-family:var(--font-mono); font-size:11.5px; pointer-events:none; opacity:0; transition:opacity .1s; white-space:nowrap; z-index:5;}
+  .bars-chart{display:flex; align-items:flex-end; gap:3px; height:220px; padding-top:10px;}
+  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; position:relative;}
+  .bar{width:100%; border-radius:2px 2px 0 0; transition:opacity .15s;}
+  .bar:hover{opacity:0.75;}
+  .bar-col .bx{font-family:var(--font-mono); font-size:9px; color:var(--text-dimmer); margin-top:6px;}
+  .prot-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px; position:relative; overflow:hidden;}
+  .prot-card .trip{font-family:var(--font-mono); font-size:26px; color:var(--amber); margin:8px 0 4px;}
+  .prot-card .cond{font-size:12px; color:var(--text-dim);}
+  .prot-card .time{font-family:var(--font-mono); font-size:11px; color:var(--cyan); margin-top:8px;}
+  .prot-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--cyan), var(--amber));}
+  .earth-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:22px;}
+  .earth-card h4{font-family:var(--font-mono); font-size:12px; color:var(--amber); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;}
+  .earth-card ul{padding-left:18px; font-size:13.5px; color:var(--text-dim);}
+  .earth-card li{margin-bottom:8px;}
 </style>
 </head>
 <body>
@@ -450,6 +509,57 @@
       <div id="proteccionesCAResultado"></div>
     
       </div>
+      <div id="conexion" class="tab-bloque">
+      <div class="eyebrow kicker">Conexión a red · GUÍA-BT-40</div>
+      <h2>Clasificación, esquema de conexión, límite de potencia y protecciones de interconexión.</h2>
+      <p class="lede">La ITC-BT-40 clasifica la instalación generadora según su relación con la red de distribución y fija el esquema de conexión, el límite de potencia interconectada y las protecciones mínimas. La potencia del generador se toma de la potencia CA total de los inversores calculada más arriba.</p>
+
+      <div class="card">
+        <div class="fieldset-title" style="margin-top:0;">Clasificación y esquema</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Clasificación de la instalación</label>
+            <select id="bt_clasificacion">
+              <option value="aislada">Aislada (sin conexión a red)</option>
+              <option value="asistida">Asistida (conmutación red/generador)</option>
+              <option value="c1" selected>Interconectada C1 (conexión en red de BT)</option>
+              <option value="c2">Interconectada C2 (conexión vía AT)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Esquema de conexión (Esq-1 a Esq-16)</label>
+            <select id="bt_esquema"></select>
+          </div>
+        </div>
+        <div class="esquema-vista" id="bt_esquemaVista"></div>
+
+        <div class="fieldset-title">Límite de potencia interconectada</div>
+        <div class="grid3" id="bt_potenciaCampos">
+          <div class="field">
+            <label>Red de distribución en el punto de conexión</label>
+            <select id="bt_red">
+              <option value="400" selected>3×400/230 V (límite fijo 100 kVA)</option>
+              <option value="220">3×220/127 V (límite fijo 60 kVA)</option>
+            </select>
+          </div>
+          <div class="field"><label>Capacidad del centro de transformación (kVA)</label><input type="number" id="bt_ct_kva" min="0" step="1" value="160"></div>
+          <div class="field"><label>Potencia nominal del generador (kVA)</label><input type="number" id="bt_pgen_override" min="0" step="0.1" placeholder="auto"><p class="hint">Vacío: potencia CA total de los inversores (cos φ = 1).</p></div>
+        </div>
+
+        <div class="fieldset-title">Protecciones de interconexión instaladas</div>
+        <div class="grid2">
+          <label class="radio-opt"><input type="checkbox" id="bt_chk_umin" checked> Mínima tensión, &lt;85% Un, &lt;0,5 s</label>
+          <label class="radio-opt"><input type="checkbox" id="bt_chk_umax" checked> Sobretensión, &gt;110% Un, &lt;0,5 s</label>
+          <label class="radio-opt"><input type="checkbox" id="bt_chk_fmin" checked> Mínima frecuencia, &lt;49 Hz</label>
+          <label class="radio-opt"><input type="checkbox" id="bt_chk_fmax" checked> Máxima frecuencia, &gt;51 Hz</label>
+          <label class="radio-opt"><input type="checkbox" id="bt_chk_sync" checked> Ventana de sincronismo (&plusmn;8% / &plusmn;0,1 Hz / &plusmn;10&deg;)</label>
+          <label class="radio-opt"><input type="checkbox" id="bt_chk_tierra" checked> Puesta a tierra según modo de funcionamiento</label>
+        </div>
+      </div>
+
+      <div class="subsection-title">Resultado de la conexión a red</div>
+      <div id="conexionResultado"></div>
+      </div>
     </section>
 
     <!-- 01 AYUDA: secciones en acordeon cerrado -->
@@ -475,6 +585,7 @@
           <div class="stat"><div class="v">Cadenas CC</div><div class="l">nº de paneles en serie compatible con Voc en frío y Vmp en caliente</div></div>
           <div class="stat"><div class="v">Inversores y MPPT</div><div class="l">distribución de cadenas por entrada y por inversor según el kWp objetivo</div></div>
           <div class="stat"><div class="v">Protecciones CC/CA</div><div class="l">fusibles, seccionadores, magnetotérmicos, diferenciales, SPD y secciones de cable</div></div>
+          <div class="stat"><div class="v">Conexión a red</div><div class="l">clasificación, esquema (Esq-1 a Esq-16), límite de potencia y protecciones según la GUÍA-BT-40</div></div>
         </div>
       </header>
       <h2>Las reglas que fijan cuántos paneles van en serie, cuántos en paralelo y cómo se protege el circuito.</h2>
@@ -533,6 +644,255 @@
     
 </div>
       </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Conexión a red: criterios de la GUÍA-BT-40</span></summary><div class="acc-cuerpo">
+<div id="teoriaBT40">
+      <h2>Las fórmulas y criterios detrás de cada límite de conexión.</h2>
+      <p class="lede">Resumen de los criterios técnicos de la GUÍA-BT-40 (Guía Técnica de Aplicación del REBT, instalaciones generadoras de baja tensión) que se aplican en el bloque «Conexión a red» de la pestaña Simulación. Para el desarrollo completo, consulta el <a href="https://industria.gob.es/Calidad-Industrial/seguridadindustrial/instalacionesindustriales/baja-tension/Documents/bt/Guia_bt_40_sep13R1.pdf" target="_blank" rel="noopener" style="color:var(--cyan);">documento oficial</a>.</p>
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h3>1 · Límite de potencia interconectada</h3>
+          <p>La potencia nominal total de los generadores conectados en un mismo punto de la red de BT no puede superar, simultáneamente, tres topes:</p>
+          <div class="formula-box">
+            <div class="f">P &le; mín ( P<sub>fijo</sub> , CT / 2 , 0,05 &times; S<sub>cc</sub> )</div>
+            <small>P_fijo: 100 kVA (red 400V) o 60 kVA (red 220V) · CT: capacidad del centro de transformación · Scc: solo generadores eólicos</small>
+          </div>
+          <p>El tercer término (5% de la potencia de cortocircuito) solo aplica a generadores eólicos, por su mayor variabilidad de potencia inyectada.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>2 · Sobretensión transitoria de desconexión</h3>
+          <p>Al desconectar el generador no debe superarse una envolvente tensión-tiempo, definida por dos grupos según el tipo de instalación:</p>
+          <ul>
+            <li><b>Grupo 1</b> (C1, conexión directa en BT): curva continua, desde 280% Un a 0,2 ms hasta 120% Un a partir de 60 ms.</li>
+            <li><b>Grupo 2</b> (C2, conexión vía transformador en AT): curva escalonada, desde 200% Un (&lt;1 ms) hasta 110% Un (&ge;500 ms).</li>
+          </ul>
+          <p>Se verifica mediante ensayo: apertura del interruptor a plena tensión y &gt;50% de potencia, registrando la tensión en bornas a &ge;10 kHz de muestreo.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>3 · Distorsión armónica admisible</h3>
+          <p>La tasa de cada armónico individual de la tensión generada, en tanto por ciento respecto al fundamental, se limita según su orden n:</p>
+          <div class="formula-box">
+            <div class="f">pares: 4/n %　·　orden 3: 5% fijo　·　impares &ge;5: 25/n %</div>
+            <small>n = orden del armónico (2, 3, 4, 5...)</small>
+          </div>
+          <p>El límite decrece con el orden porque los armónicos altos son menos energéticos pero más perjudiciales para equipos sensibles.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>4 · Umbrales de disparo de protecciones</h3>
+          <p>Cuatro condiciones de red disparan automáticamente la desconexión del generador:</p>
+          <div class="formula-box">
+            <div class="f">U &lt; 85% Un (&lt;0,5s)　·　U &gt; 110% Un (&lt;0,5s)</div>
+            <div class="f" style="margin-top:6px;">f &lt; 49 Hz　·　f &gt; 51 Hz (&gt;5 periodos)</div>
+          </div>
+          <p>Los tiempos de actuación evitan disparos innecesarios ante huecos de tensión breves, manteniendo la protección frente a defectos sostenidos.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>5 · Ventana de sincronismo</h3>
+          <p>Para generadores síncronos que se acoplan en paralelo con la red, el cierre del interruptor solo se permite dentro de una ventana estrecha de coincidencia:</p>
+          <div class="formula-box">
+            <div class="f">&Delta;U &le; &plusmn;8%　·　&Delta;f &le; &plusmn;0,1 Hz　·　&Delta;&phi; &le; &plusmn;10&deg;</div>
+            <small>diferencias entre generador y red en tensión, frecuencia y fase, en el instante del cierre</small>
+          </div>
+          <p>Fuera de esta ventana, el acoplamiento produciría corrientes de choque elevadas y solicitaciones mecánicas en el eje del generador.</p>
+        </div>
+
+        <div class="theory-card">
+          <h3>6 · Puesta a tierra según modo de funcionamiento</h3>
+          <p>El esquema de tierras no es único: se adapta al modo de funcionamiento para evitar que un defecto se transfiera entre la generación y la red pública.</p>
+          <ul>
+            <li><b>Aislada:</b> red de tierras independiente de cualquier otra instalación.</li>
+            <li><b>Asistida / interconectada con red TT:</b> esquema TT también en el lado del generador, con conmutación del neutro a tierra según la fuente activa.</li>
+            <li><b>Detección de defecto a tierra:</b> disparo si la corriente de neutro supera el 50% de la intensidad nominal.</li>
+          </ul>
+        </div>
+      </div>
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Objeto y campo</span></summary><div class="acc-cuerpo">
+<div id="objeto">
+      <h2>Toda fuente que convierta energía en electricidad, si se conecta en baja tensión.</h2>
+      <p class="lede">La instrucción aplica a cualquier <strong>instalación generadora</strong>: equipos que transforman energía no eléctrica en energía eléctrica, sea cual sea la tecnología. No importa si vendes energía, autoconsumes, o alimentas una instalación aislada de la red: si genera en BT, esta guía te aplica.</p>
+
+      <div class="grid3" style="margin-bottom:28px;">
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:10px;">Tecnologías cubiertas</div>
+          <p style="font-size:13.5px; color:var(--text-dim);">Motores de combustión · Turbinas · Generadores fotovoltaicos · Eólicos de BT · Acumuladores mecánicos o electroquímicos · Células de combustible · Otras fuentes en BT.</p>
+        </div>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:10px;">Red de Distribución Pública</div>
+          <p style="font-size:13.5px; color:var(--text-dim);">Redes eléctricas explotadas por empresas cuyo fin principal es distribuir energía para su venta a terceros.</p>
+        </div>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:10px;">Autogenerador</div>
+          <p style="font-size:13.5px; color:var(--text-dim);">Persona física o jurídica que, subsidiariamente a su actividad principal, produce electricidad para sus propias necesidades, en todo o en parte.</p>
+        </div>
+      </div>
+      <p style="font-size:13px; color:var(--text-dimmer); max-width:680px;">Aunque la guía es general, dedica especial atención a la <strong style="color:var(--text-dim);">energía solar fotovoltaica</strong> por su fuerte penetración en redes de media y baja tensión.</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Clasificación</span></summary><div class="acc-cuerpo">
+<div id="clasificacion">
+      <h2>Tres formas de relacionarse con la red pública.</h2>
+      <p class="lede">La instalación generadora se clasifica según su funcionamiento respecto a la Red de Distribución Pública. Este único criterio determina qué esquema de conexión, qué protecciones y qué puesta a tierra necesitas.</p>
+
+      <div class="grid3">
+        <div class="type-card aislada">
+          <div class="idx">TIPO A</div>
+          <h3>Aislada</h3>
+          <p>No existe conexión eléctrica alguna con la Red de Distribución Pública. El generador alimenta en exclusiva sus propias cargas. Requiere dispositivo de conexión/desconexión de carga y, si hay varios generadores, sincronización manual o automática.</p>
+        </div>
+        <div class="type-card asistida">
+          <div class="idx">TIPO B</div>
+          <h3>Asistida</h3>
+          <p>Hay conexión con la red pública, pero generador y red <strong>nunca trabajan en paralelo</strong>. Un conmutador impide el acoplamiento simultáneo. Transferencia de carga sin corte solo permitida a partir de 100 kVA, con máx. 5&nbsp;s de interconexión.</p>
+        </div>
+        <div class="type-card interconectada">
+          <div class="idx">TIPO C</div>
+          <h3>Interconectada</h3>
+          <p>Trabaja normalmente <strong>en paralelo</strong> con la red pública. Se subdivide en C1 (conexión en red de BT) y C2 (conexión en red de AT vía transformador elevador, sin otras cargas de BT ajenas conectadas).</p>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Esquemas de conexión</span></summary><div class="acc-cuerpo">
+<div id="esquemas">
+      <h2>16 topologías normalizadas, según titular, ubicación y medida.</h2>
+      <p class="lede">Cada esquema (Esq-1 a Esq-16) combina cinco variables: quién es el titular, dónde se conecta la generación, el modo de funcionamiento, la ubicación física y el tipo de contador. Filtra por categoría para encontrar el tuyo.</p>
+
+      <div class="filters" id="schemeFilters">
+        <button class="filter-btn active" data-f="all">Todos (16)</button>
+        <button class="filter-btn" data-f="aislada">Aisladas</button>
+        <button class="filter-btn" data-f="asistida">Asistidas</button>
+        <button class="filter-btn" data-f="c1">Interconectadas C1</button>
+        <button class="filter-btn" data-f="c2">Interconectadas C2</button>
+        <button class="filter-btn" data-f="separado">Modo separado</button>
+      </div>
+
+      <div class="scheme-grid" id="schemeGrid"></div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Curvas de sobretensión</span></summary><div class="acc-cuerpo">
+<div id="sobretension">
+      <h2>Cuanto más breve el transitorio, mayor sobretensión se tolera.</h2>
+      <p class="lede">Al desconectar el generador, no debe generar sobretensiones por encima de estos límites. Se definen dos grupos: <strong style="color:var(--cyan)">Grupo 1</strong> (instalaciones tipo C1, conectadas directamente en BT) y <strong style="color:var(--amber)">Grupo 2</strong> (instalaciones tipo C2, conectadas en AT vía transformador). Pasa el cursor sobre la curva para leer valores.</p>
+
+      <div class="chart-wrap" style="position:relative;">
+        <svg viewBox="0 0 900 420" id="overvoltageSvg"></svg>
+        <div class="tooltip-box" id="ovTooltip"></div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:var(--cyan)"></span>Grupo 1 — generadores C1 (curva continua)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:var(--amber)"></span>Grupo 2 — generadores C2 (curva escalonada)</div>
+        </div>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dimmer); margin-top:16px; max-width:680px;">Ensayo: se abre el interruptor de conexión con tensión de red al ±5% del valor nominal, a potencia &gt;50% de la asignada, y se registra la tensión en bornas con muestreo ≥10 kHz. Se repite 3 veces; la curva registrada debe quedar por debajo del límite en todos los puntos.</p>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Calidad de onda</span></summary><div class="acc-cuerpo">
+<div id="armonicos">
+      <h2>La tensión generada debe ser prácticamente senoidal.</h2>
+      <p class="lede">La tasa máxima de armónicos depende del orden <code class="inline">n</code>: los pares se limitan al <code class="inline">4/n</code>%, el 3er armónico al 5% fijo, y los impares ≥5 al <code class="inline">25/n</code>%. Explora los primeros 25 órdenes.</p>
+
+      <div class="chart-wrap">
+        <div class="bars-chart" id="harmonicsBars"></div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:var(--cyan)"></span>Armónico par — 4/n %</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:var(--red)"></span>Orden 3 — 5% fijo</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:var(--amber)"></span>Armónico impar ≥5 — 25/n %</div>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Protecciones mínimas</span></summary><div class="acc-cuerpo">
+<div id="protecciones">
+      <h2>Cuatro disparos obligatorios en el punto de interconexión.</h2>
+      <p class="lede">Además de la protección contra sobreintensidades y contactos indirectos, la instalación debe disparar automáticamente ante estas cuatro condiciones de red.</p>
+
+      <div class="grid2" style="margin-bottom:16px;">
+        <div class="prot-card">
+          <div class="eyebrow">Mínima tensión</div>
+          <div class="trip">&lt; 85% Un</div>
+          <div class="cond">Conectada entre las tres fases y neutro</div>
+          <div class="time">⏱ actúa en &lt; 0,5 s</div>
+        </div>
+        <div class="prot-card">
+          <div class="eyebrow">Sobretensión</div>
+          <div class="trip">&gt; 110% Un</div>
+          <div class="cond">Conectada entre una fase y neutro</div>
+          <div class="time">⏱ actúa en &lt; 0,5 s</div>
+        </div>
+        <div class="prot-card">
+          <div class="eyebrow">Mínima frecuencia</div>
+          <div class="trip">&lt; 49 Hz</div>
+          <div class="cond">Conectada entre fases</div>
+          <div class="time">⏱ actúa tras &gt; 5 periodos</div>
+        </div>
+        <div class="prot-card">
+          <div class="eyebrow">Máxima frecuencia</div>
+          <div class="trip">&gt; 51 Hz</div>
+          <div class="cond">Conectada entre fases</div>
+          <div class="time">⏱ actúa tras &gt; 5 periodos</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:12px;">Ventana de sincronismo (generadores síncronos)</div>
+          <div class="result-row"><span class="lbl">Diferencia de tensiones</span><span class="val">± 8%</span></div>
+          <div class="result-row"><span class="lbl">Diferencia de frecuencia</span><span class="val">± 0,1 Hz</span></div>
+          <div class="result-row"><span class="lbl">Diferencia de fase</span><span class="val">± 10°</span></div>
+        </div>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:12px;">Otros umbrales clave</div>
+          <div class="result-row"><span class="lbl">Arranque generador asíncrono</span><span class="val">90–100% vel. sincronismo</span></div>
+          <div class="result-row"><span class="lbl">Caída de tensión en conexión</span><span class="val">≤ 3% Un (2% eólicos)</span></div>
+          <div class="result-row"><span class="lbl">Inyección de CC a red</span><span class="val">≤ 0,5% In</span></div>
+          <div class="result-row"><span class="lbl">Reconexión tras pérdida de red</span><span class="val">red estable ≥ 3 min</span></div>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
+      <details class="acc"><summary><span class="acc-titulo">Puesta a tierra</span></summary><div class="acc-cuerpo">
+<div id="tierra">
+      <h2>La tierra sigue al modo de funcionamiento.</h2>
+      <p class="lede">El esquema de puesta a tierra no es fijo: cambia según si la instalación es aislada, asistida o interconectada, para evitar que un defecto se transfiera entre la generación y la Red de Distribución Pública.</p>
+
+      <div class="grid3">
+        <div class="earth-card">
+          <h4>Aisladas</h4>
+          <ul>
+            <li>Red de tierras <strong>independiente</strong> de cualquier otra (diferencia de tensión &lt; 50 V ante defecto máximo).</li>
+            <li>Puesta a tierra del neutro del generador según ITC-BT-08.</li>
+            <li>Con varios generadores en paralelo: unión de neutros a tierra en un único punto.</li>
+          </ul>
+        </div>
+        <div class="earth-card">
+          <h4>Asistidas</h4>
+          <ul>
+            <li>Si la red pública tiene neutro a tierra → esquema <strong>TT</strong>, con tierra de masas independiente de la del neutro de red.</li>
+            <li>Con transferencia sin corte: polo auxiliar en el conmutador conecta a tierra el neutro del generador al pasar a generación propia.</li>
+          </ul>
+        </div>
+        <div class="earth-card">
+          <h4>Interconectadas</h4>
+          <ul>
+            <li>Acopladas a red con neutro a tierra → esquema <strong>TT</strong> también para masas.</li>
+            <li>Si se separan de la red: polo auxiliar desconecta el neutro de red y conecta a tierra el neutro del generador.</li>
+            <li>Protección de detección de corriente en el neutro: dispara si supera el <strong>50%</strong> de la intensidad nominal.</li>
+          </ul>
+        </div>
+      </div>
+    
+</div>
+      </div></details>
     </section>
 
     <!-- 02 INFORME -->
@@ -548,7 +908,7 @@
         </div>
         <div class="fieldset-title">Autor</div>
         <div class="grid2">
-          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="P. Román"></div>
+          <div class="field"><label>Nombre del autor</label><input type="text" id="p_autor" value="M. Cardenas"></div>
           <div class="field"><label>Nº de registro</label><input type="text" id="p_registro" value="N.12345"></div>
         </div>
         <div class="fieldset-title">Organización</div>
@@ -1082,7 +1442,7 @@ function renderDistribucion(panel, inv, distribucion){
 function trunc(s,n){ return s && s.length>n ? s.slice(0,n-1)+'…' : (s||''); }
 function chipUnifilar(valor, etiqueta){ return {v:valor, l:etiqueta}; }
 
-function nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car){
+function nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt){
   // Potencia CC realmente conectada a cada entrada MPPT (cadenas en paralelo de esa
   // entrada × paneles en serie × Wp), no la potencia CA nominal del inversor repartida.
   const potenciaPorEntrada = paralelo.nUsado*cadena.nUsado*panel.wp/1000;
@@ -1160,7 +1520,10 @@ function nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car
     {
       id:'red', titulo:'PUNTO DE CONEXIÓN A RED', tituloColor:'green',
       subtitulo: car.trifasico ? 'Red trifásica 400 V' : 'Red monofásica 230 V',
-      chips:[chipUnifilar(fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW', 'potencia CA total')],
+      chips:[chipUnifilar(fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW', 'potencia CA total')].concat(bt ? [
+        chipUnifilar(bt.esquema ? bt.esquema.id : '—', 'esquema GUÍA-BT-40'),
+        chipUnifilar(clasifLabel(bt.clasificacion), 'clasificación'),
+      ] : []),
       badge: distribucion.nInversores>1 ? ('convergen '+distribucion.nInversores+' líneas CA') : null,
       cableSiguiente:null,
     },
@@ -1196,8 +1559,8 @@ function badgeHTML(text, colorVar){
 // escritos una vez en el HTML): NO se regeneran aquí, para no perder el foco/estado
 // mientras se escribe en ellos. Solo se actualiza su badge. Los otros 3 nodos y los
 // edges sí se regeneran en cada recálculo, porque son de solo lectura.
-function renderUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car){
-  const nodos = nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car);
+function renderUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt){
+  const nodos = nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt);
   const byId = {}; nodos.forEach(n=>{ byId[n.id] = n; });
   document.getElementById('unifilarBadgeCadena').innerHTML = badgeHTML(byId.cadena.badge, 'var(--amber)');
   document.getElementById('unifilarEdge1').innerHTML = edgeHTML(byId.cadena.cableSiguiente);
@@ -1311,7 +1674,7 @@ function renderProteccionesCA(inv, distribucion, car){
   document.getElementById('proteccionesCAResultado').innerHTML = itemsProteccionesCA(null, inv, distribucion, car).map(c=>checkItem(c.desc,c.sub,c.valor,c.estado,c.texto)).join('');
 }
 
-function renderInforme(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car){
+function renderInforme(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt){
   const fecha = val('p_fecha') || new Date().toISOString().slice(0,10);
   let html = '<div class="card">';
   html += '<div class="fieldset-title" style="margin-top:0;">'+esc(val('p_proyecto')||'Dimensionado eléctrico FV')+'</div>';
@@ -1353,8 +1716,405 @@ function renderInforme(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car
     +'<tr><td>Sección de cable CA</td><td class="num">'+car.seccionCable+' mm² Cu</td></tr>'
     +'<tr><td>IGM (conjunto de la instalación)</td><td class="num">'+(car.necesitaIGM?(car.igmRating+' A'):'no necesario')+'</td></tr>'
     +'</tbody></table>';
+
+  html += '<div class="subsection-title">Conexión a red (GUÍA-BT-40)</div>';
+  html += '<table class="data-table"><tbody>'
+    +'<tr><td>Clasificación</td><td class="num">'+clasifLabel(bt.clasificacion)+'</td></tr>'
+    +'<tr><td>Esquema de conexión</td><td class="num">'+(bt.esquema ? esc(bt.esquema.id+' — '+bt.esquema.title) : '—')+'</td></tr>'
+    +(bt.potenciaAplica
+      ? '<tr><td>Potencia del generador</td><td class="num">'+fmtNum(bt.pGen,1)+' kVA (límites: '+bt.fixedLimit+' kVA fijo, '+fmtNum(bt.halfCT,1)+' kVA por CT)</td></tr>'
+      : '<tr><td>Límite de potencia</td><td class="num">no aplica</td></tr>')
+    +'<tr><td>Protecciones de interconexión</td><td class="num">'+(bt.checksOk?'todas instaladas':'hay protecciones pendientes')+'</td></tr>'
+    +'<tr><td>Veredicto</td><td class="num" style="color:'+(bt.overall?'var(--green)':'var(--red)')+'">'+(bt.overall?'Conexión admisible':'Revisar')+'</td></tr>'
+    +'</tbody></table>';
   html += '</div>';
   document.getElementById('informeResumen').innerHTML = html;
+}
+
+// ===================== GUÍA-BT-40: ESQUEMAS DE CONEXIÓN (con mini-diagramas) =====================
+// --- helpers de dibujo, esquemático, no a escala ---
+function svgWrap(inner){ return '<svg viewBox="0 0 260 115">'+inner+'</svg>'; }
+function bx(x,y,w,h,label,stroke){
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="3" fill="var(--panel2)" stroke="'+(stroke||'var(--line)')+'" stroke-width="1"/>'+
+    '<text x="'+(x+w/2)+'" y="'+(y+h/2+3)+'" text-anchor="middle" font-family="var(--font-mono)" font-size="7.6" fill="var(--text-dim)">'+label+'</text>';
+}
+function ln(x1,y1,x2,y2,dashed){
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="var(--line)" stroke-width="1.2"'+(dashed?' stroke-dasharray="3,2"':'')+'/>';
+}
+function lbl(x,y,s,color,anchor,size){
+  return '<text x="'+x+'" y="'+y+'" text-anchor="'+(anchor||'middle')+'" font-family="var(--font-mono)" font-size="'+(size||6.5)+'" fill="'+(color||'var(--text-dimmer)')+'">'+s+'</text>';
+}
+function meterBlock(cx,cy,type){
+  if(!type || type==='none') return '';
+  const label = type==='gen' ? 'Wh' : type==='doble' ? '2×Wh' : 'Wh⇄';
+  return '<circle cx="'+cx+'" cy="'+cy+'" r="10" fill="none" stroke="var(--cyan)" stroke-width="1.2"/>'+
+    '<text x="'+cx+'" y="'+(cy+3)+'" text-anchor="middle" font-family="var(--font-mono)" font-size="6.5" fill="var(--cyan)">'+label+'</text>';
+}
+function genBox(x,y,w,h){
+  const cx=x+w/2, cy=y+h/2-3;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="3" fill="var(--panel2)" stroke="var(--amber)" stroke-width="1.3"/>'+
+    '<path d="M'+(cx-10)+' '+cy+' q5 -8 10 0 t10 0" stroke="var(--amber)" stroke-width="1.3" fill="none"/>'+
+    '<text x="'+cx+'" y="'+(y+h-4)+'" text-anchor="middle" font-family="var(--font-mono)" font-size="7" fill="var(--amber)">GEN</text>';
+}
+function swSimple(cx,cy){
+  return '<line x1="'+(cx-10)+'" y1="'+cy+'" x2="'+(cx-3)+'" y2="'+cy+'" stroke="var(--text-dim)" stroke-width="1.3"/>'+
+    '<line x1="'+(cx-3)+'" y1="'+cy+'" x2="'+(cx+5)+'" y2="'+(cy-9)+'" stroke="var(--text-dim)" stroke-width="1.3"/>'+
+    '<line x1="'+(cx+10)+'" y1="'+cy+'" x2="'+(cx+3)+'" y2="'+cy+'" stroke="var(--text-dim)" stroke-width="1.3"/>'+
+    '<circle cx="'+(cx-3)+'" cy="'+cy+'" r="1.6" fill="var(--text-dim)"/><circle cx="'+(cx+3)+'" cy="'+cy+'" r="1.6" fill="var(--text-dim)"/>';
+}
+function swSync(cx,cy){
+  return swSimple(cx,cy)+
+    '<circle cx="'+cx+'" cy="'+(cy-15)+'" r="6.5" fill="none" stroke="var(--amber)" stroke-width="1.1"/>'+
+    '<text x="'+cx+'" y="'+(cy-12)+'" text-anchor="middle" font-family="var(--font-mono)" font-size="7" fill="var(--amber)">S</text>';
+}
+function swConmutador(cx,cy){
+  return '<circle cx="'+cx+'" cy="'+cy+'" r="2" fill="var(--text-dim)"/>'+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx-10)+'" y2="'+(cy-9)+'" stroke="var(--text-dim)" stroke-width="1.3"/>'+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+10)+'" y2="'+(cy+9)+'" stroke="var(--text-dim)" stroke-width="1.3" stroke-dasharray="2,2"/>'+
+    '<text x="'+cx+'" y="'+(cy-13)+'" text-anchor="middle" font-family="var(--font-mono)" font-size="6" fill="var(--text-dimmer)">conmut.</text>';
+}
+function redSourceIcon(y){
+  return lbl(2,y-14,'RED',undefined,'start',6.5)+
+    '<line x1="0" y1="'+y+'" x2="34" y2="'+y+'" stroke="var(--text-dimmer)" stroke-width="1.2"/>'+
+    '<line x1="0" y1="'+(y-8)+'" x2="0" y2="'+(y+8)+'" stroke="var(--text-dimmer)" stroke-width="1.2"/>'+
+    '<line x1="-4" y1="'+(y-5)+'" x2="4" y2="'+(y-5)+'" stroke="var(--text-dimmer)" stroke-width="1"/>'+
+    '<line x1="-4" y1="'+(y+5)+'" x2="4" y2="'+(y+5)+'" stroke="var(--text-dimmer)" stroke-width="1"/>';
+}
+function ctSourceIcon(y){
+  return lbl(30,y-14,'AT',undefined,'start',6.5)+
+    '<circle cx="6" cy="'+y+'" r="7" fill="none" stroke="var(--text-dimmer)" stroke-width="1.1"/>'+
+    '<circle cx="17" cy="'+y+'" r="7" fill="none" stroke="var(--text-dimmer)" stroke-width="1.1"/>'+
+    '<line x1="24" y1="'+y+'" x2="34" y2="'+y+'" stroke="var(--text-dimmer)" stroke-width="1.2"/>';
+}
+function generateScheme(o){
+  let s='', connLeft, connRight;
+  if(o.source==='red'){ s+=redSourceIcon(55); connLeft=40; }
+  else if(o.source==='ct'){ s+=ctSourceIcon(55); connLeft=40; }
+  else { connLeft=8; s+=lbl(connLeft,12,'instalación interior',undefined,'start',6.3); }
+  connRight = connLeft+54;
+  s += bx(connLeft,42,54,26,o.connLabel);
+  if(o.meterType && o.meterType!=='none'){
+    s += ln(connRight,55,112,55)+meterBlock(126,55,o.meterType)+ln(140,55,150,55);
+  } else {
+    s += ln(connRight,55,150,55);
+  }
+  if(o.switchType==='sync') s+=swSync(160,55);
+  else if(o.switchType==='conmutador') s+=swConmutador(160,55);
+  else s+=swSimple(160,55);
+  s += ln(170,55,182,55);
+  s += genBox(182,38,56,32);
+  if(o.loadShown){
+    s += ln(160,55,160,94)+ln(160,94,182,94)+bx(182,82,56,24,'Cargas');
+  }
+  return svgWrap(s);
+}
+function svgAislada(){
+  let s = genBox(16,38,56,32)+ln(72,55,120,55)+swSimple(120,55)+ln(130,55,150,55)+bx(150,42,60,26,'Cargas')+
+    lbl(90,12,'sin conexión a red pública',undefined,'middle',6.3);
+  return svgWrap(s);
+}
+
+const schemes = [
+  {id:'Esq-1', cat:['aislada'], titular:'Suministro asociado', conexion:'Instalación interior', func:'Modo aislado', ubic:'Instalación interior', medida:'Ninguno',
+    title:'Generador aislado, sin conexión a red', desc:'No existe acoplamiento eléctrico con la Red de Distribución Pública. El generador alimenta en exclusiva un dispositivo de conexión/desconexión de las cargas.', svg:svgAislada()},
+  {id:'Esq-2', cat:['asistida'], titular:'Suministro asociado', conexion:'Instalación interior', func:'Modo asistido', ubic:'Instalación interior', medida:'Ninguno',
+    title:'Conmutación red/generador, sin paralelo', desc:'Un conmutador selecciona red o generador como fuente, sin permitir nunca el acoplamiento simultáneo de ambas.',
+    svg:generateScheme({source:'red',connLabel:'Interior',meterType:'none',switchType:'conmutador',loadShown:true})},
+  {id:'Esq-3', cat:['c1'], titular:'Sólo generación', conexion:'Red de distribución', func:'Independiente', ubic:'Acometida único usuario', medida:'Sólo generación',
+    title:'Conexión directa a red de BT, solo generación', desc:'Generador de conexión simple y directa a la red de BT, con el fin exclusivo de suministrar energía a la red.',
+    svg:generateScheme({source:'red',connLabel:'Acometida',meterType:'gen',switchType:'simple',loadShown:false})},
+  {id:'Esq-4', cat:['c1'], titular:'Suministro asociado', conexion:'Red de distribución', func:'Independiente', ubic:'Acometida único usuario', medida:'Doble generación/consumo',
+    title:'Conexión a red de BT con suministro asociado', desc:'Acometida de único usuario con medida doble: un contador para la generación y otro para el consumo.',
+    svg:generateScheme({source:'red',connLabel:'Acometida',meterType:'doble',switchType:'simple',loadShown:true})},
+  {id:'Esq-5', cat:['c1','separado'], titular:'Suministro asociado', conexion:'Red de distribución', func:'Modo separado', ubic:'Acometida único usuario', medida:'Doble generación/consumo',
+    title:'Igual que Esq-4, con funcionamiento en modo separado', desc:'Ante falta de red, el control del generador desconecta primero de la red y después alimenta las cargas propias, con corte.',
+    svg:generateScheme({source:'red',connLabel:'Acometida',meterType:'doble',switchType:'sync',loadShown:true})},
+  {id:'Esq-6', cat:['c1'], titular:'Suministro asociado', conexion:'Instalación interior (LGA)', func:'Independiente', ubic:'Acometida único usuario', medida:'Doble generación/consumo',
+    title:'Generador conectado a la LGA, medida doble', desc:'Comparte instalación de conexión con el consumo asociado al productor; sin posibilidad de modo separado.',
+    svg:generateScheme({source:'interior',connLabel:'LGA',meterType:'doble',switchType:'simple',loadShown:true})},
+  {id:'Esq-7', cat:['c1'], titular:'Suministro asociado', conexion:'Instalación interior (DI)', func:'Independiente', ubic:'Acometida único usuario', medida:'Único bidireccional',
+    title:'Generador conectado a la DI, medida bidireccional', desc:'Conexión en la derivación individual, con un único contador bidireccional para generación y consumo.',
+    svg:generateScheme({source:'interior',connLabel:'DI',meterType:'bidir',switchType:'simple',loadShown:true})},
+  {id:'Esq-8', cat:['c1'], titular:'Suministro asociado', conexion:'Instalación interior (DGMP/CMP)', func:'Independiente', ubic:'Acometida único usuario', medida:'Único bidireccional',
+    title:'Generador en circuito dedicado desde DGMP o CMP', desc:'El generador no comparte circuito con ninguna otra carga de la instalación; medida bidireccional.',
+    svg:generateScheme({source:'interior',connLabel:'DGMP/CMP',meterType:'bidir',switchType:'simple',loadShown:true})},
+  {id:'Esq-9', cat:['c1'], titular:'Suministro asociado', conexion:'Instalación interior (centralización)', func:'Independiente', ubic:'Centralización de contadores', medida:'Doble generación/consumo',
+    title:'Acometida en centralización de contadores', desc:'Esquema típico de conjuntos de edificación vertical u horizontal, con medida doble en la centralización.',
+    svg:generateScheme({source:'interior',connLabel:'CC contador',meterType:'doble',switchType:'simple',loadShown:true})},
+  {id:'Esq-10', cat:['c1','separado'], titular:'Suministro asociado', conexion:'Instalación interior (LGA)', func:'Modo separado', ubic:'Acometida único usuario', medida:'Doble generación/consumo',
+    title:'Esq-6 en modo separado', desc:'Típico de chalets: dos cajas de protección y medida, o una caja doble agrupando generación y consumo.',
+    svg:generateScheme({source:'interior',connLabel:'LGA',meterType:'doble',switchType:'sync',loadShown:true})},
+  {id:'Esq-11', cat:['c1','separado'], titular:'Suministro asociado', conexion:'Instalación interior (DI)', func:'Modo separado', ubic:'Acometida único usuario', medida:'Único bidireccional',
+    title:'Esq-7 en modo separado', desc:'Los dos contadores del esquema doble pueden sustituirse por uno bidireccional, si la legislación lo admite.',
+    svg:generateScheme({source:'interior',connLabel:'DI',meterType:'bidir',switchType:'sync',loadShown:true})},
+  {id:'Esq-12', cat:['c1','separado'], titular:'Suministro asociado', conexion:'Instalación interior (centralización)', func:'Modo separado', ubic:'Centralización de contadores', medida:'Doble generación/consumo',
+    title:'Esq-9 en modo separado', desc:'Centralización de contadores típica de edificación vertical u horizontal, con posibilidad de modo separado.',
+    svg:generateScheme({source:'interior',connLabel:'CC contador',meterType:'doble',switchType:'sync',loadShown:true})},
+  {id:'Esq-13', cat:['c1','separado'], titular:'Suministro asociado', conexion:'Instalación interior (DI)', func:'Modo separado', ubic:'Centralización de contadores', medida:'Único bidireccional',
+    title:'DI en centralización, modo separado, medida bidireccional', desc:'Solo posible cuando generación y consumo pertenecen al mismo titular (persona o comunidad de vecinos).',
+    svg:generateScheme({source:'interior',connLabel:'DI en CC',meterType:'bidir',switchType:'sync',loadShown:true})},
+  {id:'Esq-14', cat:['c2'], titular:'Sólo generación', conexion:'Red de distribución (AT)', func:'Independiente', ubic:'Centro de transformación único', medida:'Sólo generación',
+    title:'Conexión directa a red de AT, solo generación', desc:'Instalación tipo C2: conexión directa a la red de distribución en alta tensión, sin suministro asociado.',
+    svg:generateScheme({source:'ct',connLabel:'CT único',meterType:'gen',switchType:'simple',loadShown:false})},
+  {id:'Esq-15', cat:['c2'], titular:'Suministro asociado', conexion:'Red de distribución (AT)', func:'Independiente', ubic:'Centros de transformación separados', medida:'Doble generación/consumo',
+    title:'Conexión a red de AT, con CT separados', desc:'Conexiones independientes a la red de AT para el generador y para el suministro asociado, cada uno con su CT.',
+    svg:generateScheme({source:'ct',connLabel:'CT separados',meterType:'doble',switchType:'simple',loadShown:true})},
+  {id:'Esq-16', cat:['c2','separado'], titular:'Suministro asociado', conexion:'Instalación interior BT', func:'Modo separado', ubic:'Centro de transformación único', medida:'Bidireccional MT y/o doble BT',
+    title:'Conexión interior en BT desde CT único, modo separado', desc:'La parte de BT comparte transformador con el consumo asociado; puede combinar medida bidireccional en MT con doble en BT.',
+    svg:generateScheme({source:'ct',connLabel:'Interior BT',meterType:'bidir',switchType:'sync',loadShown:true})},
+];
+
+function catBadge(cat){
+  if(cat.includes('c1')) return '<span class="badge c1">C1</span>';
+  if(cat.includes('c2')) return '<span class="badge c2">C2</span>';
+  return '';
+}
+
+function renderSchemes(filter){
+  const grid = document.getElementById('schemeGrid');
+  grid.innerHTML = schemes.map(s=>{
+    const show = filter==='all' || s.cat.includes(filter);
+    return '<div class="scheme-card '+(show?'':'hidden')+'">'+
+      '<div class="scheme-id">'+s.id+'</div>'+
+      '<h4>'+s.title+'</h4>'+
+      '<div class="scheme-diagram">'+s.svg+'</div>'+
+      '<p>'+s.desc+'</p>'+
+      '<div class="tags">'+catBadge(s.cat)+(s.cat.includes('separado')?'<span class="badge">separado</span>':'')+
+      '<span class="badge">'+s.titular+'</span><span class="badge">'+s.medida+'</span></div>'+
+    '</div>';
+  }).join('');
+}
+renderSchemes('all');
+
+document.querySelectorAll('#schemeFilters .filter-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#schemeFilters .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderSchemes(btn.dataset.f);
+  });
+});
+
+// ===================== OVERVOLTAGE CURVES =====================
+(function(){
+  const svg = document.getElementById('overvoltageSvg');
+  const tooltip = document.getElementById('ovTooltip');
+  const W=900,H=420, ML=64, MR=24, MT=24, MB=52;
+  const plotW = W-ML-MR, plotH = H-MT-MB;
+
+  // domain: time in ms, log scale 0.1ms .. 1000ms ; value 100..300 %Un
+  const tMin=0.1, tMax=1000, vMin=100, vMax=300;
+  function xPos(tms){ return ML + (Math.log10(tms)-Math.log10(tMin))/(Math.log10(tMax)-Math.log10(tMin))*plotW; }
+  function yPos(v){ return MT + (1-(v-vMin)/(vMax-vMin))*plotH; }
+
+  const ns='http://www.w3.org/2000/svg';
+  function el(tag,attrs){const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e;}
+
+  // grid: vertical lines at decades
+  [0.1,1,10,100,1000].forEach(t=>{
+    const x=xPos(t);
+    svg.appendChild(el('line',{x1:x,x2:x,y1:MT,y2:MT+plotH,stroke:'#eceff4','stroke-width':1}));
+    const lbl = t<1 ? t+'ms' : (t>=1000? (t/1000)+'s' : t+'ms');
+    const t1=el('text',{x:x,y:MT+plotH+20,'text-anchor':'middle',class:'axis-label'}); t1.textContent=lbl; svg.appendChild(t1);
+  });
+  // horizontal grid at value levels
+  [100,120,140,160,180,200,220,240,260,280,300].forEach(v=>{
+    const y=yPos(v);
+    svg.appendChild(el('line',{x1:ML,x2:ML+plotW,y1:y,y2:y,stroke:'#eceff4','stroke-width':1}));
+    const t1=el('text',{x:ML-10,y:y+4,'text-anchor':'end',class:'axis-label'}); t1.textContent=v+'%'; svg.appendChild(t1);
+  });
+
+  const axisLbl1 = el('text',{x:ML+plotW/2,y:H-8,'text-anchor':'middle',class:'axis-label'}); axisLbl1.textContent='Duración de la sobretensión (escala logarítmica)'; svg.appendChild(axisLbl1);
+  const axisLbl2 = el('text',{x:16,y:MT+plotH/2,'text-anchor':'middle',class:'axis-label',transform:'rotate(-90,16,'+(MT+plotH/2)+')'}); axisLbl2.textContent='Tensión admisible (% Un pico)'; svg.appendChild(axisLbl2);
+
+  // Group 1 data (t in ms)
+  const g1 = [[0.2,280],[0.6,218],[2,178],[6,145],[20,129],[60,120],[200,120],[600,120]];
+  const g1path = 'M'+g1.map(p=>xPos(p[0]).toFixed(1)+','+yPos(p[1]).toFixed(1)).join(' L');
+  svg.appendChild(el('path',{d:g1path, fill:'none', stroke:'#2457e6','stroke-width':2.5}));
+  g1.forEach(p=>{
+    svg.appendChild(el('circle',{cx:xPos(p[0]),cy:yPos(p[1]),r:3.5,fill:'#2457e6'}));
+  });
+
+  // Group 2 data: step function
+  const g2steps = [[0.001,1,200],[1,3,140],[3,500,120],[500,1000,110]];
+  let g2path='';
+  g2steps.forEach((s,i)=>{
+    const x1=xPos(Math.max(s[0],tMin)), x2=xPos(s[1]), y=yPos(s[2]);
+    g2path += (i===0?'M':'L')+x1.toFixed(1)+','+y.toFixed(1)+' L'+x2.toFixed(1)+','+y.toFixed(1);
+    if(i<g2steps.length-1){
+      const yNext = yPos(g2steps[i+1][2]);
+      g2path += ' L'+x2.toFixed(1)+','+yNext.toFixed(1);
+    }
+  });
+  svg.appendChild(el('path',{d:g2path, fill:'none', stroke:'#c27c00','stroke-width':2.5,'stroke-dasharray':'0'}));
+
+  // hover interaction
+  const hoverLine = el('line',{y1:MT,y2:MT+plotH,stroke:'#7b8696','stroke-width':1,'stroke-dasharray':'3,3',opacity:0});
+  svg.appendChild(hoverLine);
+  const hitArea = el('rect',{x:ML,y:MT,width:plotW,height:plotH,fill:'transparent'});
+  svg.appendChild(hitArea);
+
+  function interp(data, tms){
+    // data sorted by t ascending, linear interpolation in log-time / linear-value space, clamped
+    if(tms<=data[0][0]) return data[0][1];
+    if(tms>=data[data.length-1][0]) return data[data.length-1][1];
+    for(let i=0;i<data.length-1;i++){
+      if(tms>=data[i][0] && tms<=data[i+1][0]){
+        const lt0=Math.log10(data[i][0]), lt1=Math.log10(data[i+1][0]), lt=Math.log10(tms);
+        const f=(lt-lt0)/(lt1-lt0);
+        return data[i][1] + f*(data[i+1][1]-data[i][1]);
+      }
+    }
+    return null;
+  }
+  function stepVal(steps, tms){
+    for(const s of steps){ if(tms>=s[0] && tms<s[1]) return s[2]; }
+    return steps[steps.length-1][2];
+  }
+
+  hitArea.addEventListener('mousemove', (e)=>{
+    const rect = svg.getBoundingClientRect();
+    const scaleX = W/rect.width;
+    const mx = (e.clientX-rect.left)*scaleX;
+    const frac = (mx-ML)/plotW;
+    const tms = Math.pow(10, Math.log10(tMin)+frac*(Math.log10(tMax)-Math.log10(tMin)));
+    if(tms<tMin||tms>tMax) return;
+    const v1 = interp(g1, tms);
+    const v2 = stepVal(g2steps, tms);
+    hoverLine.setAttribute('x1',mx); hoverLine.setAttribute('x2',mx); hoverLine.setAttribute('opacity',1);
+    const tLabel = tms<1? (tms*1000).toFixed(0)+' µs' : tms<1000? tms.toFixed(2)+' ms' : (tms/1000).toFixed(2)+' s';
+    tooltip.innerHTML = 't ≈ '+tLabel+'<br><span style="color:#2457e6">Grupo 1: '+v1.toFixed(0)+'% Un</span><br><span style="color:#c27c00">Grupo 2: '+v2.toFixed(0)+'% Un</span>';
+    const wrapRect = svg.parentElement.getBoundingClientRect();
+    let left = (e.clientX-wrapRect.left)+14;
+    let top = (e.clientY-wrapRect.top)-40;
+    tooltip.style.left = left+'px';
+    tooltip.style.top = top+'px';
+    tooltip.style.opacity=1;
+  });
+  hitArea.addEventListener('mouseleave', ()=>{ hoverLine.setAttribute('opacity',0); tooltip.style.opacity=0; });
+})();
+
+// ===================== HARMONICS BAR CHART =====================
+(function(){
+  const container = document.getElementById('harmonicsBars');
+  const maxVal = 25/5; // 5% dominates as max for visual scale reference; but n=2 gives 4/2=2, order3=5 fixed is highest small n
+  // compute actual max for scaling
+  let values = [];
+  for(let n=2;n<=25;n++){
+    let v, color, label;
+    if(n===3){ v=5; color='#c62828'; label='3'; }
+    else if(n%2===0){ v=4/n; color='#2457e6'; label=n; }
+    else { v=25/n; color='#c27c00'; label=n; }
+    values.push({n,v,color,label});
+  }
+  const maxV = Math.max(...values.map(x=>x.v));
+  values.forEach(item=>{
+    const col = document.createElement('div');
+    col.className='bar-col';
+    const bar = document.createElement('div');
+    bar.className='bar';
+    const hPct = (item.v/maxV*100).toFixed(1);
+    bar.style.height = hPct+'%';
+    bar.style.background = item.color;
+    bar.title = 'Orden '+item.n+': '+item.v.toFixed(2)+'%';
+    const lbl = document.createElement('div');
+    lbl.className='bx';
+    lbl.textContent = item.n;
+    col.appendChild(bar);
+    col.appendChild(lbl);
+    container.appendChild(col);
+  });
+})();
+
+// ===================== GUÍA-BT-40: CONEXIÓN A RED =====================
+function schemeById(id){ return schemes.find(s=>s.id===id); }
+function clasifLabel(c){ return {aislada:'Aislada', asistida:'Asistida', c1:'Interconectada C1', c2:'Interconectada C2'}[c]||c; }
+const PROTECCIONES_BT40 = [
+  ['bt_chk_umin', 'Mínima tensión', '< 85% Un', '< 0,5 s'],
+  ['bt_chk_umax', 'Sobretensión', '> 110% Un', '< 0,5 s'],
+  ['bt_chk_fmin', 'Mínima frecuencia', '< 49 Hz', '> 5 periodos'],
+  ['bt_chk_fmax', 'Máxima frecuencia', '> 51 Hz', '> 5 periodos'],
+  ['bt_chk_sync', 'Ventana de sincronismo', '±8% · ±0,1 Hz · ±10°', 'al cierre'],
+  ['bt_chk_tierra', 'Puesta a tierra según modo de funcionamiento', 'TT o red independiente', '—'],
+];
+
+// El selector de esquemas tiene siempre los 16 (así se puede restaurar el valor guardado) y
+// solo muestra los de la clasificación elegida.
+(function(){
+  document.getElementById('bt_esquema').innerHTML = schemes.map(s=>'<option value="'+s.id+'">'+s.id+' — '+esc(s.title)+'</option>').join('');
+})();
+function actualizarEsquemasBT(){
+  const cat = val('bt_clasificacion');
+  const sel = document.getElementById('bt_esquema');
+  let primero = null;
+  Array.prototype.forEach.call(sel.options, o=>{
+    const ok = schemeById(o.value).cat.includes(cat);
+    o.hidden = !ok; o.disabled = !ok;
+    if(ok && !primero) primero = o.value;
+  });
+  const actual = schemeById(sel.value);
+  if(!actual || !actual.cat.includes(cat)){ sel.value = primero; sel.dispatchEvent(new Event('change')); }
+  const aplica = (cat==='c1' || cat==='c2');
+  const campos = document.getElementById('bt_potenciaCampos');
+  campos.style.opacity = aplica ? '1' : '0.4';
+  campos.querySelectorAll('input,select').forEach(el=>{ el.disabled = !aplica; });
+}
+document.getElementById('bt_clasificacion').addEventListener('change', actualizarEsquemasBT);
+
+function calcularConexionBT(inv, distribucion){
+  const clasificacion = val('bt_clasificacion');
+  const esquema = schemeById(val('bt_esquema')) || null;
+  const potenciaAplica = (clasificacion==='c1' || clasificacion==='c2');
+  const pAuto = distribucion.nInversores*inv.potNomCA;
+  const pOverride = numOrNull('bt_pgen_override');
+  const pGen = (pOverride!=null && pOverride>0) ? pOverride : pAuto;
+  const red = val('bt_red');
+  const fixedLimit = red==='220' ? 60 : 100;
+  const ct = num('bt_ct_kva');
+  const halfCT = ct/2;
+  const passFixed = pGen <= fixedLimit;
+  const passCT = pGen <= halfCT;
+  const protecciones = PROTECCIONES_BT40.map(p=>({id:p[0], nombre:p[1], umbral:p[2], tiempo:p[3], instalada:checked(p[0])}));
+  const checksOk = protecciones.every(p=>p.instalada);
+  const powerOk = !potenciaAplica || (passFixed && passCT);
+  return {clasificacion, esquema, potenciaAplica, pGen, pAuto, manual:pGen!==pAuto, red, fixedLimit, ct, halfCT, passFixed, passCT, protecciones, checksOk, powerOk, overall: checksOk && powerOk};
+}
+
+function itemsConexionBT(bt){
+  const items = [];
+  items.push({desc:'Clasificación de la instalación', sub:'ITC-BT-40 §3', valor:clasifLabel(bt.clasificacion), estado:'ok', texto:'DEFINIDA'});
+  items.push({desc:'Esquema de conexión', sub:bt.esquema ? bt.esquema.title : '', valor:bt.esquema ? bt.esquema.id : '—', estado:bt.esquema?'ok':'fail', texto:bt.esquema?'DEFINIDO':'SIN ESQUEMA'});
+  if(bt.potenciaAplica){
+    const p = fmtNum(bt.pGen,1)+' kVA';
+    items.push({desc:'Potencia del generador ≤ límite fijo de la red', sub:(bt.red==='220'?'red 3×220/127 V':'red 3×400/230 V')+(bt.manual?' · potencia introducida a mano':' · potencia CA total de los inversores'), valor:p+' / '+bt.fixedLimit+' kVA', estado:bt.passFixed?'ok':'fail', texto:bt.passFixed?'CUMPLE':'SUPERA'});
+    items.push({desc:'Potencia del generador ≤ mitad de la capacidad del CT', sub:'CT de '+fmtNum(bt.ct,0)+' kVA', valor:p+' / '+fmtNum(bt.halfCT,1)+' kVA', estado:bt.passCT?'ok':'fail', texto:bt.passCT?'CUMPLE':'SUPERA'});
+  } else {
+    items.push({desc:'Límite de potencia interconectada', sub:'solo para instalaciones interconectadas (C1, C2)', valor:'no aplica', estado:'ok', texto:'NO APLICA'});
+  }
+  bt.protecciones.forEach(p=>items.push({desc:'Protección: '+p.nombre, sub:'umbral '+p.umbral+(p.tiempo!=='—'?' · '+p.tiempo:''), valor:p.instalada?'instalada':'pendiente', estado:p.instalada?'ok':'fail', texto:p.instalada?'INSTALADA':'PENDIENTE'}));
+  items.push({desc:'Conclusión de la conexión a red', sub:'límite de potencia y protecciones de interconexión', valor:'', estado:bt.overall?'ok':'fail', texto:bt.overall?'CONEXIÓN ADMISIBLE':'REVISAR'});
+  return items;
+}
+
+function renderConexionBT(bt){
+  const s = bt.esquema;
+  document.getElementById('bt_esquemaVista').innerHTML = s ? (
+    '<div class="scheme-diagram">'+s.svg+'</div>'+
+    '<div><div class="scheme-id">'+s.id+'</div><h4>'+esc(s.title)+'</h4><p>'+esc(s.desc)+'</p>'+
+    '<div class="result-row"><span class="lbl">Titular</span><span class="val">'+esc(s.titular)+'</span></div>'+
+    '<div class="result-row"><span class="lbl">Conexión</span><span class="val">'+esc(s.conexion)+'</span></div>'+
+    '<div class="result-row"><span class="lbl">Funcionamiento</span><span class="val">'+esc(s.func)+'</span></div>'+
+    '<div class="result-row"><span class="lbl">Ubicación</span><span class="val">'+esc(s.ubic)+'</span></div>'+
+    '<div class="result-row"><span class="lbl">Medida</span><span class="val">'+esc(s.medida)+'</span></div></div>') : '';
+  document.getElementById('bt_pgen_override').placeholder = 'auto ('+fmtNum(bt.pAuto,1)+')';
+  document.getElementById('conexionResultado').innerHTML = itemsConexionBT(bt).map(c=>checkItem(c.desc,c.sub,c.valor,c.estado,c.texto)).join('');
+}
+
+// Mini-diagrama del esquema para el informe: los colores y la fuente salen de variables CSS,
+// que el SVG suelto (fuera de la página) no conoce.
+function svgEsquemaInforme(s){
+  const COLORES = {'--panel2':'#f6f8fb', '--line':'#9aa3b0', '--text-dim':'#4f5b6d', '--text-dimmer':'#7b8696', '--amber':'#c27c00', '--cyan':'#2457e6', '--font-mono':'DejaVu Sans Mono, monospace'};
+  return s.svg.replace(/var\((--[a-z0-9-]+)\)/g, (m,k)=>COLORES[k]||'#4f5b6d')
+    .replace('<svg viewBox="0 0 260 115">', '<svg xmlns="http://www.w3.org/2000/svg" width="140mm" height="61.9mm" viewBox="-6 0 266 115">');
 }
 
 // ===================== ORQUESTADOR =====================
@@ -1371,16 +2131,18 @@ function recalcularTodo(){
   const distribucion = calcularDistribucion(panel, inv, cadena.nUsado, paralelo.nUsado, ctx.kwpObjetivo);
   const ccr = calcularProteccionesCC(panel, inv, cadena, paralelo);
   const car = calcularProteccionesCA(inv, distribucion);
+  const bt = calcularConexionBT(inv, distribucion);
 
   renderCadena(panel, inv, ctx, cadena);
   renderParalelo(panel, inv, paralelo);
   renderDistribucion(panel, inv, distribucion);
-  renderUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car);
+  renderUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt);
   renderProteccionesCC(panel, inv, paralelo, ccr);
   renderProteccionesCA(inv, distribucion, car);
-  renderInforme(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car);
+  renderConexionBT(bt);
+  renderInforme(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt);
 
-  ULTIMO_RESULTADO = {panel, inv, ctx, cadena, paralelo, distribucion, ccr, car};
+  ULTIMO_RESULTADO = {panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt};
   guardarSalidaEnVatiaco(ULTIMO_RESULTADO);
   return ULTIMO_RESULTADO;
 }
@@ -1395,7 +2157,7 @@ function programarRecalculo(){
   clearTimeout(_recalcTimer);
   _recalcTimer = setTimeout(recalcularTodo, 400);
 }
-document.querySelectorAll('#cadenas input, #cadenas select, #diagrama input, #diagrama select, #ccprot input, #ccprot select, #caprot input, #caprot select').forEach(el=>{
+document.querySelectorAll('#cadenas input, #cadenas select, #diagrama input, #diagrama select, #ccprot input, #ccprot select, #caprot input, #caprot select, #conexion input, #conexion select').forEach(el=>{
   const evento = (el.tagName==='SELECT' || el.type==='checkbox') ? 'change' : 'input';
   el.addEventListener(evento, programarRecalculo);
 });
@@ -1415,7 +2177,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   const r = recalcularTodo();
   const V = VatiacoInforme, C = new V.Contenido();
   const proyecto = val('p_proyecto') || 'Dimensionado eléctrico de sistema fotovoltaico';
-  const panel = r.panel, inv = r.inv, ctx = r.ctx, cadena = r.cadena, paralelo = r.paralelo, distribucion = r.distribucion, ccr = r.ccr, car = r.car;
+  const panel = r.panel, inv = r.inv, ctx = r.ctx, cadena = r.cadena, paralelo = r.paralelo, distribucion = r.distribucion, ccr = r.ccr, car = r.car, bt = r.bt;
   const ESTADO = { ok:'Cumple', fail:'No cumple' };
   // Comprobaciones {desc, sub, valor, estado, texto} -> tabla
   const comprobaciones = (items, titulo)=>C.tabla(['Comprobación','Valor','Resultado'],
@@ -1423,7 +2185,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
 
   C.seccion('Introducción');
   C.p('Informe técnico de predimensionado eléctrico de la instalación fotovoltaica "'+proyecto+'", con una potencia pico de '+fmtNum(distribucion.kwpReal,2)+' kWp repartida en '+distribucion.totalStrings+' cadena(s) y '+distribucion.nInversores+' inversor(es) modelo '+inv.modelo+'.');
-  C.p('Incluye la configuración de las cadenas de corriente continua, su distribución entre las entradas MPPT de cada inversor, y el calibrado de las protecciones de corriente continua (CC) y corriente alterna (CA).');
+  C.p('Incluye la configuración de las cadenas de corriente continua, su distribución entre las entradas MPPT de cada inversor, el calibrado de las protecciones de corriente continua (CC) y corriente alterna (CA), y la verificación de la conexión a la red de distribución según la GUÍA-BT-40 (clasificación, esquema de conexión, límite de potencia y protecciones de interconexión).');
   if(!cadena.compatible) C.p('ATENCIÓN: la configuración actual de panel e inversor no es compatible en tensión; revísala antes de ejecutar la instalación.', true);
 
   C.seccion('Datos de partida');
@@ -1431,6 +2193,12 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   C.kv('Datos eléctricos del panel', 'Voc '+fmtNum(panel.vOc,1)+' V · Vmp '+fmtNum(panel.vMp,1)+' V · Isc '+fmtNum(panel.iSc,2)+' A · Imp '+fmtNum(panel.iMp,2)+' A');
   C.kv('Modelo de inversor', inv.modelo);
   C.kv('Temperaturas de diseño', 'mín. '+ctx.tmin+' °C · máx. célula '+ctx.tmax+' °C · margen '+ctx.margen+' %');
+  C.kv('Clasificación (GUÍA-BT-40)', clasifLabel(bt.clasificacion));
+  C.kv('Esquema de conexión', bt.esquema ? bt.esquema.id+' — '+bt.esquema.title : '—');
+  if(bt.potenciaAplica){
+    C.kv('Red de distribución', bt.red==='220' ? '3×220/127 V' : '3×400/230 V');
+    C.kv('Capacidad del centro de transformación', fmtNum(bt.ct,0)+' kVA');
+  }
 
   C.seccion('Generador fotovoltaico y cadenas');
   C.kv('Paneles en serie por cadena', String(cadena.nUsado));
@@ -1453,7 +2221,7 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   C.seccion('Diagrama unifilar');
   C.p('Se dibuja una sola cadena representativa, con el resto de cadenas e inversores indicados mediante las etiquetas "×N".');
   const L = new V.Lienzo();
-  dibujarUnifilarPDF(L, nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car), 20, 30, 170, yy=>yy);
+  dibujarUnifilarPDF(L, nodosUnifilar(panel, inv, ctx, cadena, paralelo, distribucion, ccr, car, bt), 20, 30, 170, yy=>yy);
   const g = L.cortar();
   if(g){ C.dibujo(g.svg, g.ancho, g.alto); C.leyendaFigura('Diagrama unifilar de la instalación (una cadena representativa)'); }
 
@@ -1463,8 +2231,35 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
   C.seccion('Protecciones CA');
   comprobaciones(itemsProteccionesCA(panel, inv, distribucion, car), 'Protecciones de corriente alterna');
 
+  C.seccion('Conexión a la red de distribución (GUÍA-BT-40)');
+  if(bt.esquema){
+    C.sub('Esquema de conexión '+bt.esquema.id);
+    C.p(bt.esquema.title+'. '+bt.esquema.desc);
+    C.dibujo(svgEsquemaInforme(bt.esquema), 140, 61.9);
+    C.leyendaFigura('Esquema de conexión '+bt.esquema.id+' de la GUÍA-BT-40 (esquemático, no a escala)');
+    C.tabla(['Variable','Valor'], [['Clasificación', clasifLabel(bt.clasificacion)], ['Titular', bt.esquema.titular], ['Conexión', bt.esquema.conexion],
+      ['Funcionamiento', bt.esquema.func], ['Ubicación', bt.esquema.ubic], ['Medida', bt.esquema.medida]], 'Variables del esquema de conexión '+bt.esquema.id);
+  }
+  C.sub('Límite de potencia interconectada');
+  if(bt.potenciaAplica){
+    C.p('La potencia nominal total de los generadores conectados en un mismo punto de la red de BT no puede superar el límite fijo de la red (100 kVA en 3×400/230 V, 60 kVA en 3×220/127 V) ni la mitad de la capacidad del centro de transformación (ITC-BT-40 §4.3.1). '+(bt.manual ? 'La potencia del generador se ha introducido a mano.' : 'Como potencia del generador se toma la potencia CA total de los inversores, con cos φ = 1.'));
+    C.formula(['P ≤ mín ( P_fijo , CT / 2 )'], 'P_fijo: 100 kVA (red 400 V) o 60 kVA (red 220 V) · CT: capacidad del centro de transformación');
+    C.tabla(['Criterio','Límite','Generador','Resultado'], [
+      ['Límite fijo de la red ('+(bt.red==='220'?'3×220/127 V':'3×400/230 V')+')', bt.fixedLimit+' kVA', fmtNum(bt.pGen,1)+' kVA', bt.passFixed?'Cumple':'Supera'],
+      ['Mitad de la capacidad del CT ('+fmtNum(bt.ct,0)+' kVA)', fmtNum(bt.halfCT,1)+' kVA', fmtNum(bt.pGen,1)+' kVA', bt.passCT?'Cumple':'Supera'],
+    ], 'Comprobación del límite de potencia interconectada');
+    C.p('El RD 1699/2011 añade el criterio de la mitad de la capacidad de transporte de la línea menos la generación ya conectada y un incremento de tensión máximo del 2,5 %, que debe confirmar la empresa distribuidora.');
+  } else {
+    C.p('El límite de potencia interconectada no aplica a una instalación '+clasifLabel(bt.clasificacion).toLowerCase()+', que no trabaja en paralelo con la red de distribución.');
+  }
+  C.sub('Protecciones de interconexión');
+  C.p('Además de la protección contra sobreintensidades y contactos indirectos, la instalación debe desconectarse automáticamente de la red ante las condiciones siguientes, y los generadores síncronos solo pueden acoplarse dentro de la ventana de sincronismo.');
+  C.tabla(['Protección','Umbral','Tiempo de actuación','Estado'], bt.protecciones.map(p=>[p.nombre, p.umbral, p.tiempo, p.instalada?'Instalada':'Pendiente']), 'Protecciones de interconexión (GUÍA-BT-40)');
+  C.p('Veredicto de la conexión a red: '+(bt.overall ? 'la instalación cumple el límite de potencia y dispone de las protecciones de interconexión verificadas.' : 'REQUIERE REVISIÓN: '+[!bt.powerOk ? 'se supera el límite de potencia interconectada' : '', !bt.checksOk ? 'faltan protecciones de interconexión' : ''].filter(Boolean).join(' y ')+'.'), true);
+
   C.seccion('Conclusiones');
   C.p('Generador de '+fmtNum(distribucion.kwpReal,2)+' kWp en corriente continua con '+distribucion.totalStrings+' cadenas de '+cadena.nUsado+' paneles y '+distribucion.nInversores+' inversor(es) ('+fmtNum(distribucion.nInversores*inv.potNomCA,2)+' kW CA)'+(cadena.compatible ? '.' : '. La configuración de panel e inversor no es compatible en tensión y debe revisarse.'));
+  C.p('Conexión a red según la GUÍA-BT-40: instalación '+clasifLabel(bt.clasificacion).toLowerCase()+(bt.esquema ? ' con esquema '+bt.esquema.id : '')+'; '+(bt.overall ? 'conexión admisible con los datos introducidos.' : 'la conexión requiere revisión antes de la ejecución.'));
   C.p('Este informe es una ayuda de predimensionado con criterios habituales de diseño (IEC 62548, buenas prácticas de instalación FV). No sustituye el cálculo justificativo del proyecto ni el criterio del instalador autorizado: verifica siempre los resultados frente a la normativa vigente (REBT y sus ITC, UNE-HD 60364) y las hojas de datos reales de los equipos antes de ejecutar la instalación.');
 
   V.generar({
@@ -1473,11 +2268,21 @@ document.getElementById('btnPdf').addEventListener('click', ()=>{
     archivo: 'dimensionado-electrico-fv-', acento: [255,176,32],
     cifras: [[fmtNum(distribucion.kwpReal,2), 'kWp', 'Potencia CC'], [String(distribucion.totalStrings), '', 'Cadenas'],
              [String(distribucion.nInversores), '', 'Inversores'], [fmtNum(distribucion.nInversores*inv.potNomCA,2), 'kW', 'Potencia CA']],
-    datosPortada: [['Panel / inversor', panel.modelo+' · '+inv.modelo]],
-    palabrasClave: ['fotovoltaica', 'cadenas', 'MPPT', 'inversor', 'protecciones', 'diagrama unifilar'],
+    datosPortada: [['Panel / inversor', panel.modelo+' · '+inv.modelo], ['Conexión a red', clasifLabel(bt.clasificacion)+(bt.esquema ? ' · '+bt.esquema.id : '')]],
+    palabrasClave: ['fotovoltaica', 'cadenas', 'MPPT', 'inversor', 'protecciones', 'diagrama unifilar', 'GUÍA-BT-40', 'esquema de conexión'],
+    glosario: [
+      ['P', 'Potencia nominal total de los generadores', 'kVA'],
+      ['P_fijo', 'Límite fijo de potencia según el tipo de red', 'kVA'],
+      ['CT', 'Capacidad del centro de transformación', 'kVA'],
+      ['Un', 'Tensión nominal de la red', 'V'],
+      ['C1', 'Instalación interconectada con conexión directa en BT', '-'],
+      ['C2', 'Instalación interconectada con conexión en AT a través de transformador', '-'],
+    ],
     normativa: ['IEC 62548. Sistemas fotovoltaicos. Requisitos de diseño.',
                 'Real Decreto 842/2002. Reglamento electrotécnico para baja tensión (REBT) y sus ITC; ITC-BT-40, instalaciones generadoras de baja tensión.',
-                'UNE-HD 60364 (serie). Instalaciones eléctricas de baja tensión.'],
+                'UNE-HD 60364 (serie). Instalaciones eléctricas de baja tensión.',
+                'Ministerio de Industria, Energía y Turismo. GUÍA-BT-40: Instalaciones generadoras de baja tensión. Guía técnica de aplicación del REBT, ed. septiembre 2013, rev. 1.',
+                'Real Decreto 1699/2011, por el que se regula la conexión a red de instalaciones de producción de energía eléctrica de pequeña potencia.'],
   }).then(()=>registrarSalidaPdf());
 });
 
@@ -1497,6 +2302,7 @@ function guardarSalidaEnVatiaco(resultado){
   v[DOC_KEY].outputs.cadena = {nSeries:resultado.cadena.nUsado, nParalelo:resultado.paralelo.nUsado, vocFrioUnit:resultado.cadena.vocFrioUnit, vmpCalienteUnit:resultado.cadena.vmpCalienteUnit, compatible:resultado.cadena.compatible};
   v[DOC_KEY].outputs.distribucion = {totalStrings:resultado.distribucion.totalStrings, totalPaneles:resultado.distribucion.totalPanelesReal, kwpReal:resultado.distribucion.kwpReal, nInversores:resultado.distribucion.nInversores, inversores:resultado.distribucion.inversores};
   v[DOC_KEY].outputs.proteccionesCC = {seccionRamal:resultado.ccr.seccionRamal, seccionPrincipal:resultado.ccr.seccionPrincipal, fusibleRating:resultado.ccr.fusibleRating, seccionadorRating:resultado.ccr.seccionadorRating, seccionadorVoltaje:resultado.ccr.seccionadorVoltaje};
+  v[DOC_KEY].outputs.conexionBT40 = {clasificacion:resultado.bt.clasificacion, esquema:resultado.bt.esquema?resultado.bt.esquema.id:null, potenciaGeneradorKVA:resultado.bt.pGen, limiteFijoKVA:resultado.bt.fixedLimit, mitadCTKVA:resultado.bt.halfCT, protecciones:resultado.bt.checksOk, admisible:resultado.bt.overall};
   v[DOC_KEY].outputs.proteccionesCA = {InInversor:resultado.car.InInversor, magnetoRating:resultado.car.magnetoRating, diferencialRating:resultado.car.diferencialRating, seccionCable:resultado.car.seccionCable, igmRating:resultado.car.necesitaIGM?resultado.car.igmRating:null};
   vatiacoGuardar(v);
 }
@@ -1597,7 +2403,7 @@ function guardarSalidaEnVatiaco(resultado){
 
   inicializarImportacion();
   inicializarPresetsInversor();
-  setTimeout(function(){ inicializarVatiaco(); recalcularTodo(); }, 0);
+  setTimeout(function(){ inicializarVatiaco(); actualizarEsquemasBT(); recalcularTodo(); }, 0);
 })();
 </script>
 </body>
