@@ -155,7 +155,7 @@
 
   .fv-info-flotante{position:absolute; top:10px; left:10px; z-index:900; background:rgba(255,255,255,0.88); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:11.5px; padding:8px 12px; border-radius:var(--radius); max-width:70%; pointer-events:none;}
   .fv-info-flotante b{color:var(--amber);}
-  .fv-map-toolbar{position:absolute; top:10px; right:10px; bottom:10px; z-index:900; display:flex; flex-direction:column; gap:6px; width:270px; max-height:calc(100% - 20px); overflow-y:auto; overflow-x:visible;}
+  .fv-map-toolbar{position:absolute; top:10px; right:10px; z-index:900; display:flex; flex-direction:column; gap:6px; width:250px;}
 
   /* Fila superior de acciones: solo icono (sin texto), con tooltip nativo al pasar
      el raton. Sustituye a los antiguos botones apilados con texto. */
@@ -170,27 +170,8 @@
      el resumen (paneles/kWp) y una flecha que pliega/despliega el cuerpo; el cuerpo
      tiene un rail de iconos a la izquierda (solo icono + tooltip) que conmuta entre
      las 3 vistas, sin fondo oscuro sobre el mapa. */
-  .fv-acordeon{width:100%; background:rgba(255,255,255,0.96); border:1px solid var(--line); border-radius:var(--radius); box-shadow:0 8px 28px rgba(11,31,58,0.12); box-sizing:border-box; overflow:hidden;}
-  .fv-acordeon-selector{padding:10px 12px 8px;}
-  .fv-acordeon-selector select{width:100%; background:var(--panel2); border:1px solid var(--amber); color:var(--text); padding:7px 8px; border-radius:2px; font-family:var(--font-mono); font-size:12px; font-weight:600; cursor:pointer;}
-  .fv-acordeon-selector select:focus{outline:none;}
-  .fv-acordeon-head{width:100%; display:flex; align-items:center; gap:8px; background:none; border:none; padding:0 12px 10px; cursor:pointer; text-align:left;}
-  .fv-acordeon-head:hover .fv-acordeon-subtitulo{color:#a86a00;}
-  .fv-acordeon-subtitulo{flex:1; min-width:0; font-family:var(--font-mono); font-size:11px; color:var(--amber); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .fv-acordeon-chevron{flex-shrink:0; color:var(--text-dimmer); font-size:13px; transition:transform .15s ease;}
-  .fv-acordeon.collapsed .fv-acordeon-chevron{transform:rotate(-90deg);}
-  .fv-acordeon.collapsed .fv-acordeon-body{display:none;}
-  .fv-acordeon-body{display:flex; border-top:1px solid var(--line-soft);}
 
-  .fv-icon-rail{flex-shrink:0; width:38px; display:flex; flex-direction:column; border-right:1px solid var(--line-soft); background:rgba(255,255,255,0.015);}
-  .fv-icon-tab{background:none; border:none; border-left:2px solid transparent; color:var(--text-dimmer); font-size:15px; padding:10px 0; cursor:pointer; text-align:center;}
-  .fv-icon-tab:hover{color:var(--text); background:rgba(255,255,255,0.04);}
-  .fv-icon-tab.active{color:var(--cyan,var(--amber)); border-left-color:var(--amber); background:rgba(194,124,0,0.08);}
 
-  .fv-icon-content{flex:1; min-width:0; min-height:0; max-height:min(58vh, 420px); overflow-y:auto; padding:12px 12px 16px;}
-  .fv-panel-pane{display:none;}
-  .fv-panel-pane.active{display:block;}
-  .fv-panel-pane .fieldset-title:first-child{margin-top:0; padding-top:0; border-top:none;}
 
   .fv-superficie-item{display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 9px; border-radius:var(--radius); border:1px solid var(--line); margin-bottom:6px; cursor:pointer; font-size:12px;}
   .fv-superficie-item:hover{border-color:var(--text-dim);}
@@ -210,10 +191,6 @@
   @media(max-width:900px){
     .fv-workspace--full{height:420px;}
     .fv-map-toolbar{width:min(230px, calc(100% - 20px));}
-    .fv-acordeon-body{flex-direction:column;}
-    .fv-icon-rail{flex-direction:row; width:100%; border-right:none; border-bottom:1px solid var(--line-soft);}
-    .fv-icon-tab{flex:1; border-left:none; border-bottom:2px solid transparent; padding:8px 0;}
-    .fv-icon-tab.active{border-left-color:transparent; border-bottom-color:var(--amber);}
   }
 
   #sombraChart{touch-action:none; user-select:none; cursor:pointer;}
@@ -270,6 +247,20 @@
   .pv-manual ol{padding-left:18px; margin:6px 0 10px;}
   .pv-manual li{margin-bottom:4px;}
   .pv-manual a{color:var(--cyan);}
+
+  /* Superficies del proyecto (pestana Simulacion): la activa se edita dentro de su tarjeta */
+  .line-card.activa{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
+  .line-card.activa .line-head{background:rgba(194,124,0,0.06);}
+  .badge.editando{border-color:var(--amber); color:var(--amber); font-weight:600;}
+  .btn-mini{font-family:var(--font-mono); font-size:11px; color:var(--cyan); background:none; border:1px solid var(--line); border-radius:4px; cursor:pointer; padding:3px 9px;}
+  .btn-mini:hover{border-color:var(--cyan);}
+  .fv-editor{padding-top:14px;}
+  .fv-editor-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 24px;}
+  .nombre-cabecera{font-size:14px; font-family:inherit; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:4px 8px; min-width:220px; max-width:100%;}
+  .nombre-cabecera:focus{outline:none; border-color:var(--amber);}
+  @media(max-width:900px){.fv-editor-grid{grid-template-columns:1fr;}}
+  .fv-editor .fieldset-title:first-child{margin-top:0; padding-top:0; border-top:none;}
+  .fv-editor-sombras{margin-top:6px;}
 </style>
 </head>
 <body>
@@ -315,18 +306,9 @@
     <!-- 00 SIMULACION -->
     <section id="simulacion">
       <div class="eyebrow kicker">00 · Simulación</div>
-      <div class="btn-row" style="margin-bottom:8px;">
-        <button class="btn primary" id="btnCalcularPvgis" type="button">☀ Calcular con PVGIS</button>
-      </div>
-      <div class="pv-estado" id="pvEstado" role="status" aria-live="polite"></div>
-      <div id="pvManual" class="pv-manual" style="display:none;"></div>
-      <input type="file" id="pvJsonManual" accept=".json,application/json" multiple style="display:none;">
-      <div style="margin-bottom:24px;"></div>
       <div id="superficies" class="tab-bloque">
-      <div class="eyebrow kicker">Pinta tus paneles</div>
-      <h2>Pinta los paneles directamente sobre el mapa satélite.</h2>
-      <p class="lede">Arrastra sobre el mapa para pintar (o borrar) paneles; usa el tirador naranja para mover la matriz y el azul para rotarla. Pulsa "⚙ Editar superficie" para ajustar el nombre, la estructura, el modelo de panel y las sombras.</p>
 
+      <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
       <div class="fv-workspace fv-workspace--full">
         <div class="fv-map-col">
           <div id="mapaSuperficies"></div>
@@ -342,89 +324,60 @@
               <input type="file" id="inputImportarGeoJSON" accept=".geojson,.json,application/geo+json,application/json" style="display:none;">
             </div>
 
-            <!-- ACORDEON: editar superficie (selector siempre visible, cabecera de resumen; flecha pliega/despliega el cuerpo) -->
-            <div class="fv-acordeon" id="fvAcordeon">
-              <div class="fv-acordeon-selector">
-                <select id="selectorSuperficies" title="Cambiar de superficie"></select>
-              </div>
-
-              <button class="fv-acordeon-head" id="btnToggleAcordeon" type="button">
-                <span class="fv-acordeon-subtitulo" id="fvSubtituloSuperficie">▦ 0 paneles &nbsp;⚡ 0 kWp</span>
-                <span class="fv-acordeon-chevron" id="fvChevron">⌄</span>
-              </button>
-
-              <div class="fv-acordeon-body" id="fvAcordeonBody">
-                <div class="fv-icon-rail">
-                  <button class="fv-icon-tab active" id="iconTabSuperficie" type="button" data-tab="superficie" title="Superficie">▦</button>
-                  <button class="fv-icon-tab" id="iconTabEstructura" type="button" data-tab="estructura" title="Estructura">📐</button>
-                  <button class="fv-icon-tab" id="iconTabPanel" type="button" data-tab="panel" title="Panel">🔲</button>
-                </div>
-
-                <div class="fv-icon-content">
-
-                  <!-- SOLAPA: SUPERFICIE -->
-                  <div class="fv-panel-pane active" id="tabPaneSuperficie">
-                    <div class="fieldset-title" style="margin-top:0;">Nombre</div>
-                    <div class="fv-field-row"><input type="text" id="s_nombre"></div>
-
-                    <div class="fieldset-title">Ubicación</div>
-                    <div class="fv-field-row"><label>Latitud (tirador naranja en el mapa)</label><input type="text" id="s_lat" readonly style="opacity:.8;"></div>
-                    <div class="fv-field-row"><label>Longitud</label><input type="text" id="s_lng" readonly style="opacity:.8;"></div>
-                    <div class="fv-field-row"><label>Notas de la superficie</label><input type="text" id="s_notas" placeholder="Observaciones (opcional)"></div>
-
-                    <div class="fieldset-title">Superficies del proyecto</div>
-                    <div id="listaSuperficies"></div>
-                  </div>
-
-                  <!-- SOLAPA: ESTRUCTURA -->
-                  <div class="fv-panel-pane" id="tabPaneEstructura">
-                    <div class="fieldset-title" style="margin-top:0;">Estructura</div>
-                    <div class="fv-field-row"><label>Orientación de los paneles</label><button class="fv-btn-toggle" id="btnOrientacion" type="button">⇕ Vertical</button></div>
-                    <div class="fv-field-row"><label>Tipo de estructura</label><button class="fv-btn-toggle" id="btnEstructura" type="button">coplanar</button></div>
-                    <div class="fv-field-row" id="filaFactorSeparacion"><label>Factor separación filas (libre/doble)</label><input type="number" id="s_factorSeparacion" min="0.5" max="2" step="0.1" value="1"></div>
-                    <div class="fv-field-row"><label>Filas (i)</label><input type="number" id="s_rows" min="1" step="1" value="1"></div>
-                    <div class="fv-field-row"><label>Columnas (j)</label><input type="number" id="s_cols" min="1" step="1" value="1"></div>
-                    <div class="fv-field-row"><label>Inclinación paneles <span class="fv-slider-val" id="s_tilt_val">35°</span></label><input type="range" id="s_tilt" min="0" max="90" value="35"></div>
-                    <div class="fv-field-row"><label>Inclinación suelo <span class="fv-slider-val" id="s_slope_val">35°</span></label><input type="range" id="s_slope" min="0" max="90" value="35"></div>
-
-                    <div class="fieldset-title">Sombras del horizonte (−130° a 130°)</div>
-                    <p class="hint" style="margin-top:-4px; margin-bottom:8px;">Arrastra sobre las barras. 0°=sin obstáculo. Líneas de fondo: solsticio de verano (ámbar) e invierno (azul) para la latitud de esta superficie.</p>
-                    <svg id="sombraChart" viewBox="0 0 640 300" width="100%" style="max-width:100%; display:block;"></svg>
-                    <button class="btn ghost" id="btnSombraLimpiar" type="button" style="width:100%; margin-top:8px;">Sin sombras (todo a 0°)</button>
-                  </div>
-
-                  <!-- SOLAPA: PANEL -->
-                  <div class="fv-panel-pane" id="tabPanePanel">
-                    <div class="fieldset-title" style="margin-top:0;">Modelo de panel</div>
-                    <div class="fv-field-row"><label>Modelo</label><input type="text" id="s_modelo" placeholder="p. ej. JKM540M-72HL4-V"></div>
-                    <div class="fv-field-row"><label>Potencia (Wp)</label><input type="number" id="s_potenciaW" min="0" step="1"></div>
-                    <div class="fv-field-row"><div class="fv-total-chip" style="padding:6px 8px;"><div class="v" id="s_kwpMini" style="font-size:12px;">0 kWp</div></div></div>
-                    <div class="fv-field-row"><label>Alto (m)</label><input type="number" id="s_height" min="0" step="0.01"></div>
-                    <div class="fv-field-row"><label>Ancho (m)</label><input type="number" id="s_width" min="0" step="0.01"></div>
-                    <div class="fv-field-row"><label>Voc (V)</label><input type="number" id="s_vOc" step="0.1"></div>
-                    <div class="fv-field-row"><label>Vmp (V)</label><input type="number" id="s_vMp" step="0.1"></div>
-                    <div class="fv-field-row"><label>Isc / Icc (A)</label><input type="number" id="s_iSc" step="0.01"></div>
-                    <div class="fv-field-row"><label>Imp (A)</label><input type="number" id="s_iMp" step="0.01"></div>
-                    <div class="fv-field-row"><label>Coef. temp. Voc (%/°C)</label><input type="number" id="s_coefVoc" step="0.01"></div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>
-      <p class="hint" style="margin:0 0 8px;">Capa base por defecto: mosaico de satélite de Google Maps (mismo proveedor que usa la herramienta de referencia); también puedes cambiar a Esri o OpenStreetMap con el botón "🗺" del mapa.</p>
-      <p class="hint" style="margin:0 0 30px;">El informe PDF dibuja los paneles reales de cada superficie sobre la misma capa base que tengas seleccionada en pantalla (Google, Esri u OpenStreetMap), con el mismo zoom con el que hayas diseñado esa superficie — limitado al zoom máximo disponible de esa capa. Si a un zoom muy alto no hay tesela disponible en tu ubicación, esa zona del mapa aparecerá en blanco (el resto del informe y los datos de la superficie no se ven afectados).</p>
+
+      <div id="instContainer"><div class="empty-state">Todavía no hay superficies. Pulsa «+» en el mapa para crear una.</div></div>
+      <div class="btn-row" style="margin-bottom:8px;">
+        <button class="btn primary" id="btnCalcularPvgis" type="button">☀ Calcular con PVGIS</button>
+        <button class="btn ghost" id="btnClearInst" type="button">Vaciar todas las superficies</button>
+      </div>
+      <div class="pv-estado" id="pvEstado" role="status" aria-live="polite"></div>
+      <div id="pvManual" class="pv-manual" style="display:none;"></div>
+      <input type="file" id="pvJsonManual" accept=".json,application/json" multiple style="display:none;">
+      <div style="margin-bottom:30px;"></div>
+
+      <!-- Editor de la superficie activa: se coloca dentro de su tarjeta (renderInstallations) -->
+      <div id="editorAlmacen" hidden>
+        <input type="text" id="s_nombre" class="nombre-cabecera" title="Nombre de la superficie" aria-label="Nombre de la superficie" onclick="event.stopPropagation()">
+        <div id="editorSuperficie" class="fv-editor">
+          <div class="fv-editor-grid">
+            <div>
+              <div class="fieldset-title">Estructura</div>
+              <div class="fv-field-row"><label>Orientación de los paneles</label><button class="fv-btn-toggle" id="btnOrientacion" type="button">⇕ Vertical</button></div>
+              <div class="fv-field-row"><label>Tipo de estructura</label><button class="fv-btn-toggle" id="btnEstructura" type="button">coplanar</button></div>
+              <div class="fv-field-row" id="filaFactorSeparacion"><label>Factor separación filas (libre/doble)</label><input type="number" id="s_factorSeparacion" min="0.5" max="2" step="0.1" value="1"></div>
+              <div class="fv-field-row"><label>Filas (i)</label><input type="number" id="s_rows" min="1" step="1" value="1"></div>
+              <div class="fv-field-row"><label>Columnas (j)</label><input type="number" id="s_cols" min="1" step="1" value="1"></div>
+              <div class="fv-field-row"><label>Inclinación paneles <span class="fv-slider-val" id="s_tilt_val">35°</span></label><input type="range" id="s_tilt" min="0" max="90" value="35"></div>
+              <div class="fv-field-row"><label>Inclinación suelo <span class="fv-slider-val" id="s_slope_val">35°</span></label><input type="range" id="s_slope" min="0" max="90" value="35"></div>
+            </div>
+            <div>
+              <div class="fieldset-title">Modelo de panel</div>
+              <div class="fv-field-row"><label>Modelo</label><input type="text" id="s_modelo" placeholder="p. ej. JKM540M-72HL4-V"></div>
+              <div class="fv-field-row"><label>Potencia (Wp)</label><input type="number" id="s_potenciaW" min="0" step="1"></div>
+              <div class="fv-field-row"><label>Alto (m)</label><input type="number" id="s_height" min="0" step="0.01"></div>
+              <div class="fv-field-row"><label>Ancho (m)</label><input type="number" id="s_width" min="0" step="0.01"></div>
+              <div class="fv-field-row"><label>Voc (V)</label><input type="number" id="s_vOc" step="0.1"></div>
+              <div class="fv-field-row"><label>Vmp (V)</label><input type="number" id="s_vMp" step="0.1"></div>
+              <div class="fv-field-row"><label>Isc / Icc (A)</label><input type="number" id="s_iSc" step="0.01"></div>
+              <div class="fv-field-row"><label>Imp (A)</label><input type="number" id="s_iMp" step="0.01"></div>
+              <div class="fv-field-row"><label>Coef. temp. Voc (%/°C)</label><input type="number" id="s_coefVoc" step="0.01"></div>
+            </div>
+          </div>
+          <div class="fv-editor-sombras">
+            <div class="fieldset-title">Sombras del horizonte (−130° a 130°)</div>
+            <svg id="sombraChart" viewBox="0 0 640 300" width="100%" style="max-width:440px; display:block;"></svg>
+            <button class="btn ghost" id="btnSombraLimpiar" type="button" style="margin-top:8px;">Sin sombras (todo a 0°)</button>
+          </div>
+        </div>
+      </div>
     
       </div>
 
       <!-- PRODUCCION (PVGIS) Y ESTUDIO ECONOMICO: bloque de la pestana Simulacion -->
       <div id="produccion" class="tab-bloque">
-      <div class="eyebrow kicker">Producción y ahorro según PVGIS</div>
-      <h2>Producción mensual con PVGIS y estudio económico.</h2>
-      <p class="lede">Cada superficie pintada se envía a la API de PVGIS (servicio <code class="inline">PVcalc</code>) con su ubicación, potencia, acimut, inclinación, tipo de montaje y perfil de sombras. Con la producción resultante y los precios de las tarifas se calcula el ahorro anual y el tiempo de amortización.</p>
 
         <div class="card">
           <div class="fieldset-title">Estudio económico</div>
@@ -447,13 +400,12 @@
 
       <div class="subsection-title">Producción mensual estimada por superficie (kWh)</div>
       <div id="pvLeyenda" class="pv-legend"></div>
-      <div class="chart-svg-wrap" id="pvChartMensual"><div class="empty-state">Pulsa «Calcular con PVGIS» (al inicio de la página) para ver la producción mensual.</div></div>
+      <div class="chart-svg-wrap" id="pvChartMensual"><div class="empty-state">Pulsa «Calcular con PVGIS» (debajo de las superficies) para ver la producción mensual.</div></div>
       <details class="acc"><summary><span class="acc-titulo">Tabla de producción</span><span class="acc-sub">Mensual por superficie y anual</span></summary><div class="acc-cuerpo" id="pvTablas"></div></details>
 
       <div class="subsection-title" style="margin-top:28px;">Flujo de caja acumulado (€)</div>
       <div class="chart-svg-wrap" id="ecoChart"><div class="empty-state">El estudio económico aparece cuando todas las superficies tienen producción calculada.</div></div>
       <details class="acc"><summary><span class="acc-titulo">Tabla del estudio económico</span><span class="acc-sub">Año a año durante la vida útil</span></summary><div class="acc-cuerpo" id="ecoTabla"></div></details>
-      <p class="hint" style="font-size:11.5px; color:var(--text-dimmer); margin-top:10px;">Modelo simplificado: el autoconsumo evita comprar energía al precio de la tarifa; los excedentes se valoran al precio de excedentes (en compensación simplificada, la compensación no puede superar el término de energía de la factura). No incluye término de potencia, financiación ni sustitución del inversor.</p>
       </div>
     </section>
 
@@ -584,22 +536,29 @@
 </div>
       </div></details>
 
-      <h2>Las superficies pintadas, listas para exportar.</h2>
-      <p class="lede">El informe recoge automáticamente todas las superficies que hayas creado en la pestaña Informe (con al menos un panel pintado), con todos los parámetros en el formato que necesitará PVGIS en la fase siguiente.</p>
-
-      <div id="statsRow" class="stat-row" style="display:none; gap:14px; margin-bottom:20px; flex-wrap:wrap; border-top:none;"></div>
-      <div id="instContainer"><div class="empty-state">Todavía no has pintado ninguna superficie. Ve a la pestaña Informe y pinta al menos un panel sobre el mapa.</div></div>
+      <h2>Informe técnico del sistema fotovoltaico.</h2>
+      <p class="lede">El informe recoge automáticamente todas las superficies de la pestaña Simulación con al menos un panel pintado, su producción según PVGIS y el estudio económico.</p>
 
       <div class="btn-row">
         <button class="btn primary" id="btnPdf" disabled>&#8681; Generar informe PDF</button>
-        <button class="btn ghost" id="btnClearInst">Vaciar todas las superficies</button>
       </div>
     
     </section>
 
     <footer>
       Herramienta no oficial de apoyo al diseño de sistemas fotovoltaicos: definición de superficies (ubicación, orientación, inclinación y sombras), producción estimada con la <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">API de PVGIS</a> (Comisión Europea) y estudio económico orientativo con precios de tarifas de referencia. El mapa interactivo permite elegir entre Google, Esri y OpenStreetMap; el mapa del informe PDF usa la misma capa que tengas seleccionada en pantalla.
-      <p id="notasPvgis" style="margin-top:12px;"><b>Notas.</b> Los parámetros de PVGIS se dejan en sus valores por defecto, sin necesidad de cambiarlos: pérdidas del sistema del 14 % (cableado, inversor, suciedad y otras pérdidas, el valor que propone PVGIS), tecnología de silicio cristalino (la de la práctica totalidad de los paneles comerciales) y base de datos de radiación PVGIS-SARAH3 (satelital, cubre Europa, África y gran parte de Asia). Las pérdidas por temperatura, reflexión y espectro del módulo las calcula PVGIS aparte.</p>
+      <div id="notasPvgis" style="margin-top:14px;"><b>Notas</b>
+        <ol style="margin:6px 0 0 18px; line-height:1.6;">
+          <li>Arrastra sobre el mapa para pintar (o borrar) paneles; usa el tirador naranja para mover la matriz y el azul para rotarla. Con «+» creas una superficie nueva.</li>
+          <li>Capa base por defecto: mosaico de satélite de Google Maps (mismo proveedor que usa la herramienta de referencia); también puedes cambiar a Esri o OpenStreetMap con el botón "🗺" del mapa.</li>
+          <li>El informe PDF dibuja los paneles reales de cada superficie sobre la misma capa base que tengas seleccionada en pantalla (Google, Esri u OpenStreetMap), con el mismo zoom con el que hayas diseñado esa superficie — limitado al zoom máximo disponible de esa capa. Si a un zoom muy alto no hay tesela disponible en tu ubicación, esa zona del mapa aparecerá en blanco (el resto del informe y los datos de la superficie no se ven afectados).</li>
+          <li>Debajo del mapa están las superficies del proyecto: la activa (borde naranja) es la que se pinta en el mapa y aparece desplegada para editar su nombre, estructura, modelo de panel y sombras; las demás aparecen plegadas. Pulsa otra superficie para editarla, o «+» en el mapa para crear una nueva. Todas las superficies con algún panel pintado pasan al cálculo de PVGIS y al informe.</li>
+          <li>Sombras del horizonte: Arrastra sobre las barras. 0°=sin obstáculo. Líneas de fondo: solsticio de verano (ámbar) e invierno (azul) para la latitud de esta superficie.</li>
+          <li>Cada superficie pintada se envía a la API de PVGIS (servicio <code class="inline">PVcalc</code>) con su ubicación, potencia, acimut, inclinación, tipo de montaje y perfil de sombras. Con la producción resultante y los precios de las tarifas se calcula el ahorro anual y el tiempo de amortización.</li>
+          <li>Los parámetros de PVGIS se dejan en sus valores por defecto, sin necesidad de cambiarlos: pérdidas del sistema del 14 % (cableado, inversor, suciedad y otras pérdidas, el valor que propone PVGIS), tecnología de silicio cristalino (la de la práctica totalidad de los paneles comerciales) y base de datos de radiación PVGIS-SARAH3 (satelital, cubre Europa, África y gran parte de Asia). Las pérdidas por temperatura, reflexión y espectro del módulo las calcula PVGIS aparte.</li>
+          <li>Modelo simplificado: el autoconsumo evita comprar energía al precio de la tarifa; los excedentes se valoran al precio de excedentes (en compensación simplificada, la compensación no puede superar el término de energía de la factura). No incluye término de potencia, financiación ni sustitución del inversor.</li>
+        </ol>
+      </div>
     </footer>
 
   </main>
@@ -1109,40 +1068,16 @@ let pintor = null;
 
 function activa(){ return installations.find(s=>s.id===superficieActivaId) || null; }
 
-// ===================== ACORDEON DE EDICION (rail de iconos: Superficie / Estructura / Panel) =====================
-const SOLAPAS_PANEL = [
-  {clave:'superficie', icono:'iconTabSuperficie'},
-  {clave:'estructura', icono:'iconTabEstructura'},
-  {clave:'panel', icono:'iconTabPanel'},
-];
-let solapaActualClave = 'superficie';
-
-function mostrarSolapaPanel(clave){
-  solapaActualClave = clave;
-  SOLAPAS_PANEL.forEach(s=>{
-    document.getElementById(s.icono).classList.toggle('active', s.clave===clave);
-  });
-  document.querySelectorAll('.fv-panel-pane').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tabPane'+clave.charAt(0).toUpperCase()+clave.slice(1)).classList.add('active');
-  if(clave==='estructura') renderSombraChart();
+// Primer "Superficie N" que no este ya en uso (las importadas pueden llevar cualquier numero).
+function nombreSuperficieLibre(){
+  const usados = new Set(installations.map(s=>s.config.nombreArea));
+  let n = installations.length+1;
+  while(usados.has('Superficie '+n)) n++;
+  return 'Superficie '+n;
 }
-SOLAPAS_PANEL.forEach(s=>{
-  document.getElementById(s.icono).addEventListener('click', ()=>mostrarSolapaPanel(s.clave));
-});
-
-function acordeonAbierto(){ return !document.getElementById('fvAcordeon').classList.contains('collapsed'); }
-function abrirAcordeon(){
-  document.getElementById('fvAcordeon').classList.remove('collapsed');
-  if(solapaActualClave==='estructura') renderSombraChart();
-}
-function colapsarAcordeon(){ document.getElementById('fvAcordeon').classList.add('collapsed'); }
-document.getElementById('btnToggleAcordeon').addEventListener('click', ()=>{
-  if(acordeonAbierto()) colapsarAcordeon(); else abrirAcordeon();
-});
-
 function crearConfigNueva(centro, zoom){
   return Object.assign({
-    nombreArea: 'Superficie '+instNextId,
+    nombreArea: nombreSuperficieLibre(),
     lat: centro.lat, lng: centro.lng, rotation: 0,
     sombras: new Array(16).fill(0),
     zoomDiseno: zoom,
@@ -1231,10 +1166,6 @@ function onCambioActiva(){
   const totalPotenciaW = totalPaneles * (s.config.potenciaW||0);
   const kwp = totalPotenciaW/1000;
   document.getElementById('fvInfoFlotante').innerHTML = '<b>'+esc(s.config.nombreArea)+'</b> · '+totalPaneles+' paneles · '+fmtNum(kwp,2)+' kWp';
-  document.getElementById('s_lat').value = fmtNum(s.config.lat,6);
-  document.getElementById('s_lng').value = fmtNum(s.config.lng,6);
-  document.getElementById('s_kwpMini').textContent = fmtNum(kwp,2)+' kWp';
-  document.getElementById('fvSubtituloSuperficie').innerHTML = '▦ '+totalPaneles+' paneles &nbsp;⚡ '+fmtNum(kwp,2)+' kWp';
   renderListaSuperficies();
   renderInstallations();
 }
@@ -1265,30 +1196,11 @@ function actualizarUISidebar(){
   document.getElementById('s_iSc').value = c.iSc;
   document.getElementById('s_iMp').value = c.iMp;
   document.getElementById('s_coefVoc').value = c.coefVoc;
-  document.getElementById('s_notas').value = s.notas || '';
   renderSombraChart();
 }
 
-function renderListaSuperficies(){
-  const wrap = document.getElementById('listaSuperficies');
-  if(installations.length===0){ wrap.innerHTML = '<p class="hint">Todavía no hay superficies. Pulsa "+ Nueva superficie".</p>'; }
-  else{
-    wrap.innerHTML = installations.map(s=>{
-      const totalPaneles = s.paneles.length * (s.config.rows||1) * (s.config.cols||1);
-      return '<div class="fv-superficie-item'+(s.id===superficieActivaId?' activa':'')+'" onclick="seleccionarSuperficieDesdeUI('+s.id+')">'+
-        '<span class="nom">'+esc(s.config.nombreArea)+' ('+totalPaneles+')</span>'+
-        '<button class="del" type="button" onclick="event.stopPropagation(); eliminarSuperficie('+s.id+')">✕</button>'+
-      '</div>';
-    }).join('');
-  }
-  // Selector desplegable, siempre visible aunque el acordeon este colapsado.
-  const sel = document.getElementById('selectorSuperficies');
-  sel.innerHTML = installations.map(s=>'<option value="'+s.id+'"'+(s.id===superficieActivaId?' selected':'')+'>'+esc(s.config.nombreArea)+'</option>').join('');
-}
-document.getElementById('selectorSuperficies').addEventListener('change', (e)=>{
-  const id = parseInt(e.target.value,10);
-  if(id && id!==superficieActivaId) seleccionarSuperficie(id);
-});
+// La lista de superficies es ahora la de "Superficies del proyecto" (renderInstallations).
+function renderListaSuperficies(){}
 window.seleccionarSuperficieDesdeUI = function(id){ if(id!==superficieActivaId) seleccionarSuperficie(id); };
 window.eliminarSuperficie = function(id){
   if(!confirm('¿Eliminar esta superficie?')) return;
@@ -1297,7 +1209,7 @@ window.eliminarSuperficie = function(id){
     if(pintor){ pintor.destruir(); pintor=null; }
     superficieActivaId = null;
     if(installations.length>0){ seleccionarSuperficie(installations[0].id); }
-    else{ document.getElementById('fvInfoFlotante').textContent = 'Sin superficies — pulsa "+ Nueva superficie"'; capaOtrasSuperficies.clearLayers(); renderListaSuperficies(); renderInstallations(); }
+    else{ document.getElementById('fvInfoFlotante').textContent = 'Sin superficies — pulsa «+» en el mapa'; capaOtrasSuperficies.clearLayers(); renderListaSuperficies(); renderInstallations(); }
   } else {
     redibujarOtrasSuperficies();
     renderListaSuperficies(); renderInstallations();
@@ -1311,7 +1223,6 @@ document.getElementById('s_nombre').addEventListener('input', (e)=>{
   activa().config.nombreArea = e.target.value || 'Superficie';
   onCambioActiva();
 });
-document.getElementById('s_notas').addEventListener('input', (e)=>{ if(activa()) activa().notas = e.target.value; });
 
 document.getElementById('btnOrientacion').addEventListener('click', ()=>{ if(pintor){ pintor.alternarOrientacion(); actualizarUISidebar(); } });
 document.getElementById('btnEstructura').addEventListener('click', ()=>{
@@ -1492,8 +1403,7 @@ document.getElementById('btnClearInst').addEventListener('click', ()=>{
     if(pintor){ pintor.destruir(); pintor=null; }
     installations=[]; superficieActivaId=null;
     capaOtrasSuperficies.clearLayers();
-    document.getElementById('fvInfoFlotante').textContent = 'Sin superficies — pulsa "+ Nueva superficie"';
-    renderListaSuperficies();
+    document.getElementById('fvInfoFlotante').textContent = 'Sin superficies — pulsa «+» en el mapa';
     renderInstallations();
   }
 });
@@ -1516,63 +1426,88 @@ function buildSombraMiniChartSVG(sombras){
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:560px; display:block;">'+s+'</svg>';
 }
 
+function datosSuperficie(s){
+  const totalPaneles = s.paneles.length * (s.config.rows||1) * (s.config.cols||1);
+  return {totalPaneles, kwp: totalPaneles*(s.config.potenciaW||0)/1000};
+}
+function resumenSuperficieHTML(s){
+  const c = s.config, d = datosSuperficie(s);
+  return '<table class="data-table" style="margin-top:12px;"><tbody>'+
+      '<tr><td>Latitud / Longitud (centro de la matriz)</td><td>'+fmtNum(c.lat,6)+', '+fmtNum(c.lng,6)+'</td></tr>'+
+      '<tr><td>Bloques pintados &times; filas &times; columnas</td><td>'+s.paneles.length+' &times; '+c.rows+' &times; '+c.cols+' = '+d.totalPaneles+' paneles</td></tr>'+
+      '<tr><td>Modelo de panel / potencia unitaria</td><td>'+esc(c.modelo||'—')+' &middot; '+c.potenciaW+' Wp</td></tr>'+
+      '<tr><td>Tipo de estructura</td><td>'+c.tipoEstructura+'</td></tr>'+
+      '<tr><td>Orientación de paneles / rotación matriz</td><td>'+c.orientation+' / '+fmtNum(c.rotation,1)+'°</td></tr>'+
+      '<tr><td>Inclinación paneles / suelo</td><td>'+c.tilt+'° / '+c.slope+'°</td></tr>'+
+      '<tr><td>Sombra máxima del horizonte</td><td>'+Math.max(...c.sombras)+'°</td></tr>'+
+    '</tbody></table>'+
+    '<div class="subsection-title">Perfil de sombras del horizonte</div>'+
+    '<div class="chart-svg-wrap">'+buildSombraMiniChartSVG(c.sombras)+'</div>'+
+    (s.notas?('<div class="subsection-title">Notas</div><p style="font-size:12.5px;color:var(--text-dim);">'+esc(s.notas)+'</p>'):'');
+}
+
+// La lista se reconstruye solo cuando cambian las superficies o la activa: el editor (campos
+// con foco, deslizadores, grafico de sombras) se mueve a la tarjeta activa y no se toca
+// mientras se escribe o se arrastra; el resto de cambios solo actualizan textos.
+let claveListaSuperficies = '';
 function renderInstallations(){
   const container = document.getElementById('instContainer');
   const statsRow = document.getElementById('statsRow');
-  const btnPdf = document.getElementById('btnPdf');
+  const editor = document.getElementById('editorSuperficie');
+  const campoNombre = document.getElementById('s_nombre');
+  const almacen = document.getElementById('editorAlmacen');
 
   const conPaneles = installations.filter(s=>s.paneles.length>0);
   guardarDisenoEnVatiaco(conPaneles);
   if(typeof renderProduccion==='function') renderProduccion();
-  if(conPaneles.length===0){
-    container.innerHTML = '<div class="empty-state">Todavía no has pintado ninguna superficie. Ve a la pestaña Informe y pinta al menos un panel sobre el mapa.</div>';
+  document.getElementById('btnPdf').disabled = conPaneles.length===0;
+
+  if(installations.length===0){
+    almacen.appendChild(editor); almacen.appendChild(campoNombre);
+    claveListaSuperficies = '';
+    container.innerHTML = '<div class="empty-state">Todavía no hay superficies. Pulsa «+» en el mapa para crear una.</div>';
     statsRow.style.display='none';
-    btnPdf.disabled = true;
     return;
   }
-  btnPdf.disabled = false;
 
-  const resumen = conPaneles.map(s=>{
-    const totalPaneles = s.paneles.length * (s.config.rows||1) * (s.config.cols||1);
-    const kwp = totalPaneles*(s.config.potenciaW||0)/1000;
-    return {s, totalPaneles, kwp};
-  });
-  const totalPaneles = resumen.reduce((a,r)=>a+r.totalPaneles,0);
-  const totalKwp = resumen.reduce((a,r)=>a+r.kwp,0);
+  const datos = installations.map(s=>Object.assign({s}, datosSuperficie(s)));
+  const totalPaneles = datos.reduce((a,r)=>a+r.totalPaneles,0);
+  const totalKwp = datos.reduce((a,r)=>a+r.kwp,0);
   statsRow.style.display='flex';
   statsRow.innerHTML =
-    '<div class="stat-chip"><div class="v">'+conPaneles.length+'</div><div class="l">superficies</div></div>'+
+    '<div class="stat-chip"><div class="v">'+installations.length+'</div><div class="l">superficies</div></div>'+
     '<div class="stat-chip"><div class="v">'+totalPaneles+'</div><div class="l">paneles en total</div></div>'+
     '<div class="stat-chip"><div class="v">'+fmtNum(totalKwp,2)+' kWp</div><div class="l">potencia instalada total</div></div>';
 
-  container.innerHTML = resumen.map(({s,totalPaneles,kwp},idx)=>{
-    const c = s.config;
-    const chart = buildSombraMiniChartSVG(c.sombras);
-    const maxSombra = Math.max(...c.sombras);
-    return '<div class="line-card">'+
-      '<div class="line-head" onclick="toggleInst('+s.id+')">'+
-        '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title">'+esc(c.nombreArea)+'</span></div>'+
-        '<div class="lh-right"><span class="badge">'+totalPaneles+' paneles</span><span class="badge">'+fmtNum(kwp,2)+' kWp</span>'+
-        '<button class="remove-btn" onclick="event.stopPropagation(); eliminarSuperficie('+s.id+')">eliminar</button></div>'+
-      '</div>'+
-      '<div class="line-body" id="ib-'+s.id+'">'+
-        '<div class="subsection-title">Ubicación y paneles</div>'+
-        '<table class="data-table"><tbody>'+
-          '<tr><td>Latitud / Longitud (centro de la matriz)</td><td>'+fmtNum(c.lat,6)+', '+fmtNum(c.lng,6)+'</td></tr>'+
-          '<tr><td>Bloques pintados &times; filas &times; columnas</td><td>'+s.paneles.length+' &times; '+c.rows+' &times; '+c.cols+' = '+totalPaneles+' paneles</td></tr>'+
-          '<tr><td>Modelo de panel / potencia unitaria</td><td>'+esc(c.modelo||'—')+' &middot; '+c.potenciaW+' Wp</td></tr>'+
-          '<tr><td>Potencia instalada</td><td>'+fmtNum(kwp,2)+' kWp</td></tr>'+
-          '<tr><td>Tipo de estructura</td><td>'+c.tipoEstructura+'</td></tr>'+
-          '<tr><td>Orientación de paneles / rotación matriz</td><td>'+c.orientation+' / '+fmtNum(c.rotation,1)+'°</td></tr>'+
-          '<tr><td>Inclinación paneles / suelo</td><td>'+c.tilt+'° / '+c.slope+'°</td></tr>'+
-          '<tr><td>Sombra máxima del horizonte</td><td>'+maxSombra+'°</td></tr>'+
-        '</tbody></table>'+
-        '<div class="subsection-title">Perfil de sombras del horizonte</div>'+
-        '<div class="chart-svg-wrap">'+chart+'</div>'+
-        (s.notas?('<div class="subsection-title">Notas</div><p style="font-size:12.5px;color:var(--text-dim);">'+esc(s.notas)+'</p>'):'')+
-      '</div>'+
-    '</div>';
-  }).join('');
+  const clave = installations.map(s=>s.id).join(',')+'|'+superficieActivaId;
+  if(clave!==claveListaSuperficies){
+    claveListaSuperficies = clave;
+    almacen.appendChild(editor); almacen.appendChild(campoNombre);
+    container.innerHTML = datos.map(({s},idx)=>{
+      const esActiva = s.id===superficieActivaId;
+      return '<div class="line-card'+(esActiva?' activa':'')+'">'+
+        '<div class="line-head" onclick="seleccionarSuperficieDesdeUI('+s.id+')" title="'+(esActiva?'Superficie en edición':'Editar esta superficie')+'">'+
+          '<div class="lh-left"><span class="lh-idx">'+String(idx+1).padStart(2,'0')+'</span><span class="lh-title" id="st-'+s.id+'"></span></div>'+
+          '<div class="lh-right"><span class="badge" id="sp-'+s.id+'"></span><span class="badge" id="sk-'+s.id+'"></span>'+
+          (esActiva ? '<span class="badge editando">editando</span>'
+                    : '<button class="btn-mini" type="button" onclick="event.stopPropagation(); toggleInst('+s.id+')">resumen</button>'+
+                      '<button class="btn-mini" type="button">editar</button>')+
+          '<button class="remove-btn" type="button" onclick="event.stopPropagation(); eliminarSuperficie('+s.id+')">eliminar</button></div>'+
+        '</div>'+
+        '<div class="line-body'+(esActiva?' open':'')+'" id="ib-'+s.id+'">'+(esActiva?'<div id="slotEditor"></div>':'')+'</div>'+
+      '</div>';
+    }).join('');
+    const slot = document.getElementById('slotEditor');
+    if(slot){ slot.appendChild(editor); renderSombraChart(); }
+    const slotNombre = document.getElementById('st-'+superficieActivaId);
+    if(slotNombre){ slotNombre.appendChild(campoNombre); campoNombre.value = activa().config.nombreArea; }
+  }
+  datos.forEach(({s,totalPaneles,kwp})=>{
+    if(s.id!==superficieActivaId) document.getElementById('st-'+s.id).textContent = s.config.nombreArea;
+    document.getElementById('sp-'+s.id).textContent = totalPaneles+' paneles';
+    document.getElementById('sk-'+s.id).textContent = fmtNum(kwp,2)+' kWp';
+    if(s.id!==superficieActivaId) document.getElementById('ib-'+s.id).innerHTML = resumenSuperficieHTML(s);
+  });
 }
 
 window.toggleInst = function(id){ document.getElementById('ib-'+id).classList.toggle('open'); };
@@ -2296,7 +2231,7 @@ function renderProduccion(){
     chartEl.innerHTML = '<div class="pv-chart">'+g.svg+'</div>'+(est.completo?'':'<p class="hint" style="margin-top:8px;color:var(--amber);">Faltan '+est.nPendientes+' superficie(s) por calcular o con datos desactualizados: el gráfico solo muestra las calculadas.</p>');
     leyenda.innerHTML = g.series.length>1 ? g.series.map(sr=>'<span><span class="pv-sw" style="background:'+sr.color+'"></span>'+esc(sr.nombre)+'</span>').join('') : '';
   } else {
-    chartEl.innerHTML = '<div class="empty-state">Pulsa «Calcular con PVGIS» (al inicio de la página) para ver la producción mensual.</div>';
+    chartEl.innerHTML = '<div class="empty-state">Pulsa «Calcular con PVGIS» (debajo de las superficies) para ver la producción mensual.</div>';
     leyenda.innerHTML = '';
   }
 
