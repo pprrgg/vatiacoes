@@ -283,9 +283,8 @@
   </button>
   <nav class="tabbar" id="sidenav">
     <a href="#simulacion" data-sec="simulacion"><span class="tag">00</span>Simulación</a>
-    <a href="#produccion" data-sec="produccion"><span class="tag">01</span>Producción y ahorro</a>
-    <a href="#ayuda" data-sec="ayuda"><span class="tag">02</span>Ayuda</a>
-    <a href="#informe" data-sec="informe"><span class="tag">03</span>Informe</a>
+    <a href="#ayuda" data-sec="ayuda"><span class="tag">01</span>Ayuda</a>
+    <a href="#informe" data-sec="informe"><span class="tag">02</span>Informe</a>
   </nav>
   <button class="tabbar-arrow tabbar-arrow-right" id="tabScrollRight" type="button" aria-label="Desplazar pestañas a la derecha">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -316,6 +315,13 @@
     <!-- 00 SIMULACION -->
     <section id="simulacion">
       <div class="eyebrow kicker">00 · Simulación</div>
+      <div class="btn-row" style="margin-bottom:8px;">
+        <button class="btn primary" id="btnCalcularPvgis" type="button">☀ Calcular con PVGIS</button>
+      </div>
+      <div class="pv-estado" id="pvEstado" role="status" aria-live="polite"></div>
+      <div id="pvManual" class="pv-manual" style="display:none;"></div>
+      <input type="file" id="pvJsonManual" accept=".json,application/json" multiple style="display:none;">
+      <div style="margin-bottom:24px;"></div>
       <div id="superficies" class="tab-bloque">
       <div class="eyebrow kicker">Pinta tus paneles</div>
       <h2>Pinta los paneles directamente sobre el mapa satélite.</h2>
@@ -413,36 +419,16 @@
       <p class="hint" style="margin:0 0 30px;">El informe PDF dibuja los paneles reales de cada superficie sobre la misma capa base que tengas seleccionada en pantalla (Google, Esri u OpenStreetMap), con el mismo zoom con el que hayas diseñado esa superficie — limitado al zoom máximo disponible de esa capa. Si a un zoom muy alto no hay tesela disponible en tu ubicación, esa zona del mapa aparecerá en blanco (el resto del informe y los datos de la superficie no se ven afectados).</p>
     
       </div>
-    </section>
 
-    <!-- 01 PRODUCCION (PVGIS) Y ESTUDIO ECONOMICO -->
-    <section id="produccion">
-      <div class="eyebrow kicker">01 · Producción y ahorro</div>
+      <!-- PRODUCCION (PVGIS) Y ESTUDIO ECONOMICO: bloque de la pestana Simulacion -->
+      <div id="produccion" class="tab-bloque">
+      <div class="eyebrow kicker">Producción y ahorro según PVGIS</div>
       <h2>Producción mensual con PVGIS y estudio económico.</h2>
-      <p class="lede">Cada superficie pintada se envía a la API de PVGIS (servicio <code class="inline">PVcalc</code>) con su ubicación, potencia, acimut, inclinación, tipo de montaje y perfil de sombras. Con la producción resultante y los precios de <code class="inline">config/tarifas.json</code> se calcula el ahorro anual y el tiempo de amortización.</p>
-
-      <div class="grid2">
-        <div class="card">
-          <div class="fieldset-title">Parámetros de PVGIS</div>
-          <div class="grid2">
-            <div class="field"><label>Pérdidas del sistema (%)</label><input type="number" id="pv_perdidas" min="0" max="50" step="0.5" value="14"><div class="hint">Cableado, inversor, suciedad… (PVGIS sugiere 14 %).</div></div>
-            <div class="field"><label>Tecnología del módulo</label>
-              <select id="pv_tecnologia"><option value="crystSi">Silicio cristalino</option><option value="CIS">CIS</option><option value="CdTe">CdTe</option></select></div>
-            <div class="field" style="grid-column:1/-1;"><label>Base de datos de radiación</label>
-              <select id="pv_basedatos"><option value="PVGIS-SARAH3">PVGIS-SARAH3 (Europa, África, Asia)</option><option value="PVGIS-ERA5">PVGIS-ERA5 (global)</option></select></div>
-          </div>
-          <div class="btn-row">
-            <button class="btn primary" id="btnCalcularPvgis" type="button">☀ Calcular producción con PVGIS</button>
-            <button class="btn ghost" id="btnRecalcularPvgis" type="button" title="Ignora los resultados guardados y vuelve a consultar PVGIS">Forzar recálculo</button>
-          </div>
-          <div class="pv-estado" id="pvEstado" role="status" aria-live="polite"></div>
-          <div id="pvManual" class="pv-manual" style="display:none;"></div>
-          <input type="file" id="pvJsonManual" accept=".json,application/json" multiple style="display:none;">
-        </div>
+      <p class="lede">Cada superficie pintada se envía a la API de PVGIS (servicio <code class="inline">PVcalc</code>) con su ubicación, potencia, acimut, inclinación, tipo de montaje y perfil de sombras. Con la producción resultante y los precios de las tarifas se calcula el ahorro anual y el tiempo de amortización.</p>
 
         <div class="card">
           <div class="fieldset-title">Estudio económico</div>
-          <div class="field"><label>Tarifa (config/tarifas.json)</label><select id="e_tarifa"></select><div class="hint" id="e_tarifaInfo">Cargando tarifas…</div></div>
+          <div class="field"><label>Tarifa</label><select id="e_tarifa"></select><div class="hint" id="e_tarifaInfo">Cargando tarifas…</div></div>
           <div class="grid2">
             <div class="field"><label>Precio energía (€/kWh)</label><input type="number" id="e_precio" min="0" step="0.001" value="0.13"></div>
             <div class="field"><label>Precio excedentes (€/kWh)</label><input type="number" id="e_excedentes" min="0" step="0.001" value="0.05"></div>
@@ -456,24 +442,24 @@
           </div>
           <div class="btn-row"><button class="btn ghost" id="btnAplicarTarifa" type="button">Restablecer valores de la tarifa</button></div>
         </div>
-      </div>
 
       <div id="pvKpis" class="kpi-grid"></div>
 
       <div class="subsection-title">Producción mensual estimada por superficie (kWh)</div>
       <div id="pvLeyenda" class="pv-legend"></div>
-      <div class="chart-svg-wrap" id="pvChartMensual"><div class="empty-state">Pulsa «Calcular producción con PVGIS» para ver la producción mensual.</div></div>
+      <div class="chart-svg-wrap" id="pvChartMensual"><div class="empty-state">Pulsa «Calcular con PVGIS» (al inicio de la página) para ver la producción mensual.</div></div>
       <details class="acc"><summary><span class="acc-titulo">Tabla de producción</span><span class="acc-sub">Mensual por superficie y anual</span></summary><div class="acc-cuerpo" id="pvTablas"></div></details>
 
       <div class="subsection-title" style="margin-top:28px;">Flujo de caja acumulado (€)</div>
       <div class="chart-svg-wrap" id="ecoChart"><div class="empty-state">El estudio económico aparece cuando todas las superficies tienen producción calculada.</div></div>
       <details class="acc"><summary><span class="acc-titulo">Tabla del estudio económico</span><span class="acc-sub">Año a año durante la vida útil</span></summary><div class="acc-cuerpo" id="ecoTabla"></div></details>
       <p class="hint" style="font-size:11.5px; color:var(--text-dimmer); margin-top:10px;">Modelo simplificado: el autoconsumo evita comprar energía al precio de la tarifa; los excedentes se valoran al precio de excedentes (en compensación simplificada, la compensación no puede superar el término de energía de la factura). No incluye término de potencia, financiación ni sustitución del inversor.</p>
+      </div>
     </section>
 
     <!-- 02 AYUDA: secciones en acordeon cerrado -->
     <section id="ayuda">
-      <div class="eyebrow kicker">02 · Ayuda</div>
+      <div class="eyebrow kicker">01 · Ayuda</div>
       <h2>Fundamentos y aclaraciones.</h2>
       <details class="acc"><summary><span class="acc-titulo">Fundamento teórico</span></summary><div class="acc-cuerpo">
 <div id="teoria">
@@ -538,7 +524,7 @@
 
         <div class="theory-card">
           <h3>6 · Qué falta para el cálculo completo</h3>
-          <p>Con estos cinco datos por superficie, la pestaña «Producción y ahorro» llama a la API de PVGIS para obtener la energía generada mes a mes y, combinándola con los precios de la tarifa y el coste de la instalación, calcula el ahorro anual, el tiempo de amortización y el LCOE (coste nivelado de la energía).</p>
+          <p>Con estos cinco datos por superficie, el bloque «Producción y ahorro según PVGIS» de la pestaña Simulación llama a la API de PVGIS para obtener la energía generada mes a mes y, combinándola con los precios de la tarifa y el coste de la instalación, calcula el ahorro anual, el tiempo de amortización y el LCOE (coste nivelado de la energía).</p>
         </div>
       </div>
     
@@ -562,7 +548,7 @@
 
     <!-- 02 INFORME -->
     <section id="informe">
-      <div class="eyebrow kicker">03 · Informe</div>
+      <div class="eyebrow kicker">02 · Informe</div>
       <details class="acc"><summary><span class="acc-titulo">¿Para quién es este informe?</span><span class="acc-sub">Estos datos aparecerán en la portada del PDF.</span></summary><div class="acc-cuerpo">
 <div id="proyecto">
       <div class="card">
@@ -612,7 +598,8 @@
     </section>
 
     <footer>
-      Herramienta no oficial de apoyo al diseño de sistemas fotovoltaicos: definición de superficies (ubicación, orientación, inclinación y sombras), producción estimada con la <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">API de PVGIS</a> (Comisión Europea) y estudio económico orientativo con los precios de config/tarifas.json. El mapa interactivo permite elegir entre Google, Esri y OpenStreetMap; el mapa del informe PDF usa la misma capa que tengas seleccionada en pantalla.
+      Herramienta no oficial de apoyo al diseño de sistemas fotovoltaicos: definición de superficies (ubicación, orientación, inclinación y sombras), producción estimada con la <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank" rel="noopener">API de PVGIS</a> (Comisión Europea) y estudio económico orientativo con precios de tarifas de referencia. El mapa interactivo permite elegir entre Google, Esri y OpenStreetMap; el mapa del informe PDF usa la misma capa que tengas seleccionada en pantalla.
+      <p id="notasPvgis" style="margin-top:12px;"><b>Notas.</b> Los parámetros de PVGIS se dejan en sus valores por defecto, sin necesidad de cambiarlos: pérdidas del sistema del 14 % (cableado, inversor, suciedad y otras pérdidas, el valor que propone PVGIS), tecnología de silicio cristalino (la de la práctica totalidad de los paneles comerciales) y base de datos de radiación PVGIS-SARAH3 (satelital, cubre Europa, África y gran parte de Asia). Las pérdidas por temperatura, reflexión y espectro del módulo las calcula PVGIS aparte.</p>
     </footer>
 
   </main>
@@ -1789,19 +1776,54 @@ const VATIACO_API = 'https://vatiaco.duckdns.org/cec-api';
 const FV_API = VATIACO_API+'/fv';
 const TYPST_API = VATIACO_API+'/typst/compilar';
 
-// Ruta relativa a esta pagina (/docs/A00_Blog_Interactivo/A01_FV/) -> /config/tarifas.json
-const TARIFAS_URL = '../../../config/tarifas.json';
-// Copia de respaldo por si el JSON no se puede leer (p. ej. pagina abierta como file://).
-const TARIFAS_RESPALDO = {
-  por_defecto: 'pvpc_2.0td',
-  tarifas: [
-    { id:'pvpc_2.0td', nombre:'PVPC 2.0TD (regulada)', periodos:{P1:0.19,P2:0.13,P3:0.09}, reparto_solar:{P1:0.40,P2:0.45,P3:0.15}, precio_excedentes_eur_kwh:0.05 },
-    { id:'libre_fijo', nombre:'Mercado libre - precio fijo 24 h', precio_energia_eur_kwh:0.15, precio_excedentes_eur_kwh:0.06 },
+// Tarifas y parametros economicos del estudio, incrustados en la pagina (antes se leian de
+// config/tarifas.json). Para cambiar precios, editar este objeto.
+const TARIFAS = {
+  "descripcion": "Precios orientativos de la energía para el estudio económico de autoconsumo FV. Precios finales por kWh (término de energía con impuestos incluidos). Ajustar a la factura real del cliente.",
+  "actualizado": "2026-11",
+  "moneda": "EUR",
+  "por_defecto": "pvpc_2.0td",
+  "tarifas": [
+    {
+      "id": "pvpc_2.0td",
+      "nombre": "PVPC 2.0TD (regulada)",
+      "periodos": { "P1": 0.19, "P2": 0.13, "P3": 0.09 },
+      "reparto_solar": { "P1": 0.40, "P2": 0.45, "P3": 0.15 },
+      "precio_excedentes_eur_kwh": 0.05,
+      "notas": "Precio efectivo = media de los periodos ponderada por el reparto de la producción solar entre ellos."
+    },
+    {
+      "id": "libre_fijo",
+      "nombre": "Mercado libre - precio fijo 24 h",
+      "precio_energia_eur_kwh": 0.15,
+      "precio_excedentes_eur_kwh": 0.06
+    },
+    {
+      "id": "libre_3p",
+      "nombre": "Mercado libre - 3 periodos",
+      "periodos": { "P1": 0.21, "P2": 0.15, "P3": 0.10 },
+      "reparto_solar": { "P1": 0.40, "P2": 0.45, "P3": 0.15 },
+      "precio_excedentes_eur_kwh": 0.06
+    },
+    {
+      "id": "3.0td",
+      "nombre": "3.0TD (empresas, > 15 kW)",
+      "precio_energia_eur_kwh": 0.13,
+      "precio_excedentes_eur_kwh": 0.05
+    }
   ],
-  parametros_economicos: { autoconsumo_pct:60, coste_instalacion_eur_wp:1.2, subvencion_eur:0, mantenimiento_eur_kwp_anio:12, degradacion_pct_anio:0.5, inflacion_energia_pct_anio:2, vida_util_anios:25 },
+  "parametros_economicos": {
+    "autoconsumo_pct": 60,
+    "coste_instalacion_eur_wp": 1.2,
+    "subvencion_eur": 0,
+    "mantenimiento_eur_kwp_anio": 12,
+    "degradacion_pct_anio": 0.5,
+    "inflacion_energia_pct_anio": 2,
+    "vida_util_anios": 25
+  }
 };
-let tarifasConfig = TARIFAS_RESPALDO;
-let tarifasOrigen = 'valores de respaldo internos';
+let tarifasConfig = TARIFAS;
+const tarifasOrigen = 'tarifas de referencia de VatiaCo'+(TARIFAS.actualizado?' (actualizadas '+TARIFAS.actualizado+')':'');
 
 let produccionCache = (function(){
   const g = vatiacoLeer()[DOC_KEY_C01];
@@ -1842,6 +1864,9 @@ function horizontePvgis(sombras){
   return out;
 }
 
+// Parametros de PVGIS fijos: los valores por defecto de la propia herramienta PVGIS (se
+// explican en las notas al final de la pagina y del informe).
+const PVGIS_DEFECTO = { loss:14, pvtechchoice:'crystSi', raddatabase:'PVGIS-SARAH3' };
 function paramsPvgisSuperficie(s){
   const c = s.config;
   const npaneles = s.paneles.length*(c.rows||1)*(c.cols||1);
@@ -1852,9 +1877,9 @@ function paramsPvgisSuperficie(s){
     aspect: normalizarAcimut(c.rotation),
     angle: Math.max(0, Math.min(90, Math.round(Number(c.tilt)||0))),
     mountingplace: (c.tipoEstructura||'coplanar')==='coplanar' ? 'building' : 'free',
-    loss: Math.max(0, Math.min(50, numInput('pv_perdidas', 14))),
-    pvtechchoice: document.getElementById('pv_tecnologia').value || 'crystSi',
-    raddatabase: document.getElementById('pv_basedatos').value || 'PVGIS-SARAH3',
+    loss: PVGIS_DEFECTO.loss,
+    pvtechchoice: PVGIS_DEFECTO.pvtechchoice,
+    raddatabase: PVGIS_DEFECTO.raddatabase,
     userhorizon: horizontePvgis(c.sombras||[]),
   };
 }
@@ -1966,12 +1991,14 @@ function guardarProduccionEnVatiaco(est, eco){
 }
 
 let promesaCalculoPv = null;
+// La via manual solo se ofrece despues de que falle la consulta al servidor de VatiaCo.
+let pvFalloServidor = false;
 async function calcularProduccion(opts){
   opts = opts || {};
   if(promesaCalculoPv) return promesaCalculoPv;
   promesaCalculoPv = (async()=>{
-    const btn1 = document.getElementById('btnCalcularPvgis'), btn2 = document.getElementById('btnRecalcularPvgis');
-    btn1.disabled = btn2.disabled = true;
+    const btn1 = document.getElementById('btnCalcularPvgis');
+    btn1.disabled = true;
     const errores = [];
     try{
       const est = estadoProduccion();
@@ -1988,6 +2015,7 @@ async function calcularProduccion(opts){
           produccionCache[f.url] = d;
         }catch(e){
           errores.push(f.s.config.nombreArea+': '+(e.message||e));
+          pvFalloServidor = true;
         }
       }
       sinPotencia.forEach(f=>errores.push(f.s.config.nombreArea+': potencia 0 kWp (revisa la potencia del panel)'));
@@ -1995,7 +2023,7 @@ async function calcularProduccion(opts){
       if(errores.length) setEstadoPv('Errores — '+errores.join(' · '), true);
       else setEstadoPv(pendientes.length ? 'Producción actualizada desde PVGIS ('+new Date().toLocaleTimeString('es-ES')+').' : 'La producción ya estaba calculada para el diseño actual.');
     }finally{
-      btn1.disabled = btn2.disabled = false;
+      btn1.disabled = false;
     }
     return errores;
   })();
@@ -2049,18 +2077,7 @@ function describirTarifa(t){
   txt += 'Excedentes '+fmtNum(Number(t.precio_excedentes_eur_kwh)||0,3)+' €/kWh. Fuente: '+tarifasOrigen+'.';
   info.textContent = txt;
 }
-async function cargarTarifas(){
-  try{
-    const r = await fetch(TARIFAS_URL, {cache:'no-cache'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const j = await r.json();
-    if(!Array.isArray(j.tarifas) || j.tarifas.length===0) throw new Error('sin tarifas');
-    tarifasConfig = j;
-    tarifasOrigen = 'config/tarifas.json'+(j.actualizado?' ('+j.actualizado+')':'');
-  }catch(e){
-    tarifasConfig = TARIFAS_RESPALDO;
-    tarifasOrigen = 'valores de respaldo internos (no se pudo leer config/tarifas.json: '+(e.message||e)+')';
-  }
+function cargarTarifas(){
   const sel = document.getElementById('e_tarifa');
   sel.innerHTML = tarifasConfig.tarifas.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.nombre||t.id)+'</option>').join('');
   const g = vatiacoLeer()[DOC_KEY_C01];
@@ -2260,7 +2277,7 @@ function renderProduccion(){
   // Via manual: enlaces a la consulta de cada superficie pendiente + carga de los JSON
   const manual = document.getElementById('pvManual');
   const pendientes = est.filas.filter(f=>f.url && !f.datos);
-  if(pendientes.length){
+  if(pendientes.length && pvFalloServidor){
     manual.style.display = 'block';
     manual.innerHTML = '<b>Vía manual</b> (si el servidor de VatiaCo no responde): para cada superficie, abre el enlace, copia todo el JSON (<b>Ctrl+A</b>, <b>Ctrl+C</b>), vuelve a esta pestaña y pulsa <b>Ctrl+V</b>. Se guarda en la memoria del navegador y se recalcula todo. En Firefox usa la vista «Datos sin procesar» › «Copiar».'+
       '<ol>'+pendientes.map(f=>'<li>'+esc(f.s.config.nombreArea)+' — <a class="pv-enlace-manual" href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir consulta PVGIS ↗</a></li>').join('')+'</ol>'+
@@ -2279,7 +2296,7 @@ function renderProduccion(){
     chartEl.innerHTML = '<div class="pv-chart">'+g.svg+'</div>'+(est.completo?'':'<p class="hint" style="margin-top:8px;color:var(--amber);">Faltan '+est.nPendientes+' superficie(s) por calcular o con datos desactualizados: el gráfico solo muestra las calculadas.</p>');
     leyenda.innerHTML = g.series.length>1 ? g.series.map(sr=>'<span><span class="pv-sw" style="background:'+sr.color+'"></span>'+esc(sr.nombre)+'</span>').join('') : '';
   } else {
-    chartEl.innerHTML = '<div class="empty-state">Pulsa «Calcular producción con PVGIS» para ver la producción mensual.</div>';
+    chartEl.innerHTML = '<div class="empty-state">Pulsa «Calcular con PVGIS» (al inicio de la página) para ver la producción mensual.</div>';
     leyenda.innerHTML = '';
   }
 
@@ -2395,8 +2412,7 @@ document.getElementById('pvManual').addEventListener('click', (e)=>{
 });
 // Ctrl+V en cualquier parte de la pestana (salvo dentro de un campo de texto)
 document.addEventListener('paste', (e)=>{
-  const sec = document.getElementById('produccion');
-  if(!sec.classList.contains('tab-active')) return;
+  if(!document.getElementById('simulacion').classList.contains('tab-active')) return;
   const tg = e.target;
   if(tg && (tg.tagName==='INPUT' || tg.tagName==='TEXTAREA' || tg.isContentEditable)) return;
   const tx = e.clipboardData && e.clipboardData.getData('text');
@@ -2429,10 +2445,9 @@ document.getElementById('pvJsonManual').addEventListener('change', async (e)=>{
 
 // ---------- Eventos ----------
 document.getElementById('btnCalcularPvgis').addEventListener('click', ()=>calcularProduccion());
-document.getElementById('btnRecalcularPvgis').addEventListener('click', ()=>calcularProduccion({forzar:true}));
 document.getElementById('e_tarifa').addEventListener('change', ()=>{ aplicarTarifa(tarifaSeleccionada(), false); describirTarifa(tarifaSeleccionada()); renderProduccion(); });
 document.getElementById('btnAplicarTarifa').addEventListener('click', ()=>{ aplicarTarifa(tarifaSeleccionada(), true); renderProduccion(); showToast('Valores de la tarifa y parámetros por defecto restablecidos.'); });
-['pv_perdidas','pv_tecnologia','pv_basedatos','e_precio','e_excedentes','e_autoconsumo','e_coste_wp','e_subvencion','e_om','e_degradacion','e_inflacion','e_vida'].forEach(id=>{
+['e_precio','e_excedentes','e_autoconsumo','e_coste_wp','e_subvencion','e_om','e_degradacion','e_inflacion','e_vida'].forEach(id=>{
   const el = document.getElementById(id);
   el.addEventListener(el.tagName==='SELECT'?'change':'input', ()=>renderProduccion());
 });
@@ -2900,6 +2915,7 @@ Mapa con los paneles de todas las superficies del sistema, dibujados con la mism
     ['Tecnología del módulo', TECNOLOGIA_TXT[m.pv.pvtechchoice] || m.pv.pvtechchoice],
     ['Pérdidas del sistema', nES(m.pv.loss,1)+' %'],
   ], 1))}, [Parámetros de cálculo de la producción])
+Los parámetros de PVGIS son sus valores por defecto (véanse las notas del apartado de conclusiones).
 #ftabla(${ty(tablaInf(['Hipótesis','Valor'], [
     ['Tarifa', m.tarifa],
     ['Precio de la energía evitada', nES(P.precio,3)+' €/kWh'],
@@ -2941,7 +2957,7 @@ Mapa con los paneles de todas las superficies del sistema, dibujados con la mism
 = Producción energética estimada
 `;
   if(!completo){
-    t += `No se pudo obtener la producción de todas las superficies desde PVGIS al generar este informe (fallo de red o del servicio, superficie sin potencia o sin datos de radiación). Repite el cálculo en la pestaña «Producción y ahorro» y vuelve a generar el informe.
+    t += `No se pudo obtener la producción de todas las superficies desde PVGIS al generar este informe (fallo de red o del servicio, superficie sin potencia o sin datos de radiación). Repite el cálculo en el bloque «Producción y ahorro según PVGIS» de la pestaña Simulación y vuelve a generar el informe.
 `;
   } else {
     const series = seriesProduccion(est).map(sr=>({ n: sr.nombre.slice(0,28), c: sr.color, v: sr.valores }));
@@ -3010,6 +3026,9 @@ Mapa con los paneles de todas las superficies del sistema, dibujados con la mism
 
 == Limitaciones
 La producción es una estimación de PVGIS con datos climáticos históricos: la de un año concreto puede diferir. El estudio económico es un modelo simplificado y orientativo: no incluye término de potencia, financiación, sustitución del inversor, impuestos ni valor residual. En compensación simplificada, la compensación de excedentes no puede superar el término de energía de cada factura.
+
+== Notas
+Los parámetros de PVGIS se dejan en sus valores por defecto, sin necesidad de cambiarlos: pérdidas del sistema del 14 \\% (cableado, inversor, suciedad y otras pérdidas, el valor que propone PVGIS), tecnología de silicio cristalino (la de la práctica totalidad de los paneles comerciales) y base de datos de radiación PVGIS-SARAH3 (satelital, cubre Europa, África y gran parte de Asia). Las pérdidas por temperatura, reflexión y espectro del módulo las calcula PVGIS aparte.
 
 #heading(numbering: none)[Bibliografía]
 #set enum(numbering: "[1]")
